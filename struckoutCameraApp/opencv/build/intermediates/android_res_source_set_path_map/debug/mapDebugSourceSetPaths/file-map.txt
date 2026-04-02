@@ -1,0 +1,9 @@
+org.opencv-pngs-0 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/build/generated/res/pngs/debug
+org.opencv-updated_navigation_xml-1 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/build/generated/updated_navigation_xml/debug
+org.opencv-mergeDebugResources-2 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
+org.opencv-mergeDebugResources-3 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
+org.opencv-debug-4 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/build/intermediates/merged_res/debug/mergeDebugResources
+org.opencv-debug-5 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/build/intermediates/packaged_res/debug/packageDebugResources
+org.opencv-java-6 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/java/res
+org.opencv-debug-7 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/src/debug/res
+org.opencv-main-8 /home/taichi765/source/sandbox/struckoutCameraApp/opencv/src/main/res
