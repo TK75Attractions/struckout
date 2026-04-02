@@ -1,4 +1,0 @@
-/home/taichi765/Android/Sdk/cmake/3.22.1/bin/ninja \
-  -C \
-  /home/taichi765/source/sandbox/struckoutCameraApp/opencv/.cxx/Debug/634r4h4n/x86 \
-  opencv_jni_shared

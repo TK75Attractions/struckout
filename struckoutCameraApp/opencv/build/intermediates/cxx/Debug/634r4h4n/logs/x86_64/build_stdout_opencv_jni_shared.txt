@@ -1,2 +1,0 @@
-ninja: Entering directory `/home/taichi765/source/sandbox/struckoutCameraApp/opencv/.cxx/Debug/634r4h4n/x86_64'
-ninja: no work to do.
