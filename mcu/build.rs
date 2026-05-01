@@ -1,5 +1,8 @@
 fn main() {
     linker_be_nice();
+    if std::env::var("CARGO_FEATURE_DEFMT").is_ok() {
+        println!("cargo:rustc-link-arg=-Tdefmt.x");
+    }
     // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
 }

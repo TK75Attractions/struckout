@@ -1,0 +1,104 @@
+[package]
+edition = "2024"
+name = "esp32-rs-defmt"
+rust-version = "1.88"
+version = "0.1.0"
+
+[[bin]]
+name = "esp32-rs-defmt"
+path = "./src/bin/main.rs"
+
+[dependencies]
+log = { version = "0.4.29", optional = true }
+defmt = { version = "1.0.1", optional = true }
+panic-rtt-target = { version = "0.2.0", optional = true, features = ["defmt"] }
+rtt-target = { version = "0.6.2", optional = true, features = ["defmt"] }
+esp-println = { git = "https://github.com/lulf/esp-hal", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", optional = true, features = [
+  "log-04",
+] }
+
+heapless = "0.9.3"
+
+bt-hci = "0.8.1"
+embassy-executor = { version = "0.9.1" }
+embassy-futures = { version = "0.1.2" }
+embassy-sync = { version = "0.8.0" }
+embassy-time = { version = "0.5.0" }
+embedded-io = { version = "0.7.1" }
+embedded-io-async = { version = "0.7.0" }
+trouble-host = { git = "https://github.com/embassy-rs/trouble.git", features = [
+  "gatt",
+] }
+
+critical-section = "1.2.0"
+static_cell = "2.1.1"
+
+
+esp-rtos = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", features = [
+  "embassy",
+  "esp-alloc",
+  "esp-radio",
+] }
+esp-hal = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", features = [
+  "unstable",
+] }
+esp-alloc = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37" }
+esp-radio = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", default-features = false, features = [
+  "ble",
+  "esp-alloc",
+  "unstable",
+] }
+esp-bootloader-esp-idf = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37" }
+
+[features]
+default = ["esp32s3"]
+
+defmt = [
+  "dep:defmt",
+  "dep:rtt-target",
+  "dep:panic-rtt-target",
+  "embassy-executor/defmt",
+  "embassy-futures/defmt",
+  "embassy-sync/defmt",
+  "embassy-time/defmt",
+  "embedded-io/defmt",
+  "embedded-io-async/defmt",
+  "trouble-host/defmt",
+  "esp-hal/defmt",
+  "esp-rtos/defmt",
+  "esp-bootloader-esp-idf/defmt",
+  "esp-alloc/defmt",
+  "esp-radio/defmt",
+]
+
+esp32 = [
+  "dep:esp-println",
+  "dep:log",
+  "esp-println/esp32",
+  "esp-hal/esp32",
+  "esp-rtos/esp32",
+  "esp-bootloader-esp-idf/esp32",
+  "esp-radio/esp32",
+]
+
+esp32s3 = [
+  "defmt",
+  "esp-hal/esp32s3",
+  "esp-rtos/esp32s3",
+  "esp-bootloader-esp-idf/esp32s3",
+  "esp-radio/esp32s3",
+]
+
+[profile.dev]
+# Rust debug is too slow.
+# For debug builds always builds with some optimization
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1        # LLVM can perform better optimizations using a single thread
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false

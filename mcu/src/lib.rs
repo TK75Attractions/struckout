@@ -1,14 +1,19 @@
 #![no_std]
 
 use bt_hci::param::ConnHandle;
+#[cfg(feature = "defmt")]
+use defmt::{Format, dbg, info, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join3;
+use embassy_futures::select::select;
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Channel, Receiver, Sender},
 };
+#[cfg(not(feature = "defmt"))]
 use esp_println::dbg;
 use heapless::{Vec, index_map::FnvIndexMap};
+#[cfg(not(feature = "defmt"))]
 use log::{info, warn};
 use trouble_host::{HostResources, prelude::*};
 
@@ -61,8 +66,16 @@ impl State {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct FrameId(u32);
 
+#[cfg(feature = "defmt")]
+impl Format for FrameId {
+    fn format(&self, fmt: defmt::Formatter) {
+        self.0.format(fmt);
+    }
+}
+
 /// フレームのデータ。
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(Format))]
 struct Frame {
     conn_id: ConnHandle,
     frame_id: FrameId,
@@ -116,23 +129,76 @@ where
     let tx = FRAME_CHANNEL.sender();
     let rx = FRAME_CHANNEL.receiver();
 
+    // Extract frame handle once (used for all handlers)
+    let frame_handle = server.service.frame.handle;
+
     join3(
         ble_task(runner),
         async move {
+            // Track connections in slots. Slot value is taken when being handled.
+            let mut conn_slot_0: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
+            let mut conn_slot_1: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
+
             loop {
-                match advertise("Struckout", &mut peripheral, &server).await {
-                    Ok(conn) => {
-                        gatt_events_task(&server, &conn, tx.clone()).await;
+                // Race: accept new connection OR handle existing connections
+                let result = select(
+                    async {
+                        // Try to accept a new connection
+                        match advertise("Struckout", &mut peripheral, &server).await {
+                            Ok(conn) => Some(conn),
+                            Err(e) => {
+                                panic!("[adv] error: {:?}", e);
+                            }
+                        }
+                    },
+                    async {
+                        // Try to handle connections from slots
+                        // If slot 0 has a connection, handle it
+                        if let Some(conn) = conn_slot_0.take() {
+                            gatt_handler(conn, frame_handle, tx.clone()).await;
+                            info!("[handler] slot 0 connection closed");
+                            return;
+                        }
+
+                        // If slot 1 has a connection, handle it
+                        if let Some(conn) = conn_slot_1.take() {
+                            gatt_handler(conn, frame_handle, tx.clone()).await;
+                            info!("[handler] slot 1 connection closed");
+                            return;
+                        }
+
+                        // If no connections to handle, wait indefinitely
+                        core::future::pending::<()>().await;
+                    },
+                )
+                .await;
+
+                // Handle the result of select
+                match result {
+                    embassy_futures::select::Either::First(Some(conn)) => {
+                        // Place new connection in empty slot
+                        if conn_slot_0.is_none() {
+                            info!("[adv] connection placed in slot 0");
+                            conn_slot_0 = Some(conn);
+                        } else if conn_slot_1.is_none() {
+                            info!("[adv] connection placed in slot 1");
+                            conn_slot_1 = Some(conn);
+                        } else {
+                            warn!("[adv] both slots full, rejecting connection");
+                        }
                     }
-                    Err(e) => {
-                        panic!("[adv] error: {:?}", e);
+                    embassy_futures::select::Either::Second(_) => {
+                        // Handler finished, will loop and try again
                     }
+                    _ => {}
                 }
             }
         },
         async move {
-            let frame = rx.receive().await;
-            info!("[collect] received frame: {:?}", frame);
+            loop {
+                let frame = rx.receive().await;
+                info!("[collect] received frame: {:?}", frame);
+            }
         },
     )
     .await;
@@ -161,16 +227,16 @@ async fn ble_task<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>) {
     }
 }
 
-/// Stream Events until the connection closes.
+/// Stream events for a single connection until it closes.
 ///
 /// This function will handle the GATT events and process them.
 /// This is how we interact with read and write requests.
-async fn gatt_events_task<P: PacketPool>(
-    server: &Server<'_>,
-    conn: &GattConnection<'_, '_, P>,
+/// Called from the advertising loop when a new connection is accepted.
+async fn gatt_handler(
+    conn: GattConnection<'_, '_, DefaultPacketPool>,
+    frame_handle: u16,
     tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
 ) {
-    let frame = server.service.frame;
     let reason = loop {
         match conn.next().await {
             GattConnectionEvent::Disconnected { reason } => break reason,
@@ -178,7 +244,7 @@ async fn gatt_events_task<P: PacketPool>(
                 match &event {
                     GattEvent::Read(event) => {}
                     GattEvent::Write(event) => {
-                        if event.handle() == frame.handle {
+                        if event.handle() == frame_handle {
                             let val: [u8; 8] = match event.data().try_into() {
                                 Ok(val) => val,
                                 Err(e) => {
