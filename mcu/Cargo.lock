@@ -417,6 +417,7 @@ dependencies = [
  "document-features",
  "embassy-executor-macros",
  "embassy-executor-timer-queue",
+ "log",
 ]
 
 [[package]]
@@ -444,6 +445,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc2d050bdc5c21e0862a89256ed8029ae6c290a93aecefc73084b3002cdebb01"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -497,6 +499,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "heapless 0.9.3",
+ "log",
 ]
 
 [[package]]
@@ -514,6 +517,7 @@ dependencies = [
  "embedded-hal 1.0.0",
  "embedded-hal-async",
  "futures-core",
+ "log",
 ]
 
 [[package]]
@@ -700,6 +704,7 @@ dependencies = [
  "esp-metadata-generated",
  "esp-rom-sys",
  "jiff",
+ "log",
  "strum",
 ]
 
@@ -759,6 +764,7 @@ dependencies = [
  "esp32s3",
  "fugit",
  "instability",
+ "log",
  "nb 1.1.0",
  "paste",
  "portable-atomic",
@@ -806,6 +812,7 @@ dependencies = [
  "esp-sync",
  "esp-wifi-sys-esp32",
  "esp-wifi-sys-esp32s3",
+ "log",
 ]
 
 [[package]]
@@ -856,6 +863,7 @@ dependencies = [
  "heapless 0.9.3",
  "ieee802154",
  "instability",
+ "log",
  "num-derive",
  "num-traits",
  "portable-atomic",
@@ -915,6 +923,7 @@ dependencies = [
  "esp-radio-rtos-driver",
  "esp-rom-sys",
  "esp-sync",
+ "log",
  "portable-atomic",
  "riscv",
  "xtensa-lx",
@@ -955,6 +964,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa62cf4d74d2639852bf3502909fc650ecc21a350a8a6369f6263273dd6188c"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -964,6 +974,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39f14de1f9211c208e2bbbde0db1c1b84261061673cb49b3bd835409190981a6"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -973,6 +984,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2ff0e720a85a1b5dfcb777084e145f8cc1877fa596cf5f448f1536f520d6e24"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -982,6 +994,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be3706b97351a35bd47d392e8a8afb7725b56714c3c1d7071038144e2f8d3a83"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -991,6 +1004,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7c5fb8e69b4c3c6ae6e3dda54758739eb38d8191c2ebb30d511e8b9bd204b25"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -1000,6 +1014,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f456e2e9fadc17dd751ea235cad8ad07ab0033ed4bd00083e6e073f16b86ce3"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -1009,6 +1024,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1777e3b1b5e69d3a8ef528db54f63cac11d7991252863f5dc4bf0a727dd81c5b"
 dependencies = [
  "defmt 1.0.1",
+ "log",
 ]
 
 [[package]]
@@ -1927,7 +1943,6 @@ dependencies = [
 [[package]]
 name = "trouble-host"
 version = "0.6.0"
-source = "git+https://github.com/embassy-rs/trouble.git#6de9503251205ce794a3451009b5ef27d3decf28"
 dependencies = [
  "bt-hci",
  "defmt 1.0.1",
@@ -1937,6 +1952,7 @@ dependencies = [
  "embedded-io 0.7.1",
  "futures",
  "heapless 0.9.3",
+ "log",
  "rand_core 0.6.4",
  "static_cell",
  "trouble-host-macros",
@@ -1946,7 +1962,6 @@ dependencies = [
 [[package]]
 name = "trouble-host-macros"
 version = "0.4.0"
-source = "git+https://github.com/embassy-rs/trouble.git#6de9503251205ce794a3451009b5ef27d3decf28"
 dependencies = [
  "convert_case",
  "darling 0.20.11",

@@ -1,8 +1,8 @@
 #![no_std]
 
+mod fmt;
+
 use bt_hci::param::ConnHandle;
-#[cfg(feature = "defmt")]
-use defmt::{Format, dbg, info, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join3;
 use embassy_futures::select::select;
@@ -10,11 +10,7 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Channel, Receiver, Sender},
 };
-#[cfg(not(feature = "defmt"))]
-use esp_println::dbg;
 use heapless::{Vec, index_map::FnvIndexMap};
-#[cfg(not(feature = "defmt"))]
-use log::{info, warn};
 use trouble_host::{HostResources, prelude::*};
 
 /// Max number of connections
@@ -67,7 +63,7 @@ impl State {
 struct FrameId(u32);
 
 #[cfg(feature = "defmt")]
-impl Format for FrameId {
+impl defmt::Format for FrameId {
     fn format(&self, fmt: defmt::Formatter) {
         self.0.format(fmt);
     }
@@ -75,7 +71,7 @@ impl Format for FrameId {
 
 /// フレームのデータ。
 #[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 struct Frame {
     conn_id: ConnHandle,
     frame_id: FrameId,
@@ -110,10 +106,9 @@ where
     let mut resources: HostResources<_, DefaultPacketPool, CONNECTIONS_MAX, L2CAP_CHANNELS_MAX> =
         HostResources::new();
 
-    let stack: trouble_host::Stack<'_, C, DefaultPacketPool> =
-        trouble_host::new(controller, &mut resources)
-            .set_random_address(address)
-            .build();
+    let stack: Stack<'_, C, DefaultPacketPool> = trouble_host::new(controller, &mut resources)
+        .set_random_address(address)
+        .build();
     let runner = stack.runner();
     let mut peripheral = stack.peripheral();
 
@@ -232,8 +227,8 @@ async fn ble_task<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>) {
 /// This function will handle the GATT events and process them.
 /// This is how we interact with read and write requests.
 /// Called from the advertising loop when a new connection is accepted.
-async fn gatt_handler(
-    conn: GattConnection<'_, '_, DefaultPacketPool>,
+async fn gatt_handler<P: PacketPool>(
+    conn: GattConnection<'_, '_, P>,
     frame_handle: u16,
     tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
 ) {
@@ -298,9 +293,19 @@ async fn advertise<'values, 'server, C: Controller>(
         )
         .await?;
     info!("[adv] advertising");
-    let conn = advertiser.accept().await?.with_attribute_server(server)?;
+    let result = advertiser
+        .accept()
+        .await?
+        .with_attribute_server::<_, _, _, 2>(&server.server);
+    if result
+        .as_ref()
+        .is_err_and(|e| matches!(e, Error::ConnectionLimitReached))
+    {
+        warn!("[adv] reached to connection capacity");
+    }
+    let conn = result?;
     info!("[adv] connection established");
-    dbg!(conn.raw().peer_identity());
+
     Ok(conn)
 }
 
