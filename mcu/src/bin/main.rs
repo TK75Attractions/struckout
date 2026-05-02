@@ -14,7 +14,7 @@ use embassy_executor::Spawner;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_radio::ble::controller::BleConnector;
-#[cfg(not(feature = "defmt"))]
+#[cfg(feature = "log")]
 use log::info;
 #[cfg(feature = "defmt")]
 use panic_rtt_target as _;
