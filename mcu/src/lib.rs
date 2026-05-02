@@ -33,7 +33,7 @@ const FRAME_BUF_CAP: usize = 8;
 const CAMERA_NUM: usize = 2;
 
 /// GATT Server definition
-#[gatt_server]
+#[gatt_server(connections_max=CONNECTIONS_MAX)]
 struct Server {
     service: Service,
 }
