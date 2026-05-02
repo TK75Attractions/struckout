@@ -115,4 +115,4 @@ opt-level = 's'
 overflow-checks = false
 
 [patch."https://github.com/embassy-rs/trouble"]
-trouble-host = { path = "/home/taichi765/source/git_clones/trouble/host" }
+trouble-host = { path = "../../git_clones/trouble/host" }
