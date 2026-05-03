@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use embassy_futures::join::*;
 use embassy_futures::select::*;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -7,7 +8,30 @@ use trouble_host::prelude::*;
 use crate::fmt::{info, warning};
 use crate::{FRAME_CHANNEL_CAP, Frame};
 
-use crate::Server;
+/// Max number of connections
+pub const CONNECTIONS_MAX: usize = 2;
+
+/// Max number of L2CAP channels.
+pub const L2CAP_CHANNELS_MAX: usize = 2; // Signal + att
+
+/// GATT Server definition
+#[gatt_server(connections_max=CONNECTIONS_MAX)]
+pub struct Server {
+    service: Service,
+}
+
+/// Gatt service definition
+#[gatt_service(uuid = "d575b50d-cfd8-4747-b6cd-1aa0ffce1108")]
+struct Service {
+    /// f32をx,yの順にバイト列化したもの(little-endian)
+    /// | x (4byte) | y (4byte) |
+    #[characteristic(uuid = "a4b3a793-ff34-47a0-847b-32b54cba0d6f", write)]
+    camera_loc: [u8; 8],
+
+    /// | frame_id (4byte) | x (4byte) | x (4byte) | (little-endian)
+    #[characteristic(uuid = "bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d", write)]
+    frame: [u8; 12],
+}
 
 /// This is a background task that is required to run forever alongside any other BLE tasks.
 ///
@@ -32,9 +56,9 @@ pub async fn ble_task<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>
     }
 }
 
-pub async fn advertise_and_handle_gatt<'values, 'server, C: Controller>(
+pub async fn advertise_and_handle_gatt<'values, C: Controller>(
     peripheral: &mut Peripheral<'values, C, DefaultPacketPool>,
-    server: &'server Server<'values>,
+    server: &'_ Server<'values>,
     tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
 ) {
     // Track connections in slots. Slot value is taken when being handled.
@@ -44,33 +68,41 @@ pub async fn advertise_and_handle_gatt<'values, 'server, C: Controller>(
 
     loop {
         // Race: accept new connection OR handle existing connections
-        let result = select(
+        let result = select3(
             async {
-                // Try to accept a new connection
-                match advertise("Struckout", peripheral, &server).await {
-                    Ok(conn) => Some(conn),
-                    Err(e) => {
-                        panic!("[adv] error: {:?}", e);
+                if conn_slot_0.is_none() || conn_slot_1.is_none() {
+                    // Try to accept a new connection
+                    match advertise("Struckout", peripheral, server).await {
+                        Ok(conn) => Some(conn),
+                        Err(e) => {
+                            panic!("[adv] error: {:?}", e);
+                        }
                     }
+                } else {
+                    info!("[adv] slots are full, stop advertising");
+                    core::future::pending::<Option<GattConnection<DefaultPacketPool>>>().await;
+                    None
                 }
             },
             async {
                 // Try to handle connections from slots
                 // If slot 0 has a connection, handle it
-                if let Some(conn) = conn_slot_0.take() {
-                    gatt_handler(conn, frame_handle, tx.clone()).await;
+                if let Some(conn) = &conn_slot_0 {
+                    info!("[handler] waiting for event on slot 0");
+                    gatt_handler(conn, frame_handle, tx).await;
                     info!("[handler] slot 0 connection closed");
                     return;
                 }
-
+                core::future::pending::<()>().await;
+            },
+            async {
                 // If slot 1 has a connection, handle it
-                if let Some(conn) = conn_slot_1.take() {
-                    gatt_handler(conn, frame_handle, tx.clone()).await;
+                if let Some(conn) = &conn_slot_1 {
+                    info!("[handler] waiting for event on slot 1");
+                    gatt_handler(conn, frame_handle, tx).await;
                     info!("[handler] slot 1 connection closed");
                     return;
                 }
-
-                // If no connections to handle, wait indefinitely
                 core::future::pending::<()>().await;
             },
         )
@@ -78,7 +110,7 @@ pub async fn advertise_and_handle_gatt<'values, 'server, C: Controller>(
 
         // Handle the result of select
         match result {
-            embassy_futures::select::Either::First(Some(conn)) => {
+            embassy_futures::select::Either3::First(Some(conn)) => {
                 // Place new connection in empty slot
                 if conn_slot_0.is_none() {
                     info!("[adv] connection placed in slot 0");
@@ -87,11 +119,15 @@ pub async fn advertise_and_handle_gatt<'values, 'server, C: Controller>(
                     info!("[adv] connection placed in slot 1");
                     conn_slot_1 = Some(conn);
                 } else {
-                    warning!("[adv] both slots full, rejecting connection");
+                    unreachable!("advertising should be stopped when all slots are full");
                 }
             }
-            embassy_futures::select::Either::Second(_) => {
+            embassy_futures::select::Either3::Second(_) => {
                 // Handler finished, will loop and try again
+                info!("[adv] connection on slot 0 closed");
+            }
+            embassy_futures::select::Either3::Third(_) => {
+                info!("[adv] connection on slot 1 closed");
             }
             _ => {}
         }
@@ -104,7 +140,7 @@ pub async fn advertise_and_handle_gatt<'values, 'server, C: Controller>(
 /// This is how we interact with read and write requests.
 /// Called from the advertising loop when a new connection is accepted.
 async fn gatt_handler<P: PacketPool>(
-    conn: GattConnection<'_, '_, P>,
+    conn: &GattConnection<'_, '_, P>,
     frame_handle: u16,
     tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
 ) {
@@ -116,18 +152,19 @@ async fn gatt_handler<P: PacketPool>(
                     GattEvent::Read(_event) => {}
                     GattEvent::Write(event) => {
                         if event.handle() == frame_handle {
-                            let val: [u8; 8] = match event.data().try_into() {
+                            let data = event.data();
+                            let val: [u8; 12] = match data.try_into() {
                                 Ok(val) => val,
-                                Err(e) => {
+                                Err(_) => {
                                     warning!(
                                         "[gatt] event data for writing frame was incorrect: {:?}",
-                                        e
+                                        data
                                     );
                                     return;
                                 }
                             };
-                            //server.set(&frame, &val).unwrap();
-                            info!("[gatt] set new frame value: {:?}", val);
+                            let frame = Frame::from_bytes(val, conn.raw().handle());
+                            tx.send(frame).await;
                         }
                     }
                     _ => (),
@@ -173,12 +210,7 @@ async fn advertise<'values, 'server, C: Controller>(
         .accept()
         .await?
         .with_attribute_server::<_, _, _, 2>(&server.server);
-    if result
-        .as_ref()
-        .is_err_and(|e| matches!(e, Error::ConnectionLimitReached))
-    {
-        warning!("[adv] reached to connection capacity");
-    }
+
     let conn = result?;
     info!("[adv] connection established");
 

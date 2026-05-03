@@ -15,16 +15,10 @@ use embassy_sync::{
 use heapless::{Vec, index_map::FnvIndexMap};
 use trouble_host::{HostResources, prelude::*};
 
-use crate::ble::advertise_and_handle_gatt;
-use crate::ble::ble_task;
-use crate::fmt::info;
-use crate::fmt::warning;
-
-/// Max number of connections
-const CONNECTIONS_MAX: usize = 2;
-
-/// Max number of L2CAP channels.
-const L2CAP_CHANNELS_MAX: usize = 2; // Signal + att
+use crate::ble::{
+    CONNECTIONS_MAX, L2CAP_CHANNELS_MAX, Server, advertise_and_handle_gatt, ble_task,
+};
+use crate::fmt::{info, warning};
 
 /// frameデータをgattタスクから送るチャンネルのcapacity.
 const FRAME_CHANNEL_CAP: usize = 5;
@@ -33,26 +27,7 @@ const FRAME_CHANNEL_CAP: usize = 5;
 const FRAME_BUF_CAP: usize = 8;
 
 /// カメラの数
-const CAMERA_NUM: usize = 2;
-
-/// GATT Server definition
-#[gatt_server(connections_max=CONNECTIONS_MAX)]
-struct Server {
-    service: Service,
-}
-
-/// Gatt service definition
-#[gatt_service(uuid = "d575b50d-cfd8-4747-b6cd-1aa0ffce1108")]
-struct Service {
-    /// f32をx,yの順にバイト列化したもの(little-endian)
-    /// | x (4byte) | y (4byte) |
-    #[characteristic(uuid = "a4b3a793-ff34-47a0-847b-32b54cba0d6f", write)]
-    camera_loc: [u8; 8],
-
-    /// | frame_id (4byte) | x (4byte) | x (4byte) | (little-endian)
-    #[characteristic(uuid = "bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d", write)]
-    frame: [u8; 12],
-}
+const CAMERA_NUM: usize = 2; // TODO: CONNECTIONS_MAXと揃えるべき？
 
 struct State {
     frames: FnvIndexMap<FrameId, Vec<Frame, CAMERA_NUM>, FRAME_BUF_CAP>,
@@ -147,12 +122,9 @@ async fn collect_frames(
 ) {
     loop {
         let frame = rx.receive().await;
-        let frames = state
-            .frames
-            .entry(frame.frame_id)
-            .or_insert(Vec::new())
-            .unwrap();
-        if let Err(frame) = frames.push(frame) {
+        let frame_id = frame.frame_id;
+
+        let Ok(frames) = state.frames.entry(frame_id).or_default() else {
             warning!(
                 "[collect] frames was full. frame {:?} was dropped",
                 frame.frame_id
