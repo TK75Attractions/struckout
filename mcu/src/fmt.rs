@@ -1,7 +1,7 @@
 //! Copy&pasted from https://github.com/embassy-rs/trouble/blob/master/host/src/fmt.rs
 
-#![macro_use]
 #![allow(unused_macros)]
+#![allow(unused_imports)]
 
 use core::fmt::{Debug, Display, LowerHex};
 
@@ -163,7 +163,7 @@ macro_rules! info {
 }
 
 #[collapse_debuginfo(yes)]
-macro_rules! warn {
+macro_rules! warning {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
             #[cfg(feature = "log")]
@@ -219,7 +219,7 @@ macro_rules! unwrap {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/*#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct NoneError;
 
 pub trait Try {
@@ -246,7 +246,7 @@ impl<T, E> Try for Result<T, E> {
     fn into_result(self) -> Self {
         self
     }
-}
+}*/
 
 #[allow(unused)]
 pub(crate) struct Bytes<'a>(pub &'a [u8]);
@@ -282,8 +282,24 @@ pub trait Format: Debug {}
 #[cfg(not(feature = "defmt"))]
 impl<T: Debug> Format for T {}
 
-#[cfg(feature = "defmt")]
+/*#[cfg(feature = "defmt")]
 pub trait Format: defmt::Format {}
 
 #[cfg(feature = "defmt")]
-impl<T: defmt::Format> Format for T {}
+impl<T: defmt::Format> Format for T {}*/
+
+pub(crate) use assert;
+pub(crate) use assert_eq;
+pub(crate) use assert_ne;
+pub(crate) use debug;
+pub(crate) use debug_assert;
+pub(crate) use debug_assert_eq;
+pub(crate) use debug_assert_ne;
+pub(crate) use error;
+pub(crate) use info;
+pub(crate) use panic;
+pub(crate) use todo;
+pub(crate) use trace;
+pub(crate) use unreachable;
+pub(crate) use unwrap;
+pub(crate) use warning;

@@ -21,7 +21,8 @@
 		"vscode": {
 			"extensions": [
 				"tamasfe.even-better-toml",
-				"rust-lang.rust-analyzer"
+				"rust-lang.rust-analyzer",
+				"probe-rs.probe-rs-debugger"
 			]
 		}
 	},
