@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-	"name": "Ubuntu",
+	"name": "struckout-mcu-esp",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"build": {
 		"dockerfile": "Dockerfile",
@@ -10,13 +10,21 @@
 			"USER_GID": "1000"
 		}
 	},
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
-	// Configure tool-specific properties.
+	"runArgs": [
+		"--name",
+		"struckout-mcu-devcontainer",
+		"--device=/dev/struckout_mcu_esp:/dev/ttyACM0",
+		"--device-cgroup-rule=c 189:* rwm"
+	],
+	"containerEnv": {
+		"TZ": "Asia/Tokyo"
+	},
+	"mounts": [
+		"type=bind,source=/dev/bus/usb/,target=/dev/bus/usb/",
+		"type=bind,source=/home/taichi765/source/git_clones/trouble/,target=/workspaces/git_clones/trouble/,consistency=cached",
+		"type=volume,source=cargo-cache,target=/home/vscode/.cargo/"
+	],
+	"remoteUser": "vscode",
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -25,16 +33,5 @@
 				"probe-rs.probe-rs-debugger"
 			]
 		}
-	},
-	"runArgs": [
-		"--name",
-		"struckout-mcu-devcontainer",
-		"-v",
-		"/home/taichi765/source/git_clones/trouble/:/workspaces/git_clones/trouble/",
-		"--device=/dev/struckout_mcu_esp:/dev/ttyACM0",
-		"-v",
-		"/dev/bus/usb/:/dev/bus/usb/",
-		"--device-cgroup-rule=c 189:* rwm"
-	],
-	"remoteUser": "vscode"
+	}
 }
