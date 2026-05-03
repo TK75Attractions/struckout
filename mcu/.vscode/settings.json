@@ -10,5 +10,6 @@
   "rust-analyzer.cargo.extraEnv": {
     "RUSTUP_TOOLCHAIN": "esp"
   },
-  "rust-analyzer.cargo.targetDir": "target"
+  "rust-analyzer.cargo.targetDir": "target",
+  "rust-analyzer.server.path": "/home/vscode/.local/bin/rust-analyzer"
 }
