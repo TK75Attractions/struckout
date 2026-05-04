@@ -21,7 +21,6 @@
 	},
 	"mounts": [
 		"type=bind,source=/dev/bus/usb/,target=/dev/bus/usb/",
-		"type=bind,source=/home/taichi765/source/git_clones/trouble/,target=/workspaces/git_clones/trouble/,consistency=cached",
 		"type=volume,source=cargo-cache,target=/home/vscode/.cargo/"
 	],
 	"remoteUser": "vscode",
