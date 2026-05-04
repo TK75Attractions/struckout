@@ -26,9 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         action:
-          - command: build(esp32)
+          - command: build_esp32
             args: --release --target xtensa-esp32-none-elf --no-default-features --features=esp32,log
-          - command: build(esp32s3)
+          - command: build_esp32s3
             args: --release --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt
           - command: fmt
             args: --all -- --check
