@@ -1,12 +1,14 @@
-name: Continuous Integration
+name: MCU Build
 
 on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "**/README.md"
+    paths:
+      - mcu/**
   pull_request:
+    paths:
+      - mcu/**
   workflow_dispatch:
 
 env:
@@ -21,8 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         action:
-          - command: build
-            args: --release
+          - command: build(esp32)
+            args: --release --target xtensa-esp32-none-elf --no-default-features --features=esp32,log
+          - command: build(esp32s3)
+            args: --release --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt
           - command: fmt
             args: --all -- --check
           - command: clippy
@@ -34,7 +38,7 @@ jobs:
         uses: esp-rs/xtensa-toolchain@v1.5
         with:
           default: true
-          buildtargets: esp32
+          buildtargets: esp32,esp32s3
           ldproxy: false
       - name: Enable caching
         uses: Swatinem/rust-cache@v2
