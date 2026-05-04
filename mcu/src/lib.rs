@@ -15,10 +15,11 @@ use embassy_sync::{
 use heapless::{Vec, index_map::FnvIndexMap};
 use trouble_host::{HostResources, prelude::*};
 
-use crate::ble::{
-    CONNECTIONS_MAX, L2CAP_CHANNELS_MAX, Server, advertise_and_handle_gatt, ble_task,
-};
 use crate::fmt::{info, warning};
+use crate::{
+    ble::{CONNECTIONS_MAX, L2CAP_CHANNELS_MAX, Server, advertise_and_handle_gatt, ble_task},
+    fmt::todo,
+};
 
 /// frameデータをgattタスクから送るチャンネルのcapacity.
 const FRAME_CHANNEL_CAP: usize = 5;
@@ -124,11 +125,13 @@ async fn collect_frames(
         let frame = rx.receive().await;
         let frame_id = frame.frame_id;
 
-        let Ok(frames) = state.frames.entry(frame_id).or_default() else {
+        let Ok(positions) = state.frames.entry(frame_id).or_default() else {
             warning!(
                 "[collect] frames was full. frame {:?} was dropped",
                 frame.frame_id
-            )
-        }
+            );
+            continue;
+        };
+        todo!()
     }
 }

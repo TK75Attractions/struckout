@@ -1943,6 +1943,7 @@ dependencies = [
 [[package]]
 name = "trouble-host"
 version = "0.6.0"
+source = "git+https://github.com/embassy-rs/trouble.git?rev=6de9503251205ce794a3451009b5ef27d3decf28#6de9503251205ce794a3451009b5ef27d3decf28"
 dependencies = [
  "bt-hci",
  "defmt 1.0.1",
@@ -1962,6 +1963,7 @@ dependencies = [
 [[package]]
 name = "trouble-host-macros"
 version = "0.4.0"
+source = "git+https://github.com/embassy-rs/trouble.git?rev=6de9503251205ce794a3451009b5ef27d3decf28#6de9503251205ce794a3451009b5ef27d3decf28"
 dependencies = [
  "convert_case",
  "darling 0.20.11",
