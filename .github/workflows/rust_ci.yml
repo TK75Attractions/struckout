@@ -19,6 +19,9 @@ jobs:
   rust-checks:
     name: Rust Checks
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mcu
     strategy:
       fail-fast: false
       matrix:
