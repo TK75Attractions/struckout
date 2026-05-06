@@ -1,6 +1,9 @@
 package com.taichi765.struckoutCameraApp
 
+import android.Manifest
 import android.content.Context
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -40,6 +43,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.opencv.android.OpenCVLoader
+import org.opencv.core.Core
+import org.opencv.core.CvType
+import org.opencv.core.Mat
 import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
@@ -49,16 +55,75 @@ class MainActivity : ComponentActivity() {
             lifecycleScope.launch {
                 contoursImage = image
             }
+            val worldDirections = rects.map { rect ->
+                val pixel = Mat(3, 1, CvType.CV_64F)
+
+                pixel.put(
+                    0, 0,
+                    (rect.x + rect.width / 2).toDouble()
+                )
+                pixel.put(1, 0, (rect.y + rect.height / 2).toDouble())
+                pixel.put(2, 0, 1.0)
+
+                val normalized = Mat()
+                Core.gemm(cameraMatrix.inv(), pixel, 1.0, Mat(), 0.0, normalized)
+
+                val worldDirection = Mat()
+                Core.gemm(cameraRotation, normalized, 1.0, Mat(), 0.0, world_direction)
+                worldDirection
+            }
         }
     }
     val tracker = ObjectTracker(0.5, 15.0, 80.0)
     val cameraProvider by lazy {
         CoroutineScope(Dispatchers.Default).async {
-            Log.i("MainActivity", "Initialized camera provider")
+            Log.i(TAG, "Initialized camera provider")
             ProcessCameraProvider.awaitInstance(this@MainActivity)
         }
     }
 
+    val cameraManager by lazy {
+        getSystemService(CAMERA_SERVICE) as CameraManager
+    }
+
+    val characteristics by lazy {
+        cameraManager.cameraIdList.map { id -> cameraManager.getCameraCharacteristics(id) }
+            .filter { ch -> ch.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+    }
+
+    val cameraMatrix: Mat by lazy {
+        val intrinsics =
+            characteristics.mapNotNull { it.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION) }
+                .map { CameraIntrinsics(it[0], it[1], it[2], it[3], it[4]) }.toList().let {
+                    assert(it.count() == 1) { "There were multiple back camera. Unable to select one." }
+                    it[0]
+                }
+
+        val mtx = Mat.eye(3, 3, CvType.CV_64F)
+        mtx.put(0, 0, intrinsics.fx.toDouble())
+        mtx.put(1, 1, intrinsics.fy.toDouble())
+        mtx.put(0, 2, intrinsics.cx.toDouble())
+        mtx.put(1, 2, intrinsics.cy.toDouble())
+        mtx
+    }
+
+    val cameraRotation by lazy {
+        val rotations = characteristics
+            .mapNotNull { it.get(CameraCharacteristics.LENS_POSE_ROTATION) }
+
+        require(rotations.size == 1) {
+            "There were multiple back camera. Unable to select one."
+        }
+
+        val rotation = rotations.single().map { it.toDouble() }
+
+        Mat(4, 1, CvType.CV_64F).apply {
+            put(0, 0, rotation[0])
+            put(1, 0, rotation[1])
+            put(2, 0, rotation[2])
+            put(3, 0, rotation[3])
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +131,7 @@ class MainActivity : ComponentActivity() {
         OpenCVLoader.initLocal()
         ActivityCompat.requestPermissions(
             this,
-            arrayOf(android.Manifest.permission.CAMERA),
+            arrayOf(Manifest.permission.CAMERA),
             101
         )
 
@@ -110,10 +175,21 @@ class MainActivity : ComponentActivity() {
             CameraSelector.DEFAULT_BACK_CAMERA,
             imageAnalysis
         )
-        Log.i("MainActivity", "Initialized ImageAnalyzer")
+        Log.i(TAG, "Initialized ImageAnalyzer")
+    }
+
+    companion object {
+        const val TAG = "MainActivity"
     }
 }
 
+data class CameraIntrinsics(
+    val fx: Float,
+    val fy: Float,
+    val cx: Float,
+    val cy: Float,
+    val s: Float
+)
 
 @Composable
 fun ContoursPreview(
@@ -155,7 +231,7 @@ fun CameraPreview(
                 CameraSelector.DEFAULT_BACK_CAMERA,
                 preview
             )
-            Log.i("MainActivity", "Initialized CameraPreview")
+            Log.i("CameraPreview", "Initialized CameraPreview")
         }
     }
 }

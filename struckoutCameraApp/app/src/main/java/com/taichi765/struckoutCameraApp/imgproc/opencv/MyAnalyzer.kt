@@ -19,7 +19,7 @@ class MyAnalyzer(
     private val withAnalyzeResult: (ImageBitmap, List<Rect>) -> Unit,
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
-        try {
+        image.use { image ->
             val mat = getMatFromImage(image)
             val rects = tracker.nextFrame(mat)
 
@@ -38,8 +38,6 @@ class MyAnalyzer(
             val bitmap = createBitmap(rotated.cols(), rotated.rows())
             Utils.matToBitmap(rotated, bitmap)
             withAnalyzeResult(bitmap.asImageBitmap(), rects)
-        } finally {
-            image.close()
         }
     }
 
