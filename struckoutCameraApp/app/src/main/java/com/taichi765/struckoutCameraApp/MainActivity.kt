@@ -164,6 +164,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // TODO: close NativeAndroidEnvironment
+    }
 
     private suspend fun setupCamera() {
         val imageAnalysis = ImageAnalysis.Builder().build()
