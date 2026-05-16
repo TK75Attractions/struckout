@@ -1,6 +1,5 @@
 package com.taichi765.struckoutCameraApp
 
-
-class BleUnitTest {
+class BleInstrumentationTest {
 
 }

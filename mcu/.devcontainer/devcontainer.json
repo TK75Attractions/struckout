@@ -13,7 +13,7 @@
 	"runArgs": [
 		"--name",
 		"struckout-mcu-devcontainer",
-		"--device=/dev/struckout_mcu_esp:/dev/ttyACM0",
+		//"--device=/dev/struckout_mcu_esp:/dev/ttyACM0",
 		"--device-cgroup-rule=c 189:* rwm"
 	],
 	"containerEnv": {

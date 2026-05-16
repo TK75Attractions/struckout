@@ -1,68 +1,45 @@
 package com.taichi765.struckoutCameraApp.ble
 
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onEmpty
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
-import no.nordicsemi.kotlin.ble.client.android.CentralManager
-import no.nordicsemi.kotlin.ble.client.android.Peripheral
-import no.nordicsemi.kotlin.ble.client.distinctByPeripheral
-import kotlin.time.Duration.Companion.milliseconds
+import com.juul.kable.Filter
+import com.juul.kable.Peripheral
+import com.juul.kable.Scanner
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-private const val SERVICE_UUID = "d575b50d-cfd8-4747-b6cd-1aa0ffce1108";
-private const val CAMERA_POSITION_CHARACTERISTIC_UUID = "a4b3a793-ff34-47a0-847b-32b54cba0d6f";
-private const val FRAME_CHARACTERISTIC_UUID = "bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d";
+@OptIn(ExperimentalUuidApi::class)
+private val SERVICE_UUID = Uuid.parse("d575b50d-cfd8-4747-b6cd-1aa0ffce1108")
 
-class BleManager(
-    private val centralManager: CentralManager,
-    private val scope: CoroutineScope
-) {
-    private var peripheral: Peripheral? = null
+@OptIn(ExperimentalUuidApi::class)
+private val CAMERA_POSITION_CHARACTERISTIC_UUID = Uuid.parse("a4b3a793-ff34-47a0-847b-32b54cba0d6f")
 
-    @OptIn(ExperimentalUuidApi::class)
-    private fun findPeripheral() {
-        Log.i(TAG, "finding peripheral")
-        centralManager.scan(1250.milliseconds) {
-            ServiceUuid(
-                Uuid.parse(SERVICE_UUID)
-            )
-        }.distinctByPeripheral().map { it.peripheral }.onEach {
-            peripheral = it
-        }.launchIn(scope)
+@OptIn(ExperimentalUuidApi::class)
+private val FRAME_CHARACTERISTIC_UUID = Uuid.parse("bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d")
+
+class BleManager() {
+    private val scanner = Scanner {
+        filters { match { name = Filter.Name.Exact("Struckout") } }
     }
 
-    private fun connect() {
-        if (peripheral == null) {
-            return
-        }
-        scope.launch {
-            withTimeout(10000) {
-                centralManager.connect(
-                    peripheral = peripheral!!,// TODO: 汚い
-                    options = CentralManager.ConnectionOptions.AutoConnect()
-                )
-                Log.i(TAG, "connected to ${peripheral!!.name}")
-            }
-        }
 
-        peripheral!!.phy
-            .onEach {
-                Log.i(TAG, "PHY changed to: $it")
-            }
-            .onEmpty {
-                Log.w(TAG, "PHY didn't change")
-            }
-            .onCompletion {
-                Log.d(TAG, "PHY collection completed")
-            }
-            .launchIn(scope)
+    suspend fun connect() {
+        Log.i(TAG, "scanning advertisements...")
+        val advertisement = scanner.advertisements.first()
+        Log.i(TAG, "found advertisement: $advertisement")
+        val autoConnect = MutableStateFlow(false)
+        val peripheral = Peripheral(advertisement) {
+            autoConnectIf { autoConnect.value }
+        }
+    }
+
+    private suspend fun scanPeripheral() {
+
+    }
+
+    suspend fun sendFrame(frameId: FrameID) {
+        TODO()
     }
 
     companion object {
@@ -70,4 +47,5 @@ class BleManager(
     }
 }
 
+data class FrameID(val id: UInt)
 
