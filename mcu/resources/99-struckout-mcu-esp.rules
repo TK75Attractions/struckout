@@ -2,5 +2,5 @@
 SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1001", MODE="660", GROUP="plugdev", TAG+="uaccess", SYMLINK+="struckout_mcu_esp",
 
 # ESP32
-SUBSYSTEM=="usb", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="660", GROUP="plugdev", TAG+="uaccess", SYMLINK+="struckout_mcu_esp"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="660", GROUP="plugdev", TAG+="uaccess", SYMLINK+="struckout_mcu_esp"
 
