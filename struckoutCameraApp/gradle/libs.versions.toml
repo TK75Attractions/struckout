@@ -10,6 +10,7 @@ kotlin = "2.3.21"
 composeBom = "2026.05.00"
 camerax = "1.6.1"
 kable = "0.43.0"
+androidxNav = "2.9.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -32,6 +33,7 @@ androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle" }
 androidx-camera-video = { group = "androidx.camera", name = "camera-video" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view" }
+androidx-nav-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNav" }
 kable-core = { group = "com.juul.kable", name = "kable-core", version.ref = "kable" }
 
 [plugins]

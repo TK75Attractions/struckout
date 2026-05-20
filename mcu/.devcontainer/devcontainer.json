@@ -21,7 +21,7 @@
 	},
 	"mounts": [
 		"type=bind,source=/dev/bus/usb/,target=/dev/bus/usb/",
-		"type=volume,source=cargo-cache,target=/home/vscode/.cargo/"
+		"type=volume,source=cargo-cache,target=/usr/local/cargo/"
 	],
 	"remoteUser": "vscode",
 	"customizations": {

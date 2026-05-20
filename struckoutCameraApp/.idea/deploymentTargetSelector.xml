@@ -8,9 +8,6 @@
       <SelectionState runConfigName="nextFrame_works()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="fs()">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="MainActivity">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-04-02T05:46:42.710793471Z">

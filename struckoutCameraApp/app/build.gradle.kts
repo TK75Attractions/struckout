@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.video)
     implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.nav.compose)
     implementation(libs.kable.core)
     implementation(project(":opencv"))
     testImplementation(libs.junit)

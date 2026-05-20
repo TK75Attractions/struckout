@@ -1,0 +1,31 @@
+package com.taichi765.struckoutCameraApp
+
+import org.junit.Test
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.core.Rect
+
+class CameraManagerUnitTest {
+
+    @Test
+    fun worldDirectionCalculator_calculatesProperly() {
+        val mtx = Mat.eye(3, 3, CvType.CV_64F).apply {
+            put(0, 0, 0.5)
+            put(1, 1, 0.2)
+            put(0, 2, 0.01)
+            put(1, 2, 0.0)
+        }
+
+        val rot = Mat.eye(1, 3, CvType.CV_64F).apply {
+
+            put(0, 0, 0.0)
+            put(0, 1, 0.1)
+            put(0, 2, 0.05)
+        }
+        val calculator = WorldDirectionCalculator(mtx, rot)
+
+        val rect = Rect(10, 20, 100, 70)
+        val worldDirection = calculator.calc(rect)
+        assert(worldDirection.x == 0f)
+    }
+}
