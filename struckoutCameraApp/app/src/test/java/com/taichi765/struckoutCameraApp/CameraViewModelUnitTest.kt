@@ -1,11 +1,12 @@
 package com.taichi765.struckoutCameraApp
 
+import com.taichi765.struckoutCameraApp.camera.WorldDirectionCalculator
 import org.junit.Test
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
 
-class CameraManagerUnitTest {
+class CameraViewModelUnitTest {
 
     @Test
     fun worldDirectionCalculator_calculatesProperly() {

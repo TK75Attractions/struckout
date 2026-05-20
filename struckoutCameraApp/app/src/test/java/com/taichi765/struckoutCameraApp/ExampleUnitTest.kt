@@ -1,13 +1,7 @@
 package com.taichi765.struckoutCameraApp
 
-import android.util.Log.e
-import com.taichi765.struckoutCameraApp.imgproc.opencv.ObjectTracker
+import org.junit.Assert.assertEquals
 import org.junit.Test
-
-import org.junit.Assert.*
-import org.opencv.android.OpenCVLoader
-import org.opencv.videoio.VideoCapture
-import org.opencv.videoio.Videoio.CAP_PROP_FPS
 
 /**
  * Example local unit test, which will execute on the development machine (host).

@@ -1,7 +1,9 @@
 package com.taichi765.struckoutCameraApp.camera
 
-import android.content.Context
+import android.Manifest
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,24 +24,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.launch
 
 @Composable
-fun CameraView(
-    context: Context,
-    cameraProvider: Deferred<ProcessCameraProvider>,
-    contoursImage: ImageBitmap
+fun CameraScreen(
+    viewModel: CameraViewModel = viewModel<CameraViewModel>()
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        println(it)
+    }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center
     ) {
         Text("Camera Preview")
         CameraPreview(
-            context = context,
-            cameraProvider = cameraProvider,
+            cameraProvider = viewModel.cameraProvider,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -46,11 +56,23 @@ fun CameraView(
 
         Text("Contours Preview")
         ContoursPreview(
-            image = contoursImage,
+            image = viewModel.contoursImage,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
         )
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        launcher.launch(Manifest.permission.CAMERA)
+        // TODO: 使うscopeこれであってるか？
+        viewModel.viewModelScope.launch {
+            viewModel.setupCamera(lifecycleOwner)
+        }
+
+        onDispose {
+            TODO("clean up camera")
+        }
     }
 }
 
@@ -71,10 +93,10 @@ private fun ContoursPreview(
 
 @Composable
 private fun CameraPreview(
-    context: Context,
     cameraProvider: Deferred<ProcessCameraProvider>,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val previewView = remember { PreviewView(context) }
 
     var provider: ProcessCameraProvider? by remember { mutableStateOf(null) }

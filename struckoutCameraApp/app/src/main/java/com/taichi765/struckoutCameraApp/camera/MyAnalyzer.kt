@@ -56,7 +56,6 @@ class MyAnalyzer(
         val yuv = Mat(image.height + image.height / 2, image.width, CvType.CV_8UC1)
         yuv.put(0, 0, nv21)
         val mat = Mat()
-        mat.put()
         Imgproc.cvtColor(yuv, mat, Imgproc.COLOR_YUV2RGB_NV21, 3)
         return mat
     }

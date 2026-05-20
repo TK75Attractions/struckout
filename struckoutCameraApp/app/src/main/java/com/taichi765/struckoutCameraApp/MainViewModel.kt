@@ -8,8 +8,7 @@ import kotlinx.coroutines.launch
 
 class MainViewModel : ViewModel() {
     val bleManager = BleManager()
-    val cameraManager = CameraManager()
-    var cameraProvider = null
+
 
     init {
         Log.i(TAG, "initializing MainViewModel")
@@ -17,6 +16,7 @@ class MainViewModel : ViewModel() {
             bleManager.connect()
         }
     }
+
 
     companion object {
         const val TAG = "MainViewModel"
