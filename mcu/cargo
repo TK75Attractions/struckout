@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# espツールチェインのcargoは<1.95.0として判定されるため--lockfile-pathを使おうとしてunknown argumentになる
+# see https://github.com/rust-lang/rust-analyzer/issues/21761
+
+if [ "$1" = "--version" ]; then
+  echo "cargo 1.95.0-nightly (f2d3ce0bd 2026-03-21)"
+  exit 0
+fi
+
+exec cargo +esp "$@"
