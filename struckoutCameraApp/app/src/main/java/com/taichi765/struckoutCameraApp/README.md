@@ -46,3 +46,6 @@ $
 - [姿勢推定 — OpenCV-Python Tutorials 1 documentation](https://labs.eecs.tottori-u.ac.jp/sd/Member/oyamada/OpenCV/html/py_tutorials/py_calib3d/py_pose/py_pose.html) ：
   鳥取大学シリーズその2。
 
+- [CameraCharacteristics | API reference | Android Developers](https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics#LENS_POSE_ROTATION) ：
+  AndroidのCamera API
+

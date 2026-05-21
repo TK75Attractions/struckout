@@ -2,8 +2,7 @@ package com.taichi765.struckoutCameraApp
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.taichi765.struckoutCameraApp.imgproc.opencv.ObjectTracker
-import org.junit.Assert.assertEquals
+import com.taichi765.struckoutCameraApp.camera.ObjectTracker
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.opencv.android.OpenCVLoader
@@ -21,12 +20,7 @@ import kotlin.io.path.outputStream
  */
 @RunWith(AndroidJUnit4::class)
 class ExampleInstrumentedTest {
-    @Test
-    fun useAppContext() {
-        // Context of the app under test.
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.taichi765.struckoutCameraApp", appContext.packageName)
-    }
+
 
     @Test
     fun nextFrame_works() {
