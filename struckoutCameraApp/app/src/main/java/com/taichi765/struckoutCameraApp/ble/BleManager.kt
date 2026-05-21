@@ -6,6 +6,7 @@ import com.juul.kable.Filter
 import com.juul.kable.Peripheral
 import com.juul.kable.Scanner
 import com.juul.kable.characteristicOf
+import com.taichi765.struckoutCameraApp.camera.BleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import java.nio.ByteBuffer
@@ -23,7 +24,11 @@ private val CAMERA_POSITION_CHARACTERISTIC_UUID = Uuid.parse("a4b3a793-ff34-47a0
 private val FRAME_CHARACTERISTIC_UUID = Uuid.parse("bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d")
 
 @OptIn(ExperimentalUuidApi::class)
-class BleManager() {
+class BleManager : BleRepository {
+    override suspend fun send(frame: FrameData) {
+        peripheral?.write(frameCharacteristic!!, frame.toByteArray())
+    }
+
     private val scanner = Scanner {
         filters { match { name = Filter.Name.Exact("Struckout") } }
     }
@@ -46,14 +51,8 @@ class BleManager() {
         frameCharacteristic = characteristicOf(SERVICE_UUID, FRAME_CHARACTERISTIC_UUID)
     }
 
-
-    suspend fun sendFrame(data: FrameData) {
-        peripheral?.write(frameCharacteristic!!, data.toByteArray())
-    }
-
     suspend fun updateCameraLocation(loc: CameraLocation) {
         peripheral?.write(cameraPositionCharacteristic!!, loc.toByteArray())
-
     }
 
     companion object {

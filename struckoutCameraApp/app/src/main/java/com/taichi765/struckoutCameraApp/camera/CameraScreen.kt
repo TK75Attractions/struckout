@@ -5,8 +5,10 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -17,10 +19,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -28,19 +30,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.launch
+import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
+import java.util.concurrent.Executors
 
 @Composable
 fun CameraScreen(
-    viewModel: CameraViewModel = viewModel<CameraViewModel>()
+    bleRepository: BleRepository
 ) {
+    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    val viewModel = run {
+        val cameraController = CameraController(context)
+        val factory = CameraViewModel.Factory(bleRepository, cameraController)
+        viewModel<CameraViewModel>(factory = factory)
+    }
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         println(it)
     }
+    val image by viewModel.contoursImage.collectAsState()
+
+    val cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -48,7 +60,7 @@ fun CameraScreen(
     ) {
         Text("Camera Preview")
         CameraPreview(
-            cameraProvider = viewModel.cameraProvider,
+            cameraProvider = cameraProvider,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -56,21 +68,35 @@ fun CameraScreen(
 
         Text("Contours Preview")
         ContoursPreview(
-            image = viewModel.contoursImage,
+            image = image,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
         )
     }
 
-    DisposableEffect(lifecycleOwner) {
+    LaunchedEffect(Unit) {
         launcher.launch(Manifest.permission.CAMERA)
-        // TODO: 使うscopeこれであってるか？
-        viewModel.viewModelScope.launch {
-            viewModel.setupCamera(lifecycleOwner)
-        }
 
+        val imageAnalysis =
+            ImageAnalysis.Builder().build().apply {
+                val executor = Executors.newSingleThreadExecutor()
+                setAnalyzer(executor, viewModel.analyzer)
+            }
+
+        val cameraProvider = ProcessCameraProvider.awaitInstance(context)
+
+        cameraProvider.bindToLifecycle(
+            lifecycleOwner,
+            CameraSelector.DEFAULT_BACK_CAMERA,
+            imageAnalysis
+        )
+        Log.i(TAG, "Initialized ImageAnalyzer")
+    }
+
+    DisposableEffect(lifecycleOwner) {
         onDispose {
+            cameraProvider?.unbindAll()
             TODO("clean up camera")
         }
     }
@@ -93,21 +119,18 @@ private fun ContoursPreview(
 
 @Composable
 private fun CameraPreview(
-    cameraProvider: Deferred<ProcessCameraProvider>,
+    cameraProvider: ProcessCameraProvider?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val previewView = remember { PreviewView(context) }
 
-    var provider: ProcessCameraProvider? by remember { mutableStateOf(null) }
 
     AndroidView(factory = { previewView }, modifier = modifier)
 
-    LaunchedEffect(Unit) {
-        provider = cameraProvider.await()
-    }
 
-    provider?.let {
+
+    cameraProvider?.let {
         LaunchedEffect(Unit) {
             val preview =
                 Preview.Builder().build().apply { surfaceProvider = previewView.surfaceProvider }
