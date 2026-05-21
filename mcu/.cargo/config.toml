@@ -1,5 +1,6 @@
 [alias]
 esp32 = "run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log"
+esp32s3 = "run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt"
 
 [target.xtensa-esp32-none-elf]
 runner = "espflash flash --monitor --chip esp32"
