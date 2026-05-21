@@ -33,7 +33,7 @@ jobs:
           - command: fmt
             args: --all -- --check
           - command: clippy
-            args: ---no-default-features --features=esp32,log --workspace -- -D warnings
+            args: --no-default-features --features=esp32,log --workspace -- -D warnings
           - command: clippy
             args: --no-default-features --features=esp32s3,defmt --workspace -- -D warnings
     steps:
