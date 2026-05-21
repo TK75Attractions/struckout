@@ -65,6 +65,7 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
     let mut conn_slot_0: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
     let mut conn_slot_1: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
     let frame_handle = server.service.frame.handle;
+    let camera_handle = server.service.camera_loc.handle;
 
     loop {
         // Race: accept new connection OR handle existing connections
@@ -89,7 +90,7 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
                 // If slot 0 has a connection, handle it
                 if let Some(conn) = &conn_slot_0 {
                     info!("[handler] waiting for event on slot 0");
-                    gatt_handler(conn, frame_handle, tx).await;
+                    gatt_handler(conn, frame_handle, camera_handle, tx).await;
                     info!("[handler] slot 0 connection closed");
                     return;
                 }
@@ -99,7 +100,7 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
                 // If slot 1 has a connection, handle it
                 if let Some(conn) = &conn_slot_1 {
                     info!("[handler] waiting for event on slot 1");
-                    gatt_handler(conn, frame_handle, tx).await;
+                    gatt_handler(conn, frame_handle, camera_handle, tx).await;
                     info!("[handler] slot 1 connection closed");
                     return;
                 }
@@ -142,6 +143,7 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
 async fn gatt_handler<P: PacketPool>(
     conn: &GattConnection<'_, '_, P>,
     frame_handle: u16,
+    camera_handle: u16,
     tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
 ) {
     let reason = loop {
@@ -165,6 +167,9 @@ async fn gatt_handler<P: PacketPool>(
                             };
                             let frame = Frame::from_bytes(val, conn.raw().handle());
                             tx.send(frame).await;
+                        }
+                        if event.handle() == camera_handle {
+                            todo!()
                         }
                     }
                     _ => (),

@@ -125,7 +125,7 @@ async fn collect_frames(
         let frame = rx.receive().await;
         let frame_id = frame.frame_id;
 
-        let Ok(positions) = state.frames.entry(frame_id).or_default() else {
+        let Ok(_positions) = state.frames.entry(frame_id).or_default() else {
             warning!(
                 "[collect] frames was full. frame {:?} was dropped",
                 frame.frame_id
