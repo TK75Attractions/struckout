@@ -35,7 +35,7 @@ jobs:
           - command: clippy
             args: --no-default-features --features=esp32,log --workspace -- -D warnings
           - command: clippy
-            args: --no-default-features --features=esp32s3,defmt --workspace -- -D warnings
+            args: --no-default-features --features=esp32s3,defmt --workspace --target xtensa-esp32-none-elf -- -D warnings
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
