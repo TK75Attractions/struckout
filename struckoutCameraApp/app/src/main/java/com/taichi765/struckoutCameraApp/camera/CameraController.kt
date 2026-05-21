@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.util.Log
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
@@ -21,24 +22,27 @@ class CameraController(context: Context) : CameraRepository {
         context.getSystemService(CAMERA_SERVICE) as CameraManager
 
 
-    private val characteristics =
+    private val characteristics = run {
         cameraManager.cameraIdList.map { id -> cameraManager.getCameraCharacteristics(id) }
             .filter { ch -> ch.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+    }
 
 
     private val cameraMatrix: Mat = run {
-        val intrinsics =
+        val intrinsic =
             characteristics.mapNotNull { it.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION) }
-                .map { CameraIntrinsics(it[0], it[1], it[2], it[3], it[4]) }.toList().let {
-                    assert(it.count() == 1) { "There were multiple back camera. Unable to select one." }
+                .map { CameraIntrinsics(it[0], it[1], it[2], it[3], it[4]) }.let {
+                    if (it.count() > 1) {
+                        Log.i(TAG, "There were multiple back camera. selecting first one.")
+                    }
                     it[0]
                 }
 
         Mat.eye(3, 3, CvType.CV_64F).apply {
-            put(0, 0, intrinsics.fx.toDouble())
-            put(1, 1, intrinsics.fy.toDouble())
-            put(0, 2, intrinsics.cx.toDouble())
-            put(1, 2, intrinsics.cy.toDouble())
+            put(0, 0, intrinsic.fx.toDouble())
+            put(1, 1, intrinsic.fy.toDouble())
+            put(0, 2, intrinsic.cx.toDouble())
+            put(1, 2, intrinsic.cy.toDouble())
         }
     }
 
@@ -46,8 +50,8 @@ class CameraController(context: Context) : CameraRepository {
         val rotations = characteristics
             .mapNotNull { it.get(CameraCharacteristics.LENS_POSE_ROTATION) }
 
-        require(rotations.size == 1) {
-            "There were multiple back camera. Unable to select one."
+        if (rotations.count() > 1) {
+            Log.i(TAG, "There were multiple back camera. selecting first one.")
         }
 
         val rotation = rotations.single().map { it.toDouble() }
@@ -79,4 +83,8 @@ class CameraController(context: Context) : CameraRepository {
         val cy: Float,
         val s: Float
     )
+
+    companion object {
+        const val TAG = "CameraController"
+    }
 }

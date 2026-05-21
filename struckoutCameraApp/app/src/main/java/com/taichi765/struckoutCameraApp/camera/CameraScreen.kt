@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -38,6 +39,25 @@ import java.util.concurrent.Executors
 fun CameraScreen(
     bleRepository: BleRepository
 ) {
+    var permissionGranted by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        permissionGranted = true
+    }
+
+    if (permissionGranted) {
+        CameraScreenContent(bleRepository)
+    } else {
+        Text("Permission is required")
+    }
+
+    LaunchedEffect(Unit) {
+        launcher.launch(Manifest.permission.CAMERA)
+    }
+}
+
+@Composable
+private fun CameraScreenContent(bleRepository: BleRepository) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -46,13 +66,9 @@ fun CameraScreen(
         val factory = CameraViewModel.Factory(bleRepository, cameraController)
         viewModel<CameraViewModel>(factory = factory)
     }
-
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        println(it)
-    }
     val image by viewModel.contoursImage.collectAsState()
-
     val cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -76,8 +92,6 @@ fun CameraScreen(
     }
 
     LaunchedEffect(Unit) {
-        launcher.launch(Manifest.permission.CAMERA)
-
         val imageAnalysis =
             ImageAnalysis.Builder().build().apply {
                 val executor = Executors.newSingleThreadExecutor()
