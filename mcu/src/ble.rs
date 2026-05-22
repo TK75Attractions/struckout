@@ -25,11 +25,11 @@ pub struct Server {
 struct Service {
     /// f32をx,yの順にバイト列化したもの(little-endian)
     /// | x (4byte) | y (4byte) |
-    #[characteristic(uuid = "a4b3a793-ff34-47a0-847b-32b54cba0d6f", write)]
+    #[characteristic(uuid = "a4b3a793-ff34-47a0-847b-32b54cba0d6f", write_without_response)]
     camera_loc: [u8; 8],
 
     /// | frame_id (4byte) | x (4byte) | x (4byte) | (little-endian)
-    #[characteristic(uuid = "bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d", write)]
+    #[characteristic(uuid = "bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d", write_without_response)]
     frame: [u8; 12],
 }
 
