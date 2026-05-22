@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.taichi765.struckoutCameraApp.ble.CameraLocation
 import com.taichi765.struckoutCameraApp.ble.FrameData
 import com.taichi765.struckoutCameraApp.ble.FrameID
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,7 +107,8 @@ data class WorldDirection(val x: Float, val y: Float, val z: Float)
 
 interface BleRepository {
     suspend fun send(frame: FrameData)
-
+    suspend fun sendCameraLocation(loc: CameraLocation)
+    suspend fun connect()
 }
 
 interface CameraRepository {

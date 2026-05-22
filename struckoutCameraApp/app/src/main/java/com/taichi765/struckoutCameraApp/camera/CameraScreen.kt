@@ -1,6 +1,7 @@
 package com.taichi765.struckoutCameraApp.camera
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,8 +14,11 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,36 +32,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.taichi765.struckoutCameraApp.R
 import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
 import java.util.concurrent.Executors
 
 @Composable
 fun CameraScreen(
-    bleRepository: BleRepository
+    bleRepository: BleRepository,
+    navController: NavController
 ) {
-    var permissionGranted by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var permissionGranted by remember { mutableStateOf(context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         permissionGranted = true
     }
 
     if (permissionGranted) {
-        CameraScreenContent(bleRepository)
+        CameraScreenContent(bleRepository) {
+            navController.navigate("bleSettings")
+        }
     } else {
         Text("Permission is required")
-    }
-
-    LaunchedEffect(Unit) {
-        launcher.launch(Manifest.permission.CAMERA)
+        LaunchedEffect(Unit) {
+            launcher.launch(Manifest.permission.CAMERA)
+        }
     }
 }
 
 @Composable
-private fun CameraScreenContent(bleRepository: BleRepository) {
+private fun CameraScreenContent(bleRepository: BleRepository, onNavigateToSettings: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -69,12 +79,22 @@ private fun CameraScreenContent(bleRepository: BleRepository) {
     val image by viewModel.contoursImage.collectAsState()
     val cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
-
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Camera Preview")
+        Row() {
+            Text("Camera Preview")
+
+            IconButton(onClick = {
+                onNavigateToSettings()
+            }) {
+                Icon(
+                    painter = painterResource(R.drawable.settings_24px),
+                    contentDescription = "settings"
+                )
+            }
+        }
         CameraPreview(
             cameraProvider = cameraProvider,
             modifier = Modifier
@@ -111,7 +131,6 @@ private fun CameraScreenContent(bleRepository: BleRepository) {
     DisposableEffect(lifecycleOwner) {
         onDispose {
             cameraProvider?.unbindAll()
-            TODO("clean up camera")
         }
     }
 }
@@ -139,10 +158,7 @@ private fun CameraPreview(
     val context = LocalContext.current
     val previewView = remember { PreviewView(context) }
 
-
     AndroidView(factory = { previewView }, modifier = modifier)
-
-
 
     cameraProvider?.let {
         LaunchedEffect(Unit) {
