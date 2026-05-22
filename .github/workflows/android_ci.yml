@@ -1,0 +1,36 @@
+name: Android CI
+
+on:
+  push:
+    branches: main
+    paths:
+      - struckoutCameraApp/**
+      - .github/workflows/android_ci.yml
+  pull_request:
+    branches: main
+    paths:
+      - struckoutCameraApp/**
+      - .github/workflows/android_ci.yml
+  workflow_dispatch: 
+
+jobs:
+  android-checks:
+    name: Android Checks
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ./struckoutCameraApp/
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Java JDK
+        uses: actions/setup-java@v5.2.0
+        with:
+          java-version: 17
+          distribution: temurin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Build
+        run: ./gradlew assembleDebug
+      - name: Run unit test
+        run: ./gradlew testDebugUnitTest
+          
