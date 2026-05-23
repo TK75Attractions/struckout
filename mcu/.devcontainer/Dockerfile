@@ -23,6 +23,13 @@ RUN cargo binstall -y probe-rs-tools --bin probe-rs \
 
 USER root
 
+# Latest ra doesn't work with esp toolchain.
+# See https://github.com/rust-lang/rust-analyzer/issues/22371
+RUN curl -L --proto '=https' --tlsv1.2 -sSf \
+    https://github.com/rust-lang/rust-analyzer/releases/download/2026-05-04/rust-analyzer-x86_64-unknown-linux-gnu.gz \
+    |gunzip -c - > /usr/local/bin/rust-analyzer \
+    && chmod +x /usr/local/bin/rust-analyzer
+
 RUN cp /home/${USER_NAME}/export-esp.sh /etc/profile.d/
 RUN usermod -a -G plugdev ${USER_NAME}
-    
+
