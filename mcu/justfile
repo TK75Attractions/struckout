@@ -1,10 +1,47 @@
+alias esp32 := run-esp32
+alias esp32s3 := run-esp32s3
+
 unit-test:
     cargo +stable test -p struckout-mcu-core --target x86_64-unknown-linux-gnu
-    
-[working-directory("crates/app/")]
-esp32:
-    cargo run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu
+
+########## running ##########
 
 [working-directory("crates/app/")]
-esp32s3:
-    cargo run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu
+run-esp32:
+    cargo +esp run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu
+
+[default]
+[working-directory("crates/app/")]
+run-esp32s3:
+    cargo +esp run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu
+
+[working-directory("crates/app/")]
+run-esp32-release:
+    cargo +esp run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu --release
+
+[working-directory("crates/app/")]
+run-esp32s3-release:
+    cargo +esp run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu --release
+
+
+########## clippy ##########
+
+[working-directory("crates/app/")]
+clippy-app-esp32:
+    cargo +esp clippy --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu
+
+[working-directory("crates/app/")]
+clippy-app-esp32s3:
+    cargo +esp clippy --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu
+
+clippy-core-esp32:
+    cargo +esp clippy --target xtensa-esp32-none-elf --features=log -p struckout-mcu-core
+
+clippy-core-esp32s3:
+    cargo +esp clippy --target xtensa-esp32s3-none-elf --features=defmt -p struckout-mcu-core
+
+clippy-all-esp32: clippy-app-esp32 clippy-core-esp32
+
+clippy-all-esp32s3: clippy-app-esp32 clippy-core-esp32s3
+
+clippy-all: clippy-all-esp32 clippy-all-esp32s3

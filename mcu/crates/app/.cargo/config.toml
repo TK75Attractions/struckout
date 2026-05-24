@@ -1,3 +1,5 @@
+# Locating this file in project root causes multiple `std` or SIGSEGV while runnning unit test on host.
+
 [target.xtensa-esp32-none-elf]
 runner = "espflash flash --monitor --chip esp32"
 
