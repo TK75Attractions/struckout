@@ -59,5 +59,5 @@ async fn main(spawner: Spawner) {
     let connector = BleConnector::new(bluetooth, Default::default()).unwrap();
     let controller: ExternalController<_, 1> = ExternalController::new(connector);
 
-    esp32_rs_defmt::run(controller, spawner).await;
+    struckout_mcu::run(controller, spawner).await;
 }

@@ -1,105 +1,19 @@
-[package]
+[workspace]
+members = ["crates/app", "crates/core", "xtask"]
+resolver = "3"
+
+[workspace.package]
 edition = "2024"
-name = "esp32-rs-defmt"
-rust-version = "1.88"
-version = "0.1.0"
 
-[[bin]]
-name = "esp32-rs-defmt"
-path = "./src/bin/main.rs"
-
-[dependencies]
-log = { version = "0.4.29", optional = true }
-defmt = { version = "1.0.1", optional = true }
-panic-rtt-target = { version = "0.2.0", optional = true, features = ["defmt"] }
-rtt-target = { version = "0.6.2", optional = true, features = ["defmt"] }
-esp-println = { git = "https://github.com/lulf/esp-hal", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", optional = true, features = [
-  "log-04",
-] }
+[workspace.dependencies]
+struckout-mcu-core = { path = "crates/core" }
 
 heapless = "0.9.3"
-
 bt-hci = "0.8.1"
-embassy-executor = { version = "0.9.1" }
-embassy-futures = { version = "0.1.2" }
-embassy-sync = { version = "0.8.0" }
-embassy-time = { version = "0.5.0" }
-embedded-io = { version = "0.7.1" }
-embedded-io-async = { version = "0.7.0" }
-trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "6de9503251205ce794a3451009b5ef27d3decf28", features = [
-  "gatt",
-] }
 
-critical-section = "1.2.0"
-static_cell = "2.1.1"
+embassy-sync = "0.8.0"
+embassy-futures = "0.1.2"
 
-
-esp-rtos = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", features = [
-  "embassy",
-  "esp-alloc",
-  "esp-radio",
-] }
-esp-hal = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", features = [
-  "unstable",
-] }
-esp-alloc = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37" }
-esp-radio = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37", default-features = false, features = [
-  "ble",
-  "esp-alloc",
-  "unstable",
-] }
-esp-bootloader-esp-idf = { git = "https://github.com/lulf/esp-hal.git", rev = "49ba429e34266bcac867b968e0a55b433d5a7c37" }
-
-[features]
-default = ["esp32s3", "defmt"]
-
-defmt = [
-  "dep:defmt",
-  "dep:rtt-target",
-  "dep:panic-rtt-target",
-  "embassy-executor/defmt",
-  "embassy-futures/defmt",
-  "embassy-sync/defmt",
-  "embassy-time/defmt",
-  "embedded-io/defmt",
-  "embedded-io-async/defmt",
-  "trouble-host/defmt",
-  "esp-hal/defmt",
-  "esp-rtos/defmt",
-  "esp-bootloader-esp-idf/defmt",
-  "esp-alloc/defmt",
-  "esp-radio/defmt",
-]
-
-log = [
-  "dep:log",
-  "dep:esp-println",
-  "embassy-executor/log",
-  "embassy-futures/log",
-  "embassy-sync/log",
-  "embassy-time/log",
-  "trouble-host/log",
-  "esp-hal/log-04",
-  "esp-rtos/log-04",
-  "esp-bootloader-esp-idf/log-04",
-  "esp-radio/log-04",
-]
-
-
-esp32 = [
-  "esp-println/esp32",
-  "esp-hal/esp32",
-  "esp-rtos/esp32",
-  "esp-bootloader-esp-idf/esp32",
-  "esp-radio/esp32",
-]
-
-esp32s3 = [
-  "esp-hal/esp32s3",
-  "esp-rtos/esp32s3",
-  "esp-bootloader-esp-idf/esp32s3",
-  "esp-radio/esp32s3",
-]
 
 [profile.dev]
 # Rust debug is too slow.

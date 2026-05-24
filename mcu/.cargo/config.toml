@@ -1,23 +1,5 @@
 [alias]
-esp32 = "run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log"
-esp32s3 = "run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt"
+esp32 = "run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu"
+esp32s3 = "run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu"
 
-[target.xtensa-esp32-none-elf]
-runner = "espflash flash --monitor --chip esp32"
-
-[target.xtensa-esp32s3-none-elf]
-runner = "probe-rs run --chip=esp32s3 --preverify --always-print-stacktrace --no-location --catch-hardfault"
-
-[env]
-# for defmt
-DEFMT_LOG = "info"
-# for esp-println + log
-ESP_LOG = "info"
-
-[build]
-rustflags = ["-C", "link-arg=-nostartfiles"]
-
-target = "xtensa-esp32s3-none-elf"
-
-[unstable]
-build-std = ["alloc", "core"]
+unit-test = "test -p struckout-mcu-core --target x86_64-unknown-linux-gnu"
