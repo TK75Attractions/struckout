@@ -1,6 +1,17 @@
 alias esp32 := run-esp32
 alias esp32s3 := run-esp32s3
 
+target-esp32 := "--target xtensa-esp32-none-elf"
+target-esp32s3 := "--target xtensa-esp32s3-none-elf"
+
+features-esp32-app := "--no-default-features --features=esp32,log"
+features-esp32s3-app := "--no-default-features --features=esp32s3,defmt"
+
+# Cargo flags needed to build for esp. Same as crates/app/.cargo/config.toml.
+esp-flags := "-Zbuild-std=alloc,core"
+esp-env-var := "RUSTFLAGS=\"-Clink-args=nostartfiles\"" 
+
+
 unit-test:
     cargo +stable test -p struckout-mcu-core --target x86_64-unknown-linux-gnu
 
@@ -8,37 +19,37 @@ unit-test:
 
 [working-directory("crates/app/")]
 run-esp32:
-    cargo +esp run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu
+    cargo +esp run {{target-esp32}} {{features-esp32-app}} -p struckout-mcu
 
 [default]
 [working-directory("crates/app/")]
 run-esp32s3:
-    cargo +esp run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu
+    cargo +esp run {{target-esp32s3}} {{features-esp32s3-app}} -p struckout-mcu
 
 [working-directory("crates/app/")]
 run-esp32-release:
-    cargo +esp run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu --release
+    cargo +esp run {{target-esp32}} {{features-esp32-app}} -p struckout-mcu --release
 
 [working-directory("crates/app/")]
 run-esp32s3-release:
-    cargo +esp run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu --release
+    cargo +esp run {{target-esp32s3}} {{features-esp32s3-app}} -p struckout-mcu --release
 
 
 ########## clippy ##########
 
 [working-directory("crates/app/")]
 clippy-app-esp32:
-    cargo +esp clippy --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu
+    cargo +esp clippy {{target-esp32}} {{features-esp32-app}} -p struckout-mcu
 
 [working-directory("crates/app/")]
 clippy-app-esp32s3:
-    cargo +esp clippy --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu
+    cargo +esp clippy {{target-esp32s3}} {{features-esp32s3-app}} -p struckout-mcu
 
 clippy-core-esp32:
-    cargo +esp clippy --target xtensa-esp32-none-elf --features=log -p struckout-mcu-core
+    {{esp-env-var}} cargo +esp clippy {{target-esp32}} --features=log -p struckout-mcu-core {{esp-flags}}
 
 clippy-core-esp32s3:
-    cargo +esp clippy --target xtensa-esp32s3-none-elf --features=defmt -p struckout-mcu-core
+    {{esp-env-var}} cargo +esp clippy {{target-esp32s3}} --features=defmt -p struckout-mcu-core {{esp-flags}}
 
 clippy-all-esp32: clippy-app-esp32 clippy-core-esp32
 
