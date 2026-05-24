@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,8 +50,7 @@ private fun BleInfoView(
     var showWarningTextY by remember { mutableStateOf(false) }
     var showWarningTextZ by remember { mutableStateOf(false) }
 
-
-    Column() {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Ble Info", fontSize = 24.sp)
         PositionField("x", x, showWarningTextX)
         PositionField("y", y, showWarningTextY)
