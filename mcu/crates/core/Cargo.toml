@@ -6,10 +6,12 @@ edition = { workspace = true }
 [dependencies]
 heapless = { workspace = true }
 bt-hci = { workspace = true }
+log = { workspace = true, optional = true }
+defmt = { workspace = true, optional = true }
 
 embassy-sync = { workspace = true }
 embassy-futures = { workspace = true }
 
 [features]
-defmt = []
-log = []
+defmt = ["dep:defmt", "bt-hci/defmt"]
+log = ["dep:log", "bt-hci/log"]

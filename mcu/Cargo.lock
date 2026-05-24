@@ -83,6 +83,7 @@ dependencies = [
  "embedded-io-async 0.7.0",
  "futures-intrusive",
  "heapless 0.9.3",
+ "log",
 ]
 
 [[package]]
@@ -1827,9 +1828,11 @@ name = "struckout-mcu-core"
 version = "0.1.0"
 dependencies = [
  "bt-hci",
+ "defmt 1.1.0",
  "embassy-futures",
  "embassy-sync 0.8.0",
  "heapless 0.9.3",
+ "log",
 ]
 
 [[package]]

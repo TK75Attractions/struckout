@@ -10,6 +10,8 @@ struckout-mcu-core = { path = "crates/core" }
 
 heapless = "0.9.3"
 bt-hci = "0.8.1"
+log = "0.4.29"
+defmt = "1.0.1"
 
 embassy-sync = "0.8.0"
 embassy-futures = "0.1.2"
