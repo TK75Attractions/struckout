@@ -3,7 +3,6 @@
   "rust-analyzer.cargo.target": "xtensa-esp32s3-none-elf",
   "rust-analyzer.server.extraEnv": {
     "RUSTUP_TOOLCHAIN": "stable",
-    "PATH": "/workspaces/struckout/mcu/cargo:$PATH"
   },
   "rust-analyzer.check.extraEnv": {
     "RUSTUP_TOOLCHAIN": "esp"

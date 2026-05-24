@@ -1,3 +1,4 @@
+use bt_hci::param::ConnHandle;
 #[allow(unused_imports)]
 use embassy_futures::join::*;
 use embassy_futures::select::*;
@@ -6,13 +7,17 @@ use embassy_sync::channel::Sender;
 use trouble_host::prelude::*;
 
 use crate::fmt::{info, warning};
-use crate::{FRAME_CHANNEL_CAP, Frame};
+use crate::{CAMERA_LOC_CHANNEL_CAP, CameraLocation, FRAME_CHANNEL_CAP, Frame};
 
 /// Max number of connections
 pub const CONNECTIONS_MAX: usize = 2;
 
 /// Max number of L2CAP channels.
 pub const L2CAP_CHANNELS_MAX: usize = 2; // Signal + att
+
+type FrameSender = Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>;
+type CamaraLocSender =
+    Sender<'static, CriticalSectionRawMutex, (ConnHandle, CameraLocation), CAMERA_LOC_CHANNEL_CAP>;
 
 /// GATT Server definition
 #[gatt_server(connections_max=CONNECTIONS_MAX)]
@@ -24,13 +29,13 @@ pub struct Server {
 #[gatt_service(uuid = "d575b50d-cfd8-4747-b6cd-1aa0ffce1108")]
 struct Service {
     /// f32をx,yの順にバイト列化したもの(little-endian)
-    /// | x (4byte) | y (4byte) |
+    /// | x (4byte) | y (4byte) | z (4byte)
     #[characteristic(uuid = "a4b3a793-ff34-47a0-847b-32b54cba0d6f", write_without_response)]
-    camera_loc: [u8; 8],
+    camera_loc: [u8; 12],
 
-    /// | frame_id (4byte) | x (4byte) | x (4byte) | (little-endian)
+    /// | frame_id (4byte) | x (4byte) | y (4byte) | z (4byte)
     #[characteristic(uuid = "bda5d9c9-0c9a-4e45-b20b-1fb937e71a7d", write_without_response)]
-    frame: [u8; 12],
+    frame: [u8; 16],
 }
 
 /// This is a background task that is required to run forever alongside any other BLE tasks.
@@ -48,7 +53,7 @@ struct Service {
 ///
 /// spawner.must_spawn(ble_task(runner));
 /// ```
-pub async fn ble_task<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>) {
+pub async fn ble_background<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>) {
     loop {
         if let Err(e) = runner.run().await {
             panic!("[ble_task] error: {:?}", e);
@@ -59,7 +64,8 @@ pub async fn ble_task<C: Controller, P: PacketPool>(mut runner: Runner<'_, C, P>
 pub async fn advertise_and_handle_gatt<'values, C: Controller>(
     peripheral: &mut Peripheral<'values, C, DefaultPacketPool>,
     server: &'_ Server<'values>,
-    tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
+    frame_tx: FrameSender,
+    camera_loc_tx: CamaraLocSender,
 ) {
     // Track connections in slots. Slot value is taken when being handled.
     let mut conn_slot_0: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
@@ -90,7 +96,7 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
                 // If slot 0 has a connection, handle it
                 if let Some(conn) = &conn_slot_0 {
                     info!("[handler] waiting for event on slot 0");
-                    gatt_handler(conn, frame_handle, camera_handle, tx).await;
+                    gatt_handler(conn, frame_handle, camera_handle, frame_tx, camera_loc_tx).await;
                     info!("[handler] slot 0 connection closed");
                     return;
                 }
@@ -100,7 +106,7 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
                 // If slot 1 has a connection, handle it
                 if let Some(conn) = &conn_slot_1 {
                     info!("[handler] waiting for event on slot 1");
-                    gatt_handler(conn, frame_handle, camera_handle, tx).await;
+                    gatt_handler(conn, frame_handle, camera_handle, frame_tx, camera_loc_tx).await;
                     info!("[handler] slot 1 connection closed");
                     return;
                 }
@@ -114,17 +120,16 @@ pub async fn advertise_and_handle_gatt<'values, C: Controller>(
             embassy_futures::select::Either3::First(Some(conn)) => {
                 // Place new connection in empty slot
                 if conn_slot_0.is_none() {
-                    info!("[adv] connection placed in slot 0");
                     conn_slot_0 = Some(conn);
+                    info!("[adv] connection placed in slot 0");
                 } else if conn_slot_1.is_none() {
-                    info!("[adv] connection placed in slot 1");
                     conn_slot_1 = Some(conn);
+                    info!("[adv] connection placed in slot 1");
                 } else {
                     unreachable!("advertising should be stopped when all slots are full");
                 }
             }
             embassy_futures::select::Either3::Second(_) => {
-                // Handler finished, will loop and try again
                 info!("[adv] connection on slot 0 closed");
             }
             embassy_futures::select::Either3::Third(_) => {
@@ -144,7 +149,8 @@ async fn gatt_handler<P: PacketPool>(
     conn: &GattConnection<'_, '_, P>,
     frame_handle: u16,
     camera_handle: u16,
-    tx: Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>,
+    frame_tx: FrameSender,
+    camera_loc_tx: CamaraLocSender,
 ) {
     let reason = loop {
         match conn.next().await {
@@ -155,7 +161,7 @@ async fn gatt_handler<P: PacketPool>(
                     GattEvent::Write(event) => {
                         if event.handle() == frame_handle {
                             let data = event.data();
-                            let val: [u8; 12] = match data.try_into() {
+                            let data: [u8; 16] = match data.try_into() {
                                 Ok(val) => val,
                                 Err(_) => {
                                     warning!(
@@ -165,11 +171,23 @@ async fn gatt_handler<P: PacketPool>(
                                     return;
                                 }
                             };
-                            let frame = Frame::from_bytes(val, conn.raw().handle());
-                            tx.send(frame).await;
+                            let frame = Frame::from_bytes(data, conn.raw().handle());
+                            frame_tx.send(frame).await;
                         }
                         if event.handle() == camera_handle {
-                            todo!()
+                            let data = event.data();
+                            let data = match event.data().try_into() {
+                                Ok(v) => v,
+                                Err(_) => {
+                                    warning!(
+                                        "[gatt] event data for camera location was incorrect: {:?}",
+                                        data
+                                    );
+                                    return;
+                                }
+                            };
+                            let loc = CameraLocation::from_bytes(data);
+                            camera_loc_tx.send((conn.raw().handle(), loc)).await;
                         }
                     }
                     _ => (),

@@ -21,10 +21,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    let (tx,rx)=mpsc::channel();
+    //let (tx,rx)=mpsc::channel();
 
     std::thread::spawn(move||{
-
+        //TODO
     });
 
     ui.run()?;
