@@ -27,6 +27,7 @@ pub const FRAME_BUF_CAP: usize = 8;
 /// カメラの数
 pub const CAMERA_NUM: usize = 2; // TODO: CONNECTIONS_MAXと揃えるべき？
 
+#[derive(Default)]
 pub struct State {
     frames: Deque<(FrameId, Vec<Frame, CAMERA_NUM>), FRAME_BUF_CAP>,
     camera_loc: FnvIndexMap<ConnHandle, CameraLocation, CAMERA_NUM>,

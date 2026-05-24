@@ -24,7 +24,7 @@ impl FrameId {
     }
 
     pub fn try_new(val: impl TryInto<u32>) -> Option<Self> {
-        val.try_into().map(|v| Self(v)).ok()
+        val.try_into().map(Self).ok()
     }
 }
 
