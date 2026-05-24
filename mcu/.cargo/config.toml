@@ -1,5 +1,0 @@
-[alias]
-esp32 = "run --target xtensa-esp32-none-elf --no-default-features --features=esp32,log -p struckout-mcu"
-esp32s3 = "run --target xtensa-esp32s3-none-elf --no-default-features --features=esp32s3,defmt -p struckout-mcu"
-
-unit-test = "test -p struckout-mcu-core --target x86_64-unknown-linux-gnu"

@@ -2139,10 +2139,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xtask"
-version = "0.1.0"
-
-[[package]]
 name = "xtensa-lx"
 version = "0.13.0"
 source = "git+https://github.com/lulf/esp-hal.git?rev=49ba429e34266bcac867b968e0a55b433d5a7c37#49ba429e34266bcac867b968e0a55b433d5a7c37"

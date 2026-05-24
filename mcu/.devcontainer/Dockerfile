@@ -19,7 +19,7 @@ RUN cargo binstall -y espup \
     && espup install -t esp32,esp32s3
 
 RUN cargo binstall -y probe-rs-tools --bin probe-rs \
-    && cargo binstall espflash
+    && cargo binstall espflash just
 
 USER root
 
