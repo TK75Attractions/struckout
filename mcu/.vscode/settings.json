@@ -11,5 +11,8 @@
     "RUSTUP_TOOLCHAIN": "esp"
   },
   "rust-analyzer.cargo.targetDir": "target",
-  "rust-analyzer.server.path": "/usr/local/bin/rust-analyzer"
+  "rust-analyzer.server.path": "/usr/local/bin/rust-analyzer",
+  "[just]": {
+    "editor.formatOnSave": false
+  },
 }

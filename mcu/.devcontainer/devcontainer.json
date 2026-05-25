@@ -37,7 +37,8 @@
 			"extensions": [
 				"tamasfe.even-better-toml",
 				"rust-lang.rust-analyzer",
-				"probe-rs.probe-rs-debugger"
+				"probe-rs.probe-rs-debugger",
+				"nefrob.vscode-just-syntax"
 			]
 		}
 	}
