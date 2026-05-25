@@ -2,12 +2,16 @@
 mod fmt;
 mod types;
 pub use types::*;
+mod calc_coordinate;
+mod collision_point;
 
 use bt_hci::param::ConnHandle;
 use embassy_futures::select::*;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 
 use heapless::{Deque, Vec, index_map::FnvIndexMap};
+
+use crate::calc_coordinate::calc_coordinate;
 
 #[cfg(all(
     not(any(target_os = "linux", target_os = "macos", target_os = "windows")),
@@ -53,25 +57,39 @@ pub async fn collect_frames(
     >,
 ) {
     loop {
-        let result = select(
-            async {
-                let frame = frame_rx.receive().await;
+        let result = select(frame_rx.receive(), camera_loc_rx.receive()).await;
+
+        match result {
+            Either::First(frame) => {
                 let frame_id = frame.frame_id;
                 insert_frame(&mut state.frames, frame_id, frame);
-            },
-            async {
-                let camera_loc = camera_loc_rx.receive().await;
-                state.camera_loc.insert(camera_loc.0, camera_loc.1).unwrap();
-            },
-        );
-        /*match result {
-            embassy_futures::select::Either::First(_) => {
-                todo!()
+                let (_, frame) = state.frames.iter().find(|(id, _)| *id == frame_id).unwrap(); // inserted above
+                if !frame.is_full() {
+                    return; // wait for another camera to send this frame
+                }
+
+                let mut camera_ids = state.camera_loc.keys();
+                let camera_1 = camera_ids.next().unwrap();
+                let camera_loc_1 = state.camera_loc.get(camera_1).unwrap();
+                let camera_2 = camera_ids.next().unwrap();
+                let camera_loc_2 = state.camera_loc.get(camera_2).unwrap();
+                let orientation_1 = frame.iter().find(|v| &v.conn_id == camera_1).unwrap();
+                let orientation_2 = frame.iter().find(|v| &v.conn_id == camera_2).unwrap();
+
+                let coord = calc_coordinate(
+                    camera_loc_1.clone(),
+                    orientation_1.into(),
+                    camera_loc_2.clone(),
+                    orientation_2.into(),
+                );
+
+                todo!("軌跡計算")
             }
-            embassy_futures::select::Either::Second(_) => {
-                todo!()
+            Either::Second((camera_id, camera_loc)) => {
+                info!("updating camera location for {:?}", camera_loc);
+                state.camera_loc.insert(camera_id, camera_loc).unwrap();
             }
-        };*/
+        };
     }
 }
 

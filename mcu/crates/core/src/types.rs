@@ -2,6 +2,7 @@
 
 use bt_hci::param::ConnHandle;
 use core::fmt::Debug;
+use nalgebra::Vector3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FrameId(u32);
@@ -75,5 +76,11 @@ impl CameraLocation {
         let z = data[8..].try_into().unwrap();
         let z = f32::from_le_bytes(z);
         Self { x, y, z }
+    }
+}
+
+impl CameraLocation {
+    pub fn into_vector3(self) -> Vector3<f32> {
+        Vector3::new(self.x, self.y, self.z)
     }
 }

@@ -12,6 +12,8 @@ defmt = { workspace = true, optional = true }
 embassy-sync = { workspace = true }
 embassy-futures = { workspace = true }
 
+nalgebra = { version = "0.35.0", default-features = false }
+
 [features]
 defmt = ["dep:defmt", "bt-hci/defmt"]
 log = ["dep:log", "bt-hci/log"]
