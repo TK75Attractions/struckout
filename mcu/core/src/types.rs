@@ -30,7 +30,7 @@ impl FrameId {
 }
 
 /// フレームのデータ。
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Frame {
     pub conn_id: ConnHandle,

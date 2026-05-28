@@ -1,12 +1,12 @@
 [workspace]
-members = ["crates/app", "crates/core"]
+members = ["app_esp32", "core", "app_linux"]
 resolver = "3"
 
 [workspace.package]
 edition = "2024"
 
 [workspace.dependencies]
-struckout-mcu-core = { path = "crates/core" }
+struckout-mcu-core = { path = "./core" }
 
 heapless = "0.9.3"
 bt-hci = "0.8.1"
@@ -15,7 +15,7 @@ defmt = "1.0.1"
 
 embassy-sync = "0.8.0"
 embassy-futures = "0.1.2"
-
+embassy-net = "0.9.1"
 
 [profile.dev]
 # Rust debug is too slow.

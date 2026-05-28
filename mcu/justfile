@@ -50,6 +50,8 @@ clippy-core-esp32:
 
 clippy-core-esp32s3:
     {{esp-env-var}} cargo +esp clippy {{target-esp32s3}} --features=defmt -p struckout-mcu-core {{esp-flags}}
+clippy-core-linux:
+    cargo +stable clippy --target x86_64-unknown-linux-gnu --no-default-features --features=log,std -p struckout-mcu-core
 
 clippy-all-esp32: clippy-app-esp32 clippy-core-esp32
 

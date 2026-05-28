@@ -4,6 +4,11 @@ mod types;
 pub use types::*;
 mod calc_coordinate;
 mod collision_point;
+mod transport;
+
+pub mod struckout{
+    include!(concat!(env!("OUT_DIR"),"/struckout.rs"));
+}
 
 use bt_hci::param::ConnHandle;
 use embassy_futures::select::*;
@@ -18,6 +23,9 @@ use crate::calc_coordinate::calc_coordinate;
     test
 ))]
 core::compile_error!("test cannot be ran on no_std");
+
+#[cfg(not(any(target_arch = "risv32", target_arch = "xtensa")))]
+extern crate std;
 
 /// frameデータをgattタスクから送るチャンネルのcapacity.
 pub const FRAME_CHANNEL_CAP: usize = 5;
@@ -78,9 +86,9 @@ pub async fn collect_frames(
 
                 let coord = calc_coordinate(
                     camera_loc_1.clone(),
-                    orientation_1.into(),
+                    orientation_1.clone().into(),
                     camera_loc_2.clone(),
-                    orientation_2.into(),
+                    orientation_2.clone().into(),
                 );
 
                 todo!("軌跡計算")

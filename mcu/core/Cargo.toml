@@ -8,12 +8,23 @@ heapless = { workspace = true }
 bt-hci = { workspace = true }
 log = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
+prost = "0.14.3"
 
 embassy-sync = { workspace = true }
 embassy-futures = { workspace = true }
+embassy-net = { workspace = true, optional = true }
 
 nalgebra = { version = "0.35.0", default-features = false }
+kfilter = { version = "0.5.1" }
+
 
 [features]
-defmt = ["dep:defmt", "bt-hci/defmt"]
+default = ["std", "log"]
+
+defmt = ["dep:defmt", "bt-hci/defmt", "kfilter/defmt", "nalgebra/defmt"]
 log = ["dep:log", "bt-hci/log"]
+std = ["nalgebra/std"]
+no_std = ["dep:embassy-net"]
+
+[build-dependencies]
+prost-build = "0.14.3"
