@@ -1,14 +1,29 @@
-#![no_std]
+#![cfg_attr(feature = "embedded", no_std)]
 mod fmt;
 mod types;
 pub use types::*;
 mod calc_coordinate;
 mod collision_point;
 mod transport;
+pub use transport::FrameSocket;
 
-pub mod struckout{
-    include!(concat!(env!("OUT_DIR"),"/struckout.rs"));
+extern crate alloc;
+
+pub mod protobuf {
+    include!(concat!(env!("OUT_DIR"), "/struckout.rs"));
 }
+
+#[cfg(all(feature = "embedded", test))]
+core::compile_error!("You cannot run test on no_std");
+
+#[cfg(all(feature = "defmt", feature = "log"))]
+core::compile_error!("You cannot enable both `defmt` and `log` features.");
+
+#[cfg(all(feature = "std", feature = "embedded"))]
+core::compile_error!("You cannot enable both `std` and `embedded` features.");
+
+#[cfg(not(any(feature = "std", feature = "embedded")))]
+core::compile_error!("You need to enable one of `std` or `embedded` feature.");
 
 use bt_hci::param::ConnHandle;
 use embassy_futures::select::*;
@@ -17,15 +32,6 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiv
 use heapless::{Deque, Vec, index_map::FnvIndexMap};
 
 use crate::calc_coordinate::calc_coordinate;
-
-#[cfg(all(
-    not(any(target_os = "linux", target_os = "macos", target_os = "windows")),
-    test
-))]
-core::compile_error!("test cannot be ran on no_std");
-
-#[cfg(not(any(target_arch = "risv32", target_arch = "xtensa")))]
-extern crate std;
 
 /// frameデータをgattタスクから送るチャンネルのcapacity.
 pub const FRAME_CHANNEL_CAP: usize = 5;
@@ -38,6 +44,11 @@ pub const FRAME_BUF_CAP: usize = 8;
 
 /// カメラの数
 pub const CAMERA_NUM: usize = 2; // TODO: CONNECTIONS_MAXと揃えるべき？
+
+/// Aggregates platform APIs. You can use either `std`, `tokio` or `embassy` depend on your target.
+pub trait Platform {
+    type FrameSocket: FrameSocket;
+}
 
 #[derive(Default)]
 pub struct State {

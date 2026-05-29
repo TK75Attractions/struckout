@@ -1,0 +1,10 @@
+{
+    "rust-analyzer.check.extraArgs": [
+        "--exclude",
+        "struckout-mcu-esp32"
+    ],
+    "rust-analyzer.cargo.extraArgs": [
+        "--exclude",
+        "struckout-mcu-esp32"
+    ],
+}

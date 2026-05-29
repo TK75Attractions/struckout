@@ -1,28 +1,19 @@
-use core::{alloc, net::SocketAddr};
+use std::net::SocketAddr;
 
-use ::alloc::vec::Vec;
-use bt_hci::param::ConnHandle;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use prost::Message;
-#[cfg(feature = "std")]
-type IoResult<T> = std::io::Result<T>;
-#[cfg(feature = "embedded")]
-type IoResult<T> = Result<T, embedded_io::Error>;
 
 use crate::{
-    CameraLocation, Frame,
     protobuf::{self, packet::Body::SendFrame},
+    types::CameraLocation,
+    types::Frame,
 };
-
-type FrameSender = Sender<'static, CriticalSectionRawMutex, Frame, FRAME_CHANNEL_CAP>;
-type CamaraLocSender =
-    Sender<'static, CriticalSectionRawMutex, (ConnHandle, CameraLocation), CAMERA_LOC_CHANNEL_CAP>;
 
 /// Socket to receive frames from cameras.
 pub trait FrameSocket {
-    fn bind(addr: SocketAddr) -> IoResult<Self>;
-    async fn recv_from(&self, buf: &mut [u8]) -> IoResult<(usize, SocketAddr)>;
+    fn bind(addr: SocketAddr) -> std::io::Result<Self>;
+    async fn recv_from(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)>;
 }
+
 pub struct FrameHandler<S> {
     socket: S,
     buf: Vec<u8>,
@@ -32,14 +23,14 @@ impl<S> FrameHandler<S>
 where
     S: FrameSocket,
 {
-    fn new(addr: SocketAddr) -> IoResult<Self> {
+    fn new(addr: SocketAddr) -> std::io::Result<Self> {
         Ok(Self {
             socket: S::bind(addr)?,
             buf: Vec::new(),
         })
     }
 
-    async fn receive(&mut self) -> IoResult<()> {
+    async fn receive(&mut self) -> std::io::Result<()> {
         let (len, addr) = self.socket.recv_from(&mut self.buf).await?;
         let packet = protobuf::Packet::decode(&mut self.buf)?;
         match packet.body.unwrap() {
@@ -48,6 +39,11 @@ where
         todo!();
         Ok(())
     }
+}
+
+/// Used to receive camera location from cameras.
+pub trait CameraLocationListener {
+    // TODO
 }
 
 pub async fn advertise_and_handle_gatt<'values, C: Controller>(
@@ -228,3 +224,5 @@ async fn advertise<'values, 'server, C: Controller>(
 
     Ok(conn)
 }
+
+mod tests {}

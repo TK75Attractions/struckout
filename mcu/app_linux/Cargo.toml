@@ -5,3 +5,4 @@ edition.workspace = true
 
 [dependencies]
 struckout-mcu-core = { workspace = true }
+tokio = { version = "1.52.3", features = ["net"] }

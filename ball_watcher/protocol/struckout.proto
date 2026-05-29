@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package struckout;
+
+message SendFrame{
+    double timestamp = 1;
+    float lay_x = 2;
+    float lay_y = 3;
+    float lay_z = 4;
+    // TODO: 特徴量
+}
+
+message Packet{
+    oneof body {
+        SendFrame send_frame = 1;
+    }
+}

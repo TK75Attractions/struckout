@@ -5,9 +5,6 @@
 
 use core::fmt::{Debug, Display, LowerHex};
 
-#[cfg(all(feature = "defmt", feature = "log"))]
-compile_error!("You may not enable both `defmt` and `log` features.");
-
 #[macro_export]
 #[collapse_debuginfo(yes)]
 macro_rules! assert {
