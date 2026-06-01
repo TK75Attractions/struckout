@@ -2,16 +2,28 @@ syntax = "proto3";
 
 package struckout;
 
-message SendFrame{
-    double timestamp = 1;
-    float lay_x = 2;
-    float lay_y = 3;
-    float lay_z = 4;
+import "google/protobuf/timestamp.proto";
+
+// UDPでカメラからサーバに送られるパケット
+message UdpPacket{
+    uint32 camera_id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    uint64 frame_id = 3;
+    repeated DetectedObject detected_objects = 4;
+}
+
+message DetectedObject{
+    float bbox_width = 1;
+    float bbox_height = 2;
+    float lay_x = 3;
+    float lay_y = 4;
+    float lay_z = 5;
     // TODO: 特徴量
 }
 
-message Packet{
-    oneof body {
-        SendFrame send_frame = 1;
-    }
+// TCPでカメラからサーバに送られるパケット
+message TcpPacket{
+    float x = 1;
+    float y = 2;
+    float z = 3;
 }

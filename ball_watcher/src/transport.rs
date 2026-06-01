@@ -1,228 +1,136 @@
-use std::net::SocketAddr;
+use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 
+use bytes::BytesMut;
 use prost::Message;
-
-use crate::{
-    protobuf::{self, packet::Body::SendFrame},
-    types::CameraLocation,
-    types::Frame,
+use tokio::{
+    io::AsyncReadExt,
+    net::{TcpListener, TcpStream, UdpSocket},
+    sync::{Mutex, mpsc},
+    task::JoinHandle,
+    time,
 };
+use tracing::info;
 
-/// Socket to receive frames from cameras.
-pub trait FrameSocket {
-    fn bind(addr: SocketAddr) -> std::io::Result<Self>;
-    async fn recv_from(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)>;
+use crate::protobuf::{TcpPacket, UdpPacket};
+
+const FRAME_UDP_ADDR_DEFAULT: &str = "0.0.0.0:5050";
+const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
+
+/// UDP Socket to receive frames from cameras.
+pub struct FrameSocket {
+    socket: UdpSocket,
+    buf: BytesMut,
+    tx: mpsc::Sender<UdpPacket>,
+    server_start: time::Instant,
+    /// クライアントにserver timeを送る周期
+    time_sync_interval: time::Interval,
+    clients: HashSet<SocketAddr>,
 }
 
-pub struct FrameHandler<S> {
-    socket: S,
-    buf: Vec<u8>,
-}
-
-impl<S> FrameHandler<S>
-where
-    S: FrameSocket,
-{
-    fn new(addr: SocketAddr) -> std::io::Result<Self> {
+impl FrameSocket {
+    pub async fn new(
+        tx: mpsc::Sender<UdpPacket>,
+        time_sync_interval: time::Duration,
+    ) -> std::io::Result<Self> {
+        // TODO: retry with other port if port is already used
+        let socket = UdpSocket::bind(FRAME_UDP_ADDR_DEFAULT).await?;
         Ok(Self {
-            socket: S::bind(addr)?,
-            buf: Vec::new(),
+            socket,
+            buf: BytesMut::new(),
+            tx,
+            server_start: time::Instant::now(),
+            time_sync_interval: time::interval(time_sync_interval),
+            clients: HashSet::new(),
         })
     }
 
-    async fn receive(&mut self) -> std::io::Result<()> {
-        let (len, addr) = self.socket.recv_from(&mut self.buf).await?;
-        let packet = protobuf::Packet::decode(&mut self.buf)?;
-        match packet.body.unwrap() {
-            SendFrame(send_frame) => todo!(),
+    pub async fn start(&mut self) -> std::io::Result<()> {
+        loop {
+            let (_len, addr) = self.socket.recv_from(&mut self.buf).await?;
+            let is_inserted = self.clients.insert(addr);
+            if is_inserted {
+                info!(address = ?addr, "received frame from new device");
+            }
+            let packet = UdpPacket::decode(&mut self.buf)?;
+            self.tx.send(packet).await.unwrap();
         }
-        todo!();
-        Ok(())
     }
-}
 
-/// Used to receive camera location from cameras.
-pub trait CameraLocationListener {
-    // TODO
-}
-
-pub async fn advertise_and_handle_gatt<'values, C: Controller>(
-    peripheral: &mut Peripheral<'values, C, DefaultPacketPool>,
-    server: &'_ Server<'values>,
-    frame_tx: FrameSender,
-    camera_loc_tx: CamaraLocSender,
-) {
-    // Track connections in slots. Slot value is taken when being handled.
-    let mut conn_slot_0: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
-    let mut conn_slot_1: Option<GattConnection<'_, '_, DefaultPacketPool>> = None;
-    let frame_handle = server.service.frame.handle;
-    let camera_handle = server.service.camera_loc.handle;
-
-    loop {
-        // Race: accept new connection OR handle existing connections
-        let result = select3(
-            async {
-                if conn_slot_0.is_none() || conn_slot_1.is_none() {
-                    // Try to accept a new connection
-                    match advertise("Struckout", peripheral, server).await {
-                        Ok(conn) => Some(conn),
-                        Err(e) => {
-                            panic!("[adv] error: {:?}", e);
-                        }
-                    }
-                } else {
-                    info!("[adv] slots are full, stop advertising");
-                    core::future::pending::<Option<GattConnection<DefaultPacketPool>>>().await;
-                    None
-                }
-            },
-            async {
-                // Try to handle connections from slots
-                // If slot 0 has a connection, handle it
-                if let Some(conn) = &conn_slot_0 {
-                    info!("[handler] waiting for event on slot 0");
-                    gatt_handler(conn, frame_handle, camera_handle, frame_tx, camera_loc_tx).await;
-                    info!("[handler] slot 0 connection closed");
-                    return;
-                }
-                core::future::pending::<()>().await;
-            },
-            async {
-                // If slot 1 has a connection, handle it
-                if let Some(conn) = &conn_slot_1 {
-                    info!("[handler] waiting for event on slot 1");
-                    gatt_handler(conn, frame_handle, camera_handle, frame_tx, camera_loc_tx).await;
-                    info!("[handler] slot 1 connection closed");
-                    return;
-                }
-                core::future::pending::<()>().await;
-            },
-        )
-        .await;
-
-        // Handle the result of select
-        match result {
-            embassy_futures::select::Either3::First(Some(conn)) => {
-                // Place new connection in empty slot
-                if conn_slot_0.is_none() {
-                    conn_slot_0 = Some(conn);
-                    info!("[adv] connection placed in slot 0");
-                } else if conn_slot_1.is_none() {
-                    conn_slot_1 = Some(conn);
-                    info!("[adv] connection placed in slot 1");
-                } else {
-                    unreachable!("advertising should be stopped when all slots are full");
-                }
-            }
-            embassy_futures::select::Either3::Second(_) => {
-                info!("[adv] connection on slot 0 closed");
-            }
-            embassy_futures::select::Either3::Third(_) => {
-                info!("[adv] connection on slot 1 closed");
-            }
-            _ => {}
+    /// サーバが開始した時刻からのタイムスタンプを全クライアントに送る
+    async fn send_server_time(&self) {
+        let now = time::Instant::now();
+        let server_timestamp = (now - self.server_start).as_nanos();
+        for s in &self.clients {
+            let time_bytes = server_timestamp.to_le_bytes();
+            self.socket.send_to(&time_bytes, s);
         }
     }
 }
 
-/// Stream events for a single connection until it closes.
-///
-/// This function will handle the GATT events and process them.
-/// This is how we interact with read and write requests.
-/// Called from the advertising loop when a new connection is accepted.
-async fn gatt_handler<P: PacketPool>(
-    conn: &GattConnection<'_, '_, P>,
-    frame_handle: u16,
-    camera_handle: u16,
-    frame_tx: FrameSender,
-    camera_loc_tx: CamaraLocSender,
-) {
-    let reason = loop {
-        match conn.next().await {
-            GattConnectionEvent::Disconnected { reason } => break reason,
-            GattConnectionEvent::Gatt { event } => {
-                match &event {
-                    GattEvent::Read(_event) => {}
-                    GattEvent::Write(event) => {
-                        if event.handle() == frame_handle {
-                            let data = event.data();
-                            let data: [u8; 16] = match data.try_into() {
-                                Ok(val) => val,
-                                Err(_) => {
-                                    warning!(
-                                        "[gatt] event data for writing frame was incorrect: {:?}",
-                                        data
-                                    );
-                                    return;
-                                }
-                            };
-                            let frame = Frame::from_bytes(data, conn.raw().handle());
-                            frame_tx.send(frame).await;
-                        }
-                        if event.handle() == camera_handle {
-                            let data = event.data();
-                            let data = match event.data().try_into() {
-                                Ok(v) => v,
-                                Err(_) => {
-                                    warning!(
-                                        "[gatt] event data for camera location was incorrect: {:?}",
-                                        data
-                                    );
-                                    return;
-                                }
-                            };
-                            let loc = CameraLocation::from_bytes(data);
-                            camera_loc_tx.send((conn.raw().handle(), loc)).await;
-                        }
-                    }
-                    _ => (),
+/// TCP socket to receive camera location from cameras.
+pub struct CameraLocationListener {
+    listener: TcpListener,
+    join_handles: Vec<JoinHandle<()>>,
+    tx: mpsc::Sender<TcpPacket>,
+    streams: Arc<Mutex<Vec<TcpStream>>>,
+    server_start: time::Instant,
+}
+
+impl CameraLocationListener {
+    pub async fn new(tx: mpsc::Sender<TcpPacket>) -> std::io::Result<Self> {
+        // TODO: retry with other port if port is already used
+        info!(
+            port = CAMERA_LOC_TCP_ADDR_DEFAULT,
+            "trying to bind port for `CameraLocationListener`"
+        );
+        let listener = TcpListener::bind(CAMERA_LOC_TCP_ADDR_DEFAULT).await?;
+        info!("succeed to bind port for `CameraLocationListener`");
+        Ok(Self {
+            listener,
+            join_handles: Vec::new(),
+            tx,
+            streams: Arc::new(Mutex::new(Vec::new())),
+            server_start: time::Instant::now(),
+        })
+    }
+
+    pub async fn listen(&mut self) {
+        match self.listener.accept().await {
+            Ok((stream, _addr)) => {
+                let stream_pos = {
+                    let mut streams = self.streams.lock().await;
+                    let stream_pos = streams.len();
+                    streams.push(stream);
+                    stream_pos
                 };
-                // This step is also performed at drop(), but writing it explicitly is necessary
-                // in order to ensure reply is sent.
-                match event.accept() {
-                    Ok(reply) => reply.send().await,
-                    Err(e) => warning!("[gatt] error while sending response: {:?}", e),
-                }
+                let streams = Arc::clone(&self.streams);
+                let tx = self.tx.clone();
+                let join = tokio::spawn(async move {
+                    let mut buf = BytesMut::new();
+                    loop {
+                        {
+                            let mut streams = streams.lock().await;
+                            let stream = streams.get_mut(stream_pos).unwrap();
+                            let _len = stream.read(&mut buf).await.unwrap(); // TODO: handle errors
+                        }
+                        let packet = TcpPacket::decode(&mut buf).unwrap(); // TODO: handle errors
+                        tx.send(packet).await.unwrap(); // TODO: handle error
+                    }
+                });
+                self.join_handles.push(join);
             }
-            _ => (),
-        };
-    };
-    info!("[gatt] disconnected: {:?}", reason);
+            Err(_e) => {
+                // TODO: handle errors
+                todo!()
+            }
+        }
+    }
 }
 
-async fn advertise<'values, 'server, C: Controller>(
-    name: &'values str,
-    peripheral: &mut Peripheral<'values, C, DefaultPacketPool>,
-    server: &'server Server<'values>,
-) -> Result<GattConnection<'values, 'server, DefaultPacketPool>, BleHostError<C::Error>> {
-    let mut advertiser_data = [0; 31];
-    let len = AdStructure::encode_slice(
-        &[
-            AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-            AdStructure::IncompleteServiceUuids16(&[[0x0f, 0x18]]),
-            AdStructure::CompleteLocalName(name.as_bytes()),
-        ],
-        &mut advertiser_data[..],
-    )?;
-    let advertiser = peripheral
-        .advertise(
-            &Default::default(),
-            Advertisement::ConnectableScannableUndirected {
-                adv_data: &advertiser_data[..len],
-                scan_data: &[],
-            },
-        )
-        .await?;
-    info!("[adv] advertising");
-    let result = advertiser
-        .accept()
-        .await?
-        .with_attribute_server::<_, _, _, 2>(&server.server);
-
-    let conn = result?;
-    info!("[adv] connection established");
-
-    Ok(conn)
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn hoge() {
+        todo!()
+    }
 }
-
-mod tests {}

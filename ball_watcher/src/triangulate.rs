@@ -1,16 +1,14 @@
 use nalgebra::Vector3;
 
-use crate::{CameraLocation, Frame};
-
 pub(crate) fn calc_coordinate(
-    camera_loc_1: CameraLocation,
+    camera_loc_1: Vector3<f32>,
     orientation_1: Orientation,
-    camera_loc_2: CameraLocation,
+    camera_loc_2: Vector3<f32>,
     orientation_2: Orientation,
 ) -> Coordinate {
     // TODO: From / Intoを使う
-    let p = camera_loc_1.into_vector3();
-    let q = camera_loc_2.into_vector3();
+    let p = camera_loc_1;
+    let q = camera_loc_2;
     let a = orientation_1.into_vector3();
     let b = orientation_2.into_vector3();
 
@@ -31,16 +29,6 @@ pub struct Orientation {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-}
-
-impl From<Frame> for Orientation {
-    fn from(value: Frame) -> Self {
-        Self {
-            x: value.x,
-            y: value.y,
-            z: value.z,
-        }
-    }
 }
 
 impl Orientation {
