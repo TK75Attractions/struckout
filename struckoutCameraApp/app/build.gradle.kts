@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.nav.compose)
     implementation(libs.kable.core)
+    implementation(libs.protobuf.core)
     implementation(project(":opencv"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
