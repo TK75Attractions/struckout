@@ -22,8 +22,19 @@ message DetectedObject{
 }
 
 // TCPでカメラからサーバに送られるパケット
-message TcpPacket{
+message TcpClientPacket{
+    oneof data{
+        CameraLocation camera_location = 1;
+    }
+}
+
+message CameraLocation{
     float x = 1;
     float y = 2;
     float z = 3;
+}
+
+// TCPでサーバーからカメラに送られるパケット
+message TcpServerPacket{
+
 }

@@ -1945,8 +1945,722 @@ public final class Struckout {
 
   }
 
-  public interface TcpPacketOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:struckout.TcpPacket)
+  public interface TcpClientPacketOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:struckout.TcpClientPacket)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.struckout.CameraLocation camera_location = 1;</code>
+     * @return Whether the cameraLocation field is set.
+     */
+    boolean hasCameraLocation();
+    /**
+     * <code>.struckout.CameraLocation camera_location = 1;</code>
+     * @return The cameraLocation.
+     */
+    struckout.Struckout.CameraLocation getCameraLocation();
+    /**
+     * <code>.struckout.CameraLocation camera_location = 1;</code>
+     */
+    struckout.Struckout.CameraLocationOrBuilder getCameraLocationOrBuilder();
+
+    public struckout.Struckout.TcpClientPacket.DataCase getDataCase();
+  }
+  /**
+   * <pre>
+   * TCPでカメラからサーバに送られるパケット
+   * </pre>
+   *
+   * Protobuf type {@code struckout.TcpClientPacket}
+   */
+  public static final class TcpClientPacket extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:struckout.TcpClientPacket)
+      TcpClientPacketOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use TcpClientPacket.newBuilder() to construct.
+    private TcpClientPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private TcpClientPacket() {
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new TcpClientPacket();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return struckout.Struckout.internal_static_struckout_TcpClientPacket_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return struckout.Struckout.internal_static_struckout_TcpClientPacket_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              struckout.Struckout.TcpClientPacket.class, struckout.Struckout.TcpClientPacket.Builder.class);
+    }
+
+    private int dataCase_ = 0;
+    private java.lang.Object data_;
+    public enum DataCase
+        implements com.google.protobuf.Internal.EnumLite,
+            com.google.protobuf.AbstractMessage.InternalOneOfEnum {
+      CAMERA_LOCATION(1),
+      DATA_NOT_SET(0);
+      private final int value;
+      private DataCase(int value) {
+        this.value = value;
+      }
+      /**
+       * @param value The number of the enum to look for.
+       * @return The enum associated with the given number.
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static DataCase valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static DataCase forNumber(int value) {
+        switch (value) {
+          case 1: return CAMERA_LOCATION;
+          case 0: return DATA_NOT_SET;
+          default: return null;
+        }
+      }
+      public int getNumber() {
+        return this.value;
+      }
+    };
+
+    public DataCase
+    getDataCase() {
+      return DataCase.forNumber(
+          dataCase_);
+    }
+
+    public static final int CAMERA_LOCATION_FIELD_NUMBER = 1;
+    /**
+     * <code>.struckout.CameraLocation camera_location = 1;</code>
+     * @return Whether the cameraLocation field is set.
+     */
+    @java.lang.Override
+    public boolean hasCameraLocation() {
+      return dataCase_ == 1;
+    }
+    /**
+     * <code>.struckout.CameraLocation camera_location = 1;</code>
+     * @return The cameraLocation.
+     */
+    @java.lang.Override
+    public struckout.Struckout.CameraLocation getCameraLocation() {
+      if (dataCase_ == 1) {
+         return (struckout.Struckout.CameraLocation) data_;
+      }
+      return struckout.Struckout.CameraLocation.getDefaultInstance();
+    }
+    /**
+     * <code>.struckout.CameraLocation camera_location = 1;</code>
+     */
+    @java.lang.Override
+    public struckout.Struckout.CameraLocationOrBuilder getCameraLocationOrBuilder() {
+      if (dataCase_ == 1) {
+         return (struckout.Struckout.CameraLocation) data_;
+      }
+      return struckout.Struckout.CameraLocation.getDefaultInstance();
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (dataCase_ == 1) {
+        output.writeMessage(1, (struckout.Struckout.CameraLocation) data_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (dataCase_ == 1) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, (struckout.Struckout.CameraLocation) data_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof struckout.Struckout.TcpClientPacket)) {
+        return super.equals(obj);
+      }
+      struckout.Struckout.TcpClientPacket other = (struckout.Struckout.TcpClientPacket) obj;
+
+      if (!getDataCase().equals(other.getDataCase())) return false;
+      switch (dataCase_) {
+        case 1:
+          if (!getCameraLocation()
+              .equals(other.getCameraLocation())) return false;
+          break;
+        case 0:
+        default:
+      }
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      switch (dataCase_) {
+        case 1:
+          hash = (37 * hash) + CAMERA_LOCATION_FIELD_NUMBER;
+          hash = (53 * hash) + getCameraLocation().hashCode();
+          break;
+        case 0:
+        default:
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpClientPacket parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static struckout.Struckout.TcpClientPacket parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static struckout.Struckout.TcpClientPacket parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(struckout.Struckout.TcpClientPacket prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * TCPでカメラからサーバに送られるパケット
+     * </pre>
+     *
+     * Protobuf type {@code struckout.TcpClientPacket}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:struckout.TcpClientPacket)
+        struckout.Struckout.TcpClientPacketOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return struckout.Struckout.internal_static_struckout_TcpClientPacket_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return struckout.Struckout.internal_static_struckout_TcpClientPacket_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                struckout.Struckout.TcpClientPacket.class, struckout.Struckout.TcpClientPacket.Builder.class);
+      }
+
+      // Construct using struckout.Struckout.TcpClientPacket.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        if (cameraLocationBuilder_ != null) {
+          cameraLocationBuilder_.clear();
+        }
+        dataCase_ = 0;
+        data_ = null;
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return struckout.Struckout.internal_static_struckout_TcpClientPacket_descriptor;
+      }
+
+      @java.lang.Override
+      public struckout.Struckout.TcpClientPacket getDefaultInstanceForType() {
+        return struckout.Struckout.TcpClientPacket.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public struckout.Struckout.TcpClientPacket build() {
+        struckout.Struckout.TcpClientPacket result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public struckout.Struckout.TcpClientPacket buildPartial() {
+        struckout.Struckout.TcpClientPacket result = new struckout.Struckout.TcpClientPacket(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        buildPartialOneofs(result);
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(struckout.Struckout.TcpClientPacket result) {
+        int from_bitField0_ = bitField0_;
+      }
+
+      private void buildPartialOneofs(struckout.Struckout.TcpClientPacket result) {
+        result.dataCase_ = dataCase_;
+        result.data_ = this.data_;
+        if (dataCase_ == 1 &&
+            cameraLocationBuilder_ != null) {
+          result.data_ = cameraLocationBuilder_.build();
+        }
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof struckout.Struckout.TcpClientPacket) {
+          return mergeFrom((struckout.Struckout.TcpClientPacket)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(struckout.Struckout.TcpClientPacket other) {
+        if (other == struckout.Struckout.TcpClientPacket.getDefaultInstance()) return this;
+        switch (other.getDataCase()) {
+          case CAMERA_LOCATION: {
+            mergeCameraLocation(other.getCameraLocation());
+            break;
+          }
+          case DATA_NOT_SET: {
+            break;
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                input.readMessage(
+                    getCameraLocationFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                dataCase_ = 1;
+                break;
+              } // case 10
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int dataCase_ = 0;
+      private java.lang.Object data_;
+      public DataCase
+          getDataCase() {
+        return DataCase.forNumber(
+            dataCase_);
+      }
+
+      public Builder clearData() {
+        dataCase_ = 0;
+        data_ = null;
+        onChanged();
+        return this;
+      }
+
+      private int bitField0_;
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          struckout.Struckout.CameraLocation, struckout.Struckout.CameraLocation.Builder, struckout.Struckout.CameraLocationOrBuilder> cameraLocationBuilder_;
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       * @return Whether the cameraLocation field is set.
+       */
+      @java.lang.Override
+      public boolean hasCameraLocation() {
+        return dataCase_ == 1;
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       * @return The cameraLocation.
+       */
+      @java.lang.Override
+      public struckout.Struckout.CameraLocation getCameraLocation() {
+        if (cameraLocationBuilder_ == null) {
+          if (dataCase_ == 1) {
+            return (struckout.Struckout.CameraLocation) data_;
+          }
+          return struckout.Struckout.CameraLocation.getDefaultInstance();
+        } else {
+          if (dataCase_ == 1) {
+            return cameraLocationBuilder_.getMessage();
+          }
+          return struckout.Struckout.CameraLocation.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      public Builder setCameraLocation(struckout.Struckout.CameraLocation value) {
+        if (cameraLocationBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          data_ = value;
+          onChanged();
+        } else {
+          cameraLocationBuilder_.setMessage(value);
+        }
+        dataCase_ = 1;
+        return this;
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      public Builder setCameraLocation(
+          struckout.Struckout.CameraLocation.Builder builderForValue) {
+        if (cameraLocationBuilder_ == null) {
+          data_ = builderForValue.build();
+          onChanged();
+        } else {
+          cameraLocationBuilder_.setMessage(builderForValue.build());
+        }
+        dataCase_ = 1;
+        return this;
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      public Builder mergeCameraLocation(struckout.Struckout.CameraLocation value) {
+        if (cameraLocationBuilder_ == null) {
+          if (dataCase_ == 1 &&
+              data_ != struckout.Struckout.CameraLocation.getDefaultInstance()) {
+            data_ = struckout.Struckout.CameraLocation.newBuilder((struckout.Struckout.CameraLocation) data_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            data_ = value;
+          }
+          onChanged();
+        } else {
+          if (dataCase_ == 1) {
+            cameraLocationBuilder_.mergeFrom(value);
+          } else {
+            cameraLocationBuilder_.setMessage(value);
+          }
+        }
+        dataCase_ = 1;
+        return this;
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      public Builder clearCameraLocation() {
+        if (cameraLocationBuilder_ == null) {
+          if (dataCase_ == 1) {
+            dataCase_ = 0;
+            data_ = null;
+            onChanged();
+          }
+        } else {
+          if (dataCase_ == 1) {
+            dataCase_ = 0;
+            data_ = null;
+          }
+          cameraLocationBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      public struckout.Struckout.CameraLocation.Builder getCameraLocationBuilder() {
+        return getCameraLocationFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      @java.lang.Override
+      public struckout.Struckout.CameraLocationOrBuilder getCameraLocationOrBuilder() {
+        if ((dataCase_ == 1) && (cameraLocationBuilder_ != null)) {
+          return cameraLocationBuilder_.getMessageOrBuilder();
+        } else {
+          if (dataCase_ == 1) {
+            return (struckout.Struckout.CameraLocation) data_;
+          }
+          return struckout.Struckout.CameraLocation.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.struckout.CameraLocation camera_location = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          struckout.Struckout.CameraLocation, struckout.Struckout.CameraLocation.Builder, struckout.Struckout.CameraLocationOrBuilder> 
+          getCameraLocationFieldBuilder() {
+        if (cameraLocationBuilder_ == null) {
+          if (!(dataCase_ == 1)) {
+            data_ = struckout.Struckout.CameraLocation.getDefaultInstance();
+          }
+          cameraLocationBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              struckout.Struckout.CameraLocation, struckout.Struckout.CameraLocation.Builder, struckout.Struckout.CameraLocationOrBuilder>(
+                  (struckout.Struckout.CameraLocation) data_,
+                  getParentForChildren(),
+                  isClean());
+          data_ = null;
+        }
+        dataCase_ = 1;
+        onChanged();
+        return cameraLocationBuilder_;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:struckout.TcpClientPacket)
+    }
+
+    // @@protoc_insertion_point(class_scope:struckout.TcpClientPacket)
+    private static final struckout.Struckout.TcpClientPacket DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new struckout.Struckout.TcpClientPacket();
+    }
+
+    public static struckout.Struckout.TcpClientPacket getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<TcpClientPacket>
+        PARSER = new com.google.protobuf.AbstractParser<TcpClientPacket>() {
+      @java.lang.Override
+      public TcpClientPacket parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<TcpClientPacket> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TcpClientPacket> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public struckout.Struckout.TcpClientPacket getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface CameraLocationOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:struckout.CameraLocation)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -1968,29 +2682,25 @@ public final class Struckout {
     float getZ();
   }
   /**
-   * <pre>
-   * TCPでカメラからサーバに送られるパケット
-   * </pre>
-   *
-   * Protobuf type {@code struckout.TcpPacket}
+   * Protobuf type {@code struckout.CameraLocation}
    */
-  public static final class TcpPacket extends
+  public static final class CameraLocation extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:struckout.TcpPacket)
-      TcpPacketOrBuilder {
+      // @@protoc_insertion_point(message_implements:struckout.CameraLocation)
+      CameraLocationOrBuilder {
   private static final long serialVersionUID = 0L;
-    // Use TcpPacket.newBuilder() to construct.
-    private TcpPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    // Use CameraLocation.newBuilder() to construct.
+    private CameraLocation(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
-    private TcpPacket() {
+    private CameraLocation() {
     }
 
     @java.lang.Override
     @SuppressWarnings({"unused"})
     protected java.lang.Object newInstance(
         UnusedPrivateParameter unused) {
-      return new TcpPacket();
+      return new CameraLocation();
     }
 
     @java.lang.Override
@@ -2000,15 +2710,15 @@ public final class Struckout {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return struckout.Struckout.internal_static_struckout_TcpPacket_descriptor;
+      return struckout.Struckout.internal_static_struckout_CameraLocation_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return struckout.Struckout.internal_static_struckout_TcpPacket_fieldAccessorTable
+      return struckout.Struckout.internal_static_struckout_CameraLocation_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              struckout.Struckout.TcpPacket.class, struckout.Struckout.TcpPacket.Builder.class);
+              struckout.Struckout.CameraLocation.class, struckout.Struckout.CameraLocation.Builder.class);
     }
 
     public static final int X_FIELD_NUMBER = 1;
@@ -2098,10 +2808,10 @@ public final class Struckout {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof struckout.Struckout.TcpPacket)) {
+      if (!(obj instanceof struckout.Struckout.CameraLocation)) {
         return super.equals(obj);
       }
-      struckout.Struckout.TcpPacket other = (struckout.Struckout.TcpPacket) obj;
+      struckout.Struckout.CameraLocation other = (struckout.Struckout.CameraLocation) obj;
 
       if (java.lang.Float.floatToIntBits(getX())
           != java.lang.Float.floatToIntBits(
@@ -2137,69 +2847,69 @@ public final class Struckout {
       return hash;
     }
 
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         java.nio.ByteBuffer data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         java.nio.ByteBuffer data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(byte[] data)
+    public static struckout.Struckout.CameraLocation parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(java.io.InputStream input)
+    public static struckout.Struckout.CameraLocation parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
-    public static struckout.Struckout.TcpPacket parseDelimitedFrom(java.io.InputStream input)
+    public static struckout.Struckout.CameraLocation parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
-    public static struckout.Struckout.TcpPacket parseDelimitedFrom(
+    public static struckout.Struckout.CameraLocation parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static struckout.Struckout.TcpPacket parseFrom(
+    public static struckout.Struckout.CameraLocation parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2212,7 +2922,7 @@ public final class Struckout {
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(struckout.Struckout.TcpPacket prototype) {
+    public static Builder newBuilder(struckout.Struckout.CameraLocation prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
     @java.lang.Override
@@ -2228,30 +2938,26 @@ public final class Struckout {
       return builder;
     }
     /**
-     * <pre>
-     * TCPでカメラからサーバに送られるパケット
-     * </pre>
-     *
-     * Protobuf type {@code struckout.TcpPacket}
+     * Protobuf type {@code struckout.CameraLocation}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:struckout.TcpPacket)
-        struckout.Struckout.TcpPacketOrBuilder {
+        // @@protoc_insertion_point(builder_implements:struckout.CameraLocation)
+        struckout.Struckout.CameraLocationOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return struckout.Struckout.internal_static_struckout_TcpPacket_descriptor;
+        return struckout.Struckout.internal_static_struckout_CameraLocation_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return struckout.Struckout.internal_static_struckout_TcpPacket_fieldAccessorTable
+        return struckout.Struckout.internal_static_struckout_CameraLocation_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                struckout.Struckout.TcpPacket.class, struckout.Struckout.TcpPacket.Builder.class);
+                struckout.Struckout.CameraLocation.class, struckout.Struckout.CameraLocation.Builder.class);
       }
 
-      // Construct using struckout.Struckout.TcpPacket.newBuilder()
+      // Construct using struckout.Struckout.CameraLocation.newBuilder()
       private Builder() {
 
       }
@@ -2274,17 +2980,17 @@ public final class Struckout {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return struckout.Struckout.internal_static_struckout_TcpPacket_descriptor;
+        return struckout.Struckout.internal_static_struckout_CameraLocation_descriptor;
       }
 
       @java.lang.Override
-      public struckout.Struckout.TcpPacket getDefaultInstanceForType() {
-        return struckout.Struckout.TcpPacket.getDefaultInstance();
+      public struckout.Struckout.CameraLocation getDefaultInstanceForType() {
+        return struckout.Struckout.CameraLocation.getDefaultInstance();
       }
 
       @java.lang.Override
-      public struckout.Struckout.TcpPacket build() {
-        struckout.Struckout.TcpPacket result = buildPartial();
+      public struckout.Struckout.CameraLocation build() {
+        struckout.Struckout.CameraLocation result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
@@ -2292,14 +2998,14 @@ public final class Struckout {
       }
 
       @java.lang.Override
-      public struckout.Struckout.TcpPacket buildPartial() {
-        struckout.Struckout.TcpPacket result = new struckout.Struckout.TcpPacket(this);
+      public struckout.Struckout.CameraLocation buildPartial() {
+        struckout.Struckout.CameraLocation result = new struckout.Struckout.CameraLocation(this);
         if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
       }
 
-      private void buildPartial0(struckout.Struckout.TcpPacket result) {
+      private void buildPartial0(struckout.Struckout.CameraLocation result) {
         int from_bitField0_ = bitField0_;
         if (((from_bitField0_ & 0x00000001) != 0)) {
           result.x_ = x_;
@@ -2346,16 +3052,16 @@ public final class Struckout {
       }
       @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof struckout.Struckout.TcpPacket) {
-          return mergeFrom((struckout.Struckout.TcpPacket)other);
+        if (other instanceof struckout.Struckout.CameraLocation) {
+          return mergeFrom((struckout.Struckout.CameraLocation)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(struckout.Struckout.TcpPacket other) {
-        if (other == struckout.Struckout.TcpPacket.getDefaultInstance()) return this;
+      public Builder mergeFrom(struckout.Struckout.CameraLocation other) {
+        if (other == struckout.Struckout.CameraLocation.getDefaultInstance()) return this;
         if (other.getX() != 0F) {
           setX(other.getX());
         }
@@ -2531,23 +3237,23 @@ public final class Struckout {
       }
 
 
-      // @@protoc_insertion_point(builder_scope:struckout.TcpPacket)
+      // @@protoc_insertion_point(builder_scope:struckout.CameraLocation)
     }
 
-    // @@protoc_insertion_point(class_scope:struckout.TcpPacket)
-    private static final struckout.Struckout.TcpPacket DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:struckout.CameraLocation)
+    private static final struckout.Struckout.CameraLocation DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new struckout.Struckout.TcpPacket();
+      DEFAULT_INSTANCE = new struckout.Struckout.CameraLocation();
     }
 
-    public static struckout.Struckout.TcpPacket getDefaultInstance() {
+    public static struckout.Struckout.CameraLocation getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<TcpPacket>
-        PARSER = new com.google.protobuf.AbstractParser<TcpPacket>() {
+    private static final com.google.protobuf.Parser<CameraLocation>
+        PARSER = new com.google.protobuf.AbstractParser<CameraLocation>() {
       @java.lang.Override
-      public TcpPacket parsePartialFrom(
+      public CameraLocation parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2566,17 +3272,425 @@ public final class Struckout {
       }
     };
 
-    public static com.google.protobuf.Parser<TcpPacket> parser() {
+    public static com.google.protobuf.Parser<CameraLocation> parser() {
       return PARSER;
     }
 
     @java.lang.Override
-    public com.google.protobuf.Parser<TcpPacket> getParserForType() {
+    public com.google.protobuf.Parser<CameraLocation> getParserForType() {
       return PARSER;
     }
 
     @java.lang.Override
-    public struckout.Struckout.TcpPacket getDefaultInstanceForType() {
+    public struckout.Struckout.CameraLocation getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface TcpServerPacketOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:struckout.TcpServerPacket)
+      com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * <pre>
+   * TCPでサーバーからカメラに送られるパケット
+   * </pre>
+   *
+   * Protobuf type {@code struckout.TcpServerPacket}
+   */
+  public static final class TcpServerPacket extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:struckout.TcpServerPacket)
+      TcpServerPacketOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use TcpServerPacket.newBuilder() to construct.
+    private TcpServerPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private TcpServerPacket() {
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new TcpServerPacket();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return struckout.Struckout.internal_static_struckout_TcpServerPacket_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return struckout.Struckout.internal_static_struckout_TcpServerPacket_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              struckout.Struckout.TcpServerPacket.class, struckout.Struckout.TcpServerPacket.Builder.class);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof struckout.Struckout.TcpServerPacket)) {
+        return super.equals(obj);
+      }
+      struckout.Struckout.TcpServerPacket other = (struckout.Struckout.TcpServerPacket) obj;
+
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpServerPacket parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static struckout.Struckout.TcpServerPacket parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static struckout.Struckout.TcpServerPacket parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(struckout.Struckout.TcpServerPacket prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * TCPでサーバーからカメラに送られるパケット
+     * </pre>
+     *
+     * Protobuf type {@code struckout.TcpServerPacket}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:struckout.TcpServerPacket)
+        struckout.Struckout.TcpServerPacketOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return struckout.Struckout.internal_static_struckout_TcpServerPacket_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return struckout.Struckout.internal_static_struckout_TcpServerPacket_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                struckout.Struckout.TcpServerPacket.class, struckout.Struckout.TcpServerPacket.Builder.class);
+      }
+
+      // Construct using struckout.Struckout.TcpServerPacket.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return struckout.Struckout.internal_static_struckout_TcpServerPacket_descriptor;
+      }
+
+      @java.lang.Override
+      public struckout.Struckout.TcpServerPacket getDefaultInstanceForType() {
+        return struckout.Struckout.TcpServerPacket.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public struckout.Struckout.TcpServerPacket build() {
+        struckout.Struckout.TcpServerPacket result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public struckout.Struckout.TcpServerPacket buildPartial() {
+        struckout.Struckout.TcpServerPacket result = new struckout.Struckout.TcpServerPacket(this);
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof struckout.Struckout.TcpServerPacket) {
+          return mergeFrom((struckout.Struckout.TcpServerPacket)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(struckout.Struckout.TcpServerPacket other) {
+        if (other == struckout.Struckout.TcpServerPacket.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:struckout.TcpServerPacket)
+    }
+
+    // @@protoc_insertion_point(class_scope:struckout.TcpServerPacket)
+    private static final struckout.Struckout.TcpServerPacket DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new struckout.Struckout.TcpServerPacket();
+    }
+
+    public static struckout.Struckout.TcpServerPacket getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<TcpServerPacket>
+        PARSER = new com.google.protobuf.AbstractParser<TcpServerPacket>() {
+      @java.lang.Override
+      public TcpServerPacket parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<TcpServerPacket> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TcpServerPacket> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public struckout.Struckout.TcpServerPacket getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -2593,10 +3707,20 @@ public final class Struckout {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_struckout_DetectedObject_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_struckout_TcpPacket_descriptor;
+    internal_static_struckout_TcpClientPacket_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_struckout_TcpPacket_fieldAccessorTable;
+      internal_static_struckout_TcpClientPacket_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_struckout_CameraLocation_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_struckout_CameraLocation_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_struckout_TcpServerPacket_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_struckout_TcpServerPacket_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -2613,9 +3737,11 @@ public final class Struckout {
       "3\n\020detected_objects\030\004 \003(\0132\031.struckout.De" +
       "tectedObject\"f\n\016DetectedObject\022\022\n\nbbox_w" +
       "idth\030\001 \001(\002\022\023\n\013bbox_height\030\002 \001(\002\022\r\n\005lay_x" +
-      "\030\003 \001(\002\022\r\n\005lay_y\030\004 \001(\002\022\r\n\005lay_z\030\005 \001(\002\",\n\t" +
-      "TcpPacket\022\t\n\001x\030\001 \001(\002\022\t\n\001y\030\002 \001(\002\022\t\n\001z\030\003 \001" +
-      "(\002b\006proto3"
+      "\030\003 \001(\002\022\r\n\005lay_y\030\004 \001(\002\022\r\n\005lay_z\030\005 \001(\002\"O\n\017" +
+      "TcpClientPacket\0224\n\017camera_location\030\001 \001(\013" +
+      "2\031.struckout.CameraLocationH\000B\006\n\004data\"1\n" +
+      "\016CameraLocation\022\t\n\001x\030\001 \001(\002\022\t\n\001y\030\002 \001(\002\022\t\n" +
+      "\001z\030\003 \001(\002\"\021\n\017TcpServerPacketb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -2634,12 +3760,24 @@ public final class Struckout {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_struckout_DetectedObject_descriptor,
         new java.lang.String[] { "BboxWidth", "BboxHeight", "LayX", "LayY", "LayZ", });
-    internal_static_struckout_TcpPacket_descriptor =
+    internal_static_struckout_TcpClientPacket_descriptor =
       getDescriptor().getMessageTypes().get(2);
-    internal_static_struckout_TcpPacket_fieldAccessorTable = new
+    internal_static_struckout_TcpClientPacket_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_struckout_TcpPacket_descriptor,
+        internal_static_struckout_TcpClientPacket_descriptor,
+        new java.lang.String[] { "CameraLocation", "Data", });
+    internal_static_struckout_CameraLocation_descriptor =
+      getDescriptor().getMessageTypes().get(3);
+    internal_static_struckout_CameraLocation_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_struckout_CameraLocation_descriptor,
         new java.lang.String[] { "X", "Y", "Z", });
+    internal_static_struckout_TcpServerPacket_descriptor =
+      getDescriptor().getMessageTypes().get(4);
+    internal_static_struckout_TcpServerPacket_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_struckout_TcpServerPacket_descriptor,
+        new java.lang.String[] { });
     com.google.protobuf.TimestampProto.getDescriptor();
   }
 
