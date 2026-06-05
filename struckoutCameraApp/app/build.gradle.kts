@@ -1,6 +1,9 @@
+import com.google.protobuf.gradle.proto
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.protobuf)
 }
 
 android {
@@ -37,6 +40,13 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        getByName("main") {
+            proto {
+                srcDir("../../protocol/")
+            }
+        }
+    }
 }
 
 dependencies {
@@ -56,7 +66,8 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.nav.compose)
     implementation(libs.kable.core)
-    implementation(libs.protobuf.core)
+    implementation(libs.protobuf.javalite)
+    implementation(libs.protobuf.kotlin.lite)
     implementation(project(":opencv"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
@@ -66,4 +77,20 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+protobuf {
+    // Use system-installed protoc to share the same binary with Rust
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                create("java") {
+                    option("lite")
+                }
+                create("kotlin") {
+                    option("lite")
+                }
+            }
+        }
+    }
 }

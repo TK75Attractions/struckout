@@ -13,6 +13,7 @@ kable = "0.43.0"
 androidxNav = "2.9.8"
 robolectric = "4.16.1"
 protobuf = "4.35.0"
+protobuf-plugin = "0.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,10 +39,12 @@ androidx-camera-view = { group = "androidx.camera", name = "camera-view" }
 androidx-nav-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNav" }
 kable-core = { group = "com.juul.kable", name = "kable-core", version.ref = "kable" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-protobuf-core = { group = "com.google.protobuf", name = "protobuf-java", version.ref = "protobuf" }
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
+protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
 
