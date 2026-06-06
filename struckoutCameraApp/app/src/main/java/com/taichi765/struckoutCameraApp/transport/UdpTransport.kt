@@ -24,7 +24,7 @@ const val UDP_REMOTE_PORT = 5050
  */
 const val UDP_LOCAL_PORT = 8822
 
-class UdpTransport {
+class UdpTransport : UdpTransportRepository {
     private var socket: DatagramSocket? = null
 
     /**
@@ -32,7 +32,7 @@ class UdpTransport {
      * @return
      * Returns whether binding is succeeded or not.
      */
-    suspend fun bind(): Boolean {
+    override suspend fun bind(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
                 socket = DatagramSocket(UDP_LOCAL_PORT)
@@ -45,7 +45,7 @@ class UdpTransport {
         }
     }
 
-    suspend fun sendPacket(packet: Struckout.UdpPacket) {
+    override suspend fun sendPacket(packet: Struckout.UdpPacket) {
         val bytes = packet.toByteArray()
         val p = DatagramPacket(bytes, bytes.size)
 

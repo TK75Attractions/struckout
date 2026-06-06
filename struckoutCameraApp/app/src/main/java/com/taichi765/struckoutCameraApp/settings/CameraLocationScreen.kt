@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.ble
+package com.taichi765.struckoutCameraApp.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,17 +21,22 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.taichi765.struckoutCameraApp.camera.BleRepository
+import com.taichi765.struckoutCameraApp.ble.BleViewModel
+import com.taichi765.struckoutCameraApp.ble.CameraLocation
+import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 
 @Composable
-fun BleScreen(bleRepository: BleRepository, navController: NavController) {
+fun CameraLocationScreen(
+    tcpTransportRepository: TcpTransportRepository,
+    navController: NavController
+) {
     val viewModel = run {
-        val factory = BleViewModel.Factory(bleRepository)
+        val factory = CameraLocationViewModel.Factory(tcpTransportRepository)
         viewModel<BleViewModel>(factory = factory)
     }
     val cameraLocation by viewModel.cameraLocation.collectAsState()
 
-    BleInfoView(
+    CameraLocationView(
         cameraLocation = cameraLocation,
         onUpdateCameraLocation = {
             viewModel.updateCameraLocation(it)
@@ -40,7 +45,7 @@ fun BleScreen(bleRepository: BleRepository, navController: NavController) {
 }
 
 @Composable
-private fun BleInfoView(
+private fun CameraLocationView(
     cameraLocation: CameraLocation?,
     onUpdateCameraLocation: (CameraLocation) -> Unit
 ) {

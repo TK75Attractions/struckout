@@ -30,6 +30,8 @@ import com.taichi765.struckoutCameraApp.ble.BleManager
 import com.taichi765.struckoutCameraApp.ble.BleScreen
 import com.taichi765.struckoutCameraApp.camera.BleRepository
 import com.taichi765.struckoutCameraApp.camera.CameraScreen
+import com.taichi765.struckoutCameraApp.settings.CameraLocationScreen
+import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 
 val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.BLUETOOTH_SCAN,
@@ -47,6 +49,8 @@ fun App() {
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
 
     var bleRepository by remember { mutableStateOf<BleRepository?>(null) }
+    val tcpTransportRepository by remember { mutableStateOf<TcpTransportRepository?>(null) }
+
 
     Scaffold(
         topBar = {
@@ -75,6 +79,9 @@ fun App() {
                 bleRepository?.let {
                     BleScreen(bleRepository = it, navController)
                 }
+            }
+            composable("settings") {
+                CameraLocationScreen()
             }
             composable("permissionRequired") {
                 PermissionRequestScreen { permissionGranted = true }

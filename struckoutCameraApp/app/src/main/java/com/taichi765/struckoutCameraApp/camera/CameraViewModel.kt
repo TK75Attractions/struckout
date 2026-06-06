@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.ble.CameraLocation
 import com.taichi765.struckoutCameraApp.ble.FrameData
 import com.taichi765.struckoutCameraApp.ble.FrameID
+import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -15,9 +16,11 @@ import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
+import struckout.detectedObject
+import struckout.udpPacket
 
 class CameraViewModel(
-    private val bleRepository: BleRepository,
+    private val udpTransportRepository: UdpTransportRepository,
     val cameraRepository: CameraRepository
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
@@ -31,10 +34,16 @@ class CameraViewModel(
         }
         _contoursImage.value = image
         val worldDirection = cameraRepository.calc(rects[0])//TODO: オブジェクトが複数ある場合の処理
-        val frameData =
-            FrameData(frameId, worldDirection.x, worldDirection.y, worldDirection.z)
+        val packet = udpPacket {
+            cameraId = TODO()
+            timestamp = TODO()
+            frameId = TODO()
+            detectedObjects += detectedObject {
+                TODO()
+            }
+        }
         viewModelScope.launch {
-            bleRepository.send(frameData)
+            udpTransportRepository.sendPacket(packet)
         }
         frameId = FrameID(frameId.id + 1u)
     }

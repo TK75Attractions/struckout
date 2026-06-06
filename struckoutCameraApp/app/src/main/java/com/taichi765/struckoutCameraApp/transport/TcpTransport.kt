@@ -15,7 +15,7 @@ const val TCP_REMOTE_ADDRESS = "192.168.0.0"
 const val TCP_REMOTE_PORT = 5050
 const val TCP_LOCAL_PORT = 8833
 
-class TcpTransport {
+class TcpTransport : TcpTransportRepository {
     private var socket: Socket? = null
 
 
