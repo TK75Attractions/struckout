@@ -9,7 +9,7 @@ use tokio::{select, sync::mpsc, time};
 use tracing::warn;
 
 use crate::{
-    protobuf::{TcpPacket, UdpPacket},
+    protobuf::{TcpClientPacket, UdpPacket},
     transport::{CameraLocationListener, FrameSocket},
     types::CameraId,
 };
@@ -19,7 +19,7 @@ pub(crate) mod triangulate;
 pub(crate) mod types;
 
 pub mod protobuf {
-    include!(concat!(env!("OUT_DIR"), "/struckout.rs"));
+    include!(concat!(env!("OUT_DIR"), "/struckout.v1.rs"));
 }
 
 pub async fn run_main() -> std::io::Result<()> {
@@ -41,7 +41,7 @@ pub async fn run_main() -> std::io::Result<()> {
 
 struct State {
     frames: BTreeMap<Duration, CollectedFrame>,
-    camera_locs: HashMap<CameraId, TcpPacket>,
+    camera_locs: HashMap<CameraId, TcpClientPacket>,
 }
 
 struct CollectedFrame {
@@ -61,7 +61,7 @@ impl State {
 async fn collect_frames(
     mut state: State,
     mut frame_rx: mpsc::Receiver<UdpPacket>,
-    mut camera_loc_rx: mpsc::Receiver<TcpPacket>,
+    mut camera_loc_rx: mpsc::Receiver<TcpClientPacket>,
 ) {
     loop {
         select! {
@@ -92,7 +92,7 @@ fn update_frame(state: &mut State, frame: UdpPacket) {
     let date_time = DateTime::from_timestamp(timestamp.seconds, timestamp.nanos as u32).unwrap();
 }
 
-fn update_camera_loc(state: &mut State, camera_loc: TcpPacket) {
+fn update_camera_loc(state: &mut State, camera_loc: TcpClientPacket) {
     let camera_id = CameraId::new(state.camera_locs.len().try_into().unwrap());
     state.camera_locs.insert(camera_id, camera_loc);
 }

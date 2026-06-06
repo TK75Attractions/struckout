@@ -11,7 +11,7 @@ use tokio::{
 };
 use tracing::info;
 
-use crate::protobuf::{TcpPacket, UdpPacket};
+use crate::protobuf::{TcpClientPacket, UdpPacket};
 
 const FRAME_UDP_ADDR_DEFAULT: &str = "0.0.0.0:5050";
 const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
@@ -71,13 +71,13 @@ impl FrameSocket {
 pub struct CameraLocationListener {
     listener: TcpListener,
     join_handles: Vec<JoinHandle<()>>,
-    tx: mpsc::Sender<TcpPacket>,
+    tx: mpsc::Sender<TcpClientPacket>,
     streams: Arc<Mutex<Vec<TcpStream>>>,
     server_start: time::Instant,
 }
 
 impl CameraLocationListener {
-    pub async fn new(tx: mpsc::Sender<TcpPacket>) -> std::io::Result<Self> {
+    pub async fn new(tx: mpsc::Sender<TcpClientPacket>) -> std::io::Result<Self> {
         // TODO: retry with other port if port is already used
         info!(
             port = CAMERA_LOC_TCP_ADDR_DEFAULT,
@@ -113,7 +113,7 @@ impl CameraLocationListener {
                             let stream = streams.get_mut(stream_pos).unwrap();
                             let _len = stream.read(&mut buf).await.unwrap(); // TODO: handle errors
                         }
-                        let packet = TcpPacket::decode(&mut buf).unwrap(); // TODO: handle errors
+                        let packet = TcpClientPacket::decode(&mut buf).unwrap(); // TODO: handle errors
                         tx.send(packet).await.unwrap(); // TODO: handle error
                     }
                 });
