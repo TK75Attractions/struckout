@@ -14,7 +14,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,16 +25,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.taichi765.struckoutCameraApp.ble.BleManager
-import com.taichi765.struckoutCameraApp.ble.BleScreen
-import com.taichi765.struckoutCameraApp.camera.BleRepository
 import com.taichi765.struckoutCameraApp.camera.CameraScreen
 import com.taichi765.struckoutCameraApp.settings.CameraLocationScreen
-import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
+import com.taichi765.struckoutCameraApp.transport.TcpTransport
+import com.taichi765.struckoutCameraApp.transport.UdpTransport
 
 val REQUIRED_PERMISSIONS = arrayOf(
-    Manifest.permission.BLUETOOTH_SCAN,
-    Manifest.permission.BLUETOOTH_CONNECT,
     Manifest.permission.CAMERA,
     Manifest.permission.ACCESS_FINE_LOCATION,
     Manifest.permission.ACCESS_COARSE_LOCATION
@@ -48,9 +43,8 @@ fun App() {
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
 
-    var bleRepository by remember { mutableStateOf<BleRepository?>(null) }
-    val tcpTransportRepository by remember { mutableStateOf<TcpTransportRepository?>(null) }
-
+    val tcpTransportRepository = TcpTransport()
+    val udpTransportRepository = UdpTransport()
 
     Scaffold(
         topBar = {
@@ -67,21 +61,14 @@ fun App() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (permissionGranted) "bleSettings" else "permissionRequired",
+            startDestination = if (permissionGranted) "settings" else "permissionRequired",
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("camera") {
-                bleRepository?.let {
-                    CameraScreen(bleRepository = it, navController)
-                }
-            }
-            composable("bleSettings") {
-                bleRepository?.let {
-                    BleScreen(bleRepository = it, navController)
-                }
+                CameraScreen(udpTransportRepository, navController)
             }
             composable("settings") {
-                CameraLocationScreen()
+                CameraLocationScreen(tcpTransportRepository = tcpTransportRepository, navController)
             }
             composable("permissionRequired") {
                 PermissionRequestScreen { permissionGranted = true }
@@ -106,6 +93,13 @@ private fun PermissionRequestScreen(onAllPermissionGranted: () -> Unit) {
         }) {
             Text("Request Permission")
         }
+    }
+}
+
+@Composable
+private fun FallbackScreen(message: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(message)
     }
 }
 

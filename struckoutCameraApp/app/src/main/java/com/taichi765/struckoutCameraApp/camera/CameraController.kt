@@ -5,6 +5,7 @@ import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.util.Log
+import com.taichi765.struckoutCameraApp.camera.types.WorldDirection
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect

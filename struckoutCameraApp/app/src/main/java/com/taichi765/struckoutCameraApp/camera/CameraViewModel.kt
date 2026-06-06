@@ -4,9 +4,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.taichi765.struckoutCameraApp.ble.CameraLocation
-import com.taichi765.struckoutCameraApp.ble.FrameData
-import com.taichi765.struckoutCameraApp.ble.FrameID
+import com.taichi765.struckoutCameraApp.camera.types.FrameID
+import com.taichi765.struckoutCameraApp.camera.types.WorldDirection
 import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,8 +15,8 @@ import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
-import struckout.detectedObject
-import struckout.udpPacket
+import struckout.v1.detectedObject
+import struckout.v1.udpPacket
 
 class CameraViewModel(
     private val udpTransportRepository: UdpTransportRepository,
@@ -50,11 +49,11 @@ class CameraViewModel(
 
     @Suppress("UNCHECKED_CAST")
     class Factory(
-        private val bleRepository: BleRepository,
+        private val udpRepository: UdpTransportRepository,
         private val cameraRepository: CameraRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CameraViewModel(bleRepository, cameraRepository) as T
+            return CameraViewModel(udpRepository, cameraRepository) as T
         }
     }
 
@@ -112,16 +111,4 @@ class WorldDirectionCalculator(val cameraMatrix: Mat, cameraRotationVector: Mat)
     }
 }
 
-data class WorldDirection(val x: Float, val y: Float, val z: Float)
-
-interface BleRepository {
-    suspend fun send(frame: FrameData)
-    suspend fun sendCameraLocation(loc: CameraLocation)
-    suspend fun connect()
-}
-
-interface CameraRepository {
-    val tracker: ObjectTracker
-    fun calc(rect: Rect): WorldDirection
-}
 

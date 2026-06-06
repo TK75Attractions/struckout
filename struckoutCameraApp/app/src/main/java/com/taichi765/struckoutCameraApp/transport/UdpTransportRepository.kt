@@ -1,8 +1,11 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import struckout.Struckout
+import kotlinx.coroutines.flow.StateFlow
+import struckout.v1.Struckout
 
 interface UdpTransportRepository {
+    val isBound: StateFlow<Boolean>
+
     /**
      * Creates new UDP socket and bind it to the port for receiving data from server.
      * @return

@@ -3,16 +3,18 @@ package com.taichi765.struckoutCameraApp.settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.taichi765.struckoutCameraApp.CameraLocation
+import com.taichi765.struckoutCameraApp.camera.types.CameraLocation
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import struckout.cameraLocation
-import struckout.tcpClientPacket
+import struckout.v1.cameraLocation
+import struckout.v1.tcpClientPacket
 
 class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository) : ViewModel() {
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
     val cameraLocation = _cameraLocation.asStateFlow()
+
+    val isConnected = tcpRepository.isConnected
 
     suspend fun updateCameraLocation(value: CameraLocation) {
         Log.i(TAG, "updating camera location")
@@ -25,6 +27,14 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
             }
         }
         tcpRepository.sendPacket(packet)
+    }
+
+    suspend fun connect() {
+        tcpRepository.connect()
+    }
+
+    suspend fun close() {
+        tcpRepository.close()
     }
 
     class Factory(val tcpRepository: TcpTransportRepository) : ViewModelProvider.Factory {

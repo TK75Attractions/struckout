@@ -1,6 +1,9 @@
 package com.taichi765.struckoutCameraApp.settings
 
+import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
@@ -10,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,11 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.taichi765.struckoutCameraApp.ble.BleViewModel
-import com.taichi765.struckoutCameraApp.ble.CameraLocation
+import com.taichi765.struckoutCameraApp.camera.types.CameraLocation
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
+import kotlinx.coroutines.launch
 
 @Composable
 fun CameraLocationScreen(
@@ -32,16 +37,32 @@ fun CameraLocationScreen(
 ) {
     val viewModel = run {
         val factory = CameraLocationViewModel.Factory(tcpTransportRepository)
-        viewModel<BleViewModel>(factory = factory)
+        viewModel<CameraLocationViewModel>(factory = factory)
     }
     val cameraLocation by viewModel.cameraLocation.collectAsState()
+    val isConnected by viewModel.isConnected.collectAsState()
 
-    CameraLocationView(
-        cameraLocation = cameraLocation,
-        onUpdateCameraLocation = {
-            viewModel.updateCameraLocation(it)
-            navController.navigate("camera")
-        })
+    if (isConnected) {
+        CameraLocationView(
+            cameraLocation = cameraLocation,
+            onUpdateCameraLocation = {
+                viewModel.viewModelScope.launch {
+                    viewModel.updateCameraLocation(it)
+                }
+                navController.navigate("camera")
+            })
+    } else {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("TCP is not connected.")
+        }
+    }
+
+    if (!isConnected) {
+        LaunchedEffect(Unit) {
+            Log.i("CameraLocationScreen", "Trying to connect to TCP")
+            viewModel.connect()
+        }
+    }// TODO: close()しなきゃかも
 }
 
 @Composable
@@ -58,11 +79,10 @@ private fun CameraLocationView(
     var showWarningTextZ by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Ble Info", fontSize = 24.sp)
+        Text("Camera Location", fontSize = 24.sp)
         PositionField("x", x, showWarningTextX)
         PositionField("y", y, showWarningTextY)
         PositionField("z", z, showWarningTextZ)
-
 
         ConfirmButton {
             if (x.text.any { !it.isDigit() }) {

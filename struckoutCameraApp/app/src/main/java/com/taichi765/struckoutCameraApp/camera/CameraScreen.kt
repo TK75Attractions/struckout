@@ -40,11 +40,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.taichi765.struckoutCameraApp.R
 import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
+import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
 import java.util.concurrent.Executors
 
 @Composable
 fun CameraScreen(
-    bleRepository: BleRepository,
+    udpRepository: UdpTransportRepository,
     navController: NavController
 ) {
     val context = LocalContext.current
@@ -55,8 +56,8 @@ fun CameraScreen(
     }
 
     if (permissionGranted) {
-        CameraScreenContent(bleRepository) {
-            navController.navigate("bleSettings")
+        CameraScreenContent(udpRepository) {
+            navController.navigate("settings")
         }
     } else {
         Text("Permission is required")
@@ -67,13 +68,16 @@ fun CameraScreen(
 }
 
 @Composable
-private fun CameraScreenContent(bleRepository: BleRepository, onNavigateToSettings: () -> Unit) {
+private fun CameraScreenContent(
+    udpRepository: UdpTransportRepository,
+    onNavigateToSettings: () -> Unit
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val viewModel = run {
         val cameraController = CameraController(context)
-        val factory = CameraViewModel.Factory(bleRepository, cameraController)
+        val factory = CameraViewModel.Factory(udpRepository, cameraController)
         viewModel<CameraViewModel>(factory = factory)
     }
     val image by viewModel.contoursImage.collectAsState()
