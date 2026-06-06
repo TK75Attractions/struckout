@@ -88,12 +88,6 @@ fun App() {
             }
         }
     }
-    if (permissionGranted) {
-        LaunchedEffect(Unit) {
-            bleRepository = BleManager()
-            navController.navigate("bleSettings")
-        }
-    }
 }
 
 @Composable
