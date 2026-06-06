@@ -1,4 +1,4 @@
-## プロジェクトの構造
+## ディレクトリ構造
 - `ball_watcher`(Rust): カメラからの情報を集めて処理するサーバ(PCで動く)
 - `struckoutCameraApp` (Kotlin): カメラ用のAndroidアプリ。
 - `game_master` (Rust): 合計得点やランキングなどを管理する。たぶんESP32で動くがPCにするかも。
