@@ -13,8 +13,8 @@ import java.net.Socket
 class TcpTransport : TcpTransportRepository {
     private var socket: Socket? = null
 
-    private val _isConnected = MutableStateFlow(false)
-    override val isConnected = _isConnected.asStateFlow()
+    private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    override val state = _state.asStateFlow()
 
 
     override suspend fun connect(): Boolean {
@@ -22,11 +22,32 @@ class TcpTransport : TcpTransportRepository {
             try {
                 Log.i(TAG, "connecting to ball_watcher")
                 socket = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
-                _isConnected.value = true
-                //socket!!.getInputStream()
-                return@withContext true
+                Log.i(TAG, "TCP connection has been established successfully")
             } catch (e: IOException) {
                 Log.w(TAG, "failed to connect to TCP server: $e")
+                return@withContext false
+            }
+
+            try {
+                Log.i(TAG, "initializing states via TCP")
+                val packet = socket!!.getInputStream().use {
+                    readPacket(it, Struckout.TcpServerPacket::parseFrom)
+                }
+                when (packet.dataCase) {
+                    Struckout.TcpServerPacket.DataCase.CAMERA_ID -> {
+                        val cameraId = packet.cameraId.toUInt()
+                        _state.value = ConnectionState.Connected(cameraId)
+                        Log.i(TAG, "successfully initialized connection states")
+                    }
+
+                    Struckout.TcpServerPacket.DataCase.DATA_NOT_SET -> Log.w(
+                        TAG,
+                        "received invalid TCP packet from server"
+                    )
+                }
+                return@withContext true
+            } catch (e: IOException) {
+                Log.w(TAG, "failed to initialize connection states: $e")
                 return@withContext false
             }
         }

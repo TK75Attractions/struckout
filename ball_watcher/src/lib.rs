@@ -1,16 +1,18 @@
 use std::{
     collections::{BTreeMap, HashMap},
+    sync::Arc,
     time::Duration,
 };
 
 use anyhow::Context;
-use chrono::DateTime;
-use tokio::{select, sync::mpsc, time};
-use tracing::warn;
+use tokio::{
+    select,
+    sync::{RwLock, mpsc},
+};
 
 use crate::{
-    protobuf::{TcpClientPacket, UdpPacket},
-    transport::{CameraLocationListener, FrameSocket},
+    protobuf::{CameraLocation, UdpPacket},
+    transport::{FrameSocket, TcpTransport},
     types::CameraId,
 };
 
@@ -23,10 +25,11 @@ pub mod protobuf {
 }
 
 pub async fn run_main() -> std::io::Result<()> {
-    let (camera_loc_tx, camera_loc_rx) = mpsc::channel(16);
+    let state = Arc::new(RwLock::new(State::new()));
+
     let (frame_tx, frame_rx) = mpsc::channel(16);
-    let mut camera_loc_listener = CameraLocationListener::new(camera_loc_tx).await?;
-    let mut frame_socket = FrameSocket::new(frame_tx, time::Duration::from_secs(10)).await?;
+    let mut camera_loc_listener = TcpTransport::new(Arc::clone(&state)).await?;
+    let mut frame_socket = FrameSocket::new(frame_tx).await?;
 
     let join1 = tokio::spawn(async move {
         camera_loc_listener.listen().await;
@@ -41,7 +44,7 @@ pub async fn run_main() -> std::io::Result<()> {
 
 struct State {
     frames: BTreeMap<Duration, CollectedFrame>,
-    camera_locs: HashMap<CameraId, TcpClientPacket>,
+    camera_locs: HashMap<CameraId, CameraLocation>,
 }
 
 struct CollectedFrame {
@@ -58,11 +61,7 @@ impl State {
     }
 }
 
-async fn collect_frames(
-    mut state: State,
-    mut frame_rx: mpsc::Receiver<UdpPacket>,
-    mut camera_loc_rx: mpsc::Receiver<TcpClientPacket>,
-) {
+async fn collect_frames(mut state: State, mut frame_rx: mpsc::Receiver<UdpPacket>) {
     loop {
         select! {
             frame = frame_rx.recv() => {
@@ -71,28 +70,10 @@ async fn collect_frames(
                     .unwrap();
                 update_frame(&mut state,frame)
             }
-            camera_loc = camera_loc_rx.recv() => {
-                let camera_loc = camera_loc
-                    .with_context(|| "camera loc channel is unexpectedly closed")
-                    .unwrap();
-                update_camera_loc(&mut state, camera_loc)
-            }
         }
     }
 }
 
-fn update_frame(state: &mut State, frame: UdpPacket) {
-    if frame.timestamp.is_none() {
-        warn!("timestamp was none. camera-side implementation might be incorrect!");
-        return;
-    }
-    let timestamp = frame.timestamp.unwrap(); // checked above
-    // This cast is safe because range of Timestamp.nanos is between 0 and 999,999,999.
-    // (see https://github.com/protocolbuffers/protobuf/blob/3ddb41be1f87312cd6a9b955dbbfd9730d341dd7/src/google/protobuf/timestamp.proto#L142)
-    let date_time = DateTime::from_timestamp(timestamp.seconds, timestamp.nanos as u32).unwrap();
-}
-
-fn update_camera_loc(state: &mut State, camera_loc: TcpClientPacket) {
-    let camera_id = CameraId::new(state.camera_locs.len().try_into().unwrap());
-    state.camera_locs.insert(camera_id, camera_loc);
+fn update_frame(state: &mut State, packet: UdpPacket) {
+    todo!()
 }
