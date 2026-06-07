@@ -234,6 +234,8 @@ mod tests {
 
     #[test]
     fn data_len_is_deserialized_correctly() {
-        todo!()
+        let bytes: [u8; 4] = [0xd0, 0x07, 0, 0];
+        let len = u32::from_le_bytes(bytes);
+        assert_eq!(len, 2000);
     }
 }

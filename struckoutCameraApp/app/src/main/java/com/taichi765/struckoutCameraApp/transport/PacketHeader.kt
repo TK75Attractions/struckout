@@ -32,7 +32,7 @@ fun bytesToInt(bytes: ByteArray): Int {
 fun <P : MessageLite> writePacket(output: OutputStream, packet: P) {
     val packetBytes = packet.toByteArray()
     val len = packetBytes.size
-    val buf = ByteBuffer.allocate(4 + len)
+    val buf = ByteBuffer.allocate(4 + len).order(ByteOrder.LITTLE_ENDIAN)
     buf.putInt(len)
     buf.put(packetBytes)
     output.write(buf.array())

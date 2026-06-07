@@ -3,6 +3,7 @@ package com.taichi765.struckoutCameraApp
 import com.taichi765.struckoutCameraApp.transport.bytesToInt
 import org.junit.Test
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class PacketHeaderUnitTest {
     @Test
@@ -15,7 +16,7 @@ class PacketHeaderUnitTest {
     @Test
     fun `data length is serialized correctly`() {
         val len = 2000
-        val bytes = ByteBuffer.allocate(4).putInt(len)
-        TODO()
+        val bytes = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(len)
+        assert(bytes.array().contentEquals(byteArrayOf(-48, 7, 0, 0)))
     }
 }
