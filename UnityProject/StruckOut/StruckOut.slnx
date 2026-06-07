@@ -1,2 +1,4 @@
 ﻿<Solution>
+  <Project Path="StruckOut.Infrastructure.csproj" />
+  <Project Path="StruckOut.Domain.csproj" />
 </Solution>

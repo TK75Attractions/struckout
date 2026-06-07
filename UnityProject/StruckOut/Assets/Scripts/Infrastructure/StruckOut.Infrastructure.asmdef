@@ -1,0 +1,16 @@
+{
+    "name": "StruckOut.Infrastructure",
+    "rootNamespace": "",
+    "references": [
+        "GUID:460e46054705c7f49a140c08e36982c2"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
