@@ -16,10 +16,11 @@ import org.opencv.imgproc.Imgproc
 
 class MyAnalyzer(
     val tracker: ObjectTracker,
-    private val withAnalyzeResult: (ImageBitmap, List<Rect>) -> Unit,
+    private val withAnalyzeResult: (ImageBitmap, Long, List<Rect>) -> Unit,
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
         image.use { image ->
+            val timestamp = image.imageInfo.timestamp
             val mat = getMatFromImage(image)
             val rects = tracker.nextFrame(mat)
 
@@ -37,7 +38,7 @@ class MyAnalyzer(
             }
             val bitmap = createBitmap(rotated.cols(), rotated.rows())
             Utils.matToBitmap(rotated, bitmap)
-            withAnalyzeResult(bitmap.asImageBitmap(), rects)
+            withAnalyzeResult(bitmap.asImageBitmap(), timestamp, rects)
         }
     }
 

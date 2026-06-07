@@ -43,8 +43,8 @@ fun App() {
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
 
-    val tcpTransportRepository = TcpTransport()
-    val udpTransportRepository = UdpTransport()
+    val tcpRepository = TcpTransport()
+    val udpRepository = UdpTransport()
 
     Scaffold(
         topBar = {
@@ -65,10 +65,10 @@ fun App() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("camera") {
-                CameraScreen(udpTransportRepository, navController)
+                CameraScreen(udpRepository, tcpRepository, navController)
             }
             composable("settings") {
-                CameraLocationScreen(tcpTransportRepository = tcpTransportRepository, navController)
+                CameraLocationScreen(tcpTransportRepository = tcpRepository, navController)
             }
             composable("permissionRequired") {
                 PermissionRequestScreen { permissionGranted = true }

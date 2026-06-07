@@ -40,12 +40,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.taichi765.struckoutCameraApp.R
 import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
+import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
 import java.util.concurrent.Executors
 
 @Composable
 fun CameraScreen(
     udpRepository: UdpTransportRepository,
+    tcpRepository: TcpTransportRepository,
     navController: NavController
 ) {
     val context = LocalContext.current
@@ -56,7 +58,7 @@ fun CameraScreen(
     }
 
     if (permissionGranted) {
-        CameraScreenContent(udpRepository) {
+        CameraScreenContent(udpRepository, tcpRepository) {
             navController.navigate("settings")
         }
     } else {
@@ -70,6 +72,7 @@ fun CameraScreen(
 @Composable
 private fun CameraScreenContent(
     udpRepository: UdpTransportRepository,
+    tcpRepository: TcpTransportRepository,
     onNavigateToSettings: () -> Unit
 ) {
     val context = LocalContext.current
@@ -77,7 +80,7 @@ private fun CameraScreenContent(
 
     val viewModel = run {
         val cameraController = CameraController(context)
-        val factory = CameraViewModel.Factory(udpRepository, cameraController)
+        val factory = CameraViewModel.Factory(udpRepository, tcpRepository, cameraController)
         viewModel<CameraViewModel>(factory = factory)
     }
     val image by viewModel.contoursImage.collectAsState()

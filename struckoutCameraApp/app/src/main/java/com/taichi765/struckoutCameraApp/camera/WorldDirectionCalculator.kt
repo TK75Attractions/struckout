@@ -19,7 +19,9 @@ class WorldDirectionCalculator(val cameraMatrix: Mat, cameraRotationVector: Mat)
         require(cameraRotationVector.height() == 3 && cameraRotationVector.width() == 1) { "size of cameraRotationVector was incorrect: expected 3x1" }
     }
 
-    // convert rotation vector to rotation matrix.
+    /**
+     * convert rotation vector to rotation matrix.
+     */
     private val cameraRotationMatrix = run {
         val dst = Mat()
         Calib3d.Rodrigues(cameraRotationVector, dst)

@@ -4,7 +4,7 @@ import com.taichi765.struckoutCameraApp.transport.bytesToInt
 import org.junit.Test
 import java.nio.ByteBuffer
 
-class ReadPacketUnitTest {
+class PacketHeaderUnitTest {
     @Test
     fun `data length is deserialized correctly`() {
         val bytes = byteArrayOf(208.toByte(), 7, 0, 0)

@@ -65,8 +65,8 @@ class TcpTransport : TcpTransportRepository {
                 ?: throw IllegalStateException("$TAG.sendPacket() is called before TCP connection is established")
 
             socket.getOutputStream().use {
-                assert(it != null)
-                packet.writeTo(it)
+                check(it != null)
+                writePacket(it, packet)
             }
         }
     }

@@ -2,19 +2,18 @@ syntax = "proto3";
 
 package struckout.v1;
 
-import "google/protobuf/timestamp.proto";
-
 // UDPでカメラからサーバに送られるパケット
 message UdpPacket {
   uint32 camera_id = 1;
-  google.protobuf.Timestamp timestamp = 2;
+  // UNIX epochからの経過時間
+  int64 timestamp = 2;
   uint64 frame_id = 3;
   repeated DetectedObject detected_objects = 4;
 }
 
 message DetectedObject {
-  float bbox_width = 1;
-  float bbox_height = 2;
+  int32 bbox_width = 1;
+  int32 bbox_height = 2;
   float lay_x = 3;
   float lay_y = 4;
   float lay_z = 5;
@@ -23,8 +22,13 @@ message DetectedObject {
 
 // TCPでカメラからサーバに送られるパケット
 message TcpClientPacket {
+  message UpdateCameraLocation {
+    uint32 camera_id = 1;
+    CameraLocation camera_location = 2;
+  }
+
   oneof data {
-    CameraLocation camera_location = 1;
+    UpdateCameraLocation camera_loc = 1;
   }
 }
 
@@ -35,4 +39,9 @@ message CameraLocation {
 }
 
 // TCPでサーバーからカメラに送られるパケット
-message TcpServerPacket {}
+message TcpServerPacket {
+  oneof data {
+    // assign a camera id to client.
+    uint32 camera_id = 1;
+  }
+}
