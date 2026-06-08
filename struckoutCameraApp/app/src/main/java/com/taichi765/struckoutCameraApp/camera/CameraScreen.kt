@@ -7,10 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,8 +31,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -90,7 +86,7 @@ private fun CameraScreenContent(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center
     ) {
-        Row() {
+        Row {
             Text("Camera Preview")
 
             IconButton(onClick = {
@@ -102,14 +98,7 @@ private fun CameraScreenContent(
                 )
             }
         }
-        CameraPreview(
-            cameraProvider = cameraProvider,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        )
 
-        Text("Contours Preview")
         ContoursPreview(
             image = image,
             modifier = Modifier
@@ -154,29 +143,5 @@ private fun ContoursPreview(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
-    }
-}
-
-@Composable
-private fun CameraPreview(
-    cameraProvider: ProcessCameraProvider?,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val previewView = remember { PreviewView(context) }
-
-    AndroidView(factory = { previewView }, modifier = modifier)
-
-    cameraProvider?.let {
-        LaunchedEffect(Unit) {
-            val preview =
-                Preview.Builder().build().apply { surfaceProvider = previewView.surfaceProvider }
-            it.bindToLifecycle(
-                context as LifecycleOwner,
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                preview
-            )
-            Log.i("CameraPreview", "Initialized CameraPreview")
-        }
     }
 }
