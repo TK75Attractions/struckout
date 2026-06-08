@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import struckout.v1.TcpClientPacketKt
 import struckout.v1.cameraLocation
 import struckout.v1.tcpClientPacket
@@ -58,12 +59,16 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
         tcpRepository.sendPacket(packet)
     }
 
-    suspend fun connect() {
-        tcpRepository.connect()
+    fun connect() {
+        viewModelScope.launch {
+            tcpRepository.connect()
+        }
     }
 
-    suspend fun close() {
-        tcpRepository.close()
+    fun close() {
+        viewModelScope.launch {
+            tcpRepository.close()
+        }
     }
 
     class Factory(val tcpRepository: TcpTransportRepository) : ViewModelProvider.Factory {

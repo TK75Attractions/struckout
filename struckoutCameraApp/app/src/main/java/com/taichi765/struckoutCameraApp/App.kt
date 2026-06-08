@@ -96,13 +96,6 @@ private fun PermissionRequestScreen(onAllPermissionGranted: () -> Unit) {
     }
 }
 
-@Composable
-private fun FallbackScreen(message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(message)
-    }
-}
-
 private fun checkCurrentPermission(context: Context): Boolean {
     return REQUIRED_PERMISSIONS.all { context.checkSelfPermission(it) == PERMISSION_GRANTED }
 }

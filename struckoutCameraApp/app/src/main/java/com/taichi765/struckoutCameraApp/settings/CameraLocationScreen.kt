@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.settings
 
 import android.util.Log
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -53,9 +54,9 @@ fun CameraLocationScreen(
                 navController.navigate("camera")
             })
     } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("TCP is not connected.")
-        }
+        FallbackView(onTryConnect = {
+            viewModel.connect()
+        })
     }
 
     if (!isConnected) {
@@ -102,6 +103,21 @@ private fun CameraLocationView(
             val z = z.text.toString().toFloat()
 
             onUpdateCameraLocation(CameraLocation(x, y, z))
+        }
+    }
+}
+
+@Composable
+private fun FallbackView(onTryConnect: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, alignment = Alignment.CenterVertically)
+    ) {
+        Text("TCP is not connected.")
+
+        Button(onClick = onTryConnect) {
+            Text("Retry connection")
         }
     }
 }
