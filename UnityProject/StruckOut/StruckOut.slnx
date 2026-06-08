@@ -1,5 +1,5 @@
 ﻿<Solution>
   <Project Path="StruckOut.Infrastructure.csproj" />
   <Project Path="StruckOut.Domain.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="StruckOut.Generated.csproj" />
 </Solution>

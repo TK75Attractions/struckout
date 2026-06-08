@@ -9,7 +9,7 @@ using pb = global::Google.Protobuf;
 using pbc = global::Google.Protobuf.Collections;
 using pbr = global::Google.Protobuf.Reflection;
 using scg = global::System.Collections.Generic;
-namespace Struckout.DTO {
+namespace StruckOut.DTO {
 
   /// <summary>Holder for reflection information generated from protocol/collision.proto</summary>
   public static partial class CollisionReflection {
@@ -29,7 +29,7 @@ namespace Struckout.DTO {
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Struckout.DTO.CollisionPoint), global::Struckout.DTO.CollisionPoint.Parser, new[]{ "X", "Y" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.DTO.CollisionPoint), global::StruckOut.DTO.CollisionPoint.Parser, new[]{ "X", "Y" }, null, null, null, null)
           }));
     }
     #endregion
@@ -51,7 +51,7 @@ namespace Struckout.DTO {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Struckout.DTO.CollisionReflection.Descriptor.MessageTypes[0]; }
+      get { return global::StruckOut.DTO.CollisionReflection.Descriptor.MessageTypes[0]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
