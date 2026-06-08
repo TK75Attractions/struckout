@@ -26,8 +26,8 @@ class TcpTransport : TcpTransportRepository {
 
     override suspend fun connect(): Boolean {
         return withContext(Dispatchers.IO) {
+            Log.i(TAG, "connecting to ball_watcher")
             val socket = try {
-                Log.i(TAG, "connecting to ball_watcher")
                 val ret = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
                 Log.i(TAG, "TCP connection has been established successfully")
                 ret
@@ -36,9 +36,8 @@ class TcpTransport : TcpTransportRepository {
                 return@withContext false
             }
 
+            Log.i(TAG, "initializing states via TCP")
             try {
-                Log.i(TAG, "initializing states via TCP")
-
                 val inputStream = socket.getInputStream()
                 val packet = readPacket(inputStream, Struckout.TcpServerPacket::parseFrom)
                 when (packet.dataCase) {
@@ -83,10 +82,16 @@ class TcpTransport : TcpTransportRepository {
         check(packet.dataCase != Struckout.TcpClientPacket.DataCase.DATA_NOT_SET) {
             "Packet data must be set"
         }
-        
+
         withContext(Dispatchers.IO) {
             Log.i(TAG, "sending TCP packet")
-            writePacket(curState.outputStream, packet)
+            try {
+                writePacket(curState.outputStream, packet)
+            } catch (e: IOException) {
+                // TODO: exceptionの理由を画面に表示したほうがいいのだろうか
+                Log.w(TAG, "it seems that TCP connection is unexpectedly closed: $e")
+                internalState.value = InternalConnectionState.Disconnected
+            }
         }
     }
 
