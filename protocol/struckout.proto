@@ -45,3 +45,8 @@ message TcpServerPacket {
     uint32 camera_id = 1;
   }
 }
+
+message BallWatcherToProjector {
+  float x = 1;
+  float y = 2;
+}
