@@ -85,27 +85,29 @@ impl TcpTransport {
     }
 
     pub async fn listen(&mut self) {
-        match self.listener.accept().await {
-            Ok((stream, addr)) => {
-                info!(?addr, "accepted new connection");
+        loop {
+            match self.listener.accept().await {
+                Ok((stream, addr)) => {
+                    info!(?addr, "accepted new connection");
 
-                {
-                    let mut streams = self.streams.lock().await;
-                    streams.insert(addr, stream);
+                    {
+                        let mut streams = self.streams.lock().await;
+                        streams.insert(addr, stream);
+                    }
+
+                    self.init_conneciton(addr).await;
+
+                    let join = tokio::spawn(Self::handle_stream(
+                        Arc::clone(&self.state),
+                        Arc::clone(&self.streams),
+                        addr,
+                    ));
+                    self.join_handles.push(join);
                 }
-
-                self.init_conneciton(addr).await;
-
-                let join = tokio::spawn(Self::handle_stream(
-                    Arc::clone(&self.state),
-                    Arc::clone(&self.streams),
-                    addr,
-                ));
-                self.join_handles.push(join);
-            }
-            Err(_e) => {
-                // TODO: handle errors
-                todo!()
+                Err(_e) => {
+                    // TODO: handle errors
+                    todo!()
+                }
             }
         }
     }
