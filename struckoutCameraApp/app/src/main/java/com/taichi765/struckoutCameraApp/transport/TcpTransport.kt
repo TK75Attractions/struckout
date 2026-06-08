@@ -80,6 +80,10 @@ class TcpTransport : TcpTransportRepository {
         check(curState is InternalConnectionState.Connected) {
             "TCP connection must be established before sending packet"
         }
+        check(packet.dataCase != Struckout.TcpClientPacket.DataCase.DATA_NOT_SET) {
+            "Packet data must be set"
+        }
+        
         withContext(Dispatchers.IO) {
             Log.i(TAG, "sending TCP packet")
             writePacket(curState.outputStream, packet)

@@ -3,6 +3,7 @@ use std::{
     io,
     marker::Unpin,
     net::SocketAddr,
+    ops::Deref,
     sync::Arc,
 };
 
@@ -15,7 +16,7 @@ use tokio::{
     sync::{Mutex, RwLock, mpsc},
     task::JoinHandle,
 };
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use crate::{
     State,
@@ -157,7 +158,8 @@ impl TcpTransport {
                         warn!("camera_location field is missing for TcpClientPacket");
                         continue;
                     }
-                    let camera_loc = loc_data.camera_location.unwrap(); //cchecked above
+                    let camera_loc = loc_data.camera_location.unwrap(); // checked above
+                    info!(value = ?camera_loc,"camera location updated");
                     state
                         .write()
                         .await
@@ -206,7 +208,7 @@ async fn read_packet<T: Message + Default, I: AsyncRead + Unpin>(
     input: &mut I,
 ) -> Result<T, ReadPacketError> {
     let len = input.read_u32_le().await?;
-    let mut buf = BytesMut::with_capacity(len as usize);
+    let mut buf = BytesMut::zeroed(len as usize);
     input.read_exact(&mut buf).await?;
     let packet = T::decode(&mut buf)?;
     Ok(packet)
