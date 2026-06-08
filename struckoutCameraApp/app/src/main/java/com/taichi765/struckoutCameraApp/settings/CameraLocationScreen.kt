@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
@@ -74,7 +75,6 @@ private fun CameraLocationView(
     val y = rememberTextFieldState((cameraLocation?.y ?: 0).toString())
     val z = rememberTextFieldState((cameraLocation?.z ?: 0).toString())
     var showWarningTextX by remember { mutableStateOf(false) }
-
     var showWarningTextY by remember { mutableStateOf(false) }
     var showWarningTextZ by remember { mutableStateOf(false) }
 
@@ -112,7 +112,10 @@ private fun PositionField(text: String, textState: TextFieldState, showWarningSt
     TextField(
         textState,
         label = { Text(text) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next
+        ),
         inputTransformation = InputTransformation {
             if (asCharSequence().any { !it.isDigit() }) {
                 revertAllChanges()
