@@ -3,7 +3,7 @@ package com.taichi765.struckoutCameraApp.transport
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import struckout.v1.Struckout
@@ -13,14 +13,14 @@ import java.net.InetAddress
 
 
 class UdpTransport : UdpTransportRepository {
-    private var socket: DatagramSocket? = null
-
-    private val _isBound = MutableStateFlow(false)
+    private var socket = MutableStateFlow<DatagramSocket?>(null)
 
     /**
      * Whether the socket is bound to a port or not.
      */
-    override val isBound = _isBound.asStateFlow()
+    override val isBound = socket.map {
+        it != null
+    }
 
     /**
      * Creates new UDP socket and bind it to the port for receiving data from server.
@@ -30,9 +30,9 @@ class UdpTransport : UdpTransportRepository {
     override suspend fun bind(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                socket = DatagramSocket(UDP_LOCAL_PORT)
-                socket!!.connect(UDP_REMOTE_ADDRESS, UDP_REMOTE_PORT)
-                _isBound.value = true
+                val newSocket = DatagramSocket(UDP_LOCAL_PORT)
+                socket.value = newSocket
+                newSocket.connect(UDP_REMOTE_ADDRESS, UDP_REMOTE_PORT)
                 return@withContext true
             } catch (e: IOException) {
                 Log.w(TAG, "failed to bind port $UDP_LOCAL_PORT: $e")
@@ -42,13 +42,19 @@ class UdpTransport : UdpTransportRepository {
     }
 
     override suspend fun sendPacket(packet: Struckout.UdpPacket) {
+        val curSocket = socket.value
+        check(curSocket != null) {
+            "UDP port must be bound to port before sending packet"
+        }
+
         val bytes = packet.toByteArray()
         val p = DatagramPacket(bytes, bytes.size)
 
         withContext(Dispatchers.IO) {
-            socket?.send(p)
+            curSocket.send(p)
         }
     }
+
 
     companion object {
         const val TAG = "UdpTransport"

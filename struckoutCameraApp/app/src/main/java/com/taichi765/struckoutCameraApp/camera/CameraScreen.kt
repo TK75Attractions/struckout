@@ -80,6 +80,7 @@ private fun CameraScreenContent(
         viewModel<CameraViewModel>(factory = factory)
     }
     val image by viewModel.contoursImage.collectAsState()
+    val udpIsBound by viewModel.udpIsBound.collectAsState()
     val cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
     Column(
@@ -105,6 +106,12 @@ private fun CameraScreenContent(
                 .fillMaxWidth()
                 .weight(1f)
         )
+    }
+
+    if (!udpIsBound) {
+        LaunchedEffect(Unit) {
+            viewModel.bindUdpSocket()
+        }
     }
 
     LaunchedEffect(Unit) {
