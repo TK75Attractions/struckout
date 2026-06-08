@@ -11,7 +11,9 @@ import com.taichi765.struckoutCameraApp.transport.ConnectionState
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import struckout.v1.detectedObject
 import struckout.v1.udpPacket
@@ -24,11 +26,17 @@ class CameraViewModel(
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
 
+    val connState = tcpRepository.state.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = ConnectionState.Disconnected
+    )
+
     private var frameId = FrameID(0u)
 
     val analyzer = MyAnalyzer(cameraRepository.tracker) { image, imageTimestamp, rects ->
-        val connState = tcpRepository.state.value
-        check(connState is ConnectionState.Connected) {
+        val currentConnState = connState.value
+        check(currentConnState is ConnectionState.Connected) {
             "TCP connection must be established before camera starts"
         }
         if (rects.count() == 0) {
@@ -37,7 +45,7 @@ class CameraViewModel(
         _contoursImage.value = image
         frameId = frameId.increment()
         val packet = udpPacket {
-            cameraId = connState.cameraID.toInt()
+            cameraId = currentConnState.cameraID.toInt()
             timestamp = getTimestamp(imageTimestamp)
             frameId = frameId
             rects.forEach {

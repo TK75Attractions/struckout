@@ -20,7 +20,13 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
     val cameraLocation = _cameraLocation.asStateFlow()
 
-    val isConnected = tcpRepository.state.map {
+    val connState = tcpRepository.state.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = ConnectionState.Disconnected
+    )
+
+    val isConnected = connState.map {
         when (it) {
             is ConnectionState.Connected -> true
             is ConnectionState.Disconnected -> false
@@ -32,8 +38,8 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
     )
 
     suspend fun updateCameraLocation(value: CameraLocation) {
-        val state = tcpRepository.state.value
-        if (state !is ConnectionState.Connected) {
+        val curState = connState.value
+        if (curState !is ConnectionState.Connected) {
             Log.w(TAG, "cannot update camera location: TCP is disconnected")
             return
         }
@@ -46,7 +52,7 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
                     y = value.y
                     z = value.z
                 }
-                cameraId = state.cameraID.toInt()
+                cameraId = curState.cameraID.toInt()
             }
         }
         tcpRepository.sendPacket(packet)
