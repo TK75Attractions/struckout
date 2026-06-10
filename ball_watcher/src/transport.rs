@@ -3,7 +3,6 @@ use std::{
     io,
     marker::Unpin,
     net::SocketAddr,
-    ops::Deref,
     sync::Arc,
 };
 
@@ -16,7 +15,7 @@ use tokio::{
     sync::{Mutex, RwLock, mpsc},
     task::JoinHandle,
 };
-use tracing::{info, trace, warn};
+use tracing::{info, warn};
 
 use crate::{
     State,
@@ -28,14 +27,14 @@ const FRAME_UDP_ADDR_DEFAULT: &str = "0.0.0.0:5050";
 const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
 
 /// UDP Socket to receive frames from cameras.
-pub struct FrameSocket {
+pub struct UdpTransport {
     socket: UdpSocket,
     buf: BytesMut,
     tx: mpsc::Sender<UdpPacket>,
     clients: HashSet<SocketAddr>,
 }
 
-impl FrameSocket {
+impl UdpTransport {
     pub async fn new(tx: mpsc::Sender<UdpPacket>) -> std::io::Result<Self> {
         // TODO: retry with other port if port is already used
         let socket = UdpSocket::bind(FRAME_UDP_ADDR_DEFAULT).await?;
