@@ -13,9 +13,7 @@ namespace StruckOut.Infrastructure.Network
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
 
-        private readonly ProtoDeserializer _deserializer;
-
-        private Action<NetworkPacket>? _onCollisionReceived;
+        private Action<NetworkPacket> _onCollisionReceived;
 
         public void AddAction(Action<NetworkPacket> action)
         {
@@ -60,6 +58,8 @@ namespace StruckOut.Infrastructure.Network
             await Task.CompletedTask;
         }
 
+        #region ReadMethod
+
         private async Task ReceiveDataAsync()
         {
             while (isConnected)
@@ -97,5 +97,6 @@ namespace StruckOut.Infrastructure.Network
                 offset += received;
             }
         } 
+        #endregion
     }
 }
