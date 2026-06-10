@@ -15,6 +15,6 @@ message NetworkPacket
     oneof payload
     {
         CollisionPoint point = 1;
-        Debug.stringMessage message = 2;
+        StruckOut.Debug.stringMessage message = 2;
     }
 }
