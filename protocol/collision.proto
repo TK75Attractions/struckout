@@ -2,8 +2,19 @@ syntax = "proto3";
 
 package StruckOut.DTO;
 
+import "debug.proto";
+
 message CollisionPoint
 {
     float X = 1;
     float Y = 2;
+}
+
+message NetworkPacket
+{
+    oneof payload
+    {
+        CollisionPoint point = 1;
+        Debug.stringMessage message = 2;
+    }
 }

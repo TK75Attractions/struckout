@@ -66,7 +66,7 @@ namespace StruckOut.Infrastructure.Network
             {
                 byte[] data = await ReadByteAsync();
 
-                var packet = new NetworkPacket(data, MessageType.CollisionPoint);
+                var packet = NetworkPacket.Parser.ParseFrom(data);
 
                 _onCollisionReceived?.Invoke(packet);
             }
