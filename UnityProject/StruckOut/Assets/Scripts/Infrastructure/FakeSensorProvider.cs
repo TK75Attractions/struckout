@@ -1,5 +1,5 @@
 using StruckOut.Domain;
-using StruckOut.DTO;
+using Struckout.Dto.V1;
 
 namespace StruckOut.Infrastructure
 {

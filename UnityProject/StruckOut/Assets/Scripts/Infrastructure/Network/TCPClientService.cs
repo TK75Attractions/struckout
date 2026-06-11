@@ -2,7 +2,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System;
-using StruckOut.DTO;
+using Struckout.Dto.V1;
 using System.Buffers.Binary;
 
 namespace StruckOut.Infrastructure.Network

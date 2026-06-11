@@ -1,7 +1,7 @@
 using UnityEngine;
 using StruckOut.Infrastructure.Network;
 using StruckOut.Application;
-using StruckOut.Debug;
+using Struckout.Debug;
 
 
 namespace StruckOut.Bootstrap
@@ -23,7 +23,7 @@ namespace StruckOut.Bootstrap
 
         }
 
-        private void OnReceiveMessage(stringMessage message)
+        private void OnReceiveMessage(StringMessage message)
         {
             UnityEngine.Debug.Log($"Received message: {message.Message}");
             // Handle the received string message

@@ -1,5 +1,5 @@
 using UnityEngine;
-using StruckOut.DTO;
+using Struckout.Dto.V1;
 
 namespace StruckOut.Domain
 {

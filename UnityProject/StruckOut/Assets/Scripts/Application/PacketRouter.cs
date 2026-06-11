@@ -1,5 +1,5 @@
-using StruckOut.DTO;
-using StruckOut.Debug;
+using Struckout.Dto.V1;
+using Struckout.Debug;
 using System;
 
 
@@ -7,10 +7,10 @@ namespace StruckOut.Application
 {
     public class PacketRouter
     {
-        Action<stringMessage> _onStringMessageReceived;
+        Action<StringMessage> _onStringMessageReceived;
         Action<CollisionPoint> _onCollisionReceived;
 
-        public void AddStringMessageAction(Action<stringMessage> action)
+        public void AddStringMessageAction(Action<StringMessage> action)
         {
             _onStringMessageReceived += action;
         }
