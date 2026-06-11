@@ -9,7 +9,7 @@ using pb = global::Google.Protobuf;
 using pbc = global::Google.Protobuf.Collections;
 using pbr = global::Google.Protobuf.Reflection;
 using scg = global::System.Collections.Generic;
-namespace StruckOut.Dto.V1 {
+namespace Struckout.Dto.V1 {
 
   /// <summary>Holder for reflection information generated from collision.proto</summary>
   public static partial class CollisionReflection {
@@ -24,17 +24,17 @@ namespace StruckOut.Dto.V1 {
     static CollisionReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cg9jb2xsaXNpb24ucHJvdG8SEXN0cnVja19vdXQuZHRvLnYxGgtkZWJ1Zy5w",
-            "cm90byImCg5Db2xsaXNpb25Qb2ludBIJCgF4GAEgASgCEgkKAXkYAiABKAIi",
-            "gQEKDU5ldHdvcmtQYWNrZXQSMgoFcG9pbnQYASABKAsyIS5zdHJ1Y2tfb3V0",
-            "LmR0by52MS5Db2xsaXNpb25Qb2ludEgAEjEKB21lc3NhZ2UYAiABKAsyHi5T",
-            "dHJ1Y2tPdXQuRGVidWcuc3RyaW5nTWVzc2FnZUgAQgkKB3BheWxvYWRiBnBy",
-            "b3RvMw=="));
+            "Cg9jb2xsaXNpb24ucHJvdG8SEHN0cnVja291dC5kdG8udjEaC2RlYnVnLnBy",
+            "b3RvIiYKDkNvbGxpc2lvblBvaW50EgkKAXgYASABKAISCQoBeRgCIAEoAiKA",
+            "AQoNTmV0d29ya1BhY2tldBIxCgVwb2ludBgBIAEoCzIgLnN0cnVja291dC5k",
+            "dG8udjEuQ29sbGlzaW9uUG9pbnRIABIxCgdtZXNzYWdlGAIgASgLMh4uc3Ry",
+            "dWNrb3V0LmRlYnVnLlN0cmluZ01lc3NhZ2VIAEIJCgdwYXlsb2FkYgZwcm90",
+            "bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::StruckOut.Debug.DebugReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Struckout.Debug.DebugReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.Dto.V1.CollisionPoint), global::StruckOut.Dto.V1.CollisionPoint.Parser, new[]{ "X", "Y" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.Dto.V1.NetworkPacket), global::StruckOut.Dto.V1.NetworkPacket.Parser, new[]{ "Point", "Message" }, new[]{ "Payload" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Struckout.Dto.V1.CollisionPoint), global::Struckout.Dto.V1.CollisionPoint.Parser, new[]{ "X", "Y" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Struckout.Dto.V1.NetworkPacket), global::Struckout.Dto.V1.NetworkPacket.Parser, new[]{ "Point", "Message" }, new[]{ "Payload" }, null, null, null)
           }));
     }
     #endregion
@@ -56,7 +56,7 @@ namespace StruckOut.Dto.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::StruckOut.Dto.V1.CollisionReflection.Descriptor.MessageTypes[0]; }
+      get { return global::Struckout.Dto.V1.CollisionReflection.Descriptor.MessageTypes[0]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -291,7 +291,7 @@ namespace StruckOut.Dto.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::StruckOut.Dto.V1.CollisionReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Struckout.Dto.V1.CollisionReflection.Descriptor.MessageTypes[1]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -333,8 +333,8 @@ namespace StruckOut.Dto.V1 {
     public const int PointFieldNumber = 1;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::StruckOut.Dto.V1.CollisionPoint Point {
-      get { return payloadCase_ == PayloadOneofCase.Point ? (global::StruckOut.Dto.V1.CollisionPoint) payload_ : null; }
+    public global::Struckout.Dto.V1.CollisionPoint Point {
+      get { return payloadCase_ == PayloadOneofCase.Point ? (global::Struckout.Dto.V1.CollisionPoint) payload_ : null; }
       set {
         payload_ = value;
         payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Point;
@@ -345,8 +345,8 @@ namespace StruckOut.Dto.V1 {
     public const int MessageFieldNumber = 2;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::StruckOut.Debug.stringMessage Message {
-      get { return payloadCase_ == PayloadOneofCase.Message ? (global::StruckOut.Debug.stringMessage) payload_ : null; }
+    public global::Struckout.Debug.StringMessage Message {
+      get { return payloadCase_ == PayloadOneofCase.Message ? (global::Struckout.Debug.StringMessage) payload_ : null; }
       set {
         payload_ = value;
         payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Message;
@@ -477,13 +477,13 @@ namespace StruckOut.Dto.V1 {
       switch (other.PayloadCase) {
         case PayloadOneofCase.Point:
           if (Point == null) {
-            Point = new global::StruckOut.Dto.V1.CollisionPoint();
+            Point = new global::Struckout.Dto.V1.CollisionPoint();
           }
           Point.MergeFrom(other.Point);
           break;
         case PayloadOneofCase.Message:
           if (Message == null) {
-            Message = new global::StruckOut.Debug.stringMessage();
+            Message = new global::Struckout.Debug.StringMessage();
           }
           Message.MergeFrom(other.Message);
           break;
@@ -509,7 +509,7 @@ namespace StruckOut.Dto.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            global::StruckOut.Dto.V1.CollisionPoint subBuilder = new global::StruckOut.Dto.V1.CollisionPoint();
+            global::Struckout.Dto.V1.CollisionPoint subBuilder = new global::Struckout.Dto.V1.CollisionPoint();
             if (payloadCase_ == PayloadOneofCase.Point) {
               subBuilder.MergeFrom(Point);
             }
@@ -518,7 +518,7 @@ namespace StruckOut.Dto.V1 {
             break;
           }
           case 18: {
-            global::StruckOut.Debug.stringMessage subBuilder = new global::StruckOut.Debug.stringMessage();
+            global::Struckout.Debug.StringMessage subBuilder = new global::Struckout.Debug.StringMessage();
             if (payloadCase_ == PayloadOneofCase.Message) {
               subBuilder.MergeFrom(Message);
             }
@@ -546,7 +546,7 @@ namespace StruckOut.Dto.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            global::StruckOut.Dto.V1.CollisionPoint subBuilder = new global::StruckOut.Dto.V1.CollisionPoint();
+            global::Struckout.Dto.V1.CollisionPoint subBuilder = new global::Struckout.Dto.V1.CollisionPoint();
             if (payloadCase_ == PayloadOneofCase.Point) {
               subBuilder.MergeFrom(Point);
             }
@@ -555,7 +555,7 @@ namespace StruckOut.Dto.V1 {
             break;
           }
           case 18: {
-            global::StruckOut.Debug.stringMessage subBuilder = new global::StruckOut.Debug.stringMessage();
+            global::Struckout.Debug.StringMessage subBuilder = new global::Struckout.Debug.StringMessage();
             if (payloadCase_ == PayloadOneofCase.Message) {
               subBuilder.MergeFrom(Message);
             }

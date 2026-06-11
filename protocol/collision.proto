@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package struck_out.dto.v1;
+package struckout.dto.v1;
 
 import "debug.proto";
 
@@ -12,6 +12,6 @@ message CollisionPoint {
 message NetworkPacket {
   oneof payload {
     CollisionPoint point = 1;
-    StruckOut.Debug.stringMessage message = 2;
+    struckout.debug.StringMessage message = 2;
   }
 }

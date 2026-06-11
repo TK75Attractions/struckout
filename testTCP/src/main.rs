@@ -1,18 +1,21 @@
 use std::net::TcpListener;
 use std::io::{Read, Write};
-use proto::struck_out::dto::NetworkPacket;
-use proto::struck_out::dto::network_packet::Payload;
-use proto::struck_out::debug::StringMessage;
+use proto::struckout::dto::v1::NetworkPacket;
+use proto::struckout::dto::v1::network_packet::Payload;
+use proto::struckout::debug::StringMessage;
 use prost::Message;
 
 pub mod proto {
-    pub mod struck_out {
+    pub mod struckout {
         pub mod dto {
-            include!(concat!(env!("OUT_DIR"), "/struck_out.dto.rs"));
+            pub mod v1
+            {
+                include!(concat!(env!("OUT_DIR"), "/struckout.dto.v1.rs"));
+            }
         }
 
         pub mod debug {
-            include!(concat!(env!("OUT_DIR"), "/struck_out.debug.rs"));
+            include!(concat!(env!("OUT_DIR"), "/struckout.debug.rs"));
         }
     }
 }
