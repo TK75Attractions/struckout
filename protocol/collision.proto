@@ -1,20 +1,17 @@
 syntax = "proto3";
 
-package StruckOut.DTO;
+package struck_out.dto.v1;
 
 import "debug.proto";
 
-message CollisionPoint
-{
-    float X = 1;
-    float Y = 2;
+message CollisionPoint {
+  float x = 1;
+  float y = 2;
 }
 
-message NetworkPacket
-{
-    oneof payload
-    {
-        CollisionPoint point = 1;
-        StruckOut.Debug.stringMessage message = 2;
-    }
+message NetworkPacket {
+  oneof payload {
+    CollisionPoint point = 1;
+    StruckOut.Debug.stringMessage message = 2;
+  }
 }

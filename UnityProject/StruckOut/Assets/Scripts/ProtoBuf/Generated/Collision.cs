@@ -9,7 +9,7 @@ using pb = global::Google.Protobuf;
 using pbc = global::Google.Protobuf.Collections;
 using pbr = global::Google.Protobuf.Reflection;
 using scg = global::System.Collections.Generic;
-namespace StruckOut.DTO {
+namespace StruckOut.Dto.V1 {
 
   /// <summary>Holder for reflection information generated from collision.proto</summary>
   public static partial class CollisionReflection {
@@ -24,16 +24,17 @@ namespace StruckOut.DTO {
     static CollisionReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cg9jb2xsaXNpb24ucHJvdG8SDVN0cnVja091dC5EVE8aC2RlYnVnLnByb3Rv",
-            "IiYKDkNvbGxpc2lvblBvaW50EgkKAVgYASABKAISCQoBWRgCIAEoAiJ9Cg1O",
-            "ZXR3b3JrUGFja2V0Ei4KBXBvaW50GAEgASgLMh0uU3RydWNrT3V0LkRUTy5D",
-            "b2xsaXNpb25Qb2ludEgAEjEKB21lc3NhZ2UYAiABKAsyHi5TdHJ1Y2tPdXQu",
-            "RGVidWcuc3RyaW5nTWVzc2FnZUgAQgkKB3BheWxvYWRiBnByb3RvMw=="));
+            "Cg9jb2xsaXNpb24ucHJvdG8SEXN0cnVja19vdXQuZHRvLnYxGgtkZWJ1Zy5w",
+            "cm90byImCg5Db2xsaXNpb25Qb2ludBIJCgF4GAEgASgCEgkKAXkYAiABKAIi",
+            "gQEKDU5ldHdvcmtQYWNrZXQSMgoFcG9pbnQYASABKAsyIS5zdHJ1Y2tfb3V0",
+            "LmR0by52MS5Db2xsaXNpb25Qb2ludEgAEjEKB21lc3NhZ2UYAiABKAsyHi5T",
+            "dHJ1Y2tPdXQuRGVidWcuc3RyaW5nTWVzc2FnZUgAQgkKB3BheWxvYWRiBnBy",
+            "b3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::StruckOut.Debug.DebugReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.DTO.CollisionPoint), global::StruckOut.DTO.CollisionPoint.Parser, new[]{ "X", "Y" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.DTO.NetworkPacket), global::StruckOut.DTO.NetworkPacket.Parser, new[]{ "Point", "Message" }, new[]{ "Payload" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.Dto.V1.CollisionPoint), global::StruckOut.Dto.V1.CollisionPoint.Parser, new[]{ "X", "Y" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::StruckOut.Dto.V1.NetworkPacket), global::StruckOut.Dto.V1.NetworkPacket.Parser, new[]{ "Point", "Message" }, new[]{ "Payload" }, null, null, null)
           }));
     }
     #endregion
@@ -55,7 +56,7 @@ namespace StruckOut.DTO {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::StruckOut.DTO.CollisionReflection.Descriptor.MessageTypes[0]; }
+      get { return global::StruckOut.Dto.V1.CollisionReflection.Descriptor.MessageTypes[0]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -86,7 +87,7 @@ namespace StruckOut.DTO {
       return new CollisionPoint(this);
     }
 
-    /// <summary>Field number for the "X" field.</summary>
+    /// <summary>Field number for the "x" field.</summary>
     public const int XFieldNumber = 1;
     private float x_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -98,7 +99,7 @@ namespace StruckOut.DTO {
       }
     }
 
-    /// <summary>Field number for the "Y" field.</summary>
+    /// <summary>Field number for the "y" field.</summary>
     public const int YFieldNumber = 2;
     private float y_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -290,7 +291,7 @@ namespace StruckOut.DTO {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::StruckOut.DTO.CollisionReflection.Descriptor.MessageTypes[1]; }
+      get { return global::StruckOut.Dto.V1.CollisionReflection.Descriptor.MessageTypes[1]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -332,8 +333,8 @@ namespace StruckOut.DTO {
     public const int PointFieldNumber = 1;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::StruckOut.DTO.CollisionPoint Point {
-      get { return payloadCase_ == PayloadOneofCase.Point ? (global::StruckOut.DTO.CollisionPoint) payload_ : null; }
+    public global::StruckOut.Dto.V1.CollisionPoint Point {
+      get { return payloadCase_ == PayloadOneofCase.Point ? (global::StruckOut.Dto.V1.CollisionPoint) payload_ : null; }
       set {
         payload_ = value;
         payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Point;
@@ -476,7 +477,7 @@ namespace StruckOut.DTO {
       switch (other.PayloadCase) {
         case PayloadOneofCase.Point:
           if (Point == null) {
-            Point = new global::StruckOut.DTO.CollisionPoint();
+            Point = new global::StruckOut.Dto.V1.CollisionPoint();
           }
           Point.MergeFrom(other.Point);
           break;
@@ -508,7 +509,7 @@ namespace StruckOut.DTO {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            global::StruckOut.DTO.CollisionPoint subBuilder = new global::StruckOut.DTO.CollisionPoint();
+            global::StruckOut.Dto.V1.CollisionPoint subBuilder = new global::StruckOut.Dto.V1.CollisionPoint();
             if (payloadCase_ == PayloadOneofCase.Point) {
               subBuilder.MergeFrom(Point);
             }
@@ -545,7 +546,7 @@ namespace StruckOut.DTO {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            global::StruckOut.DTO.CollisionPoint subBuilder = new global::StruckOut.DTO.CollisionPoint();
+            global::StruckOut.Dto.V1.CollisionPoint subBuilder = new global::StruckOut.Dto.V1.CollisionPoint();
             if (payloadCase_ == PayloadOneofCase.Point) {
               subBuilder.MergeFrom(Point);
             }
