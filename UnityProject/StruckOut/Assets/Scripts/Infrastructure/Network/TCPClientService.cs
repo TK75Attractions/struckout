@@ -5,7 +5,7 @@ using System;
 using Struckout.Dto.V1;
 using System.Buffers.Binary;
 
-namespace StruckOut.Infrastructure.Network
+namespace Struckout.Infrastructure.Network
 {
     public class TCPClientService
     {

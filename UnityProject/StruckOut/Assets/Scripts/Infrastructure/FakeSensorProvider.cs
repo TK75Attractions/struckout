@@ -1,7 +1,7 @@
-using StruckOut.Domain;
+using Struckout.Domain;
 using Struckout.Dto.V1;
 
-namespace StruckOut.Infrastructure
+namespace Struckout.Infrastructure
 {
     public class FakeSensorProvider : ISensorProvider
     {

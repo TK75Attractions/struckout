@@ -1,7 +1,7 @@
 using UnityEngine;
 using Struckout.Dto.V1;
 
-namespace StruckOut.Domain
+namespace Struckout.Domain
 {
     public interface ISensorProvider
     {

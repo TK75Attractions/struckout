@@ -1,10 +1,10 @@
 using UnityEngine;
-using StruckOut.Infrastructure.Network;
-using StruckOut.Application;
+using Struckout.Infrastructure.Network;
+using Struckout.Application;
 using Struckout.Debug;
 
 
-namespace StruckOut.Bootstrap
+namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : MonoBehaviour
     {
