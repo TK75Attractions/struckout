@@ -12,7 +12,7 @@ use tokio::{
 
 use crate::{
     protobuf::{CameraLocation, UdpPacket},
-    transport::{FrameSocket, TcpTransport},
+    transport::{TcpTransport, UdpTransport},
     types::CameraId,
 };
 
