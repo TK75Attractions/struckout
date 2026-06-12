@@ -14,6 +14,7 @@ androidxNav = "2.9.8"
 robolectric = "4.16.1"
 protobuf = "4.35.0"
 protobuf-plugin = "0.10.0"
+timber = "5.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -41,6 +42,7 @@ kable-core = { group = "com.juul.kable", name = "kable-core", version.ref = "kab
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
+timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

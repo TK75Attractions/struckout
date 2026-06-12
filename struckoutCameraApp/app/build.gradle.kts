@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.protobuf)
 }
 
+val enableNatsLog = providers.gradleProperty("enableNatsLog")
+
 android {
     namespace = "com.taichi765.struckoutCameraApp"
     compileSdk {
@@ -25,12 +27,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "ENABLE_NATS_LOG", enableNatsLog.orElse("false").get())
+        }
+
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("boolean", "ENABLE_NATS_LOG", enableNatsLog.orElse("true").get())
         }
     }
     compileOptions {
@@ -39,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     sourceSets {
         getByName("main") {
@@ -68,6 +76,7 @@ dependencies {
     implementation(libs.kable.core)
     implementation(libs.protobuf.javalite)
     implementation(libs.protobuf.kotlin.lite)
+    implementation(libs.timber)
     implementation(project(":opencv"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
