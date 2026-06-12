@@ -1,16 +1,16 @@
 use nalgebra::Vector3;
 
-pub(crate) fn calc_coordinate(
+pub(crate) fn triangulate(
     camera_loc_1: Vector3<f32>,
-    orientation_1: Orientation,
+    orientation_1: Vector3<f32>,
     camera_loc_2: Vector3<f32>,
-    orientation_2: Orientation,
+    orientation_2: Vector3<f32>,
 ) -> Coordinate {
     // TODO: From / Intoを使う
     let p = camera_loc_1;
     let q = camera_loc_2;
-    let a = orientation_1.into_vector3();
-    let b = orientation_2.into_vector3();
+    let a = orientation_1;
+    let b = orientation_2;
 
     let d = p - q;
     let n = a.cross(&b);
@@ -23,18 +23,6 @@ pub(crate) fn calc_coordinate(
     let r = p + t * a;
 
     r.into()
-}
-
-pub struct Orientation {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-impl Orientation {
-    pub fn into_vector3(self) -> Vector3<f32> {
-        Vector3::new(self.x, self.y, self.z)
-    }
 }
 
 pub struct Coordinate {
