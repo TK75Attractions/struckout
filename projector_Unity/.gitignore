@@ -34,6 +34,7 @@ UserSettings/
 *.opendb
 *.VC.db
 
+
 # =========================
 # Unity Cache
 # =========================
@@ -77,3 +78,4 @@ Packages/packages-lock.json
 *.apk
 *.aab
 *.unitypackage
+*.slnx
