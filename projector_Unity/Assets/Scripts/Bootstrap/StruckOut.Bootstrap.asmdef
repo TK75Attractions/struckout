@@ -4,7 +4,8 @@
     "references": [
         "StruckOut.Infrastructure",
         "StruckOut.Application",
-        "StruckOut.Generated"
+        "StruckOut.Generated",
+        "StruckOut.Domain"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

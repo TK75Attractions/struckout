@@ -1,6 +1,6 @@
 using UnityEngine;
 using Struckout.Infrastructure.Network;
-using Struckout.Application;
+using Struckout.Infrastructure;
 using Struckout.Debug;
 
 
@@ -8,6 +8,7 @@ namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : MonoBehaviour
     {
+
         private TCPClientService _tcpClient;
         private PacketRouter packetRouter = new();
 

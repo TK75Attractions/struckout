@@ -3,7 +3,7 @@ using Struckout.Debug;
 using System;
 
 
-namespace Struckout.Application
+namespace Struckout.Infrastructure
 {
     public class PacketRouter
     {
