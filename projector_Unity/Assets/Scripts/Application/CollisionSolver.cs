@@ -7,21 +7,14 @@ namespace Struckout.Application
 {
     public class CollisionSolver : ICollisionSolver
     {
-        private readonly IPointCalculator _pointCalculator;
-
-        public CollisionSolver(IPointCalculator calculator)
+        public bool IsCollision(CollisionPoint collisionPoint, List<Target> targets, out Target target)
         {
-            _pointCalculator = calculator;
-        }
-
-        public bool IsCollision(CollisionPoint collisionPoint, List<Target> targets, out int targetPoint)
-        {
-            targetPoint = 0; //TODO: target point calculation Logic
-            foreach (var target in targets)
+            target = null;
+            foreach (var tar in targets)
             {
-                if(IsWithinTarget(collisionPoint, target))
+                if(IsWithinTarget(collisionPoint, tar))
                 {
-                    targetPoint = _pointCalculator.CalculatePoint(target);
+                    target = tar;
                     return true;
                 }
             }

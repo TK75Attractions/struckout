@@ -5,6 +5,6 @@ namespace Struckout.Domain
 {
     public interface ICollisionSolver
     {
-        bool IsCollision(CollisionPoint collisionPoint, List<Target> targets, out int targetPoint);
+        bool IsCollision(CollisionPoint collisionPoint, List<Target> targets, out Target targetPoint);
     }
 }
