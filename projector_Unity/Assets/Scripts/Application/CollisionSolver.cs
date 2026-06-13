@@ -5,8 +5,15 @@ using System;
 
 namespace Struckout.Application
 {
-    public class CollisionSolver
+    public class CollisionSolver : ICollisionSolver
     {
+        private readonly IPointCalculator _pointCalculator;
+
+        public CollisionSolver(IPointCalculator calculator)
+        {
+            _pointCalculator = calculator;
+        }
+
         public bool IsCollision(CollisionPoint collisionPoint, List<Target> targets, out int targetPoint)
         {
             targetPoint = 0; //TODO: target point calculation Logic
@@ -14,6 +21,7 @@ namespace Struckout.Application
             {
                 if(IsWithinTarget(collisionPoint, target))
                 {
+                    targetPoint = _pointCalculator.CalculatePoint(target);
                     return true;
                 }
             }
