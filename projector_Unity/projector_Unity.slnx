@@ -2,5 +2,6 @@
   <Project Path="StruckOut.Infrastructure.csproj" />
   <Project Path="StruckOut.Domain.csproj" />
   <Project Path="StruckOut.Generated.csproj" />
+  <Project Path="StruckOut.Application.csproj" />
   <Project Path="StruckOut.Bootstrap.csproj" />
 </Solution>
