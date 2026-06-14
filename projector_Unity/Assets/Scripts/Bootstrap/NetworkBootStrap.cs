@@ -2,6 +2,7 @@ using UnityEngine;
 using Struckout.Infrastructure.Network;
 using Struckout.Infrastructure;
 using Struckout.Debug;
+using Cysharp.Threading.Tasks;
 
 
 namespace Struckout.Bootstrap
@@ -11,16 +12,15 @@ namespace Struckout.Bootstrap
         private TCPClientService _tcpClient;
         private PacketRouter packetRouter = new();
 
-        private async void Start()
+        internal async UniTask Initialize(RuntimeContext context)
         {
+            context.AddDestoryEvent(OnDestroy);
             packetRouter.AddStringMessageAction(OnReceiveMessage);
-            
-            _tcpClient = new TCPClientService();
+            _tcpClient = context.TCPClient;
             
             _tcpClient.AddAction(packetRouter.RoutePacket);
 
             await _tcpClient.ConnectAsync("127.0.0.1", 5000);
-
         }
 
         private void OnReceiveMessage(StringMessage message)

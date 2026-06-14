@@ -1,7 +1,21 @@
+using System;
+using UnityEngine;
+
 namespace Struckout.Bootstrap
 {
-    public class RootBootstrap
+    public class RootBootstrap : MonoBehaviour
     {
-        private NetworkBootstrap networkBootstrap;
+        private RuntimeContext runtimeContext = new();
+
+        private void Start()
+        {
+            
+        }
+        
+
+        private void OnDestroy()
+        {
+            runtimeContext.destroyEvent?.Invoke();
+        }
     }
 }

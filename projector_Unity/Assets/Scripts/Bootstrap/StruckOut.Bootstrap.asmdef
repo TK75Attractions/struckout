@@ -5,7 +5,8 @@
         "StruckOut.Infrastructure",
         "StruckOut.Application",
         "StruckOut.Generated",
-        "StruckOut.Domain"
+        "StruckOut.Domain",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
