@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package com.tk75attractions.struckout.v1;
+
+enum Difficulty {
+  DIFFICULTY_UNSPECIFIED = 0;
+  DIFFICULTY_NORMAL = 1;
+  DIFFICULTY_HARD = 2;
+  DIFFICULTY_VERYHARD = 3;
+}
+
+message StartGameRequest {
+  Difficulty difficulty = 1;
+}
+
+message StartGameResponse {}
+
+service MasterToProjectorService {
+  rpc StartGame(StartGameRequest) returns (StartGameResponse);
+}
