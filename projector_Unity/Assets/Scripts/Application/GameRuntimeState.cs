@@ -7,7 +7,5 @@ namespace Struckout.Application
     {
         public List<Target> Targets { get; private set; } = new();
         public int Score { get; set; } = 0;
-
-        
     }
 }

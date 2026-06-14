@@ -5,7 +5,7 @@ using Struckout.Dto.V1;
 
 namespace Struckout.Application
 {
-    public class Game
+    public class GameRuntime
     {
         private readonly ICollisionSolver _collisionSolver;
         private readonly IPointCalculator _pointCalculator;
