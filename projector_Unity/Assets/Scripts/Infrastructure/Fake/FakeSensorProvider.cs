@@ -1,4 +1,4 @@
-using Struckout.Domain;
+using Struckout.Application;
 using Struckout.Dto.V1;
 
 namespace Struckout.Infrastructure

@@ -1,7 +1,6 @@
-using UnityEngine;
 using Struckout.Dto.V1;
 
-namespace Struckout.Domain
+namespace Struckout.Application
 {
     public interface ISensorProvider
     {
