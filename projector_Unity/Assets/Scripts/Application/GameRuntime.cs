@@ -12,6 +12,8 @@ namespace Struckout.Application
         
         private GameRuntimeState _state = new();
 
+        
+
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
             bool isHit = _collisionSolver.IsCollision(collisionPoint, _state.Targets, out Target hittedTarget);

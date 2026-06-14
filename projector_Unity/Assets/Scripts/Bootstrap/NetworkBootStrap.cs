@@ -6,9 +6,8 @@ using Struckout.Debug;
 
 namespace Struckout.Bootstrap
 {
-    public class NetworkBootstrap : MonoBehaviour
+    public class NetworkBootstrap
     {
-
         private TCPClientService _tcpClient;
         private PacketRouter packetRouter = new();
 
