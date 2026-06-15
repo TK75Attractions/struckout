@@ -32,7 +32,7 @@ namespace Struckout.Infrastructure
                     _onCollisionReceived?.Invoke(packet.Point);
                     break;
                 default:
-                    Console.WriteLine("Unknown packet type received.");
+                    UnityEngine.Debug.Log("Unknown packet type received.");
                     break;
             }
         }

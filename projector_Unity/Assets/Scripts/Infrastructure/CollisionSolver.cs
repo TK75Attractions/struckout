@@ -7,7 +7,7 @@ namespace Struckout.Application
 {
     public class CollisionSolver : ICollisionSolver
     {
-        public bool IsCollision(CollisionPoint collisionPoint, List<Target> targets, out Target target)
+        public bool IsCollision(CollisionPoint collisionPoint, IReadOnlyList<Target> targets, out Target target)
         {
             target = null;
             foreach (var tar in targets)

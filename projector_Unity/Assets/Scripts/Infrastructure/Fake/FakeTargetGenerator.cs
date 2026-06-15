@@ -6,12 +6,15 @@ namespace Struckout.Infrastructure
 {
     public class FakeTargetGenerator : ITargetGenerator
     {
-        public List<Target> GenerateTargets(int num)
+        public IReadOnlyList<Target> GenerateTargets(int num)
         {
             List<Target> result = new();
-            var target = CreateTarget(TargetType.Circle, 1, 1, 1);
+            for (int i = 0; i < num; i++)
+            {
+                var target = CreateTarget(TargetType.Circle, i, i, 1);
             
-            result.Add(target);
+                result.Add(target);
+            }
 
             return result;
         }

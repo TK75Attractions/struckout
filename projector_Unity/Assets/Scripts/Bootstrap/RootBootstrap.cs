@@ -11,7 +11,7 @@ namespace Struckout.Bootstrap
 
         private void Start()
         {
-            Initialize().Forget();
+            Initialize().Forget(UnityEngine.Debug.LogException);
         }
 
         private async UniTask Initialize()
@@ -40,7 +40,7 @@ namespace Struckout.Bootstrap
 
             foreach (var destroy in destroyList)
             {
-                destroy?.OnDestroy().Forget();
+                destroy?.OnDestroy().Forget(UnityEngine.Debug.LogException);
             }
         }
     }

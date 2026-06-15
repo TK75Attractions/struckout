@@ -31,11 +31,10 @@ namespace Struckout.Application
 
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
-            List<Target> targetList = new (_state.Targets);
-            bool isHit = _collisionSolver.IsCollision(collisionPoint, targetList, out Target hitTarget);
+            bool isHit = _collisionSolver.IsCollision(collisionPoint, _state.Targets, out Target hitTarget);
             if (!isHit) return;
 
-            _state.Score += _pointCalculator.CalculatePoint(hitTarget);
+            _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
         }
     }
 }

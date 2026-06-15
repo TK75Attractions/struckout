@@ -8,14 +8,29 @@ namespace Struckout.Application
     {
         private List<Target> _targets = new();
         public IReadOnlyList<Target> Targets => _targets;
-        public int Score { get; set; } = 0;
+        public int Score { get; private set; } = 0;
 
-        public void AddTargets(List<Target> targets)
+        public void AddTargets(IReadOnlyList<Target> targets)
         {
             foreach (var target in targets)
             {
                 AddTarget(target);
             }   
+        }
+
+        public void AddScore(int score)
+        {
+            Score += score;
+        }
+
+        public void DecreaseScore(int score)
+        {
+            if (score > Score)
+            {
+                Score = 0;
+                return;
+            }
+            Score -= score;
         }
 
         public void AddTarget(Target target)

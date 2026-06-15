@@ -22,7 +22,8 @@ namespace Struckout.Bootstrap
             
             _tcpClient.AddAction(packetRouter.RoutePacket);
 
-            await _tcpClient.ConnectAsync("127.0.0.1", 5000);
+            bool isSuccessfullyConnect = await _tcpClient.ConnectAsync("127.0.0.1", 5000);
+            if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
         }
 
         private void OnReceiveMessage(StringMessage message)
@@ -34,6 +35,7 @@ namespace Struckout.Bootstrap
         public async UniTask OnDestroy()
         {
             if (_tcpClient == null) return;
+            _tcpClient.RemoveAction(packetRouter.RoutePacket);
             await _tcpClient.DisconnectAsync();
         }
     }
