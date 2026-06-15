@@ -1,25 +1,21 @@
 use std::{sync::Arc, time::Duration};
 
-use kfilter::{Kalman1M, KalmanPredictInput, measurement::LinearMeasurement, system::LinearSystem};
 use nalgebra::{Matrix3, Matrix6, Matrix6x3, SMatrix, Vector3, Vector6};
 use tokio::sync::RwLock;
 
 use crate::{
     PairedFrames, State,
+    data_association::ObjectTrack,
     protobuf::DetectedObject,
-    triangulate::triangulate,
-    types::{CameraId, GetLayFromDetectedObject, ToVector3 as _},
+    types::{CameraId, ToVector3 as _},
 };
 
 const GRAVITY_ACCELERATION: f32 = 9.80665;
-
-type TheKalman = Kalman1M<f32, 6, 3, 3, LinearSystem<f32, 6, 3>, LinearMeasurement<f32, 6, 3>>;
 
 /// Tracks an object using `Kalman filter`. This would be created per an object.
 pub struct ObjectTrackerKalman {
     obj_id: ObjectId,
     state: Arc<RwLock<State>>,
-    filter: TheKalman,
     input_mtx: Vector3<f32>,
 }
 
@@ -58,19 +54,18 @@ impl ObjectTrackerKalman {
             ret.fixed_view_mut::<3, 3>(3, 0).copy_from(&bottom);
             ret
         };
-        let x_initial = Vector6::zeros(); // TODO: use proper value
+        let x_initial = Vector6::<f64>::zeros(); // TODO: use proper value
 
-        let filter: Kalman1M<f32, 6, 3, 3, _, _> = Kalman1M::new_with_input(
+        /*let filter: Kalman1M<f32, 6, 3, 3, _, _> = Kalman1M::new_with_input(
             f,                   //6x6
             SMatrix::identity(), //6x6
             b,                   //6x3
             SMatrix::identity(), // TODO:use proper value
             SMatrix::identity(), //1x1
             x_initial,
-        );
+        );*/
         Self {
             obj_id,
-            filter,
             input_mtx: Vector3::new(0., 0., -GRAVITY_ACCELERATION),
             state,
         }
@@ -78,26 +73,6 @@ impl ObjectTrackerKalman {
 
     pub fn obj_id(&self) -> ObjectId {
         self.obj_id
-    }
-
-    pub async fn evaluate_scores<'a>(
-        &mut self,
-        pair: &'a PairedFrames,
-    ) -> impl Iterator<Item = f32> + 'a {
-        let prior_estimated = self.filter.predict(self.input_mtx).unwrap();
-        let estimated_coord = Vector3::new(prior_estimated.x, prior_estimated.y, prior_estimated.z);
-        let score_a = evaluate_scores_for_objects(
-            pair.a.detected_objects.iter(),
-            self.get_camera_loc(pair.a.camera_id).await,
-            estimated_coord,
-        );
-        let score_b = evaluate_scores_for_objects(
-            pair.b.detected_objects.iter(),
-            self.get_camera_loc(pair.b.camera_id).await,
-            estimated_coord,
-        );
-
-        score_a.zip(score_b).map(|(a, b)| zip_scores(a, b))
     }
 
     pub async fn update_and_check_collision(&mut self, pair: PairedFrames) {
@@ -127,42 +102,61 @@ impl ObjectTrackerKalman {
         };*/
 
         // `idx` must exist because it comes from `find_corresponding_object()`
-        let lay_a = pair.a.detected_objects.get(idx_a).unwrap().get_lay();
-        let lay_b = pair.b.detected_objects.get(idx_b).unwrap().get_lay();
+        //let lay_a = pair.a.detected_objects.get(idx_a).unwrap().get_lay();
+        //let lay_b = pair.b.detected_objects.get(idx_b).unwrap().get_lay();
 
-        let measured_coord = triangulate(cam_loc_a, lay_a, cam_loc_b, lay_b).to_vector3();
+        //let measured_coord = triangulate(cam_loc_a, lay_a, cam_loc_b, lay_b).to_vector3();
 
-        self.filter.update(measured_coord).unwrap();
+        //self.filter.update(measured_coord).unwrap();
         //})
         //.await
         //.unwrap();
     }
 
     /// Utility method to get camera location from [`State`][crate::State].
-    async fn get_camera_loc(&self, camera_id: impl Into<CameraId>) -> Vector3<f32> {
-        self.state
-            .read()
-            .await
-            .camera_locs
-            .get(&camera_id.into())
-            .unwrap()
-            .to_vector3()
+    async fn get_camera_loc(&self, camera_id: impl Into<CameraId>) -> Vector3<f64> {
+        /*self.state
+        .read()
+        .await
+        .camera_locs
+        .get(&camera_id.into())
+        .unwrap()
+        .to_vector3()*/
+        todo!()
     }
 }
 
-/// Evaluates scores for each objects.
-fn evaluate_scores_for_objects<'a>(
-    objects: impl Iterator<Item = &'a DetectedObject>,
-    camera_loc: Vector3<f32>,
-    estimated_coord: Vector3<f32>,
-) -> impl Iterator<Item = f32> {
+/* impl ObjectTrack for ObjectTrackerKalman {
+    async fn evaluate_scores<'a>(
+        &mut self,
+        camera_id: impl Into<CameraId>,
+        detections: impl Iterator<Item = &'a DetectedObject> + 'a,
+    ) -> impl Iterator<Item = f64> + 'a {
+        /*
+        let prior_estimated =  self.filter.predict(self.input_mtx).unwrap();
+        let estimated_coord = Vector3::new(prior_estimated.x, prior_estimated.y, prior_estimated.z);
+        evaluate_scores_for_detections(
+            detections,
+            self.get_camera_loc(camera_id).await,
+            estimated_coord,
+        )*/
+        todo!()
+    }
+}*/
+
+/// Evaluates scores for each detections.
+pub fn evaluate_scores_for_detections<'a>(
+    detections: impl Iterator<Item = &'a DetectedObject>,
+    camera_loc: Vector3<f64>,
+    estimated_coord: Vector3<f64>,
+) -> impl Iterator<Item = f64> {
     // TODO: minが一定距離より遠かったらNoneにする
-    objects.map(move |obj| {
+    detections.map(move |obj| {
         // 点と直線の距離。TODO: 数式があってるか確認
-        let lay = Vector3::new(obj.lay_x, obj.lay_y, obj.lay_z);
+        let lay = Vector3::new(obj.lay_x.into(), obj.lay_y.into(), obj.lay_z.into());
         let top = (estimated_coord - camera_loc).cross(&lay).norm();
         let bottom = lay.norm();
-        top / bottom
+        (top / bottom).into()
     })
 }
 

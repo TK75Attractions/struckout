@@ -1,16 +1,12 @@
+#![allow(dead_code)] // temporary allow dead code
 use std::{
-    collections::{BTreeMap, HashMap, VecDeque},
-    hash::Hash,
+    collections::{HashMap, VecDeque},
     sync::Arc,
-    time::Duration,
 };
 
 use anyhow::Context;
 use chrono::{DateTime, TimeDelta, TimeZone, Utc};
-use tokio::{
-    select,
-    sync::{RwLock, mpsc},
-};
+use tokio::sync::{RwLock, mpsc};
 use tracing::warn;
 
 use crate::{
@@ -20,6 +16,7 @@ use crate::{
     types::CameraId,
 };
 
+pub(crate) mod data_association;
 pub(crate) mod kalman;
 pub(crate) mod transport;
 pub(crate) mod triangulate;
@@ -76,7 +73,7 @@ async fn collect_frames(state: Arc<RwLock<State>>, mut frame_rx: mpsc::Receiver<
         let frame = frame
             .with_context(|| "frame channel is unexpectedly closed")
             .unwrap();
-        update_frame(&mut *state.write().await, frame)
+        state.write().await.update_frame(frame).await;
     }
 }
 
@@ -93,7 +90,7 @@ impl State {
             let mut recent_frames = self.frames.iter().enumerate().filter(|(_, (t, p))| {
                 *t - cur_frame_time < FRAME_MATCHING_DELTA && p.camera_id != cur_frame_cam_id
             });
-            let Some((idx, recent_frame)) = recent_frames.next() else {
+            let Some((idx, _)) = recent_frames.next() else {
                 // wait for another camera to send this frame
                 return;
             };
@@ -106,35 +103,18 @@ impl State {
         };
 
         let a = self.frames.pop_back().unwrap(); // pushed above
-        let b = self.frames.remove(idx).unwrap();
+        let b = self.frames.remove(idx).unwrap(); // idx comes from above block
         let pair = PairedFrames {
             timestamp_avr: b.0 + (a.0 - b.0) / 2,
             a: a.1,
             b: b.1,
         };
 
-        // (obj_id -> score) per object snapshot
-        let mut scores_all: Vec<HashMap<ObjectId, f32>> =
-            vec![HashMap::new(); pair.a.detected_objects.len()];
-        for tracker in &mut self.objects {
-            let scores = tracker.evaluate_scores(&pair).await;
-            scores.enumerate().for_each(|(idx, s)| {
-                scores_all.get_mut(idx).unwrap().insert(tracker.obj_id(), s);
-            });
-        }
-
         // assign object id based on prior estimate
 
         // triangulate point
 
         // update Kalman filter
-    }
-
-    fn assign_object_id_to_snapshot(scores_per_snapshots: Vec<HashMap<ObjectId, f32>>) {
-        scores_per_snapshots.iter().for_each(|scores| {
-            // データの中でのあるオブジェクト(object snapshot)に対して各object trackerが与えたスコアを比較する
-            // scores.iter().min_by(|a, b| a.1.total_cmp(b.1));
-        });
     }
 }
 
