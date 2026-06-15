@@ -87,7 +87,15 @@ namespace Struckout.Infrastructure.Network
                     continue;
                 }
 
-                var packet = NetworkPacket.Parser.ParseFrom(data);
+                NetworkPacket packet;
+                try
+                {
+                    packet = NetworkPacket.Parser.ParseFrom(data);
+                }
+                catch
+                {
+                    throw new Exception("Failed to parse ");
+                }
 
                 var handlerList = _onCollisionReceived.GetInvocationList();
 

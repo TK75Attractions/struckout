@@ -1,6 +1,7 @@
 using Struckout.Infrastructure.Network;
 using Struckout.Application;
 using System;
+using System.Collections.Generic;
 
 namespace Struckout.Bootstrap
 {
@@ -8,21 +9,21 @@ namespace Struckout.Bootstrap
     {
         public TCPClientService TCPClient { get; private set; } = new();
         public IPacketRouter packetRouter { get; private set; }
-        public Action destroyEvent { get; private set; }
+        public List<IAsyncDestroy> destroyEvents { get; private set; }
 
         public RuntimeContext(IPacketRouter router)
         {
             packetRouter = router;
         }
 
-        public void AddDestroyEvent(Action action)
+        public void AddDestroyEvent(IAsyncDestroy target)
         {
-            destroyEvent += action;
+            destroyEvents.Add(target);
         }
 
-        public void RemoveDestroyEvent(Action action)
+        public void RemoveDestroyEvent(IAsyncDestroy target)
         {
-            destroyEvent -= action;
+            destroyEvents.Remove(target);
         }
     }
 }

@@ -30,7 +30,11 @@ namespace Struckout.Bootstrap
 
         private void OnDestroy()
         {
-            runtimeContext.destroyEvent?.Invoke();
+            var destroyList = runtimeContext.destroyEvents;
+            foreach (var destroy in destroyList)
+            {
+                destroy.OnDestroy();
+            }
         }
     }
 }

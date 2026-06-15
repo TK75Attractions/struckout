@@ -7,15 +7,13 @@ using Cysharp.Threading.Tasks;
 
 namespace Struckout.Bootstrap
 {
-    public class NetworkBootstrap
+    public class NetworkBootstrap : IAsyncDestroy
     {
         private TCPClientService _tcpClient;
         private IPacketRouter packetRouter;
 
         internal async UniTask Initialize(RuntimeContext context)
-        {
-            context.AddDestroyEvent(OnDestroy);
-            
+        {   
             packetRouter = context.packetRouter;
             _tcpClient = context.TCPClient;
 
@@ -33,7 +31,7 @@ namespace Struckout.Bootstrap
             // Handle the received string message
         }
 
-        private async void OnDestroy()
+        public async UniTask OnDestroy()
         {
             await _tcpClient?.DisconnectAsync();
         }

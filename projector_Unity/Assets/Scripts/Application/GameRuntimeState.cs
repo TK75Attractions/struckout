@@ -9,6 +9,14 @@ namespace Struckout.Application
         public List<Target> Targets { get; private set; } = new();
         public int Score { get; set; } = 0;
 
+        public void AddTargets(List<Target> targets)
+        {
+            foreach (var target in targets)
+            {
+                AddTarget(target);
+            }   
+        }
+
         public void AddTarget(Target target)
         {
             if (Targets.Contains(target)) throw new Exception("Add Existing Target");
