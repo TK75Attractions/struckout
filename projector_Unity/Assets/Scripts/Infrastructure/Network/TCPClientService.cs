@@ -25,9 +25,10 @@ namespace Struckout.Infrastructure.Network
             _tcpClient = new();
             try
             {
-                isConnected = true;
+                
                 await _tcpClient.ConnectAsync(host, port);
                 _networkStream = _tcpClient.GetStream();
+                isConnected = true;
                 Console.WriteLine("Connected to TCP server.");
             }
             catch (Exception ex)

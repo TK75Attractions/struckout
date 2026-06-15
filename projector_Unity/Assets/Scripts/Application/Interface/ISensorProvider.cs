@@ -1,9 +1,11 @@
+using System;
 using Struckout.Dto.V1;
 
 namespace Struckout.Application
 {
     public interface ISensorProvider
     {
-        CollisionPoint GetSensorData();
+        event Action<CollisionPoint> OnCollisionReceived;
+        void GetSensorData(CollisionPoint point);
     }
 }

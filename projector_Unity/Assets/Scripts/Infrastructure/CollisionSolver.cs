@@ -32,7 +32,7 @@ namespace Struckout.Application
                         return distance <= target.Size;
                     }
                 default:
-                    throw new Exception($"Unsupported target type{target.Type}");
+                    throw new Exception($"Unsupported target type {target.Type}");
             }
         }
     }

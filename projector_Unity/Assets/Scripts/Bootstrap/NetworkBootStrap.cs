@@ -1,6 +1,6 @@
 using UnityEngine;
 using Struckout.Infrastructure.Network;
-using Struckout.Infrastructure;
+using Struckout.Application;
 using Struckout.Debug;
 using Cysharp.Threading.Tasks;
 
@@ -10,13 +10,17 @@ namespace Struckout.Bootstrap
     public class NetworkBootstrap
     {
         private TCPClientService _tcpClient;
-        private PacketRouter packetRouter = new();
+        private IPacketRouter packetRouter;
 
         internal async UniTask Initialize(RuntimeContext context)
         {
-            context.AddDestoryEvent(OnDestroy);
-            packetRouter.AddStringMessageAction(OnReceiveMessage);
+            context.AddDestroyEvent(OnDestroy);
+            
+            packetRouter = context.packetRouter;
             _tcpClient = context.TCPClient;
+
+            packetRouter.AddStringMessageAction(OnReceiveMessage);
+            
             
             _tcpClient.AddAction(packetRouter.RoutePacket);
 
@@ -29,9 +33,9 @@ namespace Struckout.Bootstrap
             // Handle the received string message
         }
 
-        private void OnDestroy()
+        private async void OnDestroy()
         {
-            _tcpClient?.DisconnectAsync();
+            await _tcpClient?.DisconnectAsync();
         }
     }
 }

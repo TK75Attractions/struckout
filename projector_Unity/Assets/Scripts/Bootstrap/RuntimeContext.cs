@@ -1,5 +1,5 @@
 using Struckout.Infrastructure.Network;
-using Struckout.Infrastructure;
+using Struckout.Application;
 using System;
 
 namespace Struckout.Bootstrap
@@ -7,10 +7,15 @@ namespace Struckout.Bootstrap
     internal class RuntimeContext
     {
         public TCPClientService TCPClient { get; private set; } = new();
-        public PacketRouter packetRouter { get; private set; } = new();
+        public IPacketRouter packetRouter { get; private set; }
         public Action destroyEvent { get; private set; }
 
-        public void AddDestoryEvent(Action action)
+        public RuntimeContext(IPacketRouter router)
+        {
+            packetRouter = router;
+        }
+
+        public void AddDestroyEvent(Action action)
         {
             destroyEvent += action;
         }

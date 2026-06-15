@@ -1,11 +1,11 @@
 {
-    "name": "StruckOut.Bootstrap",
+    "name": "Struckout.Bootstrap",
     "rootNamespace": "",
     "references": [
-        "StruckOut.Infrastructure",
-        "StruckOut.Application",
-        "StruckOut.Generated",
-        "StruckOut.Domain",
+        "Struckout.Infrastructure",
+        "Struckout.Application",
+        "Struckout.Generated",
+        "Struckout.Domain",
         "UniTask"
     ],
     "includePlatforms": [],

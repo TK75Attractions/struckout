@@ -12,14 +12,21 @@ namespace Struckout.Application
         
         private GameRuntimeState _state = new();
 
-        
+        public GameRuntime(
+            ICollisionSolver collisionSolver,
+            IPointCalculator pointCalculator
+        )
+        {
+            _collisionSolver = collisionSolver;
+            _pointCalculator = pointCalculator;
+        }
 
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
-            bool isHit = _collisionSolver.IsCollision(collisionPoint, _state.Targets, out Target hittedTarget);
+            bool isHit = _collisionSolver.IsCollision(collisionPoint, _state.Targets, out Target hitTarget);
             if (!isHit) return;
 
-            _state.Score += _pointCalculator.CalculatePoint(hittedTarget);
+            _state.Score += _pointCalculator.CalculatePoint(hitTarget);
         }
     }
 }

@@ -1,11 +1,12 @@
 using Struckout.Dto.V1;
 using Struckout.Debug;
+using Struckout.Application;
 using System;
 
 
 namespace Struckout.Infrastructure
 {
-    public class PacketRouter
+    public class PacketRouter : IPacketRouter
     {
         Action<StringMessage> _onStringMessageReceived;
         Action<CollisionPoint> _onCollisionReceived;
