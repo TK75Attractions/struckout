@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System;
 using Struckout.Dto.V1;
 using System.Buffers.Binary;
+using Google.Protobuf;
 
 namespace Struckout.Infrastructure.Network
 {
@@ -65,11 +66,42 @@ namespace Struckout.Infrastructure.Network
         {
             while (isConnected)
             {
-                byte[] data = await ReadByteAsync();
+                byte[] data;
+                try
+                {
+                    data = await ReadByteAsync();
+                }
+                catch (InvalidProtocolBufferException ex)
+                {
+                    UnityEngine.Debug.Log(ex);
+                    continue;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    UnityEngine.Debug.Log(ex);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.Log(ex);
+                    continue;
+                }
 
                 var packet = NetworkPacket.Parser.ParseFrom(data);
 
-                _onCollisionReceived?.Invoke(packet);
+                var handlerList = _onCollisionReceived.GetInvocationList();
+
+                foreach (Action<NetworkPacket> handle in handlerList)
+                {
+                    try
+                    {
+                        handle(packet);
+                    }
+                    catch (Exception ex)
+                    {
+                        UnityEngine.Debug.Log(ex);
+                    }
+                }
             }
         }
 
