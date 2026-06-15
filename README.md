@@ -11,6 +11,7 @@
 - [SORT](https://github.com/abewley/sort) ... シンプルなMOTアルゴリズム
 - [tracktor](https://github.com/szma/tracktor) ... RustのMTTライブラリ
 - [【論文ざっくり紹介】ByteTrack ~単純なアルゴリズムでSOTAを達成(2021年12月時点)~](https://qiita.com/tomo_v/items/f1b9ab396add42c98d3b)
+- [現在のトラッキングモデルの基礎ともいえる SORT を解説！](https://deepsquare.jp/2022/06/sort/)
 - [エピボーラ幾何](https://qiita.com/Thought_Nibbler/items/9cb7c2637000eecc1a30) ... 3次元空間を異なる位置のカメラから撮影したときの幾何
 - [ハンガリー法（ハンガリアンアルゴリズム）を使って割当問題を解く方法を1つずつ丁寧に解説してみた](https://yukashun.com/hungarian_algorithm/) ... 割り当て問題のアルゴリズム
 - [高校数学で紐解くカルマンフィルタ](https://rikei-tawamure.com/entry/2025/03/22/192101) ... 用語がよくまとまっている
