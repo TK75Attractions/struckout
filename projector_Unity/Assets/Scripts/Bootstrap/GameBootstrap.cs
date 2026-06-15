@@ -13,9 +13,10 @@ namespace Struckout.Bootstrap
             ICollisionSolver collision = new CollisionSolver();
             IPointCalculator calculator = new FakePointCalculator();
             ISensorProvider sensorProvider = new FakeSensorProvider();
+            ITargetGenerator targetGenerator = new FakeTargetGenerator();
 
-            runtime = new(collision,calculator);
-            
+            runtime = new(collision,calculator,targetGenerator);
+            runtime.GameSetup();
 
             context.packetRouter.AddCollisionPointAction(runtime.CollisionDetected);
             context.packetRouter.AddCollisionPointAction(sensorProvider.GetSensorData);

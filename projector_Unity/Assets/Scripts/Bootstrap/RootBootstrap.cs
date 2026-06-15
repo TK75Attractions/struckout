@@ -23,6 +23,8 @@ namespace Struckout.Bootstrap
 
             runtimeContext = new(packetRouter);
 
+            runtimeContext.AddDestroyEvent(networkBootstrap);
+
             await networkBootstrap.Initialize(runtimeContext);
             await gameBootstrap.Initialize(runtimeContext);
         }
@@ -30,10 +32,15 @@ namespace Struckout.Bootstrap
 
         private void OnDestroy()
         {
+            if(runtimeContext == null) return;
+
             var destroyList = runtimeContext.destroyEvents;
+
+            if (destroyList == null) return;
+
             foreach (var destroy in destroyList)
             {
-                destroy.OnDestroy();
+                destroy?.OnDestroy().Forget();
             }
         }
     }

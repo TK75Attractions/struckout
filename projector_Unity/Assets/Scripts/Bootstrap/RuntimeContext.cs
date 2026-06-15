@@ -9,7 +9,7 @@ namespace Struckout.Bootstrap
     {
         public TCPClientService TCPClient { get; private set; } = new();
         public IPacketRouter packetRouter { get; private set; }
-        public List<IAsyncDestroy> destroyEvents { get; private set; }
+        public List<IAsyncDestroy> destroyEvents { get; private set; } = new();
 
         public RuntimeContext(IPacketRouter router)
         {

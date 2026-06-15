@@ -33,7 +33,8 @@ namespace Struckout.Bootstrap
 
         public async UniTask OnDestroy()
         {
-            await _tcpClient?.DisconnectAsync();
+            if (_tcpClient == null) return;
+            await _tcpClient.DisconnectAsync();
         }
     }
 }

@@ -5,6 +5,6 @@ namespace Struckout.Application
 {
     public interface ITargetGenerator
     {
-        List<Target> GenerateTarget(int num);
+        List<Target> GenerateTargets(int num);
     }
 }

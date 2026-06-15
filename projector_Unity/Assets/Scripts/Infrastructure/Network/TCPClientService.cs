@@ -26,7 +26,6 @@ namespace Struckout.Infrastructure.Network
             _tcpClient = new();
             try
             {
-                
                 await _tcpClient.ConnectAsync(host, port);
                 _networkStream = _tcpClient.GetStream();
                 isConnected = true;
@@ -37,7 +36,7 @@ namespace Struckout.Infrastructure.Network
                 Console.WriteLine($"Error connecting to TCP server: {ex.Message}");
             }
 
-            _ = ReceiveDataAsync();
+            if (isConnected) _ = ReceiveDataAsync();
             await Task.CompletedTask;
         }
 
@@ -94,15 +93,19 @@ namespace Struckout.Infrastructure.Network
                 }
                 catch
                 {
-                    throw new Exception("Failed to parse ");
+                    UnityEngine.Debug.Log("Failed to Parse");
+                    continue;
                 }
 
-                var handlerList = _onCollisionReceived.GetInvocationList();
+                var handlerList = _onCollisionReceived?.GetInvocationList();
+                if (handlerList == null) continue;
 
                 foreach (Action<NetworkPacket> handle in handlerList)
                 {
                     try
                     {
+                        if (handle == null) continue;
+
                         handle(packet);
                     }
                     catch (Exception ex)
