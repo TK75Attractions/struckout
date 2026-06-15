@@ -36,6 +36,7 @@ namespace Struckout.Bootstrap
         {
             if (_tcpClient == null) return;
             _tcpClient.RemoveAction(packetRouter.RoutePacket);
+            packetRouter.RemoveStringMessageAction(OnReceiveMessage);
             await _tcpClient.DisconnectAsync();
         }
     }

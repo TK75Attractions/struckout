@@ -122,7 +122,7 @@ namespace Struckout.Infrastructure.Network
                 catch (Exception ex)
                 {
                     UnityEngine.Debug.Log(ex);
-                    continue;
+                    break;
                 }
 
                 NetworkPacket packet;

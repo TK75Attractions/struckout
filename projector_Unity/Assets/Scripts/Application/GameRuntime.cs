@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Drawing;
 using Struckout.Domain;
 using Struckout.Dto.V1;
 
@@ -31,10 +32,10 @@ namespace Struckout.Application
 
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
-            bool isHit = _collisionSolver.IsCollision(collisionPoint, _state.Targets, out Target hitTarget);
-            if (!isHit) return;
-
-            _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
+            if(_collisionSolver.TryGetCollision(collisionPoint,_state.Targets,out Target hitTarget))
+            {
+                _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
+            }
         }
     }
 }

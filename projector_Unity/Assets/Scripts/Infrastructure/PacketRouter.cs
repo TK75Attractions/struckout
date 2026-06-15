@@ -20,6 +20,15 @@ namespace Struckout.Infrastructure
         {
             _onCollisionReceived += action;
         }
+        public void RemoveStringMessageAction(Action<StringMessage> action)
+        {
+            _onStringMessageReceived -= action;
+        }
+
+        public void RemoveCollisionPointAction(Action<CollisionPoint> action)
+        {
+            _onCollisionReceived -= action;
+        }
 
         public void RoutePacket(NetworkPacket packet)
         {

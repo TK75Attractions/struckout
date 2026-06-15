@@ -8,6 +8,8 @@ namespace Struckout.Application
     {
         void AddStringMessageAction(Action<StringMessage> action);
         void AddCollisionPointAction(Action<CollisionPoint> action);
+        void RemoveStringMessageAction(Action<StringMessage> action);
+        void RemoveCollisionPointAction(Action<CollisionPoint> action);
         void RoutePacket(NetworkPacket packet);
     }
 }

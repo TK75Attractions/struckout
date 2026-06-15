@@ -6,6 +6,6 @@ namespace Struckout.Application
 {
     public interface ICollisionSolver
     {
-        bool IsCollision(CollisionPoint collisionPoint, IReadOnlyList<Target> targets, out Target targetPoint);
+        bool TryGetCollision(CollisionPoint collisionPoint, IReadOnlyList<Target> targets, out Target targetPoint);
     }
 }
