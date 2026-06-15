@@ -59,11 +59,11 @@ impl ToVector3 for Coordinate {
 }
 
 pub trait GetLayFromDetectedObject {
-    fn get_lay(&self) -> Vector3<f32>;
+    fn get_lay(&self) -> Vector3<f64>;
 }
 
 impl GetLayFromDetectedObject for DetectedObject {
-    fn get_lay(&self) -> Vector3<f32> {
+    fn get_lay(&self) -> Vector3<f64> {
         Vector3::new(self.lay_x, self.lay_y, self.lay_z)
     }
 }
