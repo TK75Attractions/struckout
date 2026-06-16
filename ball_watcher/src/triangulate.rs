@@ -1,11 +1,11 @@
 use nalgebra::Vector3;
 
 pub(crate) fn triangulate(
-    camera_loc_1: Vector3<f32>,
-    orientation_1: Vector3<f32>,
-    camera_loc_2: Vector3<f32>,
-    orientation_2: Vector3<f32>,
-) -> Coordinate {
+    camera_loc_1: Vector3<f64>,
+    orientation_1: Vector3<f64>,
+    camera_loc_2: Vector3<f64>,
+    orientation_2: Vector3<f64>,
+) -> Position3D {
     // TODO: From / Intoを使う
     let p = camera_loc_1;
     let q = camera_loc_2;
@@ -25,14 +25,14 @@ pub(crate) fn triangulate(
     r.into()
 }
 
-pub struct Coordinate {
-    pub x: f32, // TODO: u32とかでもいい気がする
-    pub y: f32,
-    pub z: f32,
+pub struct Position3D {
+    pub x: f64, // TODO: u32とかでもいい気がする
+    pub y: f64,
+    pub z: f64,
 }
 
-impl From<Vector3<f32>> for Coordinate {
-    fn from(value: Vector3<f32>) -> Self {
+impl From<Vector3<f64>> for Position3D {
+    fn from(value: Vector3<f64>) -> Self {
         Self {
             x: value[0],
             y: value[1],

@@ -6,7 +6,7 @@ use nalgebra::Vector3;
 
 use crate::{
     protobuf::{CameraLocation, DetectedObject},
-    triangulate::Coordinate,
+    triangulate::Position3D,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -43,17 +43,17 @@ impl From<u32> for CameraId {
 }
 
 pub trait ToVector3 {
-    fn to_vector3(&self) -> Vector3<f32>;
+    fn to_vector3(&self) -> Vector3<f64>;
 }
 
 impl ToVector3 for CameraLocation {
-    fn to_vector3(&self) -> Vector3<f32> {
+    fn to_vector3(&self) -> Vector3<f64> {
         Vector3::new(self.x, self.y, self.z)
     }
 }
 
-impl ToVector3 for Coordinate {
-    fn to_vector3(&self) -> Vector3<f32> {
+impl ToVector3 for Position3D {
+    fn to_vector3(&self) -> Vector3<f64> {
         Vector3::new(self.x, self.y, self.z)
     }
 }
