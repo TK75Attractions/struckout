@@ -23,7 +23,7 @@ pub(crate) mod triangulate;
 pub(crate) mod types;
 
 pub mod protobuf {
-    include!(concat!(env!("OUT_DIR"), "/struckout.v1.rs"));
+    include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
 }
 
 pub async fn run_main() -> std::io::Result<()> {

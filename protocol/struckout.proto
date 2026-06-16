@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package struckout.v1;
+package tk75attractions.struckout.v1;
 
 // UDPでカメラからサーバに送られるパケット
 message UdpPacket {
