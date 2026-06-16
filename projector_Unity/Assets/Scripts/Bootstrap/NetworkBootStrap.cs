@@ -14,7 +14,7 @@ namespace Struckout.Bootstrap
 
         internal async UniTask Initialize(RuntimeContext context)
         {   
-            packetRouter = context.packetRouter;
+            packetRouter = context.PacketRouter;
             _tcpClient = context.TCPClient;
 
             packetRouter.AddStringMessageAction(OnReceiveMessage);

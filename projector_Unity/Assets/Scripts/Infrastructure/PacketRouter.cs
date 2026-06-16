@@ -8,8 +8,8 @@ namespace Struckout.Infrastructure
 {
     public class PacketRouter : IPacketRouter
     {
-        Action<StringMessage> _onStringMessageReceived;
-        Action<CollisionPoint> _onCollisionReceived;
+        event Action<StringMessage> _onStringMessageReceived;
+        event Action<CollisionPoint> _onCollisionReceived;
 
         public void AddStringMessageAction(Action<StringMessage> action)
         {

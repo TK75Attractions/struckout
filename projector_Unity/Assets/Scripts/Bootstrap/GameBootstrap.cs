@@ -8,7 +8,9 @@ namespace Struckout.Bootstrap
     public class GameBootstrap
     {
         private GameRuntime runtime;
-        internal async UniTask Initialize(RuntimeContext context)
+        internal async UniTask Initialize(
+            RuntimeContext context,IUIService service
+            )
         {
             ICollisionSolver collision = new CollisionSolver();
             IPointCalculator calculator = new FakePointCalculator();
@@ -16,12 +18,13 @@ namespace Struckout.Bootstrap
             ITargetGenerator targetGenerator = new FakeTargetGenerator();
 
             runtime = new(collision,calculator,targetGenerator);
-            runtime.GameSetup();
-
-            context.packetRouter.AddCollisionPointAction(runtime.CollisionDetected);
-            context.packetRouter.AddCollisionPointAction(sensorProvider.GetSensorData);
+            
+            context.PacketRouter.AddCollisionPointAction(runtime.CollisionDetected);
+            context.PacketRouter.AddCollisionPointAction(sensorProvider.GetSensorData);
 
             
+            runtime.AddCollisionTargetAction(service.OnCollisionTarget);
+            runtime.GameSetup();   
         }
     }
 }

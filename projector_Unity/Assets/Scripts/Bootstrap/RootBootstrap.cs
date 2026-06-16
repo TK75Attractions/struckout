@@ -2,12 +2,19 @@ using System;
 using Struckout.Infrastructure;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
+using Struckout.Unity;
+using Struckout.Application;
+using System.Net.Sockets;
+using Struckout.Infrastructure.Network;
 
 namespace Struckout.Bootstrap
 {
     public class RootBootstrap : MonoBehaviour
     {
         private RuntimeContext runtimeContext;
+        [SerializeField]
+        private Transform _uiServiceTransform;
+        private IUIService _uiService;
 
         private void Start()
         {
@@ -20,13 +27,15 @@ namespace Struckout.Bootstrap
             NetworkBootstrap networkBootstrap = new();
             GameBootstrap gameBootstrap = new();
             PacketRouter packetRouter = new PacketRouter();
+            TCPClientService clientService = new();
+            _uiService = _uiServiceTransform.GetComponent<IUIService>();
 
-            runtimeContext = new(packetRouter);
+            runtimeContext = new(packetRouter,clientService);
 
             runtimeContext.AddDestroyEvent(networkBootstrap);
 
             await networkBootstrap.Initialize(runtimeContext);
-            await gameBootstrap.Initialize(runtimeContext);
+            await gameBootstrap.Initialize(runtimeContext, _uiService);
         }
         
 
@@ -34,7 +43,7 @@ namespace Struckout.Bootstrap
         {
             if(runtimeContext == null) return;
 
-            var destroyList = runtimeContext.destroyEvents;
+            var destroyList = runtimeContext.DestroyEvents;
 
             if (destroyList == null) return;
 
