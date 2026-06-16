@@ -1,6 +1,6 @@
 namespace Struckout.Domain
 {
-    public struct Target
+    public class Target
     {
         public TargetCoordinate Coordinate { get; private set; }
         public TargetType Type { get; private set; }

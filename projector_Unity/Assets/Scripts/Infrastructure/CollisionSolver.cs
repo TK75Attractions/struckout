@@ -9,7 +9,7 @@ namespace Struckout.Application
     {
         public bool TryGetCollision(CollisionPoint collisionPoint, IReadOnlyList<Target> targets, out Target target)
         {
-            target = new();
+            target = null;
             foreach (var tar in targets)
             {
                 if(IsWithinTarget(collisionPoint, tar))

@@ -9,20 +9,20 @@ namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : IAsyncDestroy
     {
-        private IClientService _tcpClient;
+        private IClientService _Client;
         private IPacketRouter packetRouter;
 
         internal async UniTask Initialize(RuntimeContext context)
         {   
             packetRouter = context.PacketRouter;
-            _tcpClient = context.TCPClient;
+            _Client = context.Client;
 
-            packetRouter.AddStringMessageAction(OnReceiveMessage);
+            packetRouter._onStringMessageReceived += OnReceiveMessage;
             
             
-            _tcpClient.AddAction(packetRouter.RoutePacket);
+            _Client._onCollisionReceived += packetRouter.RoutePacket;
 
-            bool isSuccessfullyConnect = await _tcpClient.ConnectAsync("127.0.0.1", 5000);
+            bool isSuccessfullyConnect = await _Client.ConnectAsync("127.0.0.1", 5000);
             if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
         }
 
@@ -34,10 +34,10 @@ namespace Struckout.Bootstrap
 
         public async UniTask OnDestroy()
         {
-            if (_tcpClient == null) return;
-            _tcpClient.RemoveAction(packetRouter.RoutePacket);
-            packetRouter.RemoveStringMessageAction(OnReceiveMessage);
-            await _tcpClient.DisconnectAsync();
+            if (_Client == null) return;
+            _Client._onCollisionReceived -= packetRouter.RoutePacket;
+            packetRouter._onStringMessageReceived -= OnReceiveMessage;
+            await _Client.DisconnectAsync();
         }
     }
 }

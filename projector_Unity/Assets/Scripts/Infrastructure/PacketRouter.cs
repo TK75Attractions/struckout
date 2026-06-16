@@ -8,28 +8,9 @@ namespace Struckout.Infrastructure
 {
     public class PacketRouter : IPacketRouter
     {
-        event Action<StringMessage> _onStringMessageReceived;
-        event Action<CollisionPoint> _onCollisionReceived;
-
-        public void AddStringMessageAction(Action<StringMessage> action)
-        {
-            _onStringMessageReceived += action;
-        }
-
-        public void AddCollisionPointAction(Action<CollisionPoint> action)
-        {
-            _onCollisionReceived += action;
-        }
-        public void RemoveStringMessageAction(Action<StringMessage> action)
-        {
-            _onStringMessageReceived -= action;
-        }
-
-        public void RemoveCollisionPointAction(Action<CollisionPoint> action)
-        {
-            _onCollisionReceived -= action;
-        }
-
+        public event Action<StringMessage> _onStringMessageReceived;
+        public event Action<CollisionPoint> _onCollisionReceived;
+        
         public void RoutePacket(NetworkPacket packet)
         {
             switch (packet.PayloadCase)

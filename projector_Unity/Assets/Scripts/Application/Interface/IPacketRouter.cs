@@ -6,10 +6,8 @@ namespace Struckout.Application
 {
     public interface IPacketRouter
     {
-        void AddStringMessageAction(Action<StringMessage> action);
-        void AddCollisionPointAction(Action<CollisionPoint> action);
-        void RemoveStringMessageAction(Action<StringMessage> action);
-        void RemoveCollisionPointAction(Action<CollisionPoint> action);
+        public event Action<StringMessage> _onStringMessageReceived;
+        public event Action<CollisionPoint> _onCollisionReceived;
         void RoutePacket(NetworkPacket packet);
     }
 }

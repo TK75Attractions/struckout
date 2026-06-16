@@ -16,18 +16,8 @@ namespace Struckout.Infrastructure.Network
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
-        private event Action<NetworkPacket> _onCollisionReceived;
+        public event Action<NetworkPacket> _onCollisionReceived;
         private Task _receiveTask;
-
-        public void AddAction(Action<NetworkPacket> action)
-        {
-            _onCollisionReceived += action;
-        }
-
-        public void RemoveAction(Action<NetworkPacket> action)
-        {
-            _onCollisionReceived -= action;
-        }
 
         public async Task<bool> ConnectAsync(string host, int port)
         {
@@ -148,13 +138,11 @@ namespace Struckout.Infrastructure.Network
                 {
                     try
                     {
-                        if (handle == null) continue;
-
                         handle(packet);
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.Log(ex);
+                        UnityEngine.Debug.LogException(ex);
                     }
                 }
             }

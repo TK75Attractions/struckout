@@ -19,8 +19,9 @@ namespace Struckout.Bootstrap
 
             runtime = new(collision,calculator,targetGenerator, service);
             
-            context.PacketRouter.AddCollisionPointAction(runtime.CollisionDetected);
-            context.PacketRouter.AddCollisionPointAction(sensorProvider.GetSensorData);
+            context.PacketRouter._onCollisionReceived += sensorProvider.GetSensorData;
+            sensorProvider.OnCollisionReceived += runtime.CollisionDetected;
+
 
             
             runtime.AddCollisionTargetAction(service.OnCollisionTarget);
