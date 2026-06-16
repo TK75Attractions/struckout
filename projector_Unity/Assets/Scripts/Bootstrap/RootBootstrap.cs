@@ -1,10 +1,8 @@
-using System;
 using Struckout.Infrastructure;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
 using Struckout.Infrastructure.Network;
-using System.Threading;
 
 namespace Struckout.Bootstrap
 {
@@ -14,7 +12,7 @@ namespace Struckout.Bootstrap
         [SerializeField]
         private Transform _uiServiceTransform;
         private IUIService _uiService;
-        
+
 
         private void Start()
         {
@@ -27,10 +25,10 @@ namespace Struckout.Bootstrap
             NetworkBootstrap networkBootstrap = new();
             GameBootstrap gameBootstrap = new();
             IPacketRouter packetRouter = new PacketRouter();
-            TCPClientService clientService = new();
+            IClientService clientService = new TCPClientService();
             _uiService = _uiServiceTransform.GetComponent<IUIService>();
 
-            runtimeContext = new(packetRouter,clientService);
+            runtimeContext = new(packetRouter, clientService);
 
             runtimeContext.AddDestroyEvent(networkBootstrap);
 

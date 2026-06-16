@@ -4,6 +4,7 @@ using Struckout.Application;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using System;
+using System.Linq;
 
 namespace Struckout.Unity
 {
@@ -24,6 +25,7 @@ namespace Struckout.Unity
         public void InstantinateTarget(Target target)
         {
             Transform trans;
+            if (_targetToTransform.Keys.Contains(target)) return;
 
             switch (target.Type)
             {
@@ -44,7 +46,8 @@ namespace Struckout.Unity
                     }
                     break;
                 default:
-                    throw new Exception($"Missing TargetType { target.Type }");
+                    UnityEngine.Debug.LogError($"Missing TargetType { target.Type }");
+                    return;
             }
             var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("Doesn't Contain ITargetUI");
             ui.Initialize(target);

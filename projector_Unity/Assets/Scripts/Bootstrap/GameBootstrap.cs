@@ -9,7 +9,7 @@ namespace Struckout.Bootstrap
     {
         private GameRuntime runtime;
         internal async UniTask Initialize(
-            RuntimeContext context,IUIService service
+            RuntimeContext context, IUIService service
             )
         {
             ICollisionSolver collision = new CollisionSolver();
@@ -17,7 +17,7 @@ namespace Struckout.Bootstrap
             ISensorProvider sensorProvider = new FakeSensorProvider();
             ITargetGenerator targetGenerator = new FakeTargetGenerator();
 
-            runtime = new(collision,calculator,targetGenerator);
+            runtime = new(collision,calculator,targetGenerator, service);
             
             context.PacketRouter.AddCollisionPointAction(runtime.CollisionDetected);
             context.PacketRouter.AddCollisionPointAction(sensorProvider.GetSensorData);

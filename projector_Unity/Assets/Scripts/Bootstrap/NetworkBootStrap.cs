@@ -9,7 +9,7 @@ namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : IAsyncDestroy
     {
-        private TCPClientService _tcpClient;
+        private IClientService _tcpClient;
         private IPacketRouter packetRouter;
 
         internal async UniTask Initialize(RuntimeContext context)

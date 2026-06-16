@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using System;
 using Struckout.Dto.V1;
@@ -7,16 +6,17 @@ using System.Buffers.Binary;
 using Google.Protobuf;
 using System.Threading;
 using System.IO;
+using Struckout.Application;
 
 namespace Struckout.Infrastructure.Network
 {
-    public class TCPClientService
+    public class TCPClientService : IClientService
     {
         bool _isConnected = false;
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
-        private Action<NetworkPacket> _onCollisionReceived;
+        private event Action<NetworkPacket> _onCollisionReceived;
         private Task _receiveTask;
 
         public void AddAction(Action<NetworkPacket> action)

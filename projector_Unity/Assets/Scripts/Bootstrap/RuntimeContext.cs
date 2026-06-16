@@ -7,16 +7,16 @@ namespace Struckout.Bootstrap
 {
     internal class RuntimeContext
     {
-        public TCPClientService TCPClient { get; private set; }
+        public IClientService Client { get; private set; }
         public IPacketRouter PacketRouter { get; private set; }
         public List<IAsyncDestroy> DestroyEvents { get; private set; } = new();
 
         public RuntimeContext(
             IPacketRouter router,
-            TCPClientService tcpClient)
+            IClientService client)
         {
             PacketRouter = router;
-            TCPClient = tcpClient;
+            Client = client;
         }
 
         public void AddDestroyEvent(IAsyncDestroy target)
