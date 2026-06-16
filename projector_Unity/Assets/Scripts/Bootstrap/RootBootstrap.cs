@@ -2,10 +2,9 @@ using System;
 using Struckout.Infrastructure;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
-using Struckout.Unity;
 using Struckout.Application;
-using System.Net.Sockets;
 using Struckout.Infrastructure.Network;
+using System.Threading;
 
 namespace Struckout.Bootstrap
 {
@@ -15,6 +14,7 @@ namespace Struckout.Bootstrap
         [SerializeField]
         private Transform _uiServiceTransform;
         private IUIService _uiService;
+        
 
         private void Start()
         {
@@ -26,7 +26,7 @@ namespace Struckout.Bootstrap
             
             NetworkBootstrap networkBootstrap = new();
             GameBootstrap gameBootstrap = new();
-            PacketRouter packetRouter = new PacketRouter();
+            IPacketRouter packetRouter = new PacketRouter();
             TCPClientService clientService = new();
             _uiService = _uiServiceTransform.GetComponent<IUIService>();
 
