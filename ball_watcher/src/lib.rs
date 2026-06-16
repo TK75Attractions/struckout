@@ -6,11 +6,12 @@ use std::{
 
 use anyhow::Context;
 use chrono::{DateTime, TimeDelta, TimeZone, Utc};
-use tokio::sync::{RwLock, mpsc};
+use parking_lot::RwLock;
+use tokio::sync::mpsc;
 use tracing::warn;
 
 use crate::{
-    kalman::{ObjectId, ObjectTrackerKalman},
+    kalman::ObjectTrackerKalman,
     protobuf::{CameraLocation, UdpPacket},
     transport::{TcpTransport, UdpTransport},
     types::CameraId,
@@ -73,14 +74,14 @@ async fn collect_frames(state: Arc<RwLock<State>>, mut frame_rx: mpsc::Receiver<
         let frame = frame
             .with_context(|| "frame channel is unexpectedly closed")
             .unwrap();
-        state.write().await.update_frame(frame).await;
+        state.write().update_frame(frame);
     }
 }
 
 const FRAME_MATCHING_DELTA: TimeDelta = TimeDelta::milliseconds(3);
 
 impl State {
-    async fn update_frame(&mut self, packet: UdpPacket) {
+    fn update_frame(&mut self, packet: UdpPacket) {
         let cur_frame_time = Utc.timestamp_opt(packet.timestamp, 0).unwrap();
         let cur_frame_cam_id = packet.camera_id;
         self.frames.push_back((cur_frame_time, packet));

@@ -27,6 +27,7 @@ approx = "0.5.1"
 bytes = "1.11.1"
 chrono = "0.4.44"
 rand = "0.10.1"
+parking_lot = "0.12.5"
 
 [build-dependencies]
 prost-build = "0.14.3"

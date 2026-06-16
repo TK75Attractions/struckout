@@ -114,20 +114,18 @@ impl ObjectTrackerKalman {
     }
 
     /// Utility method to get camera location from [`State`][crate::State].
-    async fn get_camera_loc(&self, camera_id: impl Into<CameraId>) -> Vector3<f64> {
-        /*self.state
-        .read()
-        .await
-        .camera_locs
-        .get(&camera_id.into())
-        .unwrap()
-        .to_vector3()*/
-        todo!()
+    fn get_camera_loc(&self, camera_id: impl Into<CameraId>) -> Vector3<f64> {
+        self.state
+            .read()
+            .camera_locs
+            .get(&camera_id.into())
+            .unwrap()
+            .to_vector3()
     }
 }
 
-/* impl ObjectTrack for ObjectTrackerKalman {
-    async fn evaluate_scores<'a>(
+impl ObjectTrack for ObjectTrackerKalman {
+    fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
         detections: impl Iterator<Item = &'a DetectedObject> + 'a,
