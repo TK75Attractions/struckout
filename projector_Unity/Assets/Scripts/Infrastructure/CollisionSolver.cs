@@ -28,8 +28,8 @@ namespace Struckout.Application
                 case TargetType.Circle:
                     {
                         var targetPoint = target.Coordinate;
-                        var distance = Math.Sqrt(Math.Pow(collisionPoint.X - targetPoint.X, 2) + Math.Pow(collisionPoint.Y - targetPoint.Y, 2));
-                        return distance <= target.Size;
+                        var distance = Math.Pow(collisionPoint.X - targetPoint.X, 2) + Math.Pow(collisionPoint.Y - targetPoint.Y, 2);
+                        return distance <= target.Size*target.Size;
                     }
                 default:
                     throw new Exception($"Unsupported target type {target.Type}");

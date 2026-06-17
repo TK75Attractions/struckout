@@ -2,7 +2,6 @@ using UnityEngine;
 using Struckout.Domain;
 using Struckout.Application;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using System;
 using System.Linq;
 
@@ -25,47 +24,40 @@ namespace Struckout.Unity
         public void InstantiateTarget(Target target)
         {
             Transform trans;
-            if (_targetToTransform.Keys.Contains(target)) return;
+            if (_targetToTransform.TryGetValue(target, out var _)) return;
 
             switch (target.Type)
             {
                 case TargetType.Circle:
-                    if (_circleUI == null) return;
-                    try
+                    if (_circleUI == null)
                     {
-                        if(!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
-                        {
-                            return;
-                        }
-                        trans = transform;
-                    }
-                    catch (Exception ex)
-                    {
-                        UnityEngine.Debug.Log(ex);
+                        UnityEngine.Debug.LogError("CircleUI is null");
                         return;
                     }
+
+                    if(!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
+                    {
+                        UnityEngine.Debug.LogError("CircleTargetUI is null");
+                        return;
+                    }
+                    trans = transform;
                     break;
                 default:
                     UnityEngine.Debug.LogError($"Missing TargetType { target.Type }");
                     return;
             }
-            var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("Doesn't Contain ITargetUI");
+            var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
             ui.Initialize(target);
             _targetToTransform[target] = trans;
         }
 
         bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
         {
-            try
+            if(prefab.GetComponent<TTargetUI>() == null)
             {
-                if(prefab.GetComponent<TTargetUI>() == null)
-                {
-                    throw new Exception("There are no ITargetUI");
-                }
-            }
-            catch
-            {
-                throw;
+                transform = null;
+                UnityEngine.Debug.LogError("There are no ITargetUI");
+                return false;
             }
             
             transform = Instantiate(prefab);
@@ -74,18 +66,21 @@ namespace Struckout.Unity
 
         public void OnCollisionTarget(Target target)
         {
-            if (_targetToTransform.TryGetValue(target,out var transform))
+            if (!_targetToTransform.TryGetValue(target,out var transform))
             {
-                throw new Exception("There are no transform");
+                UnityEngine.Debug.Log("There are no transform");
+                return;
             }
             try
             {
                 ITargetUI targetui = transform.GetComponent<ITargetUI>();
+                if(targetui == null) return;
                 targetui.OnCollision();
             }
-            catch
+            catch (Exception ex)
             {
-                throw;
+                UnityEngine.Debug.LogError(ex);
+                return;
             }
         }
     }
