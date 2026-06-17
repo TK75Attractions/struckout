@@ -47,6 +47,12 @@ fn main() {
             stream.write_all(&len.to_le_bytes()).expect("Failed to write to stream");
             stream.write_all(&buffer).expect("Failed to write to stream");
             stream.flush().expect("Failed to flush stream");
+
+            loop {
+                std::thread::sleep(
+                    std::time::Duration::from_secs(1)
+                );
+            }
         }
         Err(e) => {
             println!("Failed to establish a connection: {}", e);
