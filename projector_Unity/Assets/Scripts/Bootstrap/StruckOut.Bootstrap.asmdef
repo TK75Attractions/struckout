@@ -7,7 +7,7 @@
         "Struckout.Generated",
         "Struckout.Domain",
         "UniTask",
-        "Struckout.Unity"
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

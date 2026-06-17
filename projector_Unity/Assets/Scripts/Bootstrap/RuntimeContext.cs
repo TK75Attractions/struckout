@@ -1,11 +1,9 @@
-using Struckout.Infrastructure.Network;
 using Struckout.Application;
-using System;
 using System.Collections.Generic;
 
 namespace Struckout.Bootstrap
 {
-    internal class RuntimeContext
+    public class RuntimeContext
     {
         public IClientService Client { get; private set; }
         public IPacketRouter PacketRouter { get; private set; }
@@ -13,7 +11,8 @@ namespace Struckout.Bootstrap
 
         public RuntimeContext(
             IPacketRouter router,
-            IClientService client)
+            IClientService client
+        )
         {
             PacketRouter = router;
             Client = client;

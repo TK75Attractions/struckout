@@ -414,7 +414,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64a97606af4acdd47bcc2d4ad4aac650, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Struckout.Bootstrap::Struckout.Bootstrap.RootBootstrap
-  _uiServiceTransform: {fileID: 582352445}
 --- !u!4 &1070906343
 Transform:
   m_ObjectHideFlags: 0
@@ -439,6 +438,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2143006647}
+  - component: {fileID: 2143006648}
   m_Layer: 0
   m_Name: GameLifetimeScope
   m_TagString: Untagged
@@ -461,6 +461,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2143006648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2143006646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be8a55f715292e14b99b1587ff8b7d48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.GameLifetimeScope
+  parentReference:
+    TypeName: 
+  autoRun: 1
+  autoInjectGameObjects:
+  - {fileID: 1070906341}
+  _uiService: {fileID: 582352444}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -1,29 +1,44 @@
-using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
-using Struckout.Infrastructure;
 
 namespace Struckout.Bootstrap
 {
     public class GameBootstrap
     {
         private GameRuntime runtime;
+        private readonly ICollisionSolver collision;
+        private readonly IPointCalculator calculator;
+        private readonly ISensorProvider sensorProvider;
+        private readonly ITargetGenerator targetGenerator;
+        private readonly IUIService service;
+
+
+        public GameBootstrap(
+            ICollisionSolver Collision,
+            IPointCalculator PointCalculator,
+            ISensorProvider SensorProvider,
+            ITargetGenerator TargetGenerator,
+            IUIService UIService
+        )
+        {
+            collision = Collision;
+            calculator = PointCalculator;
+            sensorProvider = SensorProvider;
+            targetGenerator = TargetGenerator;
+            service = UIService;
+        }
+
         internal async UniTask Initialize(
-            RuntimeContext context, IUIService service
+            RuntimeContext context
             )
         {
-            ICollisionSolver collision = new CollisionSolver();
-            IPointCalculator calculator = new FakePointCalculator();
-            ISensorProvider sensorProvider = new FakeSensorProvider();
-            ITargetGenerator targetGenerator = new FakeTargetGenerator();
+            if(service == null) throw new System.Exception("There are no IUIService in uiService");
 
-            runtime = new(collision,calculator,targetGenerator, service);
+            runtime = new(collision, calculator,targetGenerator, service);
             
             context.PacketRouter.OnCollisionReceived += sensorProvider.GetSensorData;
             sensorProvider.OnCollisionReceived += runtime.CollisionDetected;
 
-
-            
             runtime.AddCollisionTargetAction(service.OnCollisionTarget);
             runtime.GameSetup();   
         }

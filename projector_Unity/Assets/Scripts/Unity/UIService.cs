@@ -3,7 +3,6 @@ using Struckout.Domain;
 using Struckout.Application;
 using System.Collections.Generic;
 using System;
-using System.Linq;
 
 namespace Struckout.Unity
 {
