@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use tracing::warn;
 use tracktor::assignment::{CostMatrix, hungarian};
 
@@ -8,20 +9,21 @@ use crate::{PairedFrames, protobuf::DetectedObject, types::CameraId};
 /// Tracks an object.
 pub trait ObjectTrack {
     /// Predict object location and evaluate scores for each detections.
-    async fn evaluate_scores<'a>(
+    fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
-        detections: impl Iterator<Item = &'a DetectedObject> + 'a,
+        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
+        timestamp: DateTime<Utc>,
     ) -> impl Iterator<Item = f64> + Clone + 'a;
 }
 
 /// Associates detections to known objects (trackers).
 ///
-/// Returns tracker_idx -> (detection_idx_a, detection_idx_b).
+/// Returns `tracker_idx` -> (`detection_idx_a`, `detection_idx_b`).
 /// detection_idx will be `None` if detection is likely new object.
-pub async fn associate_objects<T>(
+pub fn associate_objects<T>(
     tracks: &mut Vec<T>,
-    new_frame: PairedFrames,
+    new_frame: &PairedFrames,
 ) -> HashMap<usize, (Option<usize>, Option<usize>)>
 where
     T: ObjectTrack,
@@ -32,12 +34,16 @@ where
         let mut ret2 = CostMatrix::zeros(new_frame.a.detected_objects.len(), tracks.len());
 
         for (obj_idx, obj) in tracks.iter_mut().enumerate() {
-            let scores_a = obj
-                .evaluate_scores(new_frame.a.camera_id, new_frame.a.detected_objects.iter())
-                .await;
-            let scores_b = obj
-                .evaluate_scores(new_frame.b.camera_id, new_frame.b.detected_objects.iter())
-                .await;
+            let scores_a = obj.evaluate_scores(
+                new_frame.a.camera_id,
+                new_frame.a.detected_objects.iter(),
+                new_frame.timestamp_avr,
+            );
+            let scores_b = obj.evaluate_scores(
+                new_frame.b.camera_id,
+                new_frame.b.detected_objects.iter(),
+                new_frame.timestamp_avr,
+            );
             for (i, s) in scores_a.enumerate() {
                 ret1.set(i, obj_idx, s);
             }
@@ -172,8 +178,7 @@ mod tests {
     }
 
     /// オブジェクトが3つ、detectionが3つありそれぞれがそれぞれに一対一対応している。重なり等もない単純なケース。
-    #[tokio::test]
-    async fn associate_objects_works_in_simple_case() {
+    fn associate_objects_works_in_simple_case() {
         let true_pos1 = Vector3::new(500., 100., 60.);
         let true_pos2 = Vector3::new(300., 130., 55.);
         let true_pos3 = Vector3::new(700., 50., 20.);
@@ -231,7 +236,7 @@ mod tests {
         };
         let mut tracks = vec![track1, track2, track3];
 
-        let assignment = associate_objects(&mut tracks, new_frame).await;
+        let assignment = associate_objects(&mut tracks, &new_frame);
         assert_eq!(assignment.len(), 3);
         assert_eq!(assignment[&0], (Some(0), Some(0)));
         assert_eq!(assignment[&1], (Some(1), Some(1)));

@@ -1,22 +1,34 @@
 use std::{sync::Arc, time::Duration};
 
-use nalgebra::{Matrix3, Matrix6, Matrix6x3, SMatrix, Vector3, Vector6};
-use tokio::sync::RwLock;
+use chrono::{DateTime, Utc};
+use nalgebra::Vector3;
+use parking_lot::RwLock;
+use tracktor::{
+    filters::kalman::KalmanFilter,
+    models::{ConstantVelocity3D, PositionSensor3D},
+    prelude::*,
+    types::spaces::{StateCovariance, StateVector},
+};
 
 use crate::{
-    PairedFrames, State,
+    State,
     data_association::ObjectTrack,
     protobuf::DetectedObject,
-    types::{CameraId, ToVector3 as _},
+    types::{CameraId, Position3D},
 };
 
 const GRAVITY_ACCELERATION: f32 = 9.80665;
 
+type TheKalmanFilter = KalmanFilter<f64, ConstantVelocity3D<f64>, PositionSensor3D<f64>, 6, 3>;
+
 /// Tracks an object using `Kalman filter`. This would be created per an object.
-pub struct ObjectTrackerKalman {
+pub struct KalmanTrack {
     obj_id: ObjectId,
     state: Arc<RwLock<State>>,
     input_mtx: Vector3<f32>,
+    filter: TheKalmanFilter,
+    kalman_state: KalmanState<f64, 6>,
+    prev_timestamp: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -31,9 +43,14 @@ impl ObjectId {
 
 const DELTA_T: f32 = Duration::from_millis(16).as_secs_f32();
 
-impl ObjectTrackerKalman {
-    pub fn new(obj_id: ObjectId, state: Arc<RwLock<State>>, coord: Vector3<f32>) -> Self {
-        let f = {
+impl KalmanTrack {
+    pub fn new(
+        obj_id: ObjectId,
+        state: Arc<RwLock<State>>,
+        initial_position: Vector3<f64>,
+        timestamp: DateTime<Utc>,
+    ) -> Self {
+        /*let f = {
             let identity = Matrix3::<f32>::identity();
             let delta_t = identity * DELTA_T;
             let zeros = Matrix3::<f32>::zeros();
@@ -53,21 +70,33 @@ impl ObjectTrackerKalman {
             ret.fixed_view_mut::<3, 3>(0, 0).copy_from(&top);
             ret.fixed_view_mut::<3, 3>(3, 0).copy_from(&bottom);
             ret
-        };
-        let x_initial = Vector6::<f64>::zeros(); // TODO: use proper value
+        };*/
 
-        /*let filter: Kalman1M<f32, 6, 3, 3, _, _> = Kalman1M::new_with_input(
-            f,                   //6x6
-            SMatrix::identity(), //6x6
-            b,                   //6x3
-            SMatrix::identity(), // TODO:use proper value
-            SMatrix::identity(), //1x1
-            x_initial,
-        );*/
+        // TODO: set proper value
+        let transition = ConstantVelocity3D::new(1.0, 0.99);
+        let sensor = PositionSensor3D::new(5.0, 0.95);
+        let filter = KalmanFilter::new(transition, sensor);
+
+        let initial_velocity = Vector3::new(5.0, 5.0, 5.0);
+        let initial_state = StateVector::from_array([
+            initial_position[0],
+            initial_position[1],
+            initial_position[2],
+            initial_velocity[0],
+            initial_velocity[1],
+            initial_velocity[2],
+        ]);
+        let initial_cov =
+            StateCovariance::from_diagonal(&nalgebra::vector![10.0, 10.0, 1.0, 1.0, 0.5, 0.5]);
+        let kalman_state = KalmanState::new(initial_state, initial_cov);
+
         Self {
             obj_id,
             input_mtx: Vector3::new(0., 0., -GRAVITY_ACCELERATION),
             state,
+            filter,
+            kalman_state,
+            prev_timestamp: timestamp,
         }
     }
 
@@ -75,10 +104,8 @@ impl ObjectTrackerKalman {
         self.obj_id
     }
 
-    pub async fn update_and_check_collision(&mut self, pair: PairedFrames) {
-        // camera location
-        let cam_loc_a = self.get_camera_loc(pair.a.camera_id).await;
-        let cam_loc_b = self.get_camera_loc(pair.b.camera_id).await;
+    /// Updates filter and check if the object was collided to target plane.
+    pub fn update_and_check_collision(&mut self, new_pos: Position3D) {
 
         //task::spawn_blocking(|| {
 
@@ -120,34 +147,39 @@ impl ObjectTrackerKalman {
             .camera_locs
             .get(&camera_id.into())
             .unwrap()
-            .to_vector3()
+            .to_owned()
+            .into()
     }
 }
 
-impl ObjectTrack for ObjectTrackerKalman {
+impl ObjectTrack for KalmanTrack {
     fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
-        detections: impl Iterator<Item = &'a DetectedObject> + 'a,
-    ) -> impl Iterator<Item = f64> + 'a {
-        /*
-        let prior_estimated =  self.filter.predict(self.input_mtx).unwrap();
-        let estimated_coord = Vector3::new(prior_estimated.x, prior_estimated.y, prior_estimated.z);
-        evaluate_scores_for_detections(
-            detections,
-            self.get_camera_loc(camera_id).await,
-            estimated_coord,
-        )*/
-        todo!()
+        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
+        timestamp: DateTime<Utc>,
+    ) -> impl Iterator<Item = f64> + Clone + 'a {
+        let state = self.filter.predict(
+            &self.kalman_state,
+            (timestamp - self.prev_timestamp).as_seconds_f64(),
+        );
+        self.prev_timestamp = timestamp;
+        let estimated_coord = Vector3::from([
+            state.mean.get(0).unwrap().to_owned(),
+            state.mean.get(1).unwrap().to_owned(),
+            state.mean.get(2).unwrap().to_owned(),
+        ]);
+        self.kalman_state = state;
+        evaluate_scores_for_detections(detections, self.get_camera_loc(camera_id), estimated_coord)
     }
-}*/
+}
 
 /// Evaluates scores for each detections.
 pub fn evaluate_scores_for_detections<'a>(
-    detections: impl Iterator<Item = &'a DetectedObject>,
+    detections: impl Iterator<Item = &'a DetectedObject> + Clone,
     camera_loc: Vector3<f64>,
     estimated_coord: Vector3<f64>,
-) -> impl Iterator<Item = f64> {
+) -> impl Iterator<Item = f64> + Clone {
     // TODO: minが一定距離より遠かったらNoneにする
     detections.map(move |obj| {
         // 点と直線の距離。TODO: 数式があってるか確認

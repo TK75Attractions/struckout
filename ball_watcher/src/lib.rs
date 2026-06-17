@@ -11,10 +11,12 @@ use tokio::sync::mpsc;
 use tracing::warn;
 
 use crate::{
-    kalman::ObjectTrackerKalman,
+    data_association::associate_objects,
+    kalman::KalmanTrack,
     protobuf::{CameraLocation, UdpPacket},
     transport::{TcpTransport, UdpTransport},
-    types::CameraId,
+    triangulate::triangulate,
+    types::{CameraId, GetLayFromDetectedObject},
 };
 
 pub(crate) mod data_association;
@@ -47,15 +49,11 @@ pub async fn run_main() -> std::io::Result<()> {
     Ok(())
 }
 
+/// Holds application states.
 struct State {
     frames: VecDeque<(DateTime<Utc>, UdpPacket)>,
     camera_locs: HashMap<CameraId, CameraLocation>,
-    objects: Vec<ObjectTrackerKalman>,
-}
-
-struct CollectedFrame {
-    frame_a: Option<UdpPacket>,
-    frame_b: Option<UdpPacket>,
+    tracks: Vec<KalmanTrack>,
 }
 
 impl State {
@@ -63,7 +61,7 @@ impl State {
         Self {
             frames: VecDeque::new(),
             camera_locs: HashMap::new(),
-            objects: Vec::new(),
+            tracks: Vec::new(),
         }
     }
 }
@@ -111,6 +109,27 @@ impl State {
             b: b.1,
         };
 
+        let assignments = associate_objects(&mut self.tracks, &pair);
+        assignments
+            .iter()
+            .filter_map(|(track, (a, b))| {
+                if a.is_some() && b.is_some() {
+                    Some((track, (a.unwrap(), b.unwrap())))
+                } else {
+                    None
+                }
+            })
+            .for_each(|(track, (det_a, det_b))| {
+                let new_pos = triangulate(
+                    self.camera_locs.get(&CameraId::new(0)).unwrap().clone(),
+                    pair.a.detected_objects.get(det_a).unwrap().get_lay(),
+                    self.camera_locs.get(&CameraId::new(1)).unwrap().clone(),
+                    pair.b.detected_objects.get(det_b).unwrap().get_lay(),
+                );
+                let track = self.tracks.get_mut(*track).unwrap();
+                track.update_and_check_collision(new_pos);
+            });
+
         // assign object id based on prior estimate
 
         // triangulate point
@@ -119,6 +138,7 @@ impl State {
     }
 }
 
+/// Paired frames from two cameras at the same timestamp.
 struct PairedFrames {
     timestamp_avr: DateTime<Utc>,
     a: UdpPacket,
