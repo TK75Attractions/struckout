@@ -26,7 +26,9 @@ namespace Struckout.Bootstrap
             
             _Client.OnCollisionReceived += _packetRouter.RoutePacket;
 
-            bool isSuccessfullyConnect = await _Client.ConnectAsync("127.0.0.1", 5000);
+            _Client.RegisterPort("127.0.0.1", 5000);
+            bool isSuccessfullyConnect = await _Client.ConnectAsync();
+            
             if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
         }
 
