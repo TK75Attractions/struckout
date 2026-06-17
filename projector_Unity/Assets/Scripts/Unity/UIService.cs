@@ -14,15 +14,15 @@ namespace Struckout.Unity
         [SerializeField]
         private Transform _circleUI;
         
-        public void InstantinateTargets(IReadOnlyList<Target> targets)
+        public void InstantiateTargets(IReadOnlyList<Target> targets)
         {
             foreach (var target in targets)
             {
-                InstantinateTarget(target);
+                InstantiateTarget(target);
             }
         }
 
-        public void InstantinateTarget(Target target)
+        public void InstantiateTarget(Target target)
         {
             Transform trans;
             if (_targetToTransform.Keys.Contains(target)) return;
@@ -33,7 +33,7 @@ namespace Struckout.Unity
                     if (_circleUI == null) return;
                     try
                     {
-                        if(!TryInstantinateTargetUI<CircleTargetUI>(_circleUI, out var transform))
+                        if(!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
                         {
                             return;
                         }
@@ -54,10 +54,21 @@ namespace Struckout.Unity
             _targetToTransform[target] = trans;
         }
 
-        bool TryInstantinateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
+        bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
         {
+            try
+            {
+                if(prefab.GetComponent<TTargetUI>() == null)
+                {
+                    throw new Exception("There are no ITagetUI");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            
             transform = Instantiate(prefab);
-
             return true;
         }
 

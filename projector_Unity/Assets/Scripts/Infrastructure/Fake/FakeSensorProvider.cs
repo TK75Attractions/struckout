@@ -7,13 +7,9 @@ namespace Struckout.Infrastructure
     public class FakeSensorProvider : ISensorProvider
     {
         public event Action<CollisionPoint> OnCollisionReceived;
-        public void GetSensorData(CollisionPoint point = null)
+        public void GetSensorData(CollisionPoint point)
         {
-            var points = new CollisionPoint{
-                X  = 0.1f,
-                Y = 0.1f
-            };
-            OnCollisionReceived?.Invoke(points);
+            OnCollisionReceived?.Invoke(point);
         }
     }
 }

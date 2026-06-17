@@ -6,7 +6,7 @@ namespace Struckout.Application
 {
     public interface IClientService
     {
-        event Action<NetworkPacket> _onCollisionReceived;
+        event Action<NetworkPacket> OnCollisionReceived;
         Task<bool> ConnectAsync(string host, int port);
         Task DisconnectAsync();
     }

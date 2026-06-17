@@ -8,18 +8,18 @@ namespace Struckout.Infrastructure
 {
     public class PacketRouter : IPacketRouter
     {
-        public event Action<StringMessage> _onStringMessageReceived;
-        public event Action<CollisionPoint> _onCollisionReceived;
+        public event Action<StringMessage> OnStringMessageReceived;
+        public event Action<CollisionPoint> OnCollisionReceived;
         
         public void RoutePacket(NetworkPacket packet)
         {
             switch (packet.PayloadCase)
             {
                 case NetworkPacket.PayloadOneofCase.Message:
-                    _onStringMessageReceived?.Invoke(packet.Message);
+                    OnStringMessageReceived?.Invoke(packet.Message);
                     break;
                 case NetworkPacket.PayloadOneofCase.Point:
-                    _onCollisionReceived?.Invoke(packet.Point);
+                    OnCollisionReceived?.Invoke(packet.Point);
                     break;
                 default:
                     UnityEngine.Debug.Log("Unknown packet type received.");

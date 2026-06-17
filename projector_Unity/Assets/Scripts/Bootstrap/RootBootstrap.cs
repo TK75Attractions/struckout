@@ -27,6 +27,7 @@ namespace Struckout.Bootstrap
             IPacketRouter packetRouter = new PacketRouter();
             IClientService clientService = new TCPClientService();
             _uiService = _uiServiceTransform.GetComponent<IUIService>();
+            if(_uiService == null) throw new System.Exception("There are no IUIService in uiService");
 
             runtimeContext = new(packetRouter, clientService);
 

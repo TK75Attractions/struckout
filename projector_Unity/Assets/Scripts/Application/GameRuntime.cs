@@ -46,7 +46,7 @@ namespace Struckout.Application
 
         public void UpdateUI()
         {
-            _uiService.InstantinateTargets(_state.Targets);
+            _uiService.InstantiateTargets(_state.Targets);
         }
 
         public void CollisionDetected(CollisionPoint collisionPoint)

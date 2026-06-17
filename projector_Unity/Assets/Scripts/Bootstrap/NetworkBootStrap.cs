@@ -17,10 +17,10 @@ namespace Struckout.Bootstrap
             packetRouter = context.PacketRouter;
             _Client = context.Client;
 
-            packetRouter._onStringMessageReceived += OnReceiveMessage;
+            packetRouter.OnStringMessageReceived += OnReceiveMessage;
             
             
-            _Client._onCollisionReceived += packetRouter.RoutePacket;
+            _Client.OnCollisionReceived += packetRouter.RoutePacket;
 
             bool isSuccessfullyConnect = await _Client.ConnectAsync("127.0.0.1", 5000);
             if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
@@ -35,8 +35,8 @@ namespace Struckout.Bootstrap
         public async UniTask OnDestroy()
         {
             if (_Client == null) return;
-            _Client._onCollisionReceived -= packetRouter.RoutePacket;
-            packetRouter._onStringMessageReceived -= OnReceiveMessage;
+            _Client.OnCollisionReceived -= packetRouter.RoutePacket;
+            packetRouter.OnStringMessageReceived -= OnReceiveMessage;
             await _Client.DisconnectAsync();
         }
     }

@@ -16,7 +16,7 @@ namespace Struckout.Infrastructure.Network
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
-        public event Action<NetworkPacket> _onCollisionReceived;
+        public event Action<NetworkPacket> OnCollisionReceived;
         private Task _receiveTask;
 
         public async Task<bool> ConnectAsync(string host, int port)
@@ -131,7 +131,7 @@ namespace Struckout.Infrastructure.Network
                     continue;
                 }
 
-                var handlerList = _onCollisionReceived?.GetInvocationList();
+                var handlerList = OnCollisionReceived?.GetInvocationList();
                 if (handlerList == null) continue;
 
                 foreach (Action<NetworkPacket> handle in handlerList)

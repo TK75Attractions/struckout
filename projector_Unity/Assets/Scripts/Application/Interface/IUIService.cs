@@ -5,7 +5,7 @@ namespace Struckout.Application
 {
     public interface IUIService
     {
-        void InstantinateTargets(IReadOnlyList<Target> targets);
+        void InstantiateTargets(IReadOnlyList<Target> targets);
         void OnCollisionTarget(Target target);
     }
 }
