@@ -60,12 +60,12 @@ namespace Struckout.Unity
             {
                 if(prefab.GetComponent<TTargetUI>() == null)
                 {
-                    throw new Exception("There are no ITagetUI");
+                    throw new Exception("There are no ITargetUI");
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                throw ex;
+                throw;
             }
             
             transform = Instantiate(prefab);
@@ -75,7 +75,18 @@ namespace Struckout.Unity
         public void OnCollisionTarget(Target target)
         {
             if (_targetToTransform.TryGetValue(target,out var transform))
-            transform.GetComponent<ITargetUI>().OnCollision();
+            {
+                throw new Exception("There are no transform");
+            }
+            try
+            {
+                ITargetUI targetui = transform.GetComponent<ITargetUI>();
+                targetui.OnCollision();
+            }
+            catch
+            {
+                throw;
+            }
         }
     }
 }
