@@ -1,20 +1,20 @@
 syntax = "proto3";
 
-package StruckOut.DTO;
+package tk75attractions.struckout.v1;
 
-import "debug.proto";
-
-message CollisionPoint
-{
-    float X = 1;
-    float Y = 2;
+message CollisionPoint {
+  double x = 1;
+  double y = 2;
 }
 
-message NetworkPacket
-{
-    oneof payload
-    {
-        CollisionPoint point = 1;
-        StruckOut.Debug.stringMessage message = 2;
-    }
+message TestMessage {
+  string message = 1;
+}
+
+// packet sent from `ball-tracker` to `projector`
+message ProjectorPacket {
+  oneof payload {
+    CollisionPoint point = 1;
+    TestMessage message = 2;
+  }
 }

@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package StruckOut.Debug;
-
-message stringMessage
-{
-    string message = 1;
-}
