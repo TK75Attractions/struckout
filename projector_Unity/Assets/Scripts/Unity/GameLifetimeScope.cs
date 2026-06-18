@@ -14,7 +14,7 @@ namespace Struckout.Unity
         private UIService _uiService;
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<IClientService, TCPClientService>(Lifetime.Singleton);
+            builder.Register<IClientService, FakeClientService>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
 

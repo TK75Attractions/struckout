@@ -1,5 +1,6 @@
 using Struckout.Application;
 using Struckout.Domain;
+using System;
 using System.Collections.Generic;
 
 namespace Struckout.Infrastructure
@@ -11,7 +12,7 @@ namespace Struckout.Infrastructure
             List<Target> result = new();
             for (int i = 0; i < num; i++)
             {
-                var target = CreateTarget(TargetType.Circle, i, i, 1);
+                var target = CreateTarget(TargetType.Circle, i, i, MathF.Sqrt(2));
             
                 result.Add(target);
             }
