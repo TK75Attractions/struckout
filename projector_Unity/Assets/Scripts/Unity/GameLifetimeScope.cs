@@ -18,7 +18,9 @@ namespace Struckout.Unity
         {
             builder.Register<IClientService, FakeClientService>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
+            builder.Register<IGRPCService,GRPCService>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
+            builder.Register<GameRuntime>(Lifetime.Singleton);
 
             builder.Register<ICollisionSolver,CollisionSolver>(Lifetime.Singleton);
             builder.Register<IPointCalculator, FakePointCalculator>(Lifetime.Singleton);
