@@ -7,19 +7,19 @@ namespace Struckout.Infrastructure
 {
     public class FakeTargetGenerator : ITargetGenerator
     {
-        public IReadOnlyList<Target> GenerateTargets(int num)
+        public IReadOnlyList<Target> GenerateTargets(int num, float size)
         {
             List<Target> result = new();
             for (int i = 0; i < num; i++)
             {
-                var target = CreateTarget(TargetType.Circle, i, i, MathF.Sqrt(2));
+                var target = GenerateTarget(TargetType.Circle, i, i, size);
             
                 result.Add(target);
             }
 
             return result;
         }
-        private Target CreateTarget(TargetType type, float X, float Y, float size)
+        public Target GenerateTarget(TargetType type, float X, float Y, float size)
         {
             TargetCoordinate coordinate = new(
                 X,

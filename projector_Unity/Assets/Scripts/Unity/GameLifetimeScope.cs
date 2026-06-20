@@ -12,6 +12,8 @@ namespace Struckout.Unity
     {
         [SerializeField]
         private UIService _uiService;
+        [SerializeField]
+        private RectTransform _targetParent;
         protected override void Configure(IContainerBuilder builder)
         {
             builder.Register<IClientService, FakeClientService>(Lifetime.Singleton);
@@ -27,8 +29,12 @@ namespace Struckout.Unity
             builder.Register<GameBootstrap>(Lifetime.Singleton);
             builder.Register<RuntimeContext>(Lifetime.Singleton);
 
+            builder.RegisterInstance(
+                new UIRoot(_targetParent)
+            );
+
             builder.RegisterEntryPoint<RootBootstrap>();
-            
+        
         }
     }
 }
