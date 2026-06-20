@@ -2,6 +2,7 @@ using Tk75Attractions.Struckout.V1;
 
 using Struckout.Application;
 using System;
+using UnityEngine;
 
 
 namespace Struckout.Infrastructure
@@ -22,7 +23,7 @@ namespace Struckout.Infrastructure
                     OnCollisionReceived?.Invoke(packet.Point);
                     break;
                 default:
-                    UnityEngine.Debug.Log("Unknown packet type received.");
+                    Debug.Log("Unknown packet type received.");
                     break;
             }
         }

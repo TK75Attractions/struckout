@@ -13,7 +13,7 @@ namespace Struckout.Bootstrap
 
         private void Start()
         {
-            Initialize().Forget(UnityEngine.Debug.LogException);
+            Initialize().Forget(Debug.LogException);
         }
 
         [Inject]
@@ -47,7 +47,7 @@ namespace Struckout.Bootstrap
 
             foreach (var destroy in destroyList)
             {
-                destroy?.OnDestroy().Forget(UnityEngine.Debug.LogException);
+                destroy?.OnDestroy().Forget(Debug.LogException);
             }
         }
     }

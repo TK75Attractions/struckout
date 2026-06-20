@@ -7,6 +7,7 @@ using Google.Protobuf;
 using System.Threading;
 using System.IO;
 using Struckout.Application;
+using UnityEngine;
 
 namespace Struckout.Infrastructure.Network
 {
@@ -38,11 +39,11 @@ namespace Struckout.Infrastructure.Network
                 await _tcpClient.ConnectAsync(_host, _port);
                 _networkStream = _tcpClient.GetStream();
                 _isConnected = true;
-                UnityEngine.Debug.Log("Connected to TCP server.");
+                Debug.Log("Connected to TCP server.");
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.Log($"Error connecting to TCP server: {ex.Message}");
+                Debug.Log($"Error connecting to TCP server: {ex.Message}");
                 return false;
             }
 
@@ -64,11 +65,11 @@ namespace Struckout.Infrastructure.Network
                 _receiveCancellationToken.Cancel();
                 await _receiveTask;
                 
-                UnityEngine.Debug.Log("Disconnected from TCP server.");
+                Debug.Log("Disconnected from TCP server.");
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.Log($"Error closing connection to TCP server: {ex.Message}");
+                Debug.Log($"Error closing connection to TCP server: {ex.Message}");
             }
             finally
             {
@@ -81,7 +82,7 @@ namespace Struckout.Infrastructure.Network
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.Log($"Error closing connection to TCP server: {ex.Message}");
+                    Debug.Log($"Error closing connection to TCP server: {ex.Message}");
                 }
             }
 
@@ -107,22 +108,22 @@ namespace Struckout.Infrastructure.Network
                 }
                 catch (EndOfStreamException ex)
                 {
-                    UnityEngine.Debug.Log(ex);
+                    Debug.Log(ex);
                     break;
                 }
                 catch (IOException ex)
                 {
-                    UnityEngine.Debug.Log(ex);
+                    Debug.Log(ex);
                     break;
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    UnityEngine.Debug.Log(ex);
+                    Debug.Log(ex);
                     break;
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.Log(ex);
+                    Debug.Log(ex);
                     break;
                 }
 
@@ -133,12 +134,12 @@ namespace Struckout.Infrastructure.Network
                 }
                 catch (InvalidProtocolBufferException ex)
                 {
-                    UnityEngine.Debug.Log(ex);
+                    Debug.Log(ex);
                     continue;
                 }
                 catch
                 {
-                    UnityEngine.Debug.Log("Failed to Parse");
+                    Debug.Log("Failed to Parse");
                     continue;
                 }
 
@@ -153,7 +154,7 @@ namespace Struckout.Infrastructure.Network
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.LogException(ex);
+                        Debug.LogException(ex);
                     }
                 }
             }

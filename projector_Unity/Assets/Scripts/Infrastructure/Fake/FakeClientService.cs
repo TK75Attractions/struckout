@@ -3,6 +3,7 @@ using System;
 using Tk75Attractions.Struckout.V1;
 using System.Threading.Tasks;
 using System.Threading;
+using UnityEngine;
 
 namespace Struckout.Infrastructure
 {
@@ -42,7 +43,7 @@ namespace Struckout.Infrastructure
                         Y = y  
                     }
                 };
-                UnityEngine.Debug.Log(x.ToString() + " " + y.ToString());
+                Debug.Log(x.ToString() + " " + y.ToString());
 
                 OnCollisionReceived?.Invoke(ProjectorPacket);
                 await Task.Delay(1000, token);
