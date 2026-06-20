@@ -3,19 +3,31 @@ using Struckout.Domain;
 using Struckout.Application;
 using System.Collections.Generic;
 using System;
+using VContainer;
 
 namespace Struckout.Unity
 {
     public class UIService : MonoBehaviour, IUIService
     {
-        private Dictionary<Target, Transform> _targetToTransform = new();
+        private Dictionary<Target, Transform> _targetToTransform;
         [SerializeField]
         private Transform _circleUI;
+        private UIRoot _uiRoot;
+
+        [Inject]
+        public void Construct(
+            UIRoot uiRoot
+        )
+        {
+            _uiRoot = uiRoot;
+            _targetToTransform = new();
+        }
         
         public void InstantiateTargets(IReadOnlyList<Target> targets)
         {
             foreach (var target in targets)
             {
+                if (target == null) Debug.Log("Target is null");
                 InstantiateTarget(target);
             }
         }
@@ -23,6 +35,8 @@ namespace Struckout.Unity
         public void InstantiateTarget(Target target)
         {
             Transform trans;
+            if (target == null) Debug.Log("Target is null");
+            if (_targetToTransform == null) Debug.Log("Dictionary is null");
             if (_targetToTransform.TryGetValue(target, out var _)) return;
 
             switch (target.Type)
@@ -30,19 +44,19 @@ namespace Struckout.Unity
                 case TargetType.Circle:
                     if (_circleUI == null)
                     {
-                        UnityEngine.Debug.LogError("CircleUI is null");
+                        Debug.LogError("CircleUI is null");
                         return;
                     }
 
                     if(!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
                     {
-                        UnityEngine.Debug.LogError("CircleTargetUI is null");
+                        Debug.LogError("CircleTargetUI is null");
                         return;
                     }
                     trans = transform;
                     break;
                 default:
-                    UnityEngine.Debug.LogError($"Missing TargetType { target.Type }");
+                    Debug.LogError($"Missing TargetType { target.Type }");
                     return;
             }
             var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
@@ -55,11 +69,11 @@ namespace Struckout.Unity
             if(prefab.GetComponent<TTargetUI>() == null)
             {
                 transform = null;
-                UnityEngine.Debug.LogError("There are no ITargetUI");
+                Debug.LogError("There are no ITargetUI");
                 return false;
             }
             
-            transform = Instantiate(prefab);
+            transform = Instantiate(prefab,_uiRoot.TargetRoot);
             return true;
         }
 
@@ -67,7 +81,7 @@ namespace Struckout.Unity
         {
             if (!_targetToTransform.TryGetValue(target,out var transform))
             {
-                UnityEngine.Debug.Log("There are no transform");
+                Debug.Log("There are no transform");
                 return;
             }
             try
@@ -78,7 +92,7 @@ namespace Struckout.Unity
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError(ex);
+                Debug.LogError(ex);
                 return;
             }
         }

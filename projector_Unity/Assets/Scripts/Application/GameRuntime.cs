@@ -30,7 +30,7 @@ namespace Struckout.Application
 
         public void GameSetup()
         {
-            _state.AddTargets(_targetGenerator.GenerateTargets(1));
+            _state.AddTargets(_targetGenerator.GenerateTargets(4, 8));
             UpdateUI();
         }
 

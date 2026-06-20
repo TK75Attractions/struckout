@@ -13,18 +13,29 @@ namespace Struckout.Infrastructure.Network
     public class TCPClientService : IClientService
     {
         bool _isConnected = false;
+        private string _host;
+        private int _port;
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
         public event Action<NetworkPacket> OnCollisionReceived;
         private Task _receiveTask;
+        private bool isRegister = false;
 
-        public async Task<bool> ConnectAsync(string host, int port)
+        public void RegisterPort(string host, int port)
         {
+            _host = host;
+            _port = port;
+            isRegister = true;
+        }
+
+        public async Task<bool> ConnectAsync()
+        {
+            if (!isRegister) throw new Exception("Haven't been register port");
             _tcpClient = new();
             try
             {
-                await _tcpClient.ConnectAsync(host, port);
+                await _tcpClient.ConnectAsync(_host, _port);
                 _networkStream = _tcpClient.GetStream();
                 _isConnected = true;
                 UnityEngine.Debug.Log("Connected to TCP server.");
