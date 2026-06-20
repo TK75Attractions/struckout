@@ -1,5 +1,5 @@
-using Struckout.Dto.V1;
-using Struckout.Debug;
+using Tk75Attractions.Struckout.V1;
+
 using Struckout.Application;
 using System;
 
@@ -8,17 +8,17 @@ namespace Struckout.Infrastructure
 {
     public class PacketRouter : IPacketRouter
     {
-        public event Action<StringMessage> OnStringMessageReceived;
+        public event Action<TestMessage> OnStringMessageReceived;
         public event Action<CollisionPoint> OnCollisionReceived;
         
-        public void RoutePacket(NetworkPacket packet)
+        public void RoutePacket(ProjectorPacket packet)
         {
             switch (packet.PayloadCase)
             {
-                case NetworkPacket.PayloadOneofCase.Message:
+                case ProjectorPacket.PayloadOneofCase.Message:
                     OnStringMessageReceived?.Invoke(packet.Message);
                     break;
-                case NetworkPacket.PayloadOneofCase.Point:
+                case ProjectorPacket.PayloadOneofCase.Point:
                     OnCollisionReceived?.Invoke(packet.Point);
                     break;
                 default:

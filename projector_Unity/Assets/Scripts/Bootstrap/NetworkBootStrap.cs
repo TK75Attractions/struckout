@@ -1,5 +1,5 @@
 using Struckout.Application;
-using Struckout.Debug;
+using Tk75Attractions.Struckout.V1;
 using Cysharp.Threading.Tasks;
 
 
@@ -32,7 +32,7 @@ namespace Struckout.Bootstrap
             if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
         }
 
-        private void OnReceiveMessage(StringMessage message)
+        private void OnReceiveMessage(TestMessage message)
         {
             UnityEngine.Debug.Log($"Received message: {message.Message}");
             // Handle the received string message

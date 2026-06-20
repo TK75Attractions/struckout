@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Struckout.Dto.V1;
+using Tk75Attractions.Struckout.V1;
 using Struckout.Domain;
 
 namespace Struckout.Application

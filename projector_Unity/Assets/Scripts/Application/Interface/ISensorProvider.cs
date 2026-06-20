@@ -1,5 +1,5 @@
 using System;
-using Struckout.Dto.V1;
+using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Application
 {
