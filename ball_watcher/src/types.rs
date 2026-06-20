@@ -56,6 +56,13 @@ impl From<Vector3<f64>> for Position3D {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CollisionPoint3D {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
 pub trait ToVector3 {
     fn to_vector3(&self) -> Vector3<f64>;
 }

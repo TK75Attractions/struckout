@@ -14,7 +14,7 @@ use crate::{
     State,
     data_association::ObjectTrack,
     protobuf::DetectedObject,
-    types::{CameraId, Position3D},
+    types::{CameraId, CollisionPoint3D, Position3D},
 };
 
 const GRAVITY_ACCELERATION: f32 = 9.80665;
@@ -105,8 +105,7 @@ impl KalmanTrack {
     }
 
     /// Updates filter and check if the object was collided to target plane.
-    pub fn update_and_check_collision(&mut self, new_pos: Position3D) {
-
+    pub fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D> {
         //task::spawn_blocking(|| {
 
         /*let Some(idx_a) =
@@ -138,6 +137,7 @@ impl KalmanTrack {
         //})
         //.await
         //.unwrap();
+        todo!()
     }
 
     /// Utility method to get camera location from [`State`][crate::State].

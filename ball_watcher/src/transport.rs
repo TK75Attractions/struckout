@@ -148,7 +148,7 @@ impl TcpTransport {
 /// Writes a protobuf message to `output`.
 ///
 /// Note that this function allocates buffer every time so it might not be efficient when the function is called frequently.
-async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
+pub async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
     packet: T,
     output: &mut O,
 ) -> Result<(), WritePacketError> {
@@ -165,7 +165,7 @@ async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
 }
 
 #[derive(Debug, Error)]
-enum WritePacketError {
+pub enum WritePacketError {
     #[error(transparent)]
     EncodeFailed(#[from] EncodeError),
     #[error(transparent)]
