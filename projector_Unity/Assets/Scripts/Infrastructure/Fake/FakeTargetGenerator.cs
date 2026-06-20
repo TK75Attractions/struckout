@@ -12,7 +12,7 @@ namespace Struckout.Infrastructure
             List<Target> result = new();
             for (int i = 0; i < num; i++)
             {
-                var target = GenerateTarget(TargetType.Circle, i, i, size);
+                var target = GenerateTarget(TargetType.Circle, i*50, i*50, size);
             
                 result.Add(target);
             }
