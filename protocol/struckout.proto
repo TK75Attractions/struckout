@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package struckout.v1;
+package tk75attractions.struckout.v1;
 
 // UDPでカメラからサーバに送られるパケット
 message UdpPacket {
@@ -14,9 +14,9 @@ message UdpPacket {
 message DetectedObject {
   int32 bbox_width = 1;
   int32 bbox_height = 2;
-  float lay_x = 3;
-  float lay_y = 4;
-  float lay_z = 5;
+  double lay_x = 3;
+  double lay_y = 4;
+  double lay_z = 5;
   // TODO: 特徴量
 }
 
@@ -33,9 +33,9 @@ message TcpClientPacket {
 }
 
 message CameraLocation {
-  float x = 1;
-  float y = 2;
-  float z = 3;
+  double x = 1;
+  double y = 2;
+  double z = 3;
 }
 
 // TCPでサーバーからカメラに送られるパケット
@@ -44,9 +44,4 @@ message TcpServerPacket {
     // assign a camera id to client.
     uint32 camera_id = 1;
   }
-}
-
-message BallWatcherToProjector {
-  float x = 1;
-  float y = 2;
 }

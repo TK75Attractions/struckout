@@ -1,17 +1,20 @@
 syntax = "proto3";
 
-package struckout.dto.v1;
-
-import "debug.proto";
+package tk75attractions.struckout.v1;
 
 message CollisionPoint {
-  float x = 1;
-  float y = 2;
+  double x = 1;
+  double y = 2;
 }
 
-message NetworkPacket {
+message TestMessage {
+  string message = 1;
+}
+
+// packet sent from `ball-tracker` to `projector`
+message ProjectorPacket {
   oneof payload {
     CollisionPoint point = 1;
-    struckout.debug.StringMessage message = 2;
+    TestMessage message = 2;
   }
 }

@@ -1,18 +1,13 @@
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-    marker::Unpin,
-    net::SocketAddr,
-    sync::Arc,
-};
+use std::{collections::HashSet, io, marker::Unpin, net::SocketAddr, sync::Arc};
 
 use bytes::BytesMut;
+use parking_lot::RwLock;
 use prost::{DecodeError, EncodeError, Message};
 use thiserror::Error;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
-    net::{TcpListener, TcpStream, UdpSocket},
-    sync::{Mutex, RwLock, mpsc},
+    net::{TcpListener, UdpSocket, tcp},
+    sync::mpsc,
     task::JoinHandle,
 };
 use tracing::{info, warn};
@@ -63,7 +58,6 @@ impl UdpTransport {
 pub struct TcpTransport {
     listener: TcpListener,
     join_handles: Vec<JoinHandle<()>>,
-    streams: Arc<Mutex<HashMap<SocketAddr, TcpStream>>>,
     state: Arc<RwLock<State>>,
 }
 
@@ -79,7 +73,6 @@ impl TcpTransport {
         Ok(Self {
             listener,
             join_handles: Vec::new(),
-            streams: Arc::new(Mutex::new(HashMap::new())),
             state,
         })
     }
@@ -89,19 +82,11 @@ impl TcpTransport {
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection");
+                    let (reader, writer) = stream.into_split();
 
-                    {
-                        let mut streams = self.streams.lock().await;
-                        streams.insert(addr, stream);
-                    }
+                    self.init_conneciton(writer).await;
 
-                    self.init_conneciton(addr).await;
-
-                    let join = tokio::spawn(Self::handle_stream(
-                        Arc::clone(&self.state),
-                        Arc::clone(&self.streams),
-                        addr,
-                    ));
+                    let join = tokio::spawn(Self::handle_stream(Arc::clone(&self.state), reader));
                     self.join_handles.push(join);
                 }
                 Err(_e) => {
@@ -112,8 +97,8 @@ impl TcpTransport {
         }
     }
 
-    async fn init_conneciton(&mut self, addr: SocketAddr) {
-        let next_camera_id = self.state.read().await.camera_locs.len();
+    async fn init_conneciton(&mut self, mut writer: tcp::OwnedWriteHalf) {
+        let next_camera_id = self.state.read().camera_locs.len();
         info!("camera id for new device is {}", next_camera_id);
         let packet = TcpServerPacket {
             data: Some(protobuf::tcp_server_packet::Data::CameraId(
@@ -121,24 +106,12 @@ impl TcpTransport {
             )),
         };
 
-        write_packet(
-            packet,
-            &mut self.streams.lock().await.get_mut(&addr).unwrap(),
-        )
-        .await
-        .unwrap();
+        write_packet(packet, &mut writer).await.unwrap();
     }
 
-    async fn handle_stream(
-        state: Arc<RwLock<State>>,
-        streams: Arc<Mutex<HashMap<SocketAddr, TcpStream>>>,
-        addr: SocketAddr,
-    ) {
+    async fn handle_stream(state: Arc<RwLock<State>>, mut reader: tcp::OwnedReadHalf) {
         loop {
-            let res = read_packet::<TcpClientPacket, _>(
-                &mut streams.lock().await.get_mut(&addr).unwrap(),
-            )
-            .await;
+            let res = read_packet::<TcpClientPacket, _>(&mut reader).await;
 
             if let Err(ReadPacketError::ReadFailed(e)) = &res {
                 match e.kind() {
@@ -161,7 +134,6 @@ impl TcpTransport {
                     info!(value = ?camera_loc,"camera location updated");
                     state
                         .write()
-                        .await
                         .camera_locs
                         .insert(CameraId::new(loc_data.camera_id), camera_loc);
                 }
@@ -176,7 +148,7 @@ impl TcpTransport {
 /// Writes a protobuf message to `output`.
 ///
 /// Note that this function allocates buffer every time so it might not be efficient when the function is called frequently.
-async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
+pub async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
     packet: T,
     output: &mut O,
 ) -> Result<(), WritePacketError> {
@@ -193,7 +165,7 @@ async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
 }
 
 #[derive(Debug, Error)]
-enum WritePacketError {
+pub enum WritePacketError {
     #[error(transparent)]
     EncodeFailed(#[from] EncodeError),
     #[error(transparent)]
