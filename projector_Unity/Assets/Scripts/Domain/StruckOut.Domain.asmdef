@@ -1,0 +1,16 @@
+{
+    "name": "Struckout.Domain",
+    "rootNamespace": "",
+    "references": [
+        "GUID:1dc54d70efa73714f925e602e943cd30"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

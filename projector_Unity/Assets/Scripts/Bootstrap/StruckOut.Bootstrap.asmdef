@@ -1,0 +1,21 @@
+{
+    "name": "Struckout.Bootstrap",
+    "rootNamespace": "",
+    "references": [
+        "Struckout.Infrastructure",
+        "Struckout.Application",
+        "Struckout.Generated",
+        "Struckout.Domain",
+        "UniTask",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
