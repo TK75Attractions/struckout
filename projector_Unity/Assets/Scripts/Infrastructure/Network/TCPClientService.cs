@@ -1,7 +1,7 @@
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System;
-using Struckout.Dto.V1;
+using Tk75Attractions.Struckout.V1;
 using System.Buffers.Binary;
 using Google.Protobuf;
 using System.Threading;
@@ -18,7 +18,7 @@ namespace Struckout.Infrastructure.Network
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
-        public event Action<NetworkPacket> OnCollisionReceived;
+        public event Action<ProjectorPacket> OnCollisionReceived;
         private Task _receiveTask;
         private bool isRegister = false;
 
@@ -126,10 +126,10 @@ namespace Struckout.Infrastructure.Network
                     break;
                 }
 
-                NetworkPacket packet;
+                ProjectorPacket packet;
                 try
                 {
-                    packet = NetworkPacket.Parser.ParseFrom(data);
+                    packet = ProjectorPacket.Parser.ParseFrom(data);
                 }
                 catch (InvalidProtocolBufferException ex)
                 {
@@ -145,7 +145,7 @@ namespace Struckout.Infrastructure.Network
                 var handlerList = OnCollisionReceived?.GetInvocationList();
                 if (handlerList == null) continue;
 
-                foreach (Action<NetworkPacket> handle in handlerList)
+                foreach (Action<ProjectorPacket> handle in handlerList)
                 {
                     try
                     {

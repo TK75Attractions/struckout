@@ -1,6 +1,6 @@
 using System;
 using Struckout.Domain;
-using Struckout.Dto.V1;
+using Tk75Attractions.Struckout.V1;
 
 
 namespace Struckout.Application

@@ -1,6 +1,6 @@
 using Struckout.Application;
 using System;
-using Struckout.Dto.V1;
+using Tk75Attractions.Struckout.V1;
 using System.Threading.Tasks;
 using System.Threading;
 
@@ -9,7 +9,7 @@ namespace Struckout.Infrastructure
     public class FakeClientService : IClientService
     {
         public void RegisterPort(string host,int port){}
-        public event Action<NetworkPacket> OnCollisionReceived;
+        public event Action<ProjectorPacket> OnCollisionReceived;
         private bool _isConnected;
         CancellationTokenSource _receiveCancellationToken;
         Task task;
@@ -34,7 +34,7 @@ namespace Struckout.Infrastructure
             {
                 float x = UnityEngine.Random.Range(0,4f);
                 float y = UnityEngine.Random.Range(0,4f);
-                NetworkPacket networkPacket = new NetworkPacket
+                ProjectorPacket ProjectorPacket = new ProjectorPacket
                 {
                     Point = new CollisionPoint
                     {
@@ -44,7 +44,7 @@ namespace Struckout.Infrastructure
                 };
                 UnityEngine.Debug.Log(x.ToString() + " " + y.ToString());
 
-                OnCollisionReceived?.Invoke(networkPacket);
+                OnCollisionReceived?.Invoke(ProjectorPacket);
                 await Task.Delay(1000, token);
             }
         }
