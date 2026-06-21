@@ -3,7 +3,7 @@ using Grpc.Core;
 using System.Threading.Tasks;
 
 
-namespace Struckout.Application
+namespace Struckout.Infrastructure
 {
     public interface IGRPCService
     {

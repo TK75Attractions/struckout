@@ -9,12 +9,17 @@ namespace Struckout.Infrastructure
     public class GRPCServer : IStartable, IAsyncDisposable
     {
         private Server server;
-        private readonly GRPCServiceImpl impl;
+        private readonly GRPCServiceImpl _impl;
+        public GRPCServer(GRPCServiceImpl impl)
+        {
+            _impl = impl;
+        }
         public void Start()
         {
+            if (_impl == null) throw new Exception("The GRPCServerImpl doesn't initialized");
             server = new Server
             {
-                Services = { MasterToProjectorService.BindService(impl) },
+                Services = { MasterToProjectorService.BindService(_impl) },
                 Ports = { new ServerPort("0.0.0.1",50051,ServerCredentials.Insecure) }
             };
 
