@@ -1,10 +1,12 @@
 using VContainer.Unity;
+using System.Threading.Tasks;
 using Grpc.Core;
 using Tk75Attractions.Struckout.V1;
+using System;
 
 namespace Struckout.Infrastructure
 {
-    public class GRPCServer : IStartable
+    public class GRPCServer : IStartable, IAsyncDisposable
     {
         private Server server;
         private readonly GRPCServiceImpl impl;
@@ -17,6 +19,11 @@ namespace Struckout.Infrastructure
             };
 
             server.Start();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await server.ShutdownAsync();
         }
     }
 }

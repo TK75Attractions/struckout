@@ -5,6 +5,7 @@ using Struckout.Bootstrap;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
+using System;
 
 namespace Struckout.Unity
 {
@@ -22,7 +23,7 @@ namespace Struckout.Unity
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.Register<IGRPCService,GRPCService>(Lifetime.Singleton);
             builder.Register<GRPCServiceImpl>(Lifetime.Singleton);
-            builder.Register<GRPCServer>(Lifetime.Singleton).As<IStartable>();
+            builder.Register<GRPCServer>(Lifetime.Singleton).As<IStartable,IAsyncDisposable>();
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();
             builder.Register<GameRuntime>(Lifetime.Singleton);
