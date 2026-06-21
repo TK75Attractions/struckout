@@ -1,23 +1,17 @@
 using UnityEngine;
 using Cysharp.Threading.Tasks;
-using VContainer;
+using System;
+using System.Threading.Tasks;
 
 namespace Struckout.Bootstrap
 {
-    public class RootBootstrap : MonoBehaviour
+    public class RootBootstrap : IAsyncDisposable
     {
         private RuntimeContext _runtimeContext;
 
         private NetworkBootstrap _networkBootstrap;
         private GameBootstrap _gameBootstrap;
-
-        private void Start()
-        {
-            Initialize().Forget(Debug.LogException);
-        }
-
-        [Inject]
-        public void Construct(
+        public RootBootstrap(
             NetworkBootstrap networkBootstrap,
             GameBootstrap gameBootstrap,
             RuntimeContext runtimeContext
@@ -26,6 +20,8 @@ namespace Struckout.Bootstrap
             _networkBootstrap = networkBootstrap;
             _gameBootstrap = gameBootstrap;
             _runtimeContext = runtimeContext;
+
+            Initialize().Forget(Debug.LogException);
         }
 
         private async UniTask Initialize()
@@ -37,7 +33,7 @@ namespace Struckout.Bootstrap
         }
         
 
-        private void OnDestroy()
+        public async ValueTask DisposeAsync()
         {
             if(_runtimeContext == null) return;
 
@@ -47,7 +43,7 @@ namespace Struckout.Bootstrap
 
             foreach (var destroy in destroyList)
             {
-                destroy?.OnDestroy().Forget(Debug.LogException);
+                await destroy.DisposeAsync();
             }
         }
     }

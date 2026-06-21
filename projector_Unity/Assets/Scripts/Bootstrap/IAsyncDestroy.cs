@@ -4,6 +4,6 @@ namespace Struckout.Bootstrap
 {
     public interface IAsyncDestroy
     {
-        UniTask OnDestroy();
+        UniTask DisposeAsync();
     }
 }

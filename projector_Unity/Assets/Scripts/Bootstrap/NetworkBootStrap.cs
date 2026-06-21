@@ -39,7 +39,7 @@ namespace Struckout.Bootstrap
             // Handle the received string message
         }
 
-        public async UniTask OnDestroy()
+        public async UniTask DisposeAsync()
         {
             if (_Client == null) return;
             _Client.OnCollisionReceived -= _packetRouter.RoutePacket;
