@@ -11,7 +11,7 @@ namespace Struckout.Application
         private readonly IPointCalculator _pointCalculator;
         private readonly ITargetGenerator _targetGenerator;
         private readonly IUIService _uiService;
-        private Action<Target> _CollisionTargetAction;
+        private Action<Target> _collisionTargetAction;
         
         private readonly GameRuntimeState _state = new();
 
@@ -36,12 +36,12 @@ namespace Struckout.Application
 
         public void AddCollisionTargetAction(Action<Target> action)
         {
-            _CollisionTargetAction += action;
+            _collisionTargetAction += action;
         }
 
         public void RemoveCollisionTargetAction(Action<Target> action)
         {
-            _CollisionTargetAction -= action;
+            _collisionTargetAction -= action;
         }
 
         public void UpdateUI()
@@ -53,7 +53,7 @@ namespace Struckout.Application
         {
             if(_collisionSolver.TryGetCollision(collisionPoint,_state.Targets,out Target hitTarget))
             {
-                _CollisionTargetAction?.Invoke(hitTarget);
+                _collisionTargetAction?.Invoke(hitTarget);
                 _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
             }
         }

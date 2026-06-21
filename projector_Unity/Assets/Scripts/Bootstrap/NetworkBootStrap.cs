@@ -1,6 +1,7 @@
 using Struckout.Application;
 using Tk75Attractions.Struckout.V1;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 
 namespace Struckout.Bootstrap
@@ -34,11 +35,11 @@ namespace Struckout.Bootstrap
 
         private void OnReceiveMessage(TestMessage message)
         {
-            UnityEngine.Debug.Log($"Received message: {message.Message}");
+            Debug.Log($"Received message: {message.Message}");
             // Handle the received string message
         }
 
-        public async UniTask OnDestroy()
+        public async UniTask DisposeAsync()
         {
             if (_Client == null) return;
             _Client.OnCollisionReceived -= _packetRouter.RoutePacket;

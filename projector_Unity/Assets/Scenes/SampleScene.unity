@@ -668,50 +668,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
   m_PrefabInstance: {fileID: 911349457}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1070906341
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1070906343}
-  - component: {fileID: 1070906342}
-  m_Layer: 0
-  m_Name: RootBootstrap
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1070906342
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1070906341}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 64a97606af4acdd47bcc2d4ad4aac650, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Struckout.Bootstrap::Struckout.Bootstrap.RootBootstrap
---- !u!4 &1070906343
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1070906341}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2143006646
 GameObject:
   m_ObjectHideFlags: 0
@@ -760,7 +716,7 @@ MonoBehaviour:
     TypeName: 
   autoRun: 1
   autoInjectGameObjects:
-  - {fileID: 1070906341}
+  - {fileID: 0}
   _uiService: {fileID: 582352444}
   _targetParent: {fileID: 637544013}
 --- !u!1660057539 &9223372036854775807
@@ -770,7 +726,6 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 2143006647}
-  - {fileID: 1070906343}
   - {fileID: 582352445}
   - {fileID: 22950409}
   - {fileID: 637544013}

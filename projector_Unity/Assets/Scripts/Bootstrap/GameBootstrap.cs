@@ -1,30 +1,24 @@
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
+using System;
 
 namespace Struckout.Bootstrap
 {
     public class GameBootstrap
     {
         private GameRuntime runtime;
-        private readonly ICollisionSolver collision;
-        private readonly IPointCalculator calculator;
         private readonly ISensorProvider sensorProvider;
-        private readonly ITargetGenerator targetGenerator;
         private readonly IUIService service;
 
 
         public GameBootstrap(
-            ICollisionSolver Collision,
-            IPointCalculator PointCalculator,
+            GameRuntime runtime,
             ISensorProvider SensorProvider,
-            ITargetGenerator TargetGenerator,
             IUIService UIService
         )
         {
-            collision = Collision;
-            calculator = PointCalculator;
+            this.runtime = runtime;
             sensorProvider = SensorProvider;
-            targetGenerator = TargetGenerator;
             service = UIService;
         }
 
@@ -32,9 +26,7 @@ namespace Struckout.Bootstrap
             RuntimeContext context
             )
         {
-            if(service == null) throw new System.Exception("There are no IUIService in uiService");
-
-            runtime = new(collision, calculator,targetGenerator, service);
+            if(service == null) throw new Exception("There are no IUIService in uiService");
             
             context.PacketRouter.OnCollisionReceived += sensorProvider.GetSensorData;
             sensorProvider.OnCollisionReceived += runtime.CollisionDetected;
