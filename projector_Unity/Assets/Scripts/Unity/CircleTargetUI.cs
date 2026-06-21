@@ -6,6 +6,7 @@ namespace Struckout.Unity
     public class CircleTargetUI : MonoBehaviour, ITargetUI
     {
         Target _target;
+        
         public void Initialize(Target target)
         {
             _target = target;
