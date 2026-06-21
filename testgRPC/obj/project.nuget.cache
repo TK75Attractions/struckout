@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "8noNGn8Qh3Q=",
+  "dgSpecHash": "ndcrIdPKYK0=",
   "success": true,
   "projectFilePath": "c:\\Users\\happy\\Documents\\GitHub\\struckout\\testgRPC\\testgRPC.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\happy\\.nuget\\packages\\google.protobuf\\3.35.1\\google.protobuf.3.35.1.nupkg.sha512",
     "C:\\Users\\happy\\.nuget\\packages\\grpc.core.api\\2.80.0\\grpc.core.api.2.80.0.nupkg.sha512",
     "C:\\Users\\happy\\.nuget\\packages\\grpc.net.client\\2.80.0\\grpc.net.client.2.80.0.nupkg.sha512",
     "C:\\Users\\happy\\.nuget\\packages\\grpc.net.common\\2.80.0\\grpc.net.common.2.80.0.nupkg.sha512",
