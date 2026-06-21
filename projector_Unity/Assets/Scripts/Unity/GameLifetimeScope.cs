@@ -14,16 +14,14 @@ namespace Struckout.Unity
         [SerializeField]
         private UIService _uiService;
         [SerializeField]
-        private IMainThreadDispatcher _dispatcher;
+        private MainThreadDispatcher _dispatcher;
+
         [SerializeField]
         private RectTransform _targetParent;
         protected override void Configure(IContainerBuilder builder)
         {
             builder.Register<IClientService, FakeClientService>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
-            builder.Register<IGRPCService,GRPCService>(Lifetime.Singleton);
-            builder.Register<GRPCServiceImpl>(Lifetime.Singleton);
-            builder.Register<GRPCServer>(Lifetime.Singleton).As<IStartable,IAsyncDisposable>();
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();
             builder.Register<GameRuntime>(Lifetime.Singleton);

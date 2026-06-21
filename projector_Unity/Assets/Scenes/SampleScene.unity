@@ -668,6 +668,50 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
   m_PrefabInstance: {fileID: 911349457}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1034201285
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1034201287}
+  - component: {fileID: 1034201286}
+  m_Layer: 0
+  m_Name: MainThreadDispatcher
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1034201286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034201285}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8018167939064d044ae5653b631e09a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.MainThreadDispatcher
+--- !u!4 &1034201287
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034201285}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.49301, y: 0.54264, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2143006646
 GameObject:
   m_ObjectHideFlags: 0
@@ -715,9 +759,9 @@ MonoBehaviour:
   parentReference:
     TypeName: 
   autoRun: 1
-  autoInjectGameObjects:
-  - {fileID: 0}
+  autoInjectGameObjects: []
   _uiService: {fileID: 582352444}
+  _dispatcher: {fileID: 1034201286}
   _targetParent: {fileID: 637544013}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -729,3 +773,4 @@ SceneRoots:
   - {fileID: 582352445}
   - {fileID: 22950409}
   - {fileID: 637544013}
+  - {fileID: 1034201287}
