@@ -1,20 +1,26 @@
-using Tk75Attractions.Struckout.V1;
-using Struckout.Application;
 using System.Threading.Tasks;
 using Grpc.Core;
+using Struckout.Application;
+using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Infrastructure
 {
-    public class GRPCService : MasterToProjectorService.MasterToProjectorServiceBase, IGRPCService
+    public class GRPCService : IGRPCService
     {
-        public GRPCService()
+        private readonly GameRuntime _runtime;
+        private readonly IMainThreadDispatcher _dispatcher;
+
+        public GRPCService(GameRuntime runtime, IMainThreadDispatcher dispatcher)
         {
-            
+            _runtime = runtime;
+            _dispatcher = dispatcher;
         }
-        
-        public override Task<StartGameResponse> StartGame(StartGameRequest request, ServerCallContext context)
+
+        public Task<StartGameResponse> StartGame(StartGameRequest request, ServerCallContext context )
         {
-            return base.StartGame(request, context);
+            StartGameResponse startGameResponse = new();
+            _dispatcher.Enqueue(_runtime.GameSetup);
+            return Task.FromResult(startGameResponse);
         }
     }
 }
