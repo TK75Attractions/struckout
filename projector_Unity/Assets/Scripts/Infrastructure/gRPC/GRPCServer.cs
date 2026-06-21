@@ -10,12 +10,14 @@ namespace Struckout.Infrastructure
     {
         private Server server;
         private readonly GRPCServiceImpl _impl;
+        private bool isInit = false;
         public GRPCServer(GRPCServiceImpl impl)
         {
             _impl = impl;
         }
         public void Start()
         {
+            if (isInit) return;
             if (_impl == null) throw new Exception("The GRPCServerImpl doesn't initialized");
             server = new Server
             {
@@ -24,10 +26,12 @@ namespace Struckout.Infrastructure
             };
 
             server.Start();
+            isInit = true;
         }
 
         public async ValueTask DisposeAsync()
         {
+            if (server == null) return;
             await server.ShutdownAsync();
         }
     }

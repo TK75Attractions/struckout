@@ -13,9 +13,9 @@ namespace Struckout.Infrastructure
             _service = service;
         }
         
-        public override Task<StartGameResponse> StartGame(StartGameRequest request, ServerCallContext context)
+        public override async Task<StartGameResponse> StartGame(StartGameRequest request, ServerCallContext context)
         {
-            return _service.StartGame(request, context);
+            return await _service.StartGame(request, context);
         }
     }
 }
