@@ -1,0 +1,15 @@
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\bin\Debug\net10.0\testTcpCLI.exe
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\bin\Debug\net10.0\testTcpCLI.deps.json
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\bin\Debug\net10.0\testTcpCLI.runtimeconfig.json
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\bin\Debug\net10.0\testTcpCLI.dll
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\bin\Debug\net10.0\testTcpCLI.pdb
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.AssemblyInfoInputs.cache
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.AssemblyInfo.cs
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.csproj.CoreCompileInputs.cache
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.sourcelink.json
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.dll
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\refint\testTcpCLI.dll
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.pdb
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.genruntimeconfig.cache
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\ref\testTcpCLI.dll

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\happy\\Documents\\GitHub\\struckout\\testgRPC\\testgRPC.csproj": {}
+    "C:\\Users\\happy\\Documents\\GitHub\\struckout\\testTcpCLI\\testTcpCLI.csproj": {}
   },
   "projects": {
-    "c:\\Users\\happy\\Documents\\GitHub\\struckout\\testgRPC\\testgRPC.csproj": {
+    "C:\\Users\\happy\\Documents\\GitHub\\struckout\\testTcpCLI\\testTcpCLI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\happy\\Documents\\GitHub\\struckout\\testgRPC\\testgRPC.csproj",
-        "projectName": "testgRPC",
-        "projectPath": "c:\\Users\\happy\\Documents\\GitHub\\struckout\\testgRPC\\testgRPC.csproj",
+        "projectUniqueName": "C:\\Users\\happy\\Documents\\GitHub\\struckout\\testTcpCLI\\testTcpCLI.csproj",
+        "projectName": "testTcpCLI",
+        "projectPath": "C:\\Users\\happy\\Documents\\GitHub\\struckout\\testTcpCLI\\testTcpCLI.csproj",
         "packagesPath": "C:\\Users\\happy\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\happy\\Documents\\GitHub\\struckout\\testgRPC\\obj\\",
+        "outputPath": "C:\\Users\\happy\\Documents\\GitHub\\struckout\\testTcpCLI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\happy\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -47,16 +47,6 @@
         "net10.0": {
           "framework": "net10.0",
           "targetAlias": "net10.0",
-          "dependencies": {
-            "Google.Protobuf": {
-              "target": "Package",
-              "version": "[3.35.1, )"
-            },
-            "Grpc.Net.Client": {
-              "target": "Package",
-              "version": "[2.80.0, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",
