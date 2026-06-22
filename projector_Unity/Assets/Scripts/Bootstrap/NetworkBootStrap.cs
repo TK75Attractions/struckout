@@ -9,27 +9,33 @@ namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : IAsyncDestroy
     {
-        private readonly IClientService<ProjectorPacket> _Client;
+        private readonly IClientService<ProjectorPacket> _client;
+        private readonly IClientService<MasterPacket> _master;
         private readonly IPacketRouter _packetRouter;
 
         public NetworkBootstrap(
             IClientService<ProjectorPacket> clientService,
+            IClientService<MasterPacket> masterService,
             IPacketRouter packetRouter
         )
         {
-            _Client = clientService;
+            _client = clientService;
+            _master = masterService;
             _packetRouter = packetRouter;
         }
 
-        internal async UniTask Initialize(RuntimeContext context)
+        internal async UniTask Initialize()
         {   
             _packetRouter.OnStringMessageReceived += OnReceiveMessage;
             
             
-            _Client.OnReceived += _packetRouter.RoutePacket;
+            _client.OnReceived += _packetRouter.RoutePacket;
+            _master.OnReceived += _packetRouter.RoutePacket;
 
-            _Client.RegisterPort("127.0.0.1", 5000);
-            bool isSuccessfullyConnect = await _Client.ConnectAsync();
+            _client.RegisterPort("127.0.0.1", 5000);
+            _master.RegisterPort("127.0.0.1", 5001);
+
+            bool isSuccessfullyConnect = await _client.ConnectAsync();
             
             if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
         }
@@ -42,10 +48,10 @@ namespace Struckout.Bootstrap
 
         public async UniTask DisposeAsync()
         {
-            if (_Client == null) return;
-            _Client.OnReceived -= _packetRouter.RoutePacket;
+            if (_client == null) return;
+            _client.OnReceived -= _packetRouter.RoutePacket;
             _packetRouter.OnStringMessageReceived -= OnReceiveMessage;
-            await _Client.DisconnectAsync();
+            await _client.DisconnectAsync();
         }
     }
 }

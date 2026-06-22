@@ -11,19 +11,40 @@ namespace Struckout.Infrastructure
     {
         public event Action<TestMessage> OnStringMessageReceived;
         public event Action<CollisionPoint> OnCollisionReceived;
+
+        public event Action<StartGameRequest> OnGameStartReceived;
+
+        private IMainThreadDispatcher mainThreadDispatcher;
         
         public void RoutePacket(ProjectorPacket packet)
         {
             switch (packet.PayloadCase)
             {
                 case ProjectorPacket.PayloadOneofCase.Message:
-                    OnStringMessageReceived?.Invoke(packet.Message);
-                    break;
+                    {
+                        Action action = () => OnStringMessageReceived(packet.Message);
+                        mainThreadDispatcher.Enqueue(action);
+                        break;
+                    }
                 case ProjectorPacket.PayloadOneofCase.Point:
-                    OnCollisionReceived?.Invoke(packet.Point);
-                    break;
+                    {
+                        Action action = () => OnCollisionReceived(packet.Point);
+                        mainThreadDispatcher.Enqueue(action);
+                        break;
+                    }
                 default:
                     Debug.Log("Unknown packet type received.");
+                    break;
+            }
+        }
+
+        public void RoutePacket(MasterPacket packet)
+        {
+            switch (packet.PayloadCase)
+            {
+                case MasterPacket.PayloadOneofCase.Request:
+                    Action action = () => OnGameStartReceived(packet.Request);
+                    mainThreadDispatcher.Enqueue(action);
                     break;
             }
         }
