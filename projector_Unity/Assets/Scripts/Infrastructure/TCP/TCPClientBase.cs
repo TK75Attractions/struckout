@@ -1,17 +1,16 @@
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System;
-using Tk75Attractions.Struckout.V1;
 using System.Buffers.Binary;
 using Google.Protobuf;
 using System.Threading;
 using System.IO;
-using Struckout.Application;
 using UnityEngine;
+using Struckout.Application;
 
-namespace Struckout.Infrastructure.Network
+namespace Struckout.Infrastructure
 {
-    public class TCPClientService : IClientService
+    public class TCPClientBase<T> : IClientService<T>
     {
         bool _isConnected = false;
         private string _host;
@@ -19,8 +18,9 @@ namespace Struckout.Infrastructure.Network
         private TcpClient _tcpClient;
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
-        public event Action<ProjectorPacket> OnCollisionReceived;
+        public event Action<T> OnReceived;
         private Task _receiveTask;
+        private IMessageParser<T> parser;
         private bool isRegister = false;
 
         public void RegisterPort(string host, int port)
@@ -89,8 +89,6 @@ namespace Struckout.Infrastructure.Network
             await Task.CompletedTask;
         }
 
-        #region ReadMethod
-
         private async Task ReceiveDataAsync(CancellationToken token)
         {
             while (_isConnected && !token.IsCancellationRequested)
@@ -127,10 +125,10 @@ namespace Struckout.Infrastructure.Network
                     break;
                 }
 
-                ProjectorPacket packet;
+                T packet;
                 try
                 {
-                    packet = ProjectorPacket.Parser.ParseFrom(data);
+                    packet = parser.MessageParse(data);
                 }
                 catch (InvalidProtocolBufferException ex)
                 {
@@ -143,10 +141,10 @@ namespace Struckout.Infrastructure.Network
                     continue;
                 }
 
-                var handlerList = OnCollisionReceived?.GetInvocationList();
+                var handlerList = OnReceived?.GetInvocationList();
                 if (handlerList == null) continue;
 
-                foreach (Action<ProjectorPacket> handle in handlerList)
+                foreach (Action<T> handle in handlerList)
                 {
                     try
                     {
@@ -185,6 +183,5 @@ namespace Struckout.Infrastructure.Network
                 offset += received;
             }
         } 
-        #endregion
     }
 }

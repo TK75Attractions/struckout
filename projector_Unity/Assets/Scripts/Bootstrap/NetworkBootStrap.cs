@@ -9,11 +9,11 @@ namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : IAsyncDestroy
     {
-        private readonly IClientService _Client;
+        private readonly IClientService<ProjectorPacket> _Client;
         private readonly IPacketRouter _packetRouter;
 
         public NetworkBootstrap(
-            IClientService clientService,
+            IClientService<ProjectorPacket> clientService,
             IPacketRouter packetRouter
         )
         {
@@ -26,7 +26,7 @@ namespace Struckout.Bootstrap
             _packetRouter.OnStringMessageReceived += OnReceiveMessage;
             
             
-            _Client.OnCollisionReceived += _packetRouter.RoutePacket;
+            _Client.OnReceived += _packetRouter.RoutePacket;
 
             _Client.RegisterPort("127.0.0.1", 5000);
             bool isSuccessfullyConnect = await _Client.ConnectAsync();
@@ -43,7 +43,7 @@ namespace Struckout.Bootstrap
         public async UniTask DisposeAsync()
         {
             if (_Client == null) return;
-            _Client.OnCollisionReceived -= _packetRouter.RoutePacket;
+            _Client.OnReceived -= _packetRouter.RoutePacket;
             _packetRouter.OnStringMessageReceived -= OnReceiveMessage;
             await _Client.DisconnectAsync();
         }

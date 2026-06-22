@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace Struckout.Infrastructure
 {
-    public class FakeClientService : IClientService
+    public class FakeClientService : IClientService<ProjectorPacket>
     {
         public void RegisterPort(string host,int port){}
-        public event Action<ProjectorPacket> OnCollisionReceived;
+        public event Action<ProjectorPacket> OnReceived;
         private bool _isConnected;
         CancellationTokenSource _receiveCancellationToken;
         Task task;
@@ -47,7 +47,7 @@ namespace Struckout.Infrastructure
                 };
                 Debug.Log(x.ToString() + " " + y.ToString());
 
-                OnCollisionReceived?.Invoke(ProjectorPacket);
+                OnReceived?.Invoke(ProjectorPacket);
                 await Task.Delay(1000, token);
             }
         }
