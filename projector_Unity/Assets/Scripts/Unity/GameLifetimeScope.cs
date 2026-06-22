@@ -1,11 +1,10 @@
 using Struckout.Application;
 using Struckout.Infrastructure;
-using Struckout.Infrastructure.Network;
 using Struckout.Bootstrap;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
-using System;
+using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Unity
 {
@@ -20,7 +19,10 @@ namespace Struckout.Unity
         private RectTransform _targetParent;
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<IClientService, FakeClientService>(Lifetime.Singleton);
+            builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
+            builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
+            builder.Register<IMessageParser<MasterPacket>, MasterPacketParser>(Lifetime.Singleton);
+            builder.Register<IClientService<MasterPacket>, TCPClientBase<MasterPacket>>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();

@@ -1,17 +1,19 @@
 using Struckout.Application;
 using System.Collections.Generic;
+using Tk75Attractions.Struckout.V1;
+using UnityEngine;
 
 namespace Struckout.Bootstrap
 {
     public class RuntimeContext
     {
-        public IClientService Client { get; private set; }
+        public IClientService<ProjectorPacket> Client { get; private set; }
         public IPacketRouter PacketRouter { get; private set; }
         public List<IAsyncDestroy> DestroyEvents { get; private set; } = new();
 
         public RuntimeContext(
             IPacketRouter router,
-            IClientService client
+            IClientService<ProjectorPacket> client
         )
         {
             PacketRouter = router;
