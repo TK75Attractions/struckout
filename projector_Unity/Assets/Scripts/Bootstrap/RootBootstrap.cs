@@ -1,11 +1,11 @@
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System;
-using System.Threading.Tasks;
+using VContainer.Unity;
 
 namespace Struckout.Bootstrap
 {
-    public class RootBootstrap : IStartable, IAsyncDisposable
+    public class RootBootstrap : IStartable, IDisposable
     {
         private RuntimeContext _runtimeContext;
 
@@ -36,9 +36,11 @@ namespace Struckout.Bootstrap
         }
         
 
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
+            Debug.Log("DisposeAsync");
             if(_runtimeContext == null) return;
+            Debug.Log("DisposeAsync2");
 
             var destroyList = _runtimeContext.DestroyEvents;
 
@@ -46,7 +48,7 @@ namespace Struckout.Bootstrap
 
             foreach (var destroy in destroyList)
             {
-                await destroy.DisposeAsync();
+                destroy.DisposeAsync();
             }
         }
     }

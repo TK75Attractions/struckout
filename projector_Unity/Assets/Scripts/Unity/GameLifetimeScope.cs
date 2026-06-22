@@ -44,5 +44,11 @@ namespace Struckout.Unity
             builder.RegisterEntryPoint<RootBootstrap>();
         
         }
+
+        protected override void OnDestroy()
+        {
+            Debug.Log("Scope Destroy");
+            base.OnDestroy();
+        }
     }
 }

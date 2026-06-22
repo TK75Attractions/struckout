@@ -32,7 +32,7 @@ namespace Struckout.Infrastructure
         private async Task ReceieveCollision(CancellationToken token)
         {
             System.Random random = new ();
-            while (_isConnected || !token.IsCancellationRequested)
+            while (_isConnected && !token.IsCancellationRequested)
             {
                 
                 float x = (float)random.NextDouble()*4;

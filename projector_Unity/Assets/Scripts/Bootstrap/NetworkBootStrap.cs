@@ -52,6 +52,7 @@ namespace Struckout.Bootstrap
             _client.OnReceived -= _packetRouter.RoutePacket;
             _packetRouter.OnStringMessageReceived -= OnReceiveMessage;
             await _client.DisconnectAsync();
+            await _master.DisconnectAsync();
         }
     }
 }
