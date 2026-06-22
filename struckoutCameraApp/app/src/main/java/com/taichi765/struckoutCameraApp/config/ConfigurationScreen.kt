@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.settings
+package com.taichi765.struckoutCameraApp.config
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,8 +36,8 @@ fun CameraLocationScreen(
     navController: NavController
 ) {
     val viewModel = run {
-        val factory = CameraLocationViewModel.Factory(tcpTransportRepository)
-        viewModel<CameraLocationViewModel>(factory = factory)
+        val factory = ConfigurationViewModel.Factory(tcpTransportRepository)
+        viewModel<ConfigurationViewModel>(factory = factory)
     }
     val cameraLocation by viewModel.cameraLocation.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()

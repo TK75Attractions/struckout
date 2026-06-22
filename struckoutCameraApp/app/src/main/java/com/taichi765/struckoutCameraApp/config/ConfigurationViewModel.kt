@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.settings
+package com.taichi765.struckoutCameraApp.config
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository) : ViewModel() {
+class ConfigurationViewModel(private val tcpRepository: TcpTransportRepository) : ViewModel() {
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
     val cameraLocation = _cameraLocation.asStateFlow()
 
@@ -74,7 +74,7 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
     class Factory(val tcpRepository: TcpTransportRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CameraLocationViewModel(tcpRepository) as T
+            return ConfigurationViewModel(tcpRepository) as T
         }
     }
 
