@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package tk75attractions.struckout.v1;
 
+option java_package = "com.taichi765.struckoutCameraApp.proto";
+
 // UDPでカメラからサーバに送られるパケット
 message UdpPacket {
   uint32 camera_id = 1;

@@ -51,9 +51,9 @@ class WorldDirectionCalculator(val cameraMatrix: Mat, cameraRotationVector: Mat)
         }
 
         return WorldDirection(
-            x = worldDirection.get(0, 0).first().toFloat(),
-            y = worldDirection.get(1, 0).first().toFloat(),
-            z = worldDirection.get(2, 0).first().toFloat()
+            x = worldDirection.get(0, 0).first(),
+            y = worldDirection.get(1, 0).first(),
+            z = worldDirection.get(2, 0).first()
         )
     }
 }
