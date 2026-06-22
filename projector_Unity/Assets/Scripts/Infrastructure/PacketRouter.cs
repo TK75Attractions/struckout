@@ -15,6 +15,13 @@ namespace Struckout.Infrastructure
         public event Action<StartGameRequest> OnGameStartReceived;
 
         private IMainThreadDispatcher mainThreadDispatcher;
+
+        public PacketRouter(
+            IMainThreadDispatcher dispatcher
+        )
+        {
+            mainThreadDispatcher = dispatcher;
+        }
         
         public void RoutePacket(ProjectorPacket packet)
         {
