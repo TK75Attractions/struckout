@@ -1,12 +1,12 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import android.util.Log
+import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
-import struckout.v1.Struckout
+import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
@@ -26,17 +26,17 @@ class TcpTransport : TcpTransportRepository {
 
     override suspend fun connect(): Boolean {
         return withContext(Dispatchers.IO) {
-            Log.i(TAG, "connecting to ball_watcher")
+            Timber.tag(TAG).i("connecting to ball_watcher")
             val socket = try {
                 val ret = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
-                Log.i(TAG, "TCP connection has been established successfully")
+                Timber.tag(TAG).i("TCP connection has been established successfully")
                 ret
             } catch (e: IOException) {
-                Log.w(TAG, "failed to connect to TCP server: $e")
+                Timber.tag(TAG).w("failed to connect to TCP server: $e")
                 return@withContext false
             }
 
-            Log.i(TAG, "initializing states via TCP")
+            Timber.tag(TAG).i("initializing states via TCP")
             try {
                 val inputStream = socket.getInputStream()
                 val packet = readPacket(inputStream, Struckout.TcpServerPacket::parseFrom)
@@ -46,17 +46,15 @@ class TcpTransport : TcpTransportRepository {
                         internalState.value = InternalConnectionState.Connected(
                             cameraId, socket, inputStream, socket.getOutputStream()
                         )
-                        Log.i(TAG, "successfully initialized connection states")
+                        Timber.tag(TAG).i("successfully initialized connection states")
                     }
 
-                    Struckout.TcpServerPacket.DataCase.DATA_NOT_SET -> Log.w(
-                        TAG,
-                        "received invalid TCP packet from server"
-                    )
+                    Struckout.TcpServerPacket.DataCase.DATA_NOT_SET -> Timber.tag(TAG)
+                        .w("received invalid TCP packet from server")
                 }
                 return@withContext true
             } catch (e: IOException) {
-                Log.w(TAG, "failed to initialize connection states: $e")
+                Timber.tag(TAG).w("failed to initialize connection states: $e")
                 return@withContext false
             }
         }
@@ -65,11 +63,11 @@ class TcpTransport : TcpTransportRepository {
     override suspend fun close() {
         val state = internalState.value
         if (state !is InternalConnectionState.Connected) {
-            Log.w(TAG, "close() is called when TCP is not connected")
+            Timber.tag(TAG).w("close() is called when TCP is not connected")
             return
         }
         withContext(Dispatchers.IO) {
-            Log.i(TAG, "closing TCP socket")
+            Timber.tag(TAG).i("closing TCP socket")
             state.socket.close()
         }
     }
@@ -84,12 +82,12 @@ class TcpTransport : TcpTransportRepository {
         }
 
         withContext(Dispatchers.IO) {
-            Log.i(TAG, "sending TCP packet")
+            Timber.tag(TAG).i("sending TCP packet")
             try {
                 writePacket(curState.outputStream, packet)
             } catch (e: IOException) {
                 // TODO: exceptionの理由を画面に表示したほうがいいのだろうか
-                Log.w(TAG, "it seems that TCP connection is unexpectedly closed: $e")
+                Timber.tag(TAG).w("it seems that TCP connection is unexpectedly closed: $e")
                 internalState.value = InternalConnectionState.Disconnected
             }
         }
