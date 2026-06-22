@@ -15,6 +15,12 @@ message StartGameRequest {
 
 message StartGameResponse {}
 
+message MasterPacket {
+  oneof payload {
+    StartGameRequest request = 1;
+  }
+}
+
 service MasterToProjectorService {
   rpc StartGame(StartGameRequest) returns (StartGameResponse);
 }

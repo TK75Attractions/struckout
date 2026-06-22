@@ -1,13 +1,13 @@
 using System;
-using Tk75Attractions.Struckout.V1;
 using System.Threading.Tasks;
+using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Application
 {
-    public interface IClientService
+    public interface IClientService<T>
     {
         void RegisterPort(string host, int port);
-        event Action<ProjectorPacket> OnCollisionReceived;
+        event Action<T> OnReceived;
         Task<bool> ConnectAsync();
         Task DisconnectAsync();
     }
