@@ -2,7 +2,6 @@ package com.taichi765.struckoutCameraApp.camera
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -38,6 +37,7 @@ import com.taichi765.struckoutCameraApp.R
 import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
+import timber.log.Timber
 import java.util.concurrent.Executors
 
 @Composable
@@ -128,7 +128,7 @@ private fun CameraScreenContent(
             CameraSelector.DEFAULT_BACK_CAMERA,
             imageAnalysis
         )
-        Log.i(TAG, "Initialized ImageAnalyzer")
+        Timber.tag(TAG).i("Initialized ImageAnalyzer")
     }
 
     DisposableEffect(lifecycleOwner) {
