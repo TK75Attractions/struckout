@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.FrameID
 import com.taichi765.struckoutCameraApp.camera.types.increment
 import com.taichi765.struckoutCameraApp.camera.types.toLong
+import com.taichi765.struckoutCameraApp.proto.detectedObject
+import com.taichi765.struckoutCameraApp.proto.udpPacket
 import com.taichi765.struckoutCameraApp.transport.ConnectionState
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
@@ -16,8 +18,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import struckout.v1.detectedObject
-import struckout.v1.udpPacket
 
 class CameraViewModel(
     private val udpRepository: UdpTransportRepository,

@@ -1,11 +1,11 @@
 package com.taichi765.struckoutCameraApp.transport
 
+import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
-import struckout.v1.Struckout
 import timber.log.Timber
 import java.net.DatagramPacket
 import java.net.DatagramSocket

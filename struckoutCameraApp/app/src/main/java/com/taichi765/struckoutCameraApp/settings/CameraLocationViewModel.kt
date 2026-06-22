@@ -1,10 +1,12 @@
 package com.taichi765.struckoutCameraApp.settings
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.CameraLocation
+import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
+import com.taichi765.struckoutCameraApp.proto.cameraLocation
+import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
 import com.taichi765.struckoutCameraApp.transport.ConnectionState
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
