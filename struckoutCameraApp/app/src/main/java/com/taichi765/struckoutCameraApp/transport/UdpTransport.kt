@@ -1,12 +1,12 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import android.util.Log
+import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
-import struckout.v1.Struckout
+import timber.log.Timber
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -35,7 +35,7 @@ class UdpTransport : UdpTransportRepository {
                 newSocket.connect(UDP_REMOTE_ADDRESS, UDP_REMOTE_PORT)
                 return@withContext true
             } catch (e: IOException) {
-                Log.w(TAG, "failed to bind port $UDP_LOCAL_PORT: $e")
+                Timber.tag(TAG).w("failed to bind port $UDP_LOCAL_PORT: $e")
                 return@withContext false
             }
         }

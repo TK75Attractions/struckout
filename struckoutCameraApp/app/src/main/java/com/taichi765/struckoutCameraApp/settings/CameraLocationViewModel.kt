@@ -1,10 +1,12 @@
 package com.taichi765.struckoutCameraApp.settings
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.CameraLocation
+import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
+import com.taichi765.struckoutCameraApp.proto.cameraLocation
+import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
 import com.taichi765.struckoutCameraApp.transport.ConnectionState
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import struckout.v1.TcpClientPacketKt
-import struckout.v1.cameraLocation
-import struckout.v1.tcpClientPacket
+import timber.log.Timber
 
 class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository) : ViewModel() {
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
@@ -41,10 +41,10 @@ class CameraLocationViewModel(private val tcpRepository: TcpTransportRepository)
     suspend fun updateCameraLocation(value: CameraLocation) {
         val curState = connState.value
         if (curState !is ConnectionState.Connected) {
-            Log.w(TAG, "cannot update camera location: TCP is disconnected")
+            Timber.tag(TAG).w("cannot update camera location: TCP is disconnected")
             return
         }
-        Log.i(TAG, "updating camera location")
+        Timber.tag(TAG).i("updating camera location")
         _cameraLocation.value = value
         val packet = tcpClientPacket {
             cameraLoc = TcpClientPacketKt.updateCameraLocation {

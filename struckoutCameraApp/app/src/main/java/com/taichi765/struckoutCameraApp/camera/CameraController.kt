@@ -4,11 +4,11 @@ import android.content.Context
 import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.util.Log
 import com.taichi765.struckoutCameraApp.camera.types.WorldDirection
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
+import timber.log.Timber
 import kotlin.math.acos
 import kotlin.math.sin
 
@@ -34,7 +34,7 @@ class CameraController(context: Context) : CameraRepository {
             characteristics.mapNotNull { it.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION) }
                 .map { CameraIntrinsics(it[0], it[1], it[2], it[3], it[4]) }.let {
                     if (it.count() > 1) {
-                        Log.i(TAG, "There were multiple back camera. selecting first one.")
+                        Timber.tag(TAG).i("There were multiple back camera. selecting first one.")
                     }
                     it[0]
                 }
@@ -52,7 +52,7 @@ class CameraController(context: Context) : CameraRepository {
             .mapNotNull { it.get(CameraCharacteristics.LENS_POSE_ROTATION) }
 
         if (rotations.count() > 1) {
-            Log.i(TAG, "There were multiple back camera. selecting first one.")
+            Timber.tag(TAG).i("There were multiple back camera. selecting first one.")
         }
 
         val rotation = rotations.single().map { it.toDouble() }

@@ -89,9 +89,9 @@ private fun CameraLocationView(
                 showWarningTextZ = true
                 return@ConfirmButton
             }
-            val x = x.text.toString().toFloat()
-            val y = y.text.toString().toFloat()
-            val z = z.text.toString().toFloat()
+            val x = x.text.toString().toDouble()
+            val y = y.text.toString().toDouble()
+            val z = z.text.toString().toDouble()
 
             onUpdateCameraLocation(CameraLocation(x, y, z))
         }

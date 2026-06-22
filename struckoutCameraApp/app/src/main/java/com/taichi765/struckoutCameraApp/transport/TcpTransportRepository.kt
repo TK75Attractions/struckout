@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.transport
 
+import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.flow.Flow
-import struckout.v1.Struckout
 
 interface TcpTransportRepository {
     val state: Flow<ConnectionState>
