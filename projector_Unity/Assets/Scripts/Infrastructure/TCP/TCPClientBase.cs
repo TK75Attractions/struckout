@@ -39,7 +39,7 @@ namespace Struckout.Infrastructure
                 await _tcpClient.ConnectAsync(_host, _port);
                 _networkStream = _tcpClient.GetStream();
                 _isConnected = true;
-                Debug.Log("Connected to TCP server.");
+                Debug.Log($"Connected to TCP server at PORT: {_port}.");
             }
             catch (Exception ex)
             {

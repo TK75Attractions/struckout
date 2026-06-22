@@ -19,7 +19,7 @@ namespace Struckout.Unity
         private RectTransform _targetParent;
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
+            builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
             builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
             builder.Register<IMessageParser<MasterPacket>, MasterPacketParser>(Lifetime.Singleton);
             builder.Register<IClientService<MasterPacket>, TCPClientBase<MasterPacket>>(Lifetime.Singleton);
@@ -35,6 +35,7 @@ namespace Struckout.Unity
 
             builder.Register<NetworkBootstrap>(Lifetime.Singleton);
             builder.Register<GameBootstrap>(Lifetime.Singleton);
+            builder.Register<RootBootstrap>(Lifetime.Singleton);
             builder.Register<RuntimeContext>(Lifetime.Singleton);
 
             builder.RegisterInstance(

@@ -2,10 +2,11 @@ using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Threading.Tasks;
+using VContainer.Unity;
 
 namespace Struckout.Bootstrap
 {
-    public class RootBootstrap : IAsyncDisposable
+    public class RootBootstrap : IStartable, IAsyncDisposable
     {
         private RuntimeContext _runtimeContext;
 
@@ -20,7 +21,10 @@ namespace Struckout.Bootstrap
             _networkBootstrap = networkBootstrap;
             _gameBootstrap = gameBootstrap;
             _runtimeContext = runtimeContext;
+        }
 
+        public void Start()
+        {
             Initialize().Forget(Debug.LogException);
         }
 

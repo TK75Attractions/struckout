@@ -35,7 +35,10 @@ namespace Struckout.Bootstrap
             _client.RegisterPort("127.0.0.1", 5000);
             _master.RegisterPort("127.0.0.1", 5001);
 
-            bool isSuccessfullyConnect = await _client.ConnectAsync();
+            bool isSuccessfullyClientConnect = await _client.ConnectAsync();
+            bool isSuccessfullyMasterConnect = await _master.ConnectAsync();
+
+            bool isSuccessfullyConnect = isSuccessfullyClientConnect && isSuccessfullyMasterConnect;
             
             if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
         }
