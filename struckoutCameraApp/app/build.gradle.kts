@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.protobuf)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 val enableNatsLog = providers.gradleProperty("enableNatsLog")
@@ -78,6 +80,7 @@ dependencies {
     implementation(libs.protobuf.javalite)
     implementation(libs.protobuf.kotlin.lite)
     implementation(libs.timber)
+    implementation(libs.hilt)
     implementation(project(":opencv"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
@@ -87,6 +90,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    ksp(libs.hilt.compiler)
 }
 
 protobuf {
