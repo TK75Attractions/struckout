@@ -13,3 +13,6 @@ C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\refint\te
 C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.pdb
 C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.genruntimeconfig.cache
 C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\ref\testTcpCLI.dll
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\bin\Debug\net10.0\Google.Protobuf.dll
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.csproj.AssemblyReference.cache
+C:\Users\happy\Documents\GitHub\struckout\testTcpCLI\obj\Debug\net10.0\testTcpCLI.csproj.Up2Date
