@@ -1,12 +1,15 @@
 package com.taichi765.struckoutCameraApp
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.taichi765.struckoutCameraApp.camera.WorldDirectionCalculator
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.opencv.android.OpenCVLoader
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
 
+@RunWith(AndroidJUnit4::class)
 class CameraInstrumentationTest {
     @Test
     fun worldDirectionCalculator_calculatesProperly() {
