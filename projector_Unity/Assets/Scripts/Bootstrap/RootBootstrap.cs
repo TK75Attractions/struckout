@@ -44,10 +44,14 @@ namespace Struckout.Bootstrap
 
             var destroyList = _runtimeContext.DestroyEvents;
 
-            if (destroyList == null) return;
+            if (destroyList == null)
+            {
+                Debug.Log("aaa");
+            }
 
             foreach (var destroy in destroyList)
             {
+                Debug.Log("Dispose");
                 destroy.DisposeAsync();
             }
         }

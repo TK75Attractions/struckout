@@ -58,11 +58,19 @@ namespace Struckout.Infrastructure
 
         public async Task DisconnectAsync()
         {
-            if (!_isConnected || _tcpClient == null) return;
+            Debug.Log("CalledDisposeAsync");
+            if (!_isConnected || _tcpClient == null)
+            {
+                Debug.Log("bbb");
+            }
 
             try
             {
                 _receiveCancellationToken.Cancel();
+                _networkStream?.Dispose();
+                _tcpClient?.Dispose();
+
+                _isConnected = false;
                 await _receiveTask;
                 
                 Debug.Log("Disconnected from TCP server.");
@@ -71,20 +79,7 @@ namespace Struckout.Infrastructure
             {
                 Debug.Log($"Error closing connection to TCP server: {ex.Message}");
             }
-            finally
-            {
-                try
-                {
-                    _networkStream?.Dispose();
-                    _tcpClient?.Dispose();
-
-                    _isConnected = false;
-                }
-                catch (Exception ex)
-                {
-                    Debug.Log($"Error closing connection to TCP server: {ex.Message}");
-                }
-            }
+            Debug.Log("Done");
 
             await Task.CompletedTask;
         }
