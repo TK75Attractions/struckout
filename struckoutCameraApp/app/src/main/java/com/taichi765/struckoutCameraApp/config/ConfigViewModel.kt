@@ -17,7 +17,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-class ConfigurationViewModel(private val tcpRepository: TcpTransportRepository) : ViewModel() {
+class ConfigViewModel(
+    private val tcpRepository: TcpTransportRepository,
+    private val configRepository: ConfigStoreRepository
+) : ViewModel() {
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
     val cameraLocation = _cameraLocation.asStateFlow()
 
@@ -71,15 +74,18 @@ class ConfigurationViewModel(private val tcpRepository: TcpTransportRepository) 
         }
     }
 
-    class Factory(val tcpRepository: TcpTransportRepository) : ViewModelProvider.Factory {
+    class Factory(
+        val tcpRepository: TcpTransportRepository,
+        val configRepository: ConfigStoreRepository
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return ConfigurationViewModel(tcpRepository) as T
+            return ConfigViewModel(tcpRepository, configRepository) as T
         }
     }
 
     companion object {
-        const val TAG = "CameraLocationViewModel"
+        const val TAG = "ConfigViewModel"
     }
 }
 

@@ -36,8 +36,8 @@ fun CameraLocationScreen(
     navController: NavController
 ) {
     val viewModel = run {
-        val factory = ConfigurationViewModel.Factory(tcpTransportRepository)
-        viewModel<ConfigurationViewModel>(factory = factory)
+        val factory = ConfigViewModel.Factory(tcpTransportRepository)
+        viewModel<ConfigViewModel>(factory = factory)
     }
     val cameraLocation by viewModel.cameraLocation.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
