@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.map
 /**
  * Provides session infos given by server.
  */
-class SessionInfoRepository(private val tcpTransport: TcpTransport) {
+class SessionInfoRepository(tcpTransport: TcpTransport) {
     val cameraID: Flow<UInt> = tcpTransport.state.map { state ->
         if (state is ConnectionState.Connected) {
             state.cameraID
