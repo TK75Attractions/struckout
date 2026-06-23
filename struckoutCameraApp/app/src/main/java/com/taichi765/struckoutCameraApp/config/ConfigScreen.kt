@@ -58,9 +58,17 @@ private fun ConfigScreen(
     onUpdateCameraLocation: (CameraLocation) -> Unit,
     onRetryConnection: () -> Unit
 ) {
+    val x = rememberTextFieldState((uiState.cameraLocation?.x ?: 0).toString())
+    val y = rememberTextFieldState((uiState.cameraLocation?.y ?: 0).toString())
+    val z = rememberTextFieldState((uiState.cameraLocation?.z ?: 0).toString())
+    var showWarningTextX by remember { mutableStateOf(false) }
+    var showWarningTextY by remember { mutableStateOf(false) }
+    var showWarningTextZ by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (!uiState.networkFeatureEnabled || uiState.isConnected) {
             SwitchField("Recording Mode", uiState.recodingModeEnabled) {
@@ -72,11 +80,34 @@ private fun ConfigScreen(
         }
         if (uiState.isConnected) {
             CameraLocationView(
-                cameraLocation = uiState.cameraLocation,
-                onUpdateCameraLocation = {
-                    onUpdateCameraLocation(uiState.cameraLocation!!)
-                }
+                x,
+                y,
+                z,
+                showWarningTextX,
+                showWarningTextY,
+                showWarningTextZ,
             )
+        }
+
+        ConfirmButton {
+            if (x.text.any { !it.isDigit() }) {
+                showWarningTextX = true
+                return@ConfirmButton
+            }
+            if (y.text.any { !it.isDigit() }) {
+                showWarningTextY = true
+                return@ConfirmButton
+            }
+            if (z.text.any { !it.isDigit() }) {
+                showWarningTextZ = true
+                return@ConfirmButton
+            }
+
+            val x = x.text.toString().toDouble()
+            val y = y.text.toString().toDouble()
+            val z = z.text.toString().toDouble()
+
+            onUpdateCameraLocation(CameraLocation(x, y, z))
         }
     }
     if (uiState.networkFeatureEnabled && !uiState.isConnected) {
@@ -99,41 +130,18 @@ private fun SwitchField(text: String, checked: Boolean, onCheckedChange: (Boolea
 
 @Composable
 private fun CameraLocationView(
-    cameraLocation: CameraLocation?,
-    onUpdateCameraLocation: (CameraLocation) -> Unit
+    x: TextFieldState,
+    y: TextFieldState,
+    z: TextFieldState,
+    showWarningTextX: Boolean,
+    showWarningTextY: Boolean,
+    showWarningTextZ: Boolean,
 ) {
-    val x = rememberTextFieldState((cameraLocation?.x ?: 0).toString())
-    val y = rememberTextFieldState((cameraLocation?.y ?: 0).toString())
-    val z = rememberTextFieldState((cameraLocation?.z ?: 0).toString())
-    var showWarningTextX by remember { mutableStateOf(false) }
-    var showWarningTextY by remember { mutableStateOf(false) }
-    var showWarningTextZ by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Camera Location", fontSize = 24.sp)
         PositionField("x", x, showWarningTextX)
         PositionField("y", y, showWarningTextY)
         PositionField("z", z, showWarningTextZ)
-
-        ConfirmButton {
-            if (x.text.any { !it.isDigit() }) {
-                showWarningTextX = true
-                return@ConfirmButton
-            }
-            if (y.text.any { !it.isDigit() }) {
-                showWarningTextY = true
-                return@ConfirmButton
-            }
-            if (z.text.any { !it.isDigit() }) {
-                showWarningTextZ = true
-                return@ConfirmButton
-            }
-            val x = x.text.toString().toDouble()
-            val y = y.text.toString().toDouble()
-            val z = z.text.toString().toDouble()
-
-            onUpdateCameraLocation(CameraLocation(x, y, z))
-        }
     }
 }
 
@@ -180,7 +188,7 @@ private fun PositionField(text: String, textState: TextFieldState, showWarningSt
 @Composable
 private fun ConfirmButton(onClick: () -> Unit) {
     Button(onClick = onClick) {
-        Text("Update Position")
+        Text("Done")
     }
 }
 
@@ -213,4 +221,17 @@ private fun NetworkDisabledPreview() {
         onUpdateCameraLocation = {},
         onRetryConnection = {}
     )
+}
+
+@Preview(name = "Network connected")
+@Composable
+private fun ConnectedPreview() {
+    ConfigScreen(
+        uiState = ConfigUiState(
+            isConnected = true
+        ), onToggleRecordingMode = {},
+        onToggleNetworkFeature = {},
+        onDisableNetworkFeature = {},
+        onUpdateCameraLocation = {},
+        onRetryConnection = {})
 }

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,12 +24,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.taichi765.struckoutCameraApp.camera.CameraScreen
+import com.taichi765.struckoutCameraApp.camera.CameraScreenRoute
 import com.taichi765.struckoutCameraApp.config.ConfigScreenRoute
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.ConfigViewModel
@@ -37,7 +42,7 @@ import com.taichi765.struckoutCameraApp.transport.UdpTransport
 val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
     Manifest.permission.ACCESS_FINE_LOCATION,
-    Manifest.permission.ACCESS_COARSE_LOCATION
+    Manifest.permission.ACCESS_COARSE_LOCATION,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,17 +62,7 @@ fun App() {
     }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Struckout Camera",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            )
-        },
+        topBar = { TopBar(navController) },
         modifier = Modifier.safeContentPadding()
     ) { innerPadding ->
         NavHost(
@@ -76,7 +71,7 @@ fun App() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("camera") {
-                CameraScreen(udpRepository, tcpRepository, navController)
+                CameraScreenRoute(udpRepository, tcpRepository, navController)
             }
             composable("config") {
                 ConfigScreenRoute(
@@ -89,6 +84,35 @@ fun App() {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopBar(navController: NavController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                "Struckout Camera",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        navigationIcon = {
+            if (currentRoute != "config") {
+                IconButton(onClick = {
+                    navController.navigate("config")
+                }) {
+                    Icon(
+                        painter = painterResource(R.drawable.settings_24px),
+                        contentDescription = "settings"
+                    )
+                }
+            }
+        }
+    )
 }
 
 @Composable
