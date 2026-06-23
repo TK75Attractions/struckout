@@ -12,19 +12,19 @@ import java.io.OutputStream
 import java.net.Socket
 
 
-class TcpTransport : TcpTransportRepository {
+class TcpTransport {
 
     private val internalState =
         MutableStateFlow<InternalConnectionState>(InternalConnectionState.Disconnected)
 
-    override val state = internalState.map {
+    val state = internalState.map {
         when (it) {
             is InternalConnectionState.Connected -> ConnectionState.Connected(it.cameraID)
             is InternalConnectionState.Disconnected -> ConnectionState.Disconnected
         }
     }
 
-    override suspend fun connect(): Boolean {
+    suspend fun connect(): Boolean {
         return withContext(Dispatchers.IO) {
             Timber.tag(TAG).i("connecting to ball_watcher")
             val socket = try {
@@ -60,7 +60,7 @@ class TcpTransport : TcpTransportRepository {
         }
     }
 
-    override suspend fun close() {
+    suspend fun close() {
         val state = internalState.value
         if (state !is InternalConnectionState.Connected) {
             Timber.tag(TAG).w("close() is called when TCP is not connected")
@@ -72,7 +72,7 @@ class TcpTransport : TcpTransportRepository {
         }
     }
 
-    override suspend fun sendPacket(packet: Struckout.TcpClientPacket) {
+    suspend fun sendPacket(packet: Struckout.TcpClientPacket) {
         val curState = internalState.value
         check(curState is InternalConnectionState.Connected) {
             "TCP connection must be established before sending packet"
@@ -111,4 +111,10 @@ class TcpTransport : TcpTransportRepository {
 
         const val TCP_REMOTE_PORT = 6060
     }
+}
+
+sealed interface ConnectionState {
+    data class Connected(val cameraID: UInt) : ConnectionState
+
+    object Disconnected : ConnectionState
 }

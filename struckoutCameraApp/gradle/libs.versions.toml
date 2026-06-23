@@ -15,6 +15,7 @@ robolectric = "4.16.1"
 protobuf = "4.35.0"
 protobuf-plugin = "0.10.0"
 timber = "5.0.1"
+androidx-datastore = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,6 +39,7 @@ androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycl
 androidx-camera-video = { group = "androidx.camera", name = "camera-video" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view" }
 androidx-nav-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNav" }
+androidx-datastore = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "androidx-datastore" }
 kable-core = { group = "com.juul.kable", name = "kable-core", version.ref = "kable" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }

@@ -9,7 +9,6 @@ import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
 
-    @Suppress("KotlinConstantConditions")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -19,7 +18,7 @@ class MainActivity : ComponentActivity() {
         } else {
             Timber.plant(Timber.DebugTree())
         }
-        
+
         OpenCVLoader.initLocal()
 
         setContent {

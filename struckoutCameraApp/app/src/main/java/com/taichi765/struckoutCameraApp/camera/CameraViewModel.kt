@@ -10,9 +10,8 @@ import com.taichi765.struckoutCameraApp.camera.types.increment
 import com.taichi765.struckoutCameraApp.camera.types.toLong
 import com.taichi765.struckoutCameraApp.proto.detectedObject
 import com.taichi765.struckoutCameraApp.proto.udpPacket
-import com.taichi765.struckoutCameraApp.transport.ConnectionState
-import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
-import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
+import com.taichi765.struckoutCameraApp.transport.DetectionRepository
+import com.taichi765.struckoutCameraApp.transport.SessionInfoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,36 +19,23 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class CameraViewModel(
-    private val udpRepository: UdpTransportRepository,
-    private val tcpRepository: TcpTransportRepository,
-    private val cameraRepository: CameraRepository
+    private val detectionRepository: DetectionRepository,
+    private val cameraRepository: CameraRepository,
+    sessionInfoRepository: SessionInfoRepository,
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
 
-    val tcpConnState = tcpRepository.state.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = ConnectionState.Disconnected
-    )
 
-    val udpIsBound = udpRepository.isBound.stateIn(
+    private val cameraID = sessionInfoRepository.cameraID.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
-        initialValue = false
+        initialValue = 0u // dummy
     )
 
     private var frameId = FrameID(0u)
 
     val analyzer = MyAnalyzer(cameraRepository.tracker) { image, imageTimestamp, rects ->
-        // check connection states
-        val currentConnState = tcpConnState.value
-        check(currentConnState is ConnectionState.Connected) {
-            "TCP connection must be established before camera starts"
-        }
-        check(udpIsBound.value) {
-            "UDP socket must be bound to port before camera starts"
-        }
         if (rects.count() == 0) {
             return@MyAnalyzer
         }
@@ -61,7 +47,7 @@ class CameraViewModel(
         // create and send packet
         val curFrameID = frameId.toLong()
         val packet = udpPacket {
-            cameraId = currentConnState.cameraID.toInt()
+            cameraId = cameraID.value.toInt()
             timestamp = getTimestamp(imageTimestamp)
             this.frameId = curFrameID
             rects.forEach {
@@ -76,27 +62,22 @@ class CameraViewModel(
             }
         }
         viewModelScope.launch {
-            udpRepository.sendPacket(packet)
-        }
-    }
-
-    fun bindUdpSocket() {
-        if (udpIsBound.value) {
-            return
-        }
-        viewModelScope.launch {
-            udpRepository.bind()
+            detectionRepository.pushDetection(packet)
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     class Factory(
-        private val udpRepository: UdpTransportRepository,
-        private val tcpRepository: TcpTransportRepository,
-        private val cameraRepository: CameraRepository
+        private val detectionRepository: DetectionRepository,
+        private val cameraRepository: CameraRepository,
+        private val sessionInfoRepository: SessionInfoRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CameraViewModel(udpRepository, tcpRepository, cameraRepository) as T
+            return CameraViewModel(
+                detectionRepository,
+                cameraRepository,
+                sessionInfoRepository
+            ) as T
         }
     }
 
