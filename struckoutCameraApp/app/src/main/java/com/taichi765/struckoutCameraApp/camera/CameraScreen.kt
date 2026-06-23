@@ -55,7 +55,7 @@ fun CameraScreen(
 
     if (permissionGranted) {
         CameraScreenContent(udpRepository, tcpRepository) {
-            navController.navigate("settings")
+            navController.navigate("config")
         }
     } else {
         Text("Permission is required")

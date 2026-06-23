@@ -72,13 +72,13 @@ fun App() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (permissionGranted) "settings" else "permissionRequired",
+            startDestination = if (permissionGranted) "config" else "permissionRequired",
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("camera") {
                 CameraScreen(udpRepository, tcpRepository, navController)
             }
-            composable("settings") {
+            composable("config") {
                 ConfigScreenRoute(
                     configViewModel,
                     navController
