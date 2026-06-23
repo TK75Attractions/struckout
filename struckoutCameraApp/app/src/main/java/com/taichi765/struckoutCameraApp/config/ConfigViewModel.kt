@@ -21,6 +21,9 @@ class ConfigViewModel(
     private val tcpRepository: TcpTransportRepository,
     private val configRepository: ConfigStoreRepository
 ) : ViewModel() {
+    /**
+     * TODO: [TcpTransportRepository]に持たせる
+     */
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
 
     private val _connState = tcpRepository.state.stateIn(

@@ -88,21 +88,10 @@ private fun ConfigScreen(
     }
 }
 
-@Preview
-@Composable
-private fun ConfigScreenPreView() {
-    ConfigScreen(
-        uiState = ConfigUiState(), onToggleRecordingMode = {},
-        onToggleNetworkFeature = {},
-        onDisableNetworkFeature = {},
-        onUpdateCameraLocation = {},
-        onRetryConnection = {},
-    )
-}
 
 @Composable
 private fun SwitchField(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         Text(text)
         Switch(checked, onCheckedChange)
     }
@@ -193,4 +182,35 @@ private fun ConfirmButton(onClick: () -> Unit) {
     Button(onClick = onClick) {
         Text("Update Position")
     }
+}
+
+@Preview(name = "Network enabled but not connected")
+@Composable
+private fun DisconnectedPreView() {
+    ConfigScreen(
+        uiState = ConfigUiState(
+            isConnected = false,
+            networkFeatureEnabled = true
+        ),
+        onToggleRecordingMode = {},
+        onToggleNetworkFeature = {},
+        onDisableNetworkFeature = {},
+        onUpdateCameraLocation = {},
+        onRetryConnection = {},
+    )
+}
+
+@Preview(name = "Network feature disabled")
+@Composable
+private fun NetworkDisabledPreview() {
+    ConfigScreen(
+        uiState = ConfigUiState(
+            networkFeatureEnabled = false
+        ),
+        onToggleRecordingMode = {},
+        onToggleNetworkFeature = {},
+        onDisableNetworkFeature = {},
+        onUpdateCameraLocation = {},
+        onRetryConnection = {}
+    )
 }

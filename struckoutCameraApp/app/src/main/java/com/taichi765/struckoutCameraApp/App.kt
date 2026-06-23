@@ -49,7 +49,7 @@ fun App() {
 
     val tcpRepository = TcpTransport()
     val udpRepository = UdpTransport()
-    val configRepository = ConfigStoreRepository(context.applicationContext)
+    val configRepository = ConfigStoreRepository(context)
 
     val configViewModel = run {
         val factory = ConfigViewModel.Factory(tcpRepository, configRepository)
