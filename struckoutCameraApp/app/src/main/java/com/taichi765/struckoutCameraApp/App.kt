@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,11 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.taichi765.struckoutCameraApp.camera.CameraScreen
-import com.taichi765.struckoutCameraApp.config.CameraLocationScreen
+import com.taichi765.struckoutCameraApp.config.ConfigScreenRoute
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.config.ConfigViewModel
 import com.taichi765.struckoutCameraApp.transport.TcpTransport
 import com.taichi765.struckoutCameraApp.transport.UdpTransport
 
@@ -45,6 +49,12 @@ fun App() {
 
     val tcpRepository = TcpTransport()
     val udpRepository = UdpTransport()
+    val configRepository = ConfigStoreRepository(context.applicationContext)
+
+    val configViewModel = run {
+        val factory = ConfigViewModel.Factory(tcpRepository, configRepository)
+        viewModel<ConfigViewModel>(factory = factory)
+    }
 
     Scaffold(
         topBar = {
@@ -57,7 +67,8 @@ fun App() {
                     )
                 }
             )
-        }
+        },
+        modifier = Modifier.safeContentPadding()
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -68,7 +79,10 @@ fun App() {
                 CameraScreen(udpRepository, tcpRepository, navController)
             }
             composable("settings") {
-                CameraLocationScreen(tcpTransportRepository = tcpRepository, navController)
+                ConfigScreenRoute(
+                    configViewModel,
+                    navController
+                )
             }
             composable("permissionRequired") {
                 PermissionRequestScreen { permissionGranted = true }

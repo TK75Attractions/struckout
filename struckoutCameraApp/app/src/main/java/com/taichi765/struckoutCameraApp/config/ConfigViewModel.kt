@@ -11,7 +11,7 @@ import com.taichi765.struckoutCameraApp.transport.ConnectionState
 import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -22,27 +22,45 @@ class ConfigViewModel(
     private val configRepository: ConfigStoreRepository
 ) : ViewModel() {
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
-    val cameraLocation = _cameraLocation.asStateFlow()
 
-    val connState = tcpRepository.state.stateIn(
+    private val _connState = tcpRepository.state.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ConnectionState.Disconnected
     )
-
-    val isConnected = connState.map {
-        when (it) {
-            is ConnectionState.Connected -> true
-            is ConnectionState.Disconnected -> false
-        }
-    }.stateIn(
+    private val _networkFeatureEnabled = configRepository.networkFeatureEnabled().stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
-        initialValue = false
+        initialValue = ConfigStoreRepository.ENABLE_NETWORK_FEATURE_DEFAULT
     )
 
-    suspend fun updateCameraLocation(value: CameraLocation) {
-        val curState = connState.value
+    /**
+     * invariant: `isConnected` should be always `false` if `networkFeature` is disabled.
+     *
+     * TODO: isConnectedとnetworkFeatureEnabledをsealed interfaceにする
+     */
+    val uiState = combine(
+        configRepository.recordingModeEnabled(),
+        _networkFeatureEnabled,
+        _cameraLocation,
+        _connState.map {
+            when (it) {
+                is ConnectionState.Connected -> true
+                is ConnectionState.Disconnected -> false
+            }
+        }
+    ) { recodingModeEnabled, networkFeatureEnabled, cameraLocation, isConnected ->
+        ConfigUiState(
+            recodingModeEnabled, networkFeatureEnabled, isConnected, cameraLocation,
+        )
+    }.stateIn(
+        viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = ConfigUiState()
+    )
+
+    fun updateCameraLocation(value: CameraLocation) {
+        val curState = _connState.value
         if (curState !is ConnectionState.Connected) {
             Timber.tag(TAG).w("cannot update camera location: TCP is disconnected")
             return
@@ -59,7 +77,9 @@ class ConfigViewModel(
                 cameraId = curState.cameraID.toInt()
             }
         }
-        tcpRepository.sendPacket(packet)
+        viewModelScope.launch {
+            tcpRepository.sendPacket(packet)
+        }
     }
 
     fun connect() {
@@ -71,6 +91,27 @@ class ConfigViewModel(
     fun close() {
         viewModelScope.launch {
             tcpRepository.close()
+        }
+    }
+
+    fun toggleRecordingMode() {
+        viewModelScope.launch {
+            configRepository.toggleRecodingMode()
+        }
+    }
+
+    fun toggleNetworkFeature() {
+        viewModelScope.launch {
+            configRepository.toggleNetworkFeature()
+        }
+    }
+
+    fun disableNetworkFeature() {
+        check(_networkFeatureEnabled.value) {
+            "disableNetworkFeature should not be called when it's already disabled"
+        }
+        viewModelScope.launch {
+            configRepository.disableNetworkFeature()
         }
     }
 
@@ -88,4 +129,5 @@ class ConfigViewModel(
         const val TAG = "ConfigViewModel"
     }
 }
+
 

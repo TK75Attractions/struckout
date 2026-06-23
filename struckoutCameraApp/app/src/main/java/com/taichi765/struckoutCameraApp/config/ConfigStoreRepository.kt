@@ -10,32 +10,45 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "config")
 
 class ConfigStoreRepository(private val context: Context) {
-    fun enableRecordingModeFlow() = context.dataStore.data.map { preferences ->
+    fun recordingModeEnabled() = context.dataStore.data.map { preferences ->
         preferences[ENABLE_RECORDING_MODE] ?: ENABLE_RECORDING_MODE_DEFAULT
     }
 
-    fun enableNetworkFlow() = context.dataStore.data.map { preferences ->
-        preferences[ENABLE_NETWORK] ?: ENABLE_NETWORK_DEFAULT
+    fun networkFeatureEnabled() = context.dataStore.data.map { preferences ->
+        preferences[ENABLE_NETWORK_FEATURE] ?: ENABLE_NETWORK_FEATURE_DEFAULT
     }
 
-    suspend fun toggleRecodingMode() = context.dataStore.updateData {
-        it.toMutablePreferences().also { preferences ->
-            preferences[ENABLE_RECORDING_MODE] =
-                !(preferences[ENABLE_RECORDING_MODE] ?: ENABLE_RECORDING_MODE_DEFAULT)
+    suspend fun toggleRecodingMode() {
+        context.dataStore.updateData {
+            it.toMutablePreferences().also { preferences ->
+                preferences[ENABLE_RECORDING_MODE] =
+                    !(preferences[ENABLE_RECORDING_MODE] ?: ENABLE_RECORDING_MODE_DEFAULT)
+            }
         }
     }
 
-    suspend fun toggleNetwork() = context.dataStore.updateData {
-        it.toMutablePreferences().also { preferences ->
-            preferences[ENABLE_NETWORK] = !(preferences[ENABLE_NETWORK] ?: ENABLE_NETWORK_DEFAULT)
+    suspend fun toggleNetworkFeature() {
+        context.dataStore.updateData {
+            it.toMutablePreferences().also { preferences ->
+                preferences[ENABLE_NETWORK_FEATURE] =
+                    !(preferences[ENABLE_NETWORK_FEATURE] ?: ENABLE_NETWORK_FEATURE_DEFAULT)
+            }
+        }
+    }
+
+    suspend fun disableNetworkFeature() {
+        context.dataStore.updateData {
+            it.toMutablePreferences().also { preferences ->
+                preferences[ENABLE_NETWORK_FEATURE] = false
+            }
         }
     }
 
     companion object {
-        private const val ENABLE_RECORDING_MODE_DEFAULT = false
-        private const val ENABLE_NETWORK_DEFAULT = true
+        const val ENABLE_RECORDING_MODE_DEFAULT = false
+        const val ENABLE_NETWORK_FEATURE_DEFAULT = true
 
         private val ENABLE_RECORDING_MODE = booleanPreferencesKey("enable_recording_mode")
-        private val ENABLE_NETWORK = booleanPreferencesKey("enable_network")
+        private val ENABLE_NETWORK_FEATURE = booleanPreferencesKey("enable_network")
     }
 }
