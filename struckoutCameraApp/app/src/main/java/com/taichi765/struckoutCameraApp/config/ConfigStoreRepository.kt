@@ -5,18 +5,33 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "config")
 
-class ConfigStoreRepository(private val context: Context) {
-    fun recordingModeEnabled() = context.dataStore.data.map { preferences ->
+/**
+ * Lifetime of this repository is as same as [android.app.Activity],
+ * so you should use `applicationScope`.
+ */
+class ConfigStoreRepository(private val context: Context, private val scope: CoroutineScope) {
+    val recordingModeEnabled = context.dataStore.data.map { preferences ->
         preferences[ENABLE_RECORDING_MODE] ?: ENABLE_RECORDING_MODE_DEFAULT
-    }
+    }.stateIn(
+        scope = scope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ENABLE_RECORDING_MODE_DEFAULT
+    )// アプリケーション全体で共有される状態なのでRepository内でstateInしても不自然ではない
 
-    fun networkFeatureEnabled() = context.dataStore.data.map { preferences ->
+    val networkFeatureEnabled = context.dataStore.data.map { preferences ->
         preferences[ENABLE_NETWORK_FEATURE] ?: ENABLE_NETWORK_FEATURE_DEFAULT
-    }
+    }.stateIn(
+        scope = scope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ENABLE_NETWORK_FEATURE_DEFAULT
+    )// アプリケーション全体で共有される状態なのでRepository内でstateInしても不自然ではない
 
     suspend fun toggleRecodingMode() {
         context.dataStore.updateData {

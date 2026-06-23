@@ -22,47 +22,30 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
-import com.taichi765.struckoutCameraApp.transport.TcpTransportRepository
-import com.taichi765.struckoutCameraApp.transport.UdpTransportRepository
 import timber.log.Timber
 import java.util.concurrent.Executors
 
 @Composable
 fun CameraScreenRoute(
-    udpRepository: UdpTransportRepository,
-    tcpRepository: TcpTransportRepository,
-    navController: NavController
+    viewModel: CameraViewModel,
 ) {
-    val context = LocalContext.current
+    val image by viewModel.contoursImage.collectAsState()
 
-
-
-
-    CameraScreen(udpRepository, tcpRepository, onNavigateToConfigScreen = {
-        navController.navigate("config")
-    })
-
+    CameraScreen(
+        image,
+        viewModel.analyzer,
+    )
 }
 
 @Composable
 private fun CameraScreen(
-    udpRepository: UdpTransportRepository,
-    tcpRepository: TcpTransportRepository,
-    onNavigateToConfigScreen: () -> Unit
+    image: ImageBitmap?,
+    analyzer: MyAnalyzer,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val viewModel = run {
-        val cameraController = CameraController(context)
-        val factory = CameraViewModel.Factory(udpRepository, tcpRepository, cameraController)
-        viewModel<CameraViewModel>(factory = factory)
-    }
-    val image by viewModel.contoursImage.collectAsState()
-    val udpIsBound by viewModel.udpIsBound.collectAsState()
     val cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
     Column(
@@ -79,17 +62,11 @@ private fun CameraScreen(
         )
     }
 
-    if (!udpIsBound) {
-        LaunchedEffect(Unit) {
-            viewModel.bindUdpSocket()
-        }
-    }
-
     LaunchedEffect(Unit) {
         val imageAnalysis =
             ImageAnalysis.Builder().build().apply {
                 val executor = Executors.newSingleThreadExecutor()
-                setAnalyzer(executor, viewModel.analyzer)
+                setAnalyzer(executor, analyzer)
             }
 
         val cameraProvider = ProcessCameraProvider.awaitInstance(context)

@@ -31,11 +31,6 @@ class ConfigViewModel(
         started = SharingStarted.Eagerly,
         initialValue = ConnectionState.Disconnected
     )
-    private val _networkFeatureEnabled = configRepository.networkFeatureEnabled().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = ConfigStoreRepository.ENABLE_NETWORK_FEATURE_DEFAULT
-    )
 
     /**
      * invariant: `isConnected` should be always `false` if `networkFeature` is disabled.
@@ -43,8 +38,8 @@ class ConfigViewModel(
      * TODO: isConnectedとnetworkFeatureEnabledをsealed interfaceにする
      */
     val uiState = combine(
-        configRepository.recordingModeEnabled(),
-        _networkFeatureEnabled,
+        configRepository.recordingModeEnabled,
+        configRepository.networkFeatureEnabled,
         _cameraLocation,
         _connState.map {
             when (it) {
@@ -110,7 +105,7 @@ class ConfigViewModel(
     }
 
     fun disableNetworkFeature() {
-        check(_networkFeatureEnabled.value) {
+        check(configRepository.networkFeatureEnabled.value) {
             "disableNetworkFeature should not be called when it's already disabled"
         }
         viewModelScope.launch {
