@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.protobuf.kotlin.lite)
     implementation(libs.timber)
     implementation(libs.hilt)
+    implementation(libs.hilt.navigation.compose)
     implementation(project(":opencv"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
