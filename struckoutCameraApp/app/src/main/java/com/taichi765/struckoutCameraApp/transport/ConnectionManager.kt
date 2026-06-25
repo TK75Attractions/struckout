@@ -7,8 +7,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
-class ConnectionManager(
-    private val tcpTransport: TcpTransport,
+@Singleton
+class ConnectionManager @Inject constructor(
+    private val sessionRepository: SessionRepository,
     private val udpDetectionRepository: UdpDetectionRepository,
     private val configRepository: ConfigStoreRepository,
     private val applicationScope: CoroutineScope
@@ -20,14 +21,14 @@ class ConnectionManager(
 
     private fun watchTcpConnection() {
         combine(
-            tcpTransport.state,
+            sessionRepository.state,
             configRepository.networkFeatureEnabled
         ) { connState, networkFeatureEnabled ->
             networkFeatureEnabled &&
                     connState is ConnectionState.Disconnected
         }.distinctUntilChanged().onEach { shouldConnect ->
             if (shouldConnect) {
-                tcpTransport.connect()
+                sessionRepository.connect()
             }
         }.launchIn(applicationScope)
     }

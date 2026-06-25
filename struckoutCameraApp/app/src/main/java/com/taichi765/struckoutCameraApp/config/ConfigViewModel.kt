@@ -8,6 +8,7 @@ import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
 import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
 import com.taichi765.struckoutCameraApp.transport.ConnectionState
+import com.taichi765.struckoutCameraApp.transport.SessionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -17,15 +18,27 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class ConfigViewModel(
-    private val tcpRepository: TcpTransportRepository,
+    private val sessionRepository: SessionRepository,
     private val configRepository: ConfigStoreRepository
 ) : ViewModel() {
     /**
-     * TODO: [TcpTransportRepository]に持たせる
+     * TODO: [SessionRepository]に持たせる
      */
     private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
-
-    private val _connState = tcpRepository.state.stateIn(
+    private val isConnected = sessionRepository.state.map { state ->
+        state is ConnectionState.Connected
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = false
+    )
+    private val cameraId = sessionRepository.state.map { state ->
+        if (state is ConnectionState.Connected) {
+            state.cameraID
+        } else {
+            DUMMY_CAMERA_ID
+        }
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ConnectionState.Disconnected
@@ -81,13 +94,13 @@ class ConfigViewModel(
 
     fun connect() {
         viewModelScope.launch {
-            tcpRepository.connect()
+            sessionRepository.connect()
         }
     }
 
     fun close() {
         viewModelScope.launch {
-            tcpRepository.close()
+            sessionRepository.close()
         }
     }
 

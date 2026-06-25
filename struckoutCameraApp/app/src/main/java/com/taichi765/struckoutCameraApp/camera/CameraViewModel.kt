@@ -11,7 +11,8 @@ import com.taichi765.struckoutCameraApp.camera.types.toLong
 import com.taichi765.struckoutCameraApp.proto.detectedObject
 import com.taichi765.struckoutCameraApp.proto.udpPacket
 import com.taichi765.struckoutCameraApp.transport.DetectionRepository
-import com.taichi765.struckoutCameraApp.transport.SessionInfoRepository
+import com.taichi765.struckoutCameraApp.transport.SessionRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,13 +22,13 @@ import kotlinx.coroutines.launch
 class CameraViewModel(
     private val detectionRepository: DetectionRepository,
     private val cameraRepository: CameraRepository,
-    sessionInfoRepository: SessionInfoRepository,
+    sessionRepository: SessionRepository,
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
 
 
-    private val cameraID = sessionInfoRepository.cameraID.stateIn(
+    private val cameraID = sessionRepository.state.cameraID.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = 0u // dummy
