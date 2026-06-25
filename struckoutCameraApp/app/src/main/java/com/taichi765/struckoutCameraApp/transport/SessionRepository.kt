@@ -1,6 +1,9 @@
 package com.taichi765.struckoutCameraApp.transport
 
 import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
+import com.taichi765.struckoutCameraApp.proto.cameraLocation
+import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -12,16 +15,12 @@ import java.io.OutputStream
 import java.net.Socket
 
 
-class TcpTransport {
-
+class SessionRepository {
     private val internalState =
         MutableStateFlow<InternalConnectionState>(InternalConnectionState.Disconnected)
 
-    val state = internalState.map {
-        when (it) {
-            is InternalConnectionState.Connected -> ConnectionState.Connected(it.cameraID)
-            is InternalConnectionState.Disconnected -> ConnectionState.Disconnected
-        }
+    val isConnected = internalState.map { state ->
+        state is InternalConnectionState.Connected
     }
 
     suspend fun connect(): Boolean {
@@ -72,13 +71,21 @@ class TcpTransport {
         }
     }
 
-    suspend fun sendPacket(packet: Struckout.TcpClientPacket) {
+    suspend fun updateCameraLocation(value: Struckout.CameraLocation) {
         val curState = internalState.value
         check(curState is InternalConnectionState.Connected) {
             "TCP connection must be established before sending packet"
         }
-        check(packet.dataCase != Struckout.TcpClientPacket.DataCase.DATA_NOT_SET) {
-            "Packet data must be set"
+
+        val packet = tcpClientPacket {
+            cameraLoc = TcpClientPacketKt.updateCameraLocation {
+                this.cameraLocation = cameraLocation {
+                    x = value.x
+                    y = value.y
+                    z = value.z
+                }
+                cameraId = curState.cameraID.toInt()
+            }
         }
 
         withContext(Dispatchers.IO) {
@@ -110,6 +117,7 @@ class TcpTransport {
         const val TCP_REMOTE_ADDRESS = "192.168.10.110"
 
         const val TCP_REMOTE_PORT = 6060
+        const val DUMMY_CAMERA_ID = 99u
     }
 }
 
