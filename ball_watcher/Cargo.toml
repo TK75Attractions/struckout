@@ -1,16 +1,16 @@
 [package]
 name = "ball_watcher"
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 
 [dependencies]
 nalgebra = { version = "0.34.2" }
 tracktor = "0.4.1"
 
-prost = "0.14.3"
+prost = { workspace = true }
 prost-types = { version = "0.14.3", features = ["chrono"] }
 
-tokio = { version = "1.52.3", features = [
+tokio = { workspace = true, features = [
     "net",
     "rt-multi-thread",
     "macros",
@@ -18,16 +18,16 @@ tokio = { version = "1.52.3", features = [
     "io-util",
     "time",
 ] }
-tracing = "0.1.44"
-tracing-subscriber = "0.3.23"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
-anyhow = "1.0"
-thiserror = "2.0.18"
-approx = "0.5.1"
-bytes = "1.11.1"
-chrono = "0.4.44"
-rand = "0.10.1"
-parking_lot = "0.12.5"
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+approx = { workspace = true }
+bytes = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+parking_lot = { workspace = true }
 
 [build-dependencies]
-prost-build = "0.14.3"
+prost-build = { workspace = true }
