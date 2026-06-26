@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
-import com.taichi765.struckoutCameraApp.transport.SessionRepository
+import com.taichi765.struckoutCameraApp.transport.SessionState
+import com.taichi765.struckoutCameraApp.transport.TcpSessionRepository
+import com.taichi765.struckoutCameraApp.transport.UdpDetectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,14 +18,23 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ConfigViewModel @Inject constructor(
-    private val sessionRepository: SessionRepository,
+    private val tcpSessionRepository: TcpSessionRepository,
+    udpDetectionRepository: UdpDetectionRepository,
     private val configRepository: ConfigStoreRepository
 ) : ViewModel() {
     /**
-     * TODO: [SessionRepository]に持たせる
+     * TODO: [TcpSessionRepository]に持たせる
      */
     private val _cameraLocation = MutableStateFlow<Struckout.CameraLocation?>(null)
     private val _warningState = MutableStateFlow(WarningState())
+
+    private val sessionState =
+        combine(
+            tcpSessionRepository.state,
+            udpDetectionRepository.isBound
+        ) { tcpState, udpIsBound ->
+            Pair(tcpState, udpIsBound)
+        }
 
     /**
      * invariant: `isConnected` should be always `false` if `networkFeature` is disabled.
@@ -33,16 +44,17 @@ class ConfigViewModel @Inject constructor(
     val uiState = combine(
         configRepository.recordingModeEnabled,
         configRepository.networkFeatureEnabled,
+        sessionState,
         _cameraLocation,
-        sessionRepository.connState,
         _warningState
-    ) { recodingModeEnabled, networkFeatureEnabled, cameraLocation, connState, warningState ->
+    ) { recodingModeEnabled, networkFeatureEnabled, sessionState, cameraLocation, warningState ->
         ConfigUiState(
             recodingModeEnabled,
             networkFeatureEnabled,
-            connState is SessionRepository.ConnectionState.Connected,
-            cameraLocation,
-            warningState
+            tcpIsConnected = sessionState.first is SessionState.Connected,
+            udpIsBound = sessionState.second,
+            cameraLocation = cameraLocation,
+            warningState = warningState
         )
     }.stateIn(
         viewModelScope,
@@ -65,7 +77,13 @@ class ConfigViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionRepository.updateCameraLocation(cameraLocation)
+            configRepository.updateCameraLocation(cameraLocation)
+        }
+    }
+
+    fun connect() {
+        viewModelScope.launch {
+            tcpSessionRepository.connect()
         }
     }
 
@@ -90,12 +108,6 @@ class ConfigViewModel @Inject constructor(
             _warningState.value = _warningState.value.copy(showZ = true)
         }
         return _warningState.value.isAllOk()
-    }
-
-    fun connect() {
-        viewModelScope.launch {
-            sessionRepository.connect()
-        }
     }
 
     fun toggleRecordingMode() {

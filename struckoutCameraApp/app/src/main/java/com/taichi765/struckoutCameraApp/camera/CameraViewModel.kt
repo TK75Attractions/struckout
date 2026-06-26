@@ -21,7 +21,7 @@ import javax.inject.Inject
 class CameraViewModel @Inject constructor(
     private val detectionRepository: DetectionRepository,
     private val cameraRepository: CameraRepository,
-    sessionRepository: SessionRepository,
+    sessionRepository: SessionRepository
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()

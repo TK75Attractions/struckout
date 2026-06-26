@@ -1,6 +1,7 @@
 package com.taichi765.struckoutCameraApp.transport
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -13,12 +14,16 @@ class ConfiguredDetectionRepository @Inject constructor(
 ) : DetectionRepository {
 
     override suspend fun pushDetection(data: DetectionData) {
+        Timber.tag(TAG).d("networkFeatureEnabled: ${configRepository.networkFeatureEnabled.value}")
         if (configRepository.networkFeatureEnabled.value) {
-
             udpDetectionRepository.pushDetection(data)
         }
         if (configRepository.recordingModeEnabled.value) {
             diskDetectionRepository.pushDetection(data)
         }
+    }
+
+    companion object {
+        const val TAG = "ConfiguredDetectionRepository"
     }
 }
