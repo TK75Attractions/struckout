@@ -12,7 +12,7 @@ import javax.inject.Singleton
 
 @Singleton
 class ConnectionManager @Inject constructor(
-    private val sessionRepository: SessionRepository,
+    private val tcpSessionRepository: TcpSessionRepository,
     private val udpDetectionRepository: UdpDetectionRepository,
     private val configRepository: ConfigStoreRepository,
     @ApplicationScope private val scope: CoroutineScope
@@ -24,14 +24,14 @@ class ConnectionManager @Inject constructor(
 
     private fun watchTcpConnection() {
         combine(
-            sessionRepository.connState,
+            tcpSessionRepository.state,
             configRepository.networkFeatureEnabled
         ) { connState, networkFeatureEnabled ->
             networkFeatureEnabled &&
-                    connState is SessionRepository.ConnectionState.Connected
+                    connState is SessionState.Connected
         }.distinctUntilChanged().onEach { shouldConnect ->
             if (shouldConnect) {
-                sessionRepository.connect()
+                tcpSessionRepository.connect()
             }
         }.launchIn(scope)
     }

@@ -63,7 +63,7 @@ private fun ConfigScreen(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (!uiState.networkFeatureEnabled || uiState.isConnected) {
+        if (!uiState.networkFeatureEnabled || uiState.tcpIsConnected) {
             SwitchField("Recording Mode", uiState.recodingModeEnabled) {
                 onToggleRecordingMode()
             }
@@ -71,7 +71,7 @@ private fun ConfigScreen(
                 onToggleNetworkFeature()
             }
         }
-        if (uiState.isConnected) {
+        if (uiState.tcpIsConnected) {
             CameraLocationView(
                 x,
                 y,
@@ -84,7 +84,7 @@ private fun ConfigScreen(
             onUpdateCameraLocation(x.text, y.text, z.text)
         }
     }
-    if (uiState.networkFeatureEnabled && !uiState.isConnected) {
+    if (uiState.networkFeatureEnabled && !uiState.tcpIsConnected) {
         FallbackView(onTryConnect = {
             onRetryConnection()
         }, onDisableNetworkFeature = {
@@ -169,7 +169,7 @@ private fun ConfirmButton(onClick: () -> Unit) {
 private fun DisconnectedPreView() {
     ConfigScreen(
         uiState = ConfigUiState(
-            isConnected = false,
+            tcpIsConnected = false,
             networkFeatureEnabled = true
         ),
         onToggleRecordingMode = {},
@@ -200,7 +200,7 @@ private fun NetworkDisabledPreview() {
 private fun ConnectedPreview() {
     ConfigScreen(
         uiState = ConfigUiState(
-            isConnected = true
+            tcpIsConnected = true
         ), onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},

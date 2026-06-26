@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import timber.log.Timber
 import javax.inject.Inject
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "config")
@@ -66,6 +67,7 @@ class ConfigStoreRepository @Inject constructor(
     }
 
     suspend fun toggleNetworkFeature() {
+        Timber.tag(TAG).d("toggling network feature, current value: ${networkFeatureEnabled.value}")
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
                 preferences[ENABLE_NETWORK_FEATURE] =
@@ -75,6 +77,7 @@ class ConfigStoreRepository @Inject constructor(
     }
 
     suspend fun disableNetworkFeature() {
+        Timber.tag(TAG).d("disabling network feature")
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
                 preferences[ENABLE_NETWORK_FEATURE] = false
@@ -93,6 +96,8 @@ class ConfigStoreRepository @Inject constructor(
     }
 
     companion object {
+        const val TAG = "ConfigStoreRepository"
+
         const val ENABLE_RECORDING_MODE_DEFAULT = false
         const val ENABLE_NETWORK_FEATURE_DEFAULT = true
 

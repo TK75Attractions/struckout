@@ -16,8 +16,9 @@ import javax.inject.Inject
 /**
  * Sends detections to server via UDP.
  */
-class UdpDetectionRepository @Inject constructor(private val sessionRepository: SessionRepository) :
-    DetectionRepository {
+class UdpDetectionRepository @Inject constructor(
+    private val sessionRepository: SessionRepository
+) : DetectionRepository {
     private var socket = MutableStateFlow<DatagramSocket?>(null)
 
     /**
@@ -33,14 +34,16 @@ class UdpDetectionRepository @Inject constructor(private val sessionRepository: 
      * Returns whether binding is succeeded or not.
      */
     suspend fun bind(): Boolean {
+        Timber.tag(TAG).i("trying to bind UDP port")
         return withContext(Dispatchers.IO) {
             try {
-                val newSocket = DatagramSocket(UDP_LOCAL_PORT)
+                val newSocket = DatagramSocket()
                 socket.value = newSocket
                 newSocket.connect(UDP_REMOTE_ADDRESS, UDP_REMOTE_PORT)
+                Timber.tag(TAG).i("successfully bound UDP port")
                 return@withContext true
             } catch (e: IOException) {
-                Timber.tag(TAG).w("failed to bind port $UDP_LOCAL_PORT: $e")
+                Timber.tag(TAG).w("failed to bind port: $e")
                 return@withContext false
             }
         }
@@ -48,11 +51,11 @@ class UdpDetectionRepository @Inject constructor(private val sessionRepository: 
 
     override suspend fun pushDetection(data: DetectionData) {
         val curSocket = socket.value
-        val sessionState = sessionRepository.connState.value
+        val sessionState = sessionRepository.state.value
         check(curSocket != null) {
             "UDP port must be bound to port before sending packet"
         }
-        check(sessionState is SessionRepository.ConnectionState.Connected) {
+        check(sessionState is SessionState.Connected) {
             "TCP session must be established before sending detections via UDP"
         }
 
@@ -85,10 +88,5 @@ class UdpDetectionRepository @Inject constructor(private val sessionRepository: 
          * Send packet to port 5050
          */
         const val UDP_REMOTE_PORT = 5050
-
-        /**
-         * Receive packet at port 8822
-         */
-        const val UDP_LOCAL_PORT = 8822
     }
 }
