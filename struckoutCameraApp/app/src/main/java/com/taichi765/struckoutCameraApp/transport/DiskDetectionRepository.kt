@@ -1,12 +1,12 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import javax.inject.Inject
 
 /**
  * Saves detections to disk (in protobuf format).
  */
-class DiskDetectionRepository : DetectionRepository {
-    override suspend fun pushDetection(packet: Struckout.UdpPacket) {
+class DiskDetectionRepository @Inject constructor() : DetectionRepository {
+    override suspend fun pushDetection(data: DetectionData) {
         TODO("Not yet implemented")
     }
 }

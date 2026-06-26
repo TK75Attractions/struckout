@@ -1,24 +1,23 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import com.taichi765.struckoutCameraApp.proto.Struckout
-import kotlinx.coroutines.CoroutineScope
+import com.taichi765.struckoutCameraApp.proto.udpPacket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import timber.log.Timber
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import javax.inject.Inject
 
 
 /**
  * Sends detections to server via UDP.
  */
-class UdpDetectionRepository(scope: CoroutineScope) : DetectionRepository {
+class UdpDetectionRepository @Inject constructor(private val sessionRepository: SessionRepository) :
+    DetectionRepository {
     private var socket = MutableStateFlow<DatagramSocket?>(null)
 
     /**
@@ -26,11 +25,7 @@ class UdpDetectionRepository(scope: CoroutineScope) : DetectionRepository {
      */
     val isBound = socket.map {
         it != null
-    }.stateIn(
-        scope = scope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = false
-    )// FIXME: ここでstateInするのは問題ない？
+    }
 
     /**
      * Creates new UDP socket and bind it to the port for receiving data from server.
@@ -51,10 +46,23 @@ class UdpDetectionRepository(scope: CoroutineScope) : DetectionRepository {
         }
     }
 
-    override suspend fun pushDetection(packet: Struckout.UdpPacket) {
+    override suspend fun pushDetection(data: DetectionData) {
         val curSocket = socket.value
+        val sessionState = sessionRepository.connState.value
         check(curSocket != null) {
             "UDP port must be bound to port before sending packet"
+        }
+        check(sessionState is SessionRepository.ConnectionState.Connected) {
+            "TCP session must be established before sending detections via UDP"
+        }
+
+        val packet = udpPacket {
+            cameraId = sessionState.cameraID.toInt()
+            timestamp = data.timestamp
+            frameId = data.frameId.toLong()
+            data.detections.forEach {
+                detectedObjects += it
+            }
         }
 
         val bytes = packet.toByteArray()

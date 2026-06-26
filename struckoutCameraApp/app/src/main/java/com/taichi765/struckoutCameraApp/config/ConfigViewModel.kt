@@ -1,48 +1,27 @@
 package com.taichi765.struckoutCameraApp.config
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.taichi765.struckoutCameraApp.camera.types.CameraLocation
-import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
-import com.taichi765.struckoutCameraApp.proto.cameraLocation
-import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
-import com.taichi765.struckoutCameraApp.transport.ConnectionState
+import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.transport.SessionRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
-class ConfigViewModel(
+@HiltViewModel
+class ConfigViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val configRepository: ConfigStoreRepository
 ) : ViewModel() {
     /**
      * TODO: [SessionRepository]に持たせる
      */
-    private val _cameraLocation = MutableStateFlow<CameraLocation?>(null)
-    private val isConnected = sessionRepository.state.map { state ->
-        state is ConnectionState.Connected
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = false
-    )
-    private val cameraId = sessionRepository.state.map { state ->
-        if (state is ConnectionState.Connected) {
-            state.cameraID
-        } else {
-            DUMMY_CAMERA_ID
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = ConnectionState.Disconnected
-    )
+    private val _cameraLocation = MutableStateFlow<Struckout.CameraLocation?>(null)
 
     /**
      * invariant: `isConnected` should be always `false` if `networkFeature` is disabled.
@@ -53,15 +32,13 @@ class ConfigViewModel(
         configRepository.recordingModeEnabled,
         configRepository.networkFeatureEnabled,
         _cameraLocation,
-        _connState.map {
-            when (it) {
-                is ConnectionState.Connected -> true
-                is ConnectionState.Disconnected -> false
-            }
-        }
-    ) { recodingModeEnabled, networkFeatureEnabled, cameraLocation, isConnected ->
+        sessionRepository.connState
+    ) { recodingModeEnabled, networkFeatureEnabled, cameraLocation, connState ->
         ConfigUiState(
-            recodingModeEnabled, networkFeatureEnabled, isConnected, cameraLocation,
+            recodingModeEnabled,
+            networkFeatureEnabled,
+            connState is SessionRepository.ConnectionState.Connected,
+            cameraLocation,
         )
     }.stateIn(
         viewModelScope,
@@ -69,26 +46,11 @@ class ConfigViewModel(
         initialValue = ConfigUiState()
     )
 
-    fun updateCameraLocation(value: CameraLocation) {
-        val curState = _connState.value
-        if (curState !is ConnectionState.Connected) {
-            Timber.tag(TAG).w("cannot update camera location: TCP is disconnected")
-            return
-        }
+    fun updateCameraLocation(value: Struckout.CameraLocation) {
         Timber.tag(TAG).i("updating camera location")
-        _cameraLocation.value = value
-        val packet = tcpClientPacket {
-            cameraLoc = TcpClientPacketKt.updateCameraLocation {
-                this.cameraLocation = cameraLocation {
-                    x = value.x
-                    y = value.y
-                    z = value.z
-                }
-                cameraId = curState.cameraID.toInt()
-            }
-        }
+
         viewModelScope.launch {
-            tcpRepository.sendPacket(packet)
+            sessionRepository.updateCameraLocation(value)
         }
     }
 
@@ -122,16 +84,6 @@ class ConfigViewModel(
         }
         viewModelScope.launch {
             configRepository.disableNetworkFeature()
-        }
-    }
-
-    class Factory(
-        val tcpRepository: TcpTransportRepository,
-        val configRepository: ConfigStoreRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return ConfigViewModel(tcpRepository, configRepository) as T
         }
     }
 

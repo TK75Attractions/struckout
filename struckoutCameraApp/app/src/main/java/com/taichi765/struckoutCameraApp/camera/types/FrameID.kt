@@ -10,6 +10,6 @@ fun FrameID.increment(): FrameID {
 }
 
 @CheckResult
-fun FrameID.toLong(): Long {
-    return id.toLong()
+fun FrameID.toULong(): ULong {
+    return id.toULong()
 }

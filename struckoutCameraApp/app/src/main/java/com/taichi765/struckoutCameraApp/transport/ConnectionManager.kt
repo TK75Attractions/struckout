@@ -1,18 +1,21 @@
 package com.taichi765.struckoutCameraApp.transport
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class ConnectionManager @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val udpDetectionRepository: UdpDetectionRepository,
     private val configRepository: ConfigStoreRepository,
-    private val applicationScope: CoroutineScope
+    @ApplicationScope private val scope: CoroutineScope
 ) {
     fun start() {
         watchTcpConnection()
@@ -21,16 +24,16 @@ class ConnectionManager @Inject constructor(
 
     private fun watchTcpConnection() {
         combine(
-            sessionRepository.state,
+            sessionRepository.connState,
             configRepository.networkFeatureEnabled
         ) { connState, networkFeatureEnabled ->
             networkFeatureEnabled &&
-                    connState is ConnectionState.Disconnected
+                    connState is SessionRepository.ConnectionState.Connected
         }.distinctUntilChanged().onEach { shouldConnect ->
             if (shouldConnect) {
                 sessionRepository.connect()
             }
-        }.launchIn(applicationScope)
+        }.launchIn(scope)
     }
 
     private fun watchUdpStatus() {
@@ -41,6 +44,6 @@ class ConnectionManager @Inject constructor(
             networkFeatureEnabled && !isBoundToPort
         }.distinctUntilChanged().onEach { shouldBind ->
             if (shouldBind) udpDetectionRepository.bind()
-        }.launchIn(applicationScope)
+        }.launchIn(scope)
     }
 }
