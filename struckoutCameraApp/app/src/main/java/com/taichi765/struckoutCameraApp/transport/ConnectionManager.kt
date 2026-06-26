@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +19,7 @@ class ConnectionManager @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope
 ) {
     fun start() {
+        Timber.tag(TAG).i("ConnectionManager started")
         watchTcpConnection()
         watchUdpStatus()
     }
@@ -28,7 +30,7 @@ class ConnectionManager @Inject constructor(
             configRepository.networkFeatureEnabled
         ) { connState, networkFeatureEnabled ->
             networkFeatureEnabled &&
-                    connState is SessionState.Connected
+                    connState !is SessionState.Connected
         }.distinctUntilChanged().onEach { shouldConnect ->
             if (shouldConnect) {
                 tcpSessionRepository.connect()
@@ -45,5 +47,9 @@ class ConnectionManager @Inject constructor(
         }.distinctUntilChanged().onEach { shouldBind ->
             if (shouldBind) udpDetectionRepository.bind()
         }.launchIn(scope)
+    }
+
+    companion object {
+        const val TAG = "ConnectionManager"
     }
 }
