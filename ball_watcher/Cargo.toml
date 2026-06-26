@@ -29,5 +29,9 @@ chrono = { workspace = true }
 rand = { workspace = true }
 parking_lot = { workspace = true }
 
+[features]
+default = ["network-projector"]
+network-projector = []
+
 [build-dependencies]
 prost-build = { workspace = true }

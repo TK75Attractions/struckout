@@ -36,7 +36,7 @@ pub async fn run_main() -> std::io::Result<()> {
     let state = Arc::new(RwLock::new(State::new()));
 
     let (frame_tx, frame_rx) = mpsc::channel(FRAME_CHANNEL_BUF);
-    let (collision_tx, collision_rx) = mpsc::channel(COLLISION_CHANNEL_BUF);
+    let (collision_tx, mut collision_rx) = mpsc::channel(COLLISION_CHANNEL_BUF);
     let mut camera_loc_listener = TcpTransport::new(Arc::clone(&state)).await?;
     let mut frame_socket = UdpTransport::new(frame_tx).await?;
 
@@ -47,11 +47,22 @@ pub async fn run_main() -> std::io::Result<()> {
         frame_socket.start().await.unwrap();
     });
     let join3 = tokio::spawn(collect_frames(state, frame_rx, collision_tx));
+    #[cfg(feature = "network-projector")]
     let join4 = tokio::spawn(collision_sender(collision_rx));
+    #[cfg(not(feature = "network-projector"))]
+    let join4 = tokio::spawn(async move {
+        loop {
+            use tracing::trace;
+
+            let coll = collision_rx.recv().await.unwrap();
+            trace!(target = "collision", ?coll, "detected collision");
+        }
+    });
     join1.await.unwrap();
     join2.await.unwrap();
     join3.await.unwrap();
     join4.await.unwrap();
+
     Ok(())
 }
 
