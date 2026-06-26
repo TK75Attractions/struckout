@@ -26,23 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.taichi765.struckoutCameraApp.camera.CameraController
 import com.taichi765.struckoutCameraApp.camera.CameraScreenRoute
-import com.taichi765.struckoutCameraApp.camera.CameraViewModel
 import com.taichi765.struckoutCameraApp.config.ConfigScreenRoute
-import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
-import com.taichi765.struckoutCameraApp.config.ConfigViewModel
-import com.taichi765.struckoutCameraApp.transport.TcpTransport
-import com.taichi765.struckoutCameraApp.transport.UdpDetectionRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 
 val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
@@ -53,29 +43,9 @@ val REQUIRED_PERMISSIONS = arrayOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val navController = rememberNavController()
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
-
-    val tcpRepository = TcpTransport()
-    val udpRepository = UdpDetectionRepository()
-    val configRepository = ConfigStoreRepository(context, applicationScope)
-
-    val configViewModel = run {
-        val factory = ConfigViewModel.Factory(tcpRepository, configRepository)
-        viewModel<ConfigViewModel>(factory = factory)
-    }
-    val cameraViewModel = run {
-        val cameraController = CameraController(context)
-        val factory = CameraViewModel.Factory(
-            udpRepository,
-            tcpRepository,
-            cameraController,
-            configRepository
-        )
-        viewModel<CameraViewModel>(factory = factory)
-    }
 
     Scaffold(
         topBar = { TopBar(navController) },
@@ -87,12 +57,13 @@ fun App() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("camera") {
-                CameraScreenRoute(cameraViewModel)
+                CameraScreenRoute()
             }
             composable("config") {
                 ConfigScreenRoute(
-                    configViewModel,
-                    navController
+                    onNavigateToCameraScreen = {
+                        navController.navigate("camera")
+                    }
                 )
             }
             composable("permissionRequired") {

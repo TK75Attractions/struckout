@@ -26,14 +26,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.taichi765.struckoutCameraApp.camera.types.CameraLocation
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.cameraLocation
 
 @Composable
 fun ConfigScreenRoute(
-    viewModel: ConfigViewModel,
-    navController: NavController
+    onNavigateToCameraScreen: () -> Unit
 ) {
+    val viewModel = hiltViewModel<ConfigViewModel>()
     val uiState by viewModel.uiState.collectAsState()
 
     ConfigScreen(
@@ -44,7 +45,7 @@ fun ConfigScreenRoute(
         onDisableNetworkFeature = viewModel::disableNetworkFeature,
         onUpdateCameraLocation = {
             viewModel.updateCameraLocation(it)
-            navController.navigate("camera")
+            onNavigateToCameraScreen()
         }
     )
 }
@@ -55,7 +56,7 @@ private fun ConfigScreen(
     onToggleRecordingMode: () -> Unit,
     onToggleNetworkFeature: () -> Unit,
     onDisableNetworkFeature: () -> Unit,
-    onUpdateCameraLocation: (CameraLocation) -> Unit,
+    onUpdateCameraLocation: (Struckout.CameraLocation) -> Unit,
     onRetryConnection: () -> Unit
 ) {
     val x = rememberTextFieldState((uiState.cameraLocation?.x ?: 0).toString())
@@ -103,11 +104,15 @@ private fun ConfigScreen(
                 return@ConfirmButton
             }
 
-            val x = x.text.toString().toDouble()
-            val y = y.text.toString().toDouble()
-            val z = z.text.toString().toDouble()
+            val curX = x.text.toString().toDouble()
+            val curY = y.text.toString().toDouble()
+            val curZ = z.text.toString().toDouble()
 
-            onUpdateCameraLocation(CameraLocation(x, y, z))
+            onUpdateCameraLocation(cameraLocation {
+                this.x = curX
+                this.y = curY
+                this.z = curZ
+            })
         }
     }
     if (uiState.networkFeatureEnabled && !uiState.isConnected) {

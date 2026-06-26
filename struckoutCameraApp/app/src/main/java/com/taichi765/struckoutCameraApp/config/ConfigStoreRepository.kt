@@ -5,18 +5,21 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.taichi765.struckoutCameraApp.di.ApplicationScope
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "config")
 
-/**
- * Lifetime of this repository is as same as [android.app.Activity],
- * so you should use `applicationScope`.
- */
-class ConfigStoreRepository(private val context: Context, private val scope: CoroutineScope) {
+
+class ConfigStoreRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    @ApplicationScope private val scope: CoroutineScope
+) {
     val recordingModeEnabled = context.dataStore.data.map { preferences ->
         preferences[ENABLE_RECORDING_MODE] ?: ENABLE_RECORDING_MODE_DEFAULT
     }.stateIn(

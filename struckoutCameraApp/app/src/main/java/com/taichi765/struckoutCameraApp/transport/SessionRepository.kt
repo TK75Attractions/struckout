@@ -1,27 +1,42 @@
 package com.taichi765.struckoutCameraApp.transport
 
+import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
 import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
+import javax.inject.Inject
 
-
-class SessionRepository {
-    private val internalState =
+class SessionRepository @Inject constructor(
+    @ApplicationScope private val scope: CoroutineScope
+) {
+    private val _connState =
         MutableStateFlow<InternalConnectionState>(InternalConnectionState.Disconnected)
 
-    val isConnected = internalState.map { state ->
-        state is InternalConnectionState.Connected
-    }
+    val connState: StateFlow<ConnectionState> = _connState.map { state ->
+        if (state is InternalConnectionState.Connected) {
+            ConnectionState.Connected(state.cameraID)
+        } else {
+            ConnectionState.DisConnected
+        }
+    }.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = ConnectionState.DisConnected
+    )
 
     suspend fun connect(): Boolean {
         return withContext(Dispatchers.IO) {
@@ -42,7 +57,7 @@ class SessionRepository {
                 when (packet.dataCase) {
                     Struckout.TcpServerPacket.DataCase.CAMERA_ID -> {
                         val cameraId = packet.cameraId.toUInt()
-                        internalState.value = InternalConnectionState.Connected(
+                        _connState.value = InternalConnectionState.Connected(
                             cameraId, socket, inputStream, socket.getOutputStream()
                         )
                         Timber.tag(TAG).i("successfully initialized connection states")
@@ -60,7 +75,7 @@ class SessionRepository {
     }
 
     suspend fun close() {
-        val state = internalState.value
+        val state = _connState.value
         if (state !is InternalConnectionState.Connected) {
             Timber.tag(TAG).w("close() is called when TCP is not connected")
             return
@@ -72,7 +87,7 @@ class SessionRepository {
     }
 
     suspend fun updateCameraLocation(value: Struckout.CameraLocation) {
-        val curState = internalState.value
+        val curState = _connState.value
         check(curState is InternalConnectionState.Connected) {
             "TCP connection must be established before sending packet"
         }
@@ -95,9 +110,15 @@ class SessionRepository {
             } catch (e: IOException) {
                 // TODO: exceptionの理由を画面に表示したほうがいいのだろうか
                 Timber.tag(TAG).w("it seems that TCP connection is unexpectedly closed: $e")
-                internalState.value = InternalConnectionState.Disconnected
+                _connState.value = InternalConnectionState.Disconnected
             }
         }
+    }
+
+    sealed interface ConnectionState {
+        data class Connected(val cameraID: UInt) : ConnectionState
+
+        object DisConnected : ConnectionState
     }
 
     private sealed interface InternalConnectionState {
@@ -119,10 +140,4 @@ class SessionRepository {
         const val TCP_REMOTE_PORT = 6060
         const val DUMMY_CAMERA_ID = 99u
     }
-}
-
-sealed interface ConnectionState {
-    data class Connected(val cameraID: UInt) : ConnectionState
-
-    object Disconnected : ConnectionState
 }

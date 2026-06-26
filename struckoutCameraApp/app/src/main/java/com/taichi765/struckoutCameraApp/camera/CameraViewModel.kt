@@ -3,36 +3,28 @@ package com.taichi765.struckoutCameraApp.camera
 import android.os.SystemClock
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.FrameID
 import com.taichi765.struckoutCameraApp.camera.types.increment
-import com.taichi765.struckoutCameraApp.camera.types.toLong
+import com.taichi765.struckoutCameraApp.camera.types.toULong
 import com.taichi765.struckoutCameraApp.proto.detectedObject
-import com.taichi765.struckoutCameraApp.proto.udpPacket
+import com.taichi765.struckoutCameraApp.transport.DetectionData
 import com.taichi765.struckoutCameraApp.transport.DetectionRepository
 import com.taichi765.struckoutCameraApp.transport.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class CameraViewModel(
+@HiltViewModel
+class CameraViewModel @Inject constructor(
     private val detectionRepository: DetectionRepository,
     private val cameraRepository: CameraRepository,
     sessionRepository: SessionRepository,
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
-
-
-    private val cameraID = sessionRepository.state.cameraID.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = 0u // dummy
-    )
 
     private var frameId = FrameID(0u)
 
@@ -46,39 +38,22 @@ class CameraViewModel(
         frameId = frameId.increment()
 
         // create and send packet
-        val curFrameID = frameId.toLong()
-        val packet = udpPacket {
-            cameraId = cameraID.value.toInt()
-            timestamp = getTimestamp(imageTimestamp)
-            this.frameId = curFrameID
-            rects.forEach {
-                val worldDirection = cameraRepository.calc(rect = it)
-                detectedObjects += detectedObject {
+        val curFrameID = frameId.toULong()
+        val data = DetectionData(
+            timestamp = getTimestamp(imageTimestamp),
+            frameId = curFrameID,
+            detections = rects.map { rect ->
+                val worldDirection = cameraRepository.calc(rect)
+                detectedObject {
                     layX = worldDirection.x
                     layY = worldDirection.y
                     layZ = worldDirection.z
-                    bboxWidth = it.width
-                    bboxHeight = it.height
+                    bboxWidth = rect.width
+                    bboxHeight = rect.height
                 }
-            }
-        }
+            })
         viewModelScope.launch {
-            detectionRepository.pushDetection(packet)
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    class Factory(
-        private val detectionRepository: DetectionRepository,
-        private val cameraRepository: CameraRepository,
-        private val sessionInfoRepository: SessionInfoRepository
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CameraViewModel(
-                detectionRepository,
-                cameraRepository,
-                sessionInfoRepository
-            ) as T
+            detectionRepository.pushDetection(data)
         }
     }
 

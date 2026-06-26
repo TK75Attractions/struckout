@@ -1,26 +1,24 @@
 package com.taichi765.struckoutCameraApp.transport
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import javax.inject.Inject
 
 /**
  * Decide the actual [DetectionRepository] to push detections, based on configurations from [ConfigStoreRepository].
  */
-class ConfiguredDetectionRepository(
-    private val udpDetectionRepo: UdpDetectionRepository,
-    private val diskDetectionRepo: DiskDetectionRepository,
+class ConfiguredDetectionRepository @Inject constructor(
+    private val udpDetectionRepository: UdpDetectionRepository,
+    private val diskDetectionRepository: DiskDetectionRepository,
     private val configRepository: ConfigStoreRepository,
 ) : DetectionRepository {
 
-    override suspend fun pushDetection(packet: Struckout.UdpPacket) {
+    override suspend fun pushDetection(data: DetectionData) {
         if (configRepository.networkFeatureEnabled.value) {
-            check(udpDetectionRepo.isBound.value) {
-                "UDP must be bound to port before starting detection stream"
-            }
-            udpDetectionRepo.pushDetection(packet)
+
+            udpDetectionRepository.pushDetection(data)
         }
         if (configRepository.recordingModeEnabled.value) {
-            diskDetectionRepo.pushDetection(packet)
+            diskDetectionRepository.pushDetection(data)
         }
     }
 }

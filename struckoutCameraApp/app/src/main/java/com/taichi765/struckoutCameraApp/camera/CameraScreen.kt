@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.taichi765.struckoutCameraApp.camera.CameraViewModel.Companion.TAG
 import timber.log.Timber
@@ -28,8 +29,8 @@ import java.util.concurrent.Executors
 
 @Composable
 fun CameraScreenRoute(
-    viewModel: CameraViewModel,
 ) {
+    val viewModel = hiltViewModel<CameraViewModel>()
     val image by viewModel.contoursImage.collectAsState()
 
     CameraScreen(
