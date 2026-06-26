@@ -98,12 +98,6 @@ class ConfigViewModel @Inject constructor(
         }
     }
 
-    fun close() {
-        viewModelScope.launch {
-            sessionRepository.close()
-        }
-    }
-
     fun toggleRecordingMode() {
         viewModelScope.launch {
             configRepository.toggleRecodingMode()
