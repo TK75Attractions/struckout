@@ -16,9 +16,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -27,8 +24,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.taichi765.struckoutCameraApp.proto.Struckout
-import com.taichi765.struckoutCameraApp.proto.cameraLocation
 
 @Composable
 fun ConfigScreenRoute(
@@ -43,8 +38,8 @@ fun ConfigScreenRoute(
         onToggleRecordingMode = viewModel::toggleRecordingMode,
         onRetryConnection = viewModel::connect,
         onDisableNetworkFeature = viewModel::disableNetworkFeature,
-        onUpdateCameraLocation = {
-            viewModel.updateCameraLocation(it)
+        onUpdateCameraLocation = { x, y, z ->
+            viewModel.updateCameraLocation(x, y, z)
             onNavigateToCameraScreen()
         }
     )
@@ -56,15 +51,12 @@ private fun ConfigScreen(
     onToggleRecordingMode: () -> Unit,
     onToggleNetworkFeature: () -> Unit,
     onDisableNetworkFeature: () -> Unit,
-    onUpdateCameraLocation: (Struckout.CameraLocation) -> Unit,
+    onUpdateCameraLocation: (CharSequence, CharSequence, CharSequence) -> Unit,
     onRetryConnection: () -> Unit
 ) {
     val x = rememberTextFieldState((uiState.cameraLocation?.x ?: 0).toString())
     val y = rememberTextFieldState((uiState.cameraLocation?.y ?: 0).toString())
     val z = rememberTextFieldState((uiState.cameraLocation?.z ?: 0).toString())
-    var showWarningTextX by remember { mutableStateOf(false) }
-    var showWarningTextY by remember { mutableStateOf(false) }
-    var showWarningTextZ by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -84,35 +76,12 @@ private fun ConfigScreen(
                 x,
                 y,
                 z,
-                showWarningTextX,
-                showWarningTextY,
-                showWarningTextZ,
+                uiState.warningState
             )
         }
 
         ConfirmButton {
-            if (x.text.any { !it.isDigit() }) {
-                showWarningTextX = true
-                return@ConfirmButton
-            }
-            if (y.text.any { !it.isDigit() }) {
-                showWarningTextY = true
-                return@ConfirmButton
-            }
-            if (z.text.any { !it.isDigit() }) {
-                showWarningTextZ = true
-                return@ConfirmButton
-            }
-
-            val curX = x.text.toString().toDouble()
-            val curY = y.text.toString().toDouble()
-            val curZ = z.text.toString().toDouble()
-
-            onUpdateCameraLocation(cameraLocation {
-                this.x = curX
-                this.y = curY
-                this.z = curZ
-            })
+            onUpdateCameraLocation(x.text, y.text, z.text)
         }
     }
     if (uiState.networkFeatureEnabled && !uiState.isConnected) {
@@ -138,15 +107,13 @@ private fun CameraLocationView(
     x: TextFieldState,
     y: TextFieldState,
     z: TextFieldState,
-    showWarningTextX: Boolean,
-    showWarningTextY: Boolean,
-    showWarningTextZ: Boolean,
+    warningState: WarningState,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Camera Location", fontSize = 24.sp)
-        PositionField("x", x, showWarningTextX)
-        PositionField("y", y, showWarningTextY)
-        PositionField("z", z, showWarningTextZ)
+        PositionField("x", x, warningState.showX)
+        PositionField("y", y, warningState.showY)
+        PositionField("z", z, warningState.showZ)
     }
 }
 
@@ -171,7 +138,7 @@ private fun FallbackView(onTryConnect: () -> Unit, onDisableNetworkFeature: () -
 
 
 @Composable
-private fun PositionField(text: String, textState: TextFieldState, showWarningState: Boolean) {
+private fun PositionField(text: String, textState: TextFieldState, showWarning: Boolean) {
     TextField(
         textState,
         label = { Text(text) },
@@ -185,7 +152,7 @@ private fun PositionField(text: String, textState: TextFieldState, showWarningSt
             }
         }
     )
-    if (showWarningState) {
+    if (showWarning) {
         Text("error: cameraPositionには数字しか入力できません")
     }
 }
@@ -208,7 +175,7 @@ private fun DisconnectedPreView() {
         onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
-        onUpdateCameraLocation = {},
+        onUpdateCameraLocation = { x, y, z -> },
         onRetryConnection = {},
     )
 }
@@ -223,7 +190,7 @@ private fun NetworkDisabledPreview() {
         onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
-        onUpdateCameraLocation = {},
+        onUpdateCameraLocation = { x, y, z -> },
         onRetryConnection = {}
     )
 }
@@ -237,6 +204,6 @@ private fun ConnectedPreview() {
         ), onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
-        onUpdateCameraLocation = {},
+        onUpdateCameraLocation = { x, y, z -> },
         onRetryConnection = {})
 }
