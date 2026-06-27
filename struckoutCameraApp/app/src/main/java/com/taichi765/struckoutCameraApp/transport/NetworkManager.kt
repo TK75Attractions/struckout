@@ -28,8 +28,8 @@ import javax.inject.Singleton
 @Singleton
 class NetworkManager @Inject constructor(
     private val configRepository: ConfigStoreRepository,
-    private val cameraLocationDataSource: CameraLocationDataSource,
-    @ApplicationScope private val scope: CoroutineScope,
+    @ApplicationScope private val applicationScope: CoroutineScope,
+    private val tcpSessionFactory: TcpSession.Factory
 ) : DetectionRepository {
     private val tcpSession = MutableStateFlow<TcpSession?>(null)
     private val udpConnection = MutableStateFlow<UdpConnection?>(null)
@@ -104,7 +104,7 @@ class NetworkManager @Inject constructor(
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
-                tcpSession.value = TcpSession(cameraLocationDataSource)
+                tcpSession.value = tcpSessionFactory.create()
             }
             if (shouldConnect) {
                 tcpSession.value!!.connect()
