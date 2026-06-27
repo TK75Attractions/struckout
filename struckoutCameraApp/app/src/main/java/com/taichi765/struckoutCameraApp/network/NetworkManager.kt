@@ -131,10 +131,6 @@ class NetworkManager @Inject constructor(
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
-                val tcpSession = tcpSession.value
-                check(tcpSession != null) {
-                    "TcpSession instance should be created before creating UdpConnection instance"
-                }
                 udpConnection.value = udpConnectionFactory.create()
             }
             if (shouldConnect) {

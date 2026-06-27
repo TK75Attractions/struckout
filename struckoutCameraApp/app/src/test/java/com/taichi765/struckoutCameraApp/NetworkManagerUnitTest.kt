@@ -2,6 +2,7 @@ package com.taichi765.struckoutCameraApp
 
 import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.TcpSession
+import com.taichi765.struckoutCameraApp.network.UdpConnection
 import com.taichi765.struckoutCameraApp.network.types.SessionState
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -23,19 +24,25 @@ class NetworkManagerUnitTest {
     @Test
     fun `NetworkManager creates TcpSession and UdpConnection after network feature enabled`(
         @MockK tcpSession: TcpSession,
-        @MockK tcpSessionFactory: TcpSession.Factory
+        @MockK tcpSessionFactory: TcpSession.Factory,
+        @MockK udpConnection: UdpConnection,
+        @MockK udpConnectionFactory: UdpConnection.Factory
     ) = runTest {
         // Arrange
         coJustRun { tcpSession.connect() }
         every { tcpSessionFactory.create() } returns tcpSession
         every { tcpSession.state } returns MutableStateFlow(SessionState.DisConnected)
+        coJustRun { udpConnection.connect() }
+        every { udpConnectionFactory.create() } returns udpConnection
+        every { udpConnection.isConnected } returns MutableStateFlow(false)
 
         val configStoreRepository =
             FakeConfigStoreRepository(initialNetworkFeatureEnabled = false)
         val networkManager = NetworkManager(
             configRepository = configStoreRepository,
             applicationScope = backgroundScope,
-            tcpSessionFactory = tcpSessionFactory
+            tcpSessionFactory = tcpSessionFactory,
+            udpConnectionFactory = udpConnectionFactory
         )
 
         // Act1
@@ -44,6 +51,7 @@ class NetworkManagerUnitTest {
 
         // Assert1
         coVerify(exactly = 0) { tcpSession.connect() }
+        coVerify(exactly = 0) { udpConnection.connect() }
 
         // Act2
         configStoreRepository.toggleNetworkFeature()
@@ -52,5 +60,7 @@ class NetworkManagerUnitTest {
         // Assert2
         verify(exactly = 1) { tcpSessionFactory.create() }
         coVerify(exactly = 1) { tcpSession.connect() }
+        verify(exactly = 1) { udpConnectionFactory.create() }
+        coVerify(exactly = 1) { udpConnection.connect() }
     }
 }
