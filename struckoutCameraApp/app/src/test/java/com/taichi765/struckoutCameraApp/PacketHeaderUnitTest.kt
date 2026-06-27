@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp
 
 import com.taichi765.struckoutCameraApp.transport.bytesToInt
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
