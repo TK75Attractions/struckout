@@ -1,6 +1,5 @@
 package com.taichi765.struckoutCameraApp.network
 
-import com.taichi765.struckoutCameraApp.network.types.SessionState
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
 import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
@@ -19,9 +18,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.io.IOException
 import timber.log.Timber
 import java.io.Closeable
+import java.io.IOException
 import java.io.OutputStream
 import java.net.Socket
 import javax.inject.Inject

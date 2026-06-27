@@ -1,6 +1,5 @@
 package com.taichi765.struckoutCameraApp.network
 
-import com.taichi765.struckoutCameraApp.network.types.SessionState
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,8 +9,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import kotlinx.io.IOException
 import timber.log.Timber
+import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress

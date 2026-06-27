@@ -5,7 +5,6 @@ import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.network.types.InstanceState
-import com.taichi765.struckoutCameraApp.network.types.SessionState
 import com.taichi765.struckoutCameraApp.proto.udpPacket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
