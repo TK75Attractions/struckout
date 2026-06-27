@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,15 +70,17 @@ class NetworkManager @Inject constructor(
             ConnectionState.NetworkFeatureDisabled
         }
     }.stateIn(
-        scope = scope,
+        scope = applicationScope,
         started = SharingStarted.Eagerly,
         initialValue = ConnectionState.NetworkFeatureDisabled
     )
 
     fun start() {
         Timber.tag(TAG).i("ConnectionManager started")
-        watchTcpConnection()
-        watchUdpStatus()
+        applicationScope.launch {
+            watchTcpConnection()
+            watchUdpStatus()
+        }
     }
 
     suspend fun retryConnection() {
@@ -92,7 +95,7 @@ class NetworkManager @Inject constructor(
         session.connect()
     }
 
-    private fun watchTcpConnection() {
+    private fun CoroutineScope.watchTcpConnection() {
         combine(
             tcpSession,
             configRepository.networkFeatureEnabled
@@ -109,10 +112,10 @@ class NetworkManager @Inject constructor(
             if (shouldConnect) {
                 tcpSession.value!!.connect()
             }
-        }.launchIn(scope)
+        }.launchIn(this)
     }
 
-    private fun watchUdpStatus() {
+    private fun CoroutineScope.watchUdpStatus() {
         combine(
             udpConnection,
             configRepository.networkFeatureEnabled
@@ -132,7 +135,7 @@ class NetworkManager @Inject constructor(
             if (shouldBind) {
                 udpConnection.value!!.bind()
             }
-        }.launchIn(scope)
+        }.launchIn(this)
     }
 
     /**

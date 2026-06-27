@@ -1,6 +1,6 @@
 package com.taichi765.struckoutCameraApp
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class WorldDirectionCalculatorUnitTest {
     @Test
