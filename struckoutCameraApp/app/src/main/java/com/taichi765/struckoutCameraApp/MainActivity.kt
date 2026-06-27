@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.taichi765.struckoutCameraApp.transport.NetworkManager
+import com.taichi765.struckoutCameraApp.network.NetworkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.HiltAndroidApp
 import org.opencv.android.OpenCVLoader

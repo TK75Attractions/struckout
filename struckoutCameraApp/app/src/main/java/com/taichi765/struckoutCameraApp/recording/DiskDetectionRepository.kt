@@ -1,5 +1,7 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.recording
 
+import com.taichi765.struckoutCameraApp.network.DetectionRepository
+import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import javax.inject.Inject
 
 /**

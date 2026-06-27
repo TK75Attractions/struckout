@@ -1,5 +1,6 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.network
 
+import com.taichi765.struckoutCameraApp.network.types.SessionState
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
 import com.taichi765.struckoutCameraApp.proto.tcpClientPacket

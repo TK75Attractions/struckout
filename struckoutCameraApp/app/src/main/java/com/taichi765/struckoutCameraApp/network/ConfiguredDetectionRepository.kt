@@ -1,6 +1,8 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.network
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.network.types.DetectionData
+import com.taichi765.struckoutCameraApp.recording.DiskDetectionRepository
 import timber.log.Timber
 import javax.inject.Inject
 

@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.network.types
 
 sealed interface ConnectionState {
     data class NetworkFeatureEnabled(

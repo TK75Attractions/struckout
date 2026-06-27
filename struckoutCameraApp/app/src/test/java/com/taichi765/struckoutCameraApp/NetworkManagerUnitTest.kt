@@ -1,8 +1,8 @@
 package com.taichi765.struckoutCameraApp
 
-import com.taichi765.struckoutCameraApp.transport.NetworkManager
-import com.taichi765.struckoutCameraApp.transport.SessionState
-import com.taichi765.struckoutCameraApp.transport.TcpSession
+import com.taichi765.struckoutCameraApp.network.NetworkManager
+import com.taichi765.struckoutCameraApp.network.TcpSession
+import com.taichi765.struckoutCameraApp.network.types.SessionState
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.every
