@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = { workspace = true }
 
 [dependencies]
-nalgebra = { version = "0.34.2" }
+nalgebra = { version = "0.35.0" }
 tracktor = "0.4.1"
 
 prost = { workspace = true }
