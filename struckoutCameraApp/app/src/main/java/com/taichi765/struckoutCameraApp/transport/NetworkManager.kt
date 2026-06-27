@@ -1,0 +1,173 @@
+package com.taichi765.struckoutCameraApp.transport
+
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.di.ApplicationScope
+import com.taichi765.struckoutCameraApp.proto.udpPacket
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import timber.log.Timber
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * [TcpSession]や[UdpConnection]などネットワーク関連のライフサイクルを管理する。
+ *
+ * 管理されたクラスには直接アクセスするのではなく[NetworkManager]を介してアクセスすべし。
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@Singleton
+class NetworkManager @Inject constructor(
+    private val configRepository: ConfigStoreRepository,
+    private val cameraLocationDataSource: CameraLocationDataSource,
+    @ApplicationScope private val scope: CoroutineScope,
+) : DetectionRepository {
+    private val tcpSession = MutableStateFlow<TcpSession?>(null)
+    private val udpConnection = MutableStateFlow<UdpConnection?>(null)
+
+    @Suppress("IfThenToElvis")
+    private val tcpState = tcpSession.flatMapLatest { session ->
+        if (session == null) {
+            flowOf(InstanceState.NotCreated)
+        } else {
+            session.state.map {
+                InstanceState.Created(it)
+            }
+        }
+    }
+
+    @Suppress("IfThenToElvis")
+    private val udpState = udpConnection.flatMapLatest { udpConnection ->
+        if (udpConnection == null) {
+            flowOf(InstanceState.NotCreated)
+        } else {
+            udpConnection.isBound.map {
+                InstanceState.Created(it)
+            }
+        }
+    }
+
+    val state = combine(
+        configRepository.networkFeatureEnabled,
+        tcpState,
+        udpState
+    ) { networkFeatureEnabled, tcpState, udpState ->
+        if (networkFeatureEnabled) {
+            ConnectionState.NetworkFeatureEnabled(
+                tcpState, udpState
+            )
+        } else {
+            ConnectionState.NetworkFeatureDisabled
+        }
+    }.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = ConnectionState.NetworkFeatureDisabled
+    )
+
+    fun start() {
+        Timber.tag(TAG).i("ConnectionManager started")
+        watchTcpConnection()
+        watchUdpStatus()
+    }
+
+    suspend fun retryConnection() {
+        val session = tcpSession.value
+        check(session != null) {
+            "TcpSession instance should be created before retrying connection: state = ${state.value}"
+        }
+        if (session.state.value is SessionState.Connected) {
+            Timber.tag(TAG).w("retryConnection is called when TCP is already connected")
+            return
+        }
+        session.connect()
+    }
+
+    private fun watchTcpConnection() {
+        combine(
+            tcpSession,
+            configRepository.networkFeatureEnabled
+        ) { tcpSession, networkFeatureEnabled ->
+            Pair(
+                networkFeatureEnabled &&
+                        tcpSession == null,
+                networkFeatureEnabled && tcpSession != null && tcpSession.state.value !is SessionState.Connected
+            )
+        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
+            if (shouldCreateInstance) {
+                tcpSession.value = TcpSession(cameraLocationDataSource)
+            }
+            if (shouldConnect) {
+                tcpSession.value!!.connect()
+            }
+        }.launchIn(scope)
+    }
+
+    private fun watchUdpStatus() {
+        combine(
+            udpConnection,
+            configRepository.networkFeatureEnabled
+        ) { udpConnection, networkFeatureEnabled ->
+            Pair(
+                networkFeatureEnabled && udpConnection == null,
+                networkFeatureEnabled && udpConnection != null && !udpConnection.isBound.value
+            )
+        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldBind) ->
+            if (shouldCreateInstance) {
+                val tcpSession = tcpSession.value
+                check(tcpSession != null) {
+                    "TcpSession instance should be created before creating UdpConnection instance"
+                }
+                udpConnection.value = UdpConnection()
+            }
+            if (shouldBind) {
+                udpConnection.value!!.bind()
+            }
+        }.launchIn(scope)
+    }
+
+    /**
+     * TODO: 若干責務外かも
+     */
+    override suspend fun pushDetection(data: DetectionData) {
+        val session = tcpSession.value
+        check(session != null) {
+            "TcpSession instance must be created before sending detection via network"
+        }
+        val sessionState = session.state.value
+        check(sessionState is SessionState.Connected) {
+            "TcpSession must be initialized before sending detection via network"
+        }
+        val udpConnection = udpConnection.value
+        check(udpConnection != null) {
+            "UdpConnection instance must be created before sending detection via network"
+        }
+        check(udpConnection.isBound.value) {
+            "UdpConnection must be initialized before sending detection via network"
+        }
+
+        val packet = udpPacket {
+            cameraId = sessionState.cameraID.toInt()
+            timestamp = data.timestamp
+            frameId = data.frameId.toLong()
+            data.detections.forEach {
+                detectedObjects += it
+            }
+        }
+
+        udpConnection.sendPacket(packet)
+    }
+
+    companion object {
+        const val TAG = "ConnectionManager"
+    }
+}

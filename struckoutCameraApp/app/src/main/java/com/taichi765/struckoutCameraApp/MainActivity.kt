@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.taichi765.struckoutCameraApp.transport.ConnectionManager
+import com.taichi765.struckoutCameraApp.transport.NetworkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.HiltAndroidApp
 import org.opencv.android.OpenCVLoader
@@ -18,7 +18,7 @@ class MainApplication : Application() {}
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject
-    lateinit var connectionManager: ConnectionManager
+    lateinit var networkManager: NetworkManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
         OpenCVLoader.initLocal()
 
-        connectionManager.start()
+        networkManager.start()
 
         setContent {
             AppTheme {

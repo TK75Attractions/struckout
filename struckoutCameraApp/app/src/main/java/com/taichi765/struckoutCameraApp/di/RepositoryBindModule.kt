@@ -1,11 +1,12 @@
 package com.taichi765.struckoutCameraApp.di
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepositoryImpl
 import com.taichi765.struckoutCameraApp.transport.CameraLocationDataSource
 import com.taichi765.struckoutCameraApp.transport.ConfiguredDetectionRepository
 import com.taichi765.struckoutCameraApp.transport.DetectionRepository
-import com.taichi765.struckoutCameraApp.transport.SessionRepository
-import com.taichi765.struckoutCameraApp.transport.TcpSessionRepository
+import com.taichi765.struckoutCameraApp.transport.SessionStateProvider
+import com.taichi765.struckoutCameraApp.transport.TcpSession
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -19,8 +20,11 @@ abstract class RepositoryBindModule {
     abstract fun bindDetectionRepository(configuredDetectionRepository: ConfiguredDetectionRepository): DetectionRepository
 
     @Binds
-    abstract fun bindCameraLocationDataSource(configStoreRepository: ConfigStoreRepository): CameraLocationDataSource
+    abstract fun bindCameraLocationDataSource(configStoreRepository: ConfigStoreRepositoryImpl): CameraLocationDataSource
 
     @Binds
-    abstract fun bindSessionRepository(tcpSessionRepository: TcpSessionRepository): SessionRepository
+    abstract fun bindSessionStateProvider(tcpSession: TcpSession): SessionStateProvider
+
+    @Binds
+    abstract fun bindConfigStoreRepository(configStoreRepository: ConfigStoreRepositoryImpl): ConfigStoreRepository
 }

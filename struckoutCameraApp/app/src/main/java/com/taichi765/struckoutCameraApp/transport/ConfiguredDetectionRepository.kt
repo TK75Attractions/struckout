@@ -8,7 +8,7 @@ import javax.inject.Inject
  * Decide the actual [DetectionRepository] to push detections, based on configurations from [ConfigStoreRepository].
  */
 class ConfiguredDetectionRepository @Inject constructor(
-    private val udpDetectionRepository: UdpDetectionRepository,
+    private val networkManager: NetworkManager,
     private val diskDetectionRepository: DiskDetectionRepository,
     private val configRepository: ConfigStoreRepository,
 ) : DetectionRepository {
@@ -16,7 +16,7 @@ class ConfiguredDetectionRepository @Inject constructor(
     override suspend fun pushDetection(data: DetectionData) {
         Timber.tag(TAG).d("networkFeatureEnabled: ${configRepository.networkFeatureEnabled.value}")
         if (configRepository.networkFeatureEnabled.value) {
-            udpDetectionRepository.pushDetection(data)
+            networkManager.pushDetection(data)
         }
         if (configRepository.recordingModeEnabled.value) {
             diskDetectionRepository.pushDetection(data)
