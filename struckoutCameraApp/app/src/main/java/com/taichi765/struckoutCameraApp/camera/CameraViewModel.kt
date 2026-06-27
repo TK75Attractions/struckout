@@ -7,9 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.FrameID
 import com.taichi765.struckoutCameraApp.camera.types.increment
 import com.taichi765.struckoutCameraApp.camera.types.toULong
+import com.taichi765.struckoutCameraApp.network.DetectionRepository
+import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.proto.detectedObject
-import com.taichi765.struckoutCameraApp.transport.DetectionData
-import com.taichi765.struckoutCameraApp.transport.DetectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

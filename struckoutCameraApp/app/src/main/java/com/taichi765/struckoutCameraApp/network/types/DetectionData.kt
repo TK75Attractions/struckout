@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.network.types
 
 import com.taichi765.struckoutCameraApp.proto.Struckout
 

@@ -2,12 +2,12 @@ package com.taichi765.struckoutCameraApp.di
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepositoryImpl
-import com.taichi765.struckoutCameraApp.transport.CameraLocationDataSource
-import com.taichi765.struckoutCameraApp.transport.ConfiguredDetectionRepository
-import com.taichi765.struckoutCameraApp.transport.DetectionRepository
-import com.taichi765.struckoutCameraApp.transport.SessionStateProvider
-import com.taichi765.struckoutCameraApp.transport.TcpSession
-import com.taichi765.struckoutCameraApp.transport.TcpSessionImpl
+import com.taichi765.struckoutCameraApp.network.CameraLocationDataSource
+import com.taichi765.struckoutCameraApp.network.ConfiguredDetectionRepository
+import com.taichi765.struckoutCameraApp.network.DetectionRepository
+import com.taichi765.struckoutCameraApp.network.SessionStateProvider
+import com.taichi765.struckoutCameraApp.network.TcpSession
+import com.taichi765.struckoutCameraApp.network.TcpSessionImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

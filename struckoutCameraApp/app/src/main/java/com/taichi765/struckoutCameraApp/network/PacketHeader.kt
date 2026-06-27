@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.network
 
 import androidx.annotation.CheckResult
 import com.google.protobuf.MessageLite

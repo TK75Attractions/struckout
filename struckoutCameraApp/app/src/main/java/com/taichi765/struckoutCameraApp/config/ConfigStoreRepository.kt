@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.config
 
+import com.taichi765.struckoutCameraApp.network.CameraLocationDataSource
 import com.taichi765.struckoutCameraApp.proto.Struckout
-import com.taichi765.struckoutCameraApp.transport.CameraLocationDataSource
 import kotlinx.coroutines.flow.StateFlow
 
 interface ConfigStoreRepository : CameraLocationDataSource {

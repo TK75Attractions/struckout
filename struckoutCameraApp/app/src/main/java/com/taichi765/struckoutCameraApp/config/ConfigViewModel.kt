@@ -2,13 +2,13 @@ package com.taichi765.struckoutCameraApp.config
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.taichi765.struckoutCameraApp.network.NetworkManager
+import com.taichi765.struckoutCameraApp.network.TcpSession
+import com.taichi765.struckoutCameraApp.network.types.ConnectionState
+import com.taichi765.struckoutCameraApp.network.types.InstanceState
+import com.taichi765.struckoutCameraApp.network.types.SessionState
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
-import com.taichi765.struckoutCameraApp.transport.ConnectionState
-import com.taichi765.struckoutCameraApp.transport.InstanceState
-import com.taichi765.struckoutCameraApp.transport.NetworkManager
-import com.taichi765.struckoutCameraApp.transport.SessionState
-import com.taichi765.struckoutCameraApp.transport.TcpSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

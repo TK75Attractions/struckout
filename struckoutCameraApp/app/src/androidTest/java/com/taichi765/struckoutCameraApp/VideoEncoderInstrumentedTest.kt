@@ -2,7 +2,7 @@ package com.taichi765.struckoutCameraApp
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.taichi765.struckoutCameraApp.camera.VideoEncoder
+import com.taichi765.struckoutCameraApp.recording.VideoEncoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

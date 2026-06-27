@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.camera
+package com.taichi765.struckoutCameraApp.recording
 
 import android.content.ContentValues
 import android.content.Context
@@ -65,7 +65,7 @@ class VideoEncoder(val context: Context, width: Int, height: Int) {
     private val bufferInfo = MediaCodec.BufferInfo()
     private val tempFilePath =
         File.createTempFile("temp.mp4", null, context.cacheDir)
-    
+
     private val muxer =
         MediaMuxer(tempFilePath.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4).also {
             trackIdx = it.addTrack(codec.outputFormat)

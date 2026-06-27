@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp.transport
+package com.taichi765.struckoutCameraApp.network
 
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +25,7 @@ class UdpConnection {
     private var socket = MutableStateFlow<DatagramSocket?>(null)
 
     /**
-     * [TcpSession]で[SessionState]をstateInするとき独自スコープを使っているので、それに合わせてこちらも
+     * [TcpSession]で[com.taichi765.struckoutCameraApp.network.types.SessionState]をstateInするとき独自スコープを使っているので、それに合わせてこちらも
      * 同じようにする
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
