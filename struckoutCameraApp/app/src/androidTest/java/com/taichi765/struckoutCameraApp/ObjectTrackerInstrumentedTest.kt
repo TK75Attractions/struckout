@@ -13,14 +13,8 @@ import kotlin.io.path.createFile
 import kotlin.io.path.exists
 import kotlin.io.path.outputStream
 
-/**
- * Instrumented test, which will execute on an Android device.
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
 @RunWith(AndroidJUnit4::class)
-class ExampleInstrumentedTest {
-
+class ObjectTrackerInstrumentedTest {
 
     @Test
     fun nextFrame_works() {

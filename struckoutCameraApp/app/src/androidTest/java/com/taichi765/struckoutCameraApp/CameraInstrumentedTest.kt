@@ -10,7 +10,7 @@ import org.opencv.core.Mat
 import org.opencv.core.Rect
 
 @RunWith(AndroidJUnit4::class)
-class CameraInstrumentationTest {
+class CameraInstrumentedTest {
     @Test
     fun worldDirectionCalculator_calculatesProperly() {
         OpenCVLoader.initLocal()

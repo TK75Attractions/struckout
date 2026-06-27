@@ -22,7 +22,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.outputStream
 
 @RunWith(AndroidJUnit4::class)
-class VideoEncoderInstrumentationTest {
+class VideoEncoderInstrumentedTest {
 
     @Test
     fun `VideoEncoder encodes properly`() = runTest {
