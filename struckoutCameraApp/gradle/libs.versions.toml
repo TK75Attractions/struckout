@@ -16,7 +16,7 @@ protobuf = "4.35.0"
 protobuf-plugin = "0.10.0"
 timber = "5.0.1"
 androidx-datastore = "1.2.1"
-hilt = "2.59.2"
+hilt = "2.60"
 androidx-hilt = "1.2.0"
 ksp = "2.3.9"
 
