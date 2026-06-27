@@ -14,9 +14,7 @@ val enableNatsLog = providers.gradleProperty("enableNatsLog")
 android {
     namespace = "com.taichi765.struckoutCameraApp"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {
