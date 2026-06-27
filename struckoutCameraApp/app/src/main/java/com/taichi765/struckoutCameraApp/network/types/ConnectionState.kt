@@ -1,5 +1,7 @@
 package com.taichi765.struckoutCameraApp.network.types
 
+import com.taichi765.struckoutCameraApp.network.SessionState
+
 sealed interface ConnectionState {
     data class NetworkFeatureEnabled(
         val tcpInstanceState: InstanceState<SessionState>,
