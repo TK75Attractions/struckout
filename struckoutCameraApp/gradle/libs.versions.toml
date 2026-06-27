@@ -9,7 +9,6 @@ activityCompose = "1.13.0"
 kotlin = "2.4.0"
 composeBom = "2026.05.01"
 camerax = "1.6.1"
-kable = "0.43.0"
 androidxNav = "2.9.8"
 robolectric = "4.16.1"
 protobuf = "4.35.1"
@@ -47,7 +46,6 @@ androidx-camera-video = { group = "androidx.camera", name = "camera-video" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view" }
 androidx-nav-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNav" }
 androidx-datastore = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "androidx-datastore" }
-kable-core = { group = "com.juul.kable", name = "kable-core", version.ref = "kable" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }

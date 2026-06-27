@@ -75,7 +75,6 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.nav.compose)
     implementation(libs.androidx.datastore)
-    implementation(libs.kable.core)
     implementation(libs.protobuf.javalite)
     implementation(libs.protobuf.kotlin.lite)
     implementation(libs.timber)

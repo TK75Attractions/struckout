@@ -1,2 +1,0 @@
-gen:
-    protoc -I=../protocol --java_out=./app/src/main/java/com/taichi765/struckoutCameraApp/ --kotlin_out=./app/src/main/java/com/taichi765/struckoutCameraApp/ ../protocol/struckout.proto
