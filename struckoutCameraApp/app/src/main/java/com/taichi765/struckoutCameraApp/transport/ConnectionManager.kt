@@ -1,6 +1,6 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import com.taichi765.struckoutCameraApp.config.ConfigStoreRepositoryImpl
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,7 +26,7 @@ import javax.inject.Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class ConnectionManager @Inject constructor(
-    private val configRepository: ConfigStoreRepositoryImpl,
+    private val configRepository: ConfigStoreRepository,
     private val cameraLocationDataSource: CameraLocationDataSource,
     @ApplicationScope private val scope: CoroutineScope,
 ) {

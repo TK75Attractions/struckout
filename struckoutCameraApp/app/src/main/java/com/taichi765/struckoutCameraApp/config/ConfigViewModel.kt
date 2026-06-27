@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
 import com.taichi765.struckoutCameraApp.transport.SessionState
-import com.taichi765.struckoutCameraApp.transport.TcpSessionRepository
+import com.taichi765.struckoutCameraApp.transport.TcpSession
 import com.taichi765.struckoutCameraApp.transport.UdpDetectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,19 +18,19 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ConfigViewModel @Inject constructor(
-    private val tcpSessionRepository: TcpSessionRepository,
+    private val tcpSession: TcpSession,
     udpDetectionRepository: UdpDetectionRepository,
     private val configRepository: ConfigStoreRepository
 ) : ViewModel() {
     /**
-     * TODO: [TcpSessionRepository]に持たせる
+     * TODO: [TcpSession]に持たせる
      */
     private val _cameraLocation = MutableStateFlow<Struckout.CameraLocation?>(null)
     private val _warningState = MutableStateFlow(WarningState())
 
     private val sessionState =
         combine(
-            tcpSessionRepository.state,
+            tcpSession.state,
             udpDetectionRepository.isBound
         ) { tcpState, udpIsBound ->
             Pair(tcpState, udpIsBound)
@@ -83,7 +83,7 @@ class ConfigViewModel @Inject constructor(
 
     fun connect() {
         viewModelScope.launch {
-            tcpSessionRepository.connect()
+            tcpSession.connect()
         }
     }
 
