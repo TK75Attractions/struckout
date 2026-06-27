@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,14 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.taichi765.struckoutCameraApp.camera.CameraScreenRoute
 import com.taichi765.struckoutCameraApp.config.ConfigScreenRoute
+import com.taichi765.struckoutCameraApp.recording.RecordingDataScreen
 
 val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
@@ -48,7 +47,9 @@ fun App() {
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
 
     Scaffold(
-        topBar = { TopBar(navController) },
+        bottomBar = {
+            BottomBar(navController = navController)
+        },
         modifier = Modifier.safeContentPadding()
     ) { innerPadding ->
         NavHost(
@@ -56,6 +57,9 @@ fun App() {
             startDestination = if (permissionGranted) "config" else "permissionRequired",
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("data") {
+                RecordingDataScreen()
+            }
             composable("camera") {
                 CameraScreenRoute()
             }
@@ -73,33 +77,28 @@ fun App() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(navController: NavController) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                "Struckout Camera",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        navigationIcon = {
-            if (currentRoute != "config") {
-                IconButton(onClick = {
-                    navController.navigate("config")
-                }) {
-                    Icon(
-                        painter = painterResource(R.drawable.settings_24px),
-                        contentDescription = "settings"
-                    )
-                }
-            }
+private fun BottomBar(navController: NavController) {
+    BottomAppBar(actions = {
+        IconButton(onClick = {
+            navController.navigate("data")
+        }) {
+            Icon(Icons.database, contentDescription = "data")
         }
-    )
+        IconButton(onClick = {
+            navController.navigate("camera")
+        }) {
+            Icon(imageVector = Icons.photo_camera, contentDescription = "camera")
+        }
+        IconButton(onClick = {
+            navController.navigate("config")
+        }) {
+            Icon(
+                painter = painterResource(R.drawable.settings_24px),
+                contentDescription = "config"
+            )
+        }
+    })
 }
 
 @Composable
