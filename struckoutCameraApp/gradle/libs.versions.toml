@@ -20,7 +20,7 @@ hilt = "2.60"
 androidx-hilt = "1.2.0"
 ksp = "2.3.9"
 mockk = "1.14.11"
-jupiter = "5.14.4"
+jupiter = "6.1.0"
 junit-platform = "1.14.4"
 kotlinx-coroutines = "1.11.0"
 
