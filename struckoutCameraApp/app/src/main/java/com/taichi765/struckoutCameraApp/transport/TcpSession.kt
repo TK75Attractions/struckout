@@ -30,7 +30,7 @@ import java.net.Socket
  */
 class TcpSession(
     cameraLocationDataSource: CameraLocationDataSource
-) : SessionRepository, Closeable {
+) : SessionStateProvider, Closeable {
     /**
      * [outputActor]や[CameraLocationDataSource]のライフサイクルをApplicationやViewModelではなく
      * 自前で管理したいため
@@ -66,7 +66,7 @@ class TcpSession(
         }.launchIn(scope)
     }
 
-    override suspend fun connect(): Boolean {
+    suspend fun connect(): Boolean {
         return withContext(Dispatchers.IO) {
             Timber.tag(TAG).i("connecting to ball_watcher")
             val socket = try {
@@ -147,12 +147,6 @@ class TcpSession(
      */
     private sealed interface OutputAction {
         data class UpdateCameraLocation(val location: Struckout.CameraLocation) : OutputAction
-    }
-
-    sealed interface SessionState {
-        data class Connected(val cameraID: UInt) : SessionState
-
-        object DisConnected : SessionState
     }
 
     private sealed interface InternalSessionState {

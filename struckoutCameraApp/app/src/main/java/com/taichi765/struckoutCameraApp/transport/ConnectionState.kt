@@ -2,7 +2,7 @@ package com.taichi765.struckoutCameraApp.transport
 
 sealed interface ConnectionState {
     data class NetworkFeatureEnabled(
-        val tcpInstanceState: InstanceState<TcpSession.SessionState>,
+        val tcpInstanceState: InstanceState<SessionState>,
         val udpInstanceState: InstanceState<Boolean>
     ) : ConnectionState
 

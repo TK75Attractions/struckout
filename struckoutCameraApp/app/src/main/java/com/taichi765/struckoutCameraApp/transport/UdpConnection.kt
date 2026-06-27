@@ -1,6 +1,6 @@
 package com.taichi765.struckoutCameraApp.transport
 
-import com.taichi765.struckoutCameraApp.proto.udpPacket
+import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,9 +21,7 @@ import java.net.InetAddress
  * [NetworkManager]でインスタンスのライフサイクルを管理しているので他のところで
  * 直接使うべからず
  */
-class UdpDetectionRepository(
-    private val sessionRepository: SessionRepository
-) : DetectionRepository {
+class UdpConnection {
     private var socket = MutableStateFlow<DatagramSocket?>(null)
 
     /**
@@ -64,23 +62,10 @@ class UdpDetectionRepository(
         }
     }
 
-    override suspend fun pushDetection(data: DetectionData) {
+    suspend fun sendPacket(packet: Struckout.UdpPacket) {
         val curSocket = socket.value
-        val sessionState = sessionRepository.state.value
         check(curSocket != null) {
             "UDP port must be bound to port before sending packet"
-        }
-        check(sessionState is SessionState.Connected) {
-            "TCP session must be established before sending detections via UDP"
-        }
-
-        val packet = udpPacket {
-            cameraId = sessionState.cameraID.toInt()
-            timestamp = data.timestamp
-            frameId = data.frameId.toLong()
-            data.detections.forEach {
-                detectedObjects += it
-            }
         }
 
         val bytes = packet.toByteArray()

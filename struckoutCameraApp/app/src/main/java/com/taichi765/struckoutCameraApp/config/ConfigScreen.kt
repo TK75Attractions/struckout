@@ -36,7 +36,7 @@ fun ConfigScreenRoute(
         uiState,
         onToggleNetworkFeature = viewModel::toggleNetworkFeature,
         onToggleRecordingMode = viewModel::toggleRecordingMode,
-        onRetryConnection = viewModel::connect,
+        onRetryConnection = viewModel::retryConnection,
         onDisableNetworkFeature = viewModel::disableNetworkFeature,
         onUpdateCameraLocation = { x, y, z ->
             viewModel.updateCameraLocation(x, y, z)
@@ -175,7 +175,7 @@ private fun DisconnectedPreView() {
         onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
-        onUpdateCameraLocation = { x, y, z -> },
+        onUpdateCameraLocation = { _, _, _ -> },
         onRetryConnection = {},
     )
 }
@@ -190,7 +190,7 @@ private fun NetworkDisabledPreview() {
         onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
-        onUpdateCameraLocation = { x, y, z -> },
+        onUpdateCameraLocation = { _, _, _ -> },
         onRetryConnection = {}
     )
 }
@@ -204,6 +204,6 @@ private fun ConnectedPreview() {
         ), onToggleRecordingMode = {},
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
-        onUpdateCameraLocation = { x, y, z -> },
+        onUpdateCameraLocation = { _, _, _ -> },
         onRetryConnection = {})
 }

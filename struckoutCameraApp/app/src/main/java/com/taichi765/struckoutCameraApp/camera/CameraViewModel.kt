@@ -10,7 +10,6 @@ import com.taichi765.struckoutCameraApp.camera.types.toULong
 import com.taichi765.struckoutCameraApp.proto.detectedObject
 import com.taichi765.struckoutCameraApp.transport.DetectionData
 import com.taichi765.struckoutCameraApp.transport.DetectionRepository
-import com.taichi765.struckoutCameraApp.transport.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +20,6 @@ import javax.inject.Inject
 class CameraViewModel @Inject constructor(
     private val detectionRepository: DetectionRepository,
     private val cameraRepository: CameraRepository,
-    sessionRepository: SessionRepository
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
