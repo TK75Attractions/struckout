@@ -25,7 +25,7 @@ import java.io.OutputStream
 import java.net.Socket
 
 /**
- * [ConnectionManager]がインスタンスのライフサイクルを管理しているので他のところで
+ * [NetworkManager]がインスタンスのライフサイクルを管理しているので他のところで
  * 直接使うべからず
  */
 class TcpSession(

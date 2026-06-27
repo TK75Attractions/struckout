@@ -21,11 +21,11 @@ import javax.inject.Singleton
 /**
  * [TcpSession]や[UdpDetectionRepository]などネットワーク関連のライフサイクルを管理する。
  *
- * 管理されたクラスには直接アクセスするのではなく[ConnectionManager]を介してアクセスすべし。
+ * 管理されたクラスには直接アクセスするのではなく[NetworkManager]を介してアクセスすべし。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
-class ConnectionManager @Inject constructor(
+class NetworkManager @Inject constructor(
     private val configRepository: ConfigStoreRepository,
     private val cameraLocationDataSource: CameraLocationDataSource,
     @ApplicationScope private val scope: CoroutineScope,
@@ -79,6 +79,18 @@ class ConnectionManager @Inject constructor(
         watchUdpStatus()
     }
 
+    suspend fun retryConnection() {
+        val session = tcpSession.value
+        check(session != null) {
+            "TcpSession instance should be created before retrying connection: state = ${state.value}"
+        }
+        if (session.state.value is TcpSession.SessionState.Connected) {
+            Timber.tag(TAG).w("retryConnection is called when TCP is already connected")
+            return
+        }
+        session.connect()
+    }
+
     private fun watchTcpConnection() {
         combine(
             tcpSession,
@@ -87,7 +99,7 @@ class ConnectionManager @Inject constructor(
             Pair(
                 networkFeatureEnabled &&
                         tcpSession == null,
-                networkFeatureEnabled && tcpSession != null && tcpSession.state.value !is SessionState.Connected
+                networkFeatureEnabled && tcpSession != null && tcpSession.state.value !is TcpSession.SessionState.Connected
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {

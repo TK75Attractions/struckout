@@ -18,7 +18,7 @@ import java.net.InetAddress
 
 /**
  * Sends detections to server via UDP.
- * [ConnectionManager]でインスタンスのライフサイクルを管理しているので他のところで
+ * [NetworkManager]でインスタンスのライフサイクルを管理しているので他のところで
  * 直接使うべからず
  */
 class UdpDetectionRepository(
