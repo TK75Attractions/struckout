@@ -34,7 +34,8 @@ import javax.inject.Singleton
 class NetworkManager @Inject constructor(
     private val configRepository: ConfigStoreRepository,
     @ApplicationScope private val applicationScope: CoroutineScope,
-    private val tcpSessionFactory: TcpSession.Factory
+    private val tcpSessionFactory: TcpSession.Factory,
+    private val udpConnectionFactory: UdpConnection.Factory
 ) : DetectionRepository {
     private val tcpSession = MutableStateFlow<TcpSession?>(null)
     private val udpConnection = MutableStateFlow<UdpConnection?>(null)
@@ -55,7 +56,7 @@ class NetworkManager @Inject constructor(
         if (udpConnection == null) {
             flowOf(InstanceState.NotCreated)
         } else {
-            udpConnection.isBound.map {
+            udpConnection.isConnected.map {
                 InstanceState.Created(it)
             }
         }
@@ -126,18 +127,18 @@ class NetworkManager @Inject constructor(
         ) { udpConnection, networkFeatureEnabled ->
             Pair(
                 networkFeatureEnabled && udpConnection == null,
-                networkFeatureEnabled && udpConnection != null && !udpConnection.isBound.value
+                networkFeatureEnabled && udpConnection != null && !udpConnection.isConnected.value
             )
-        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldBind) ->
+        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
                 val tcpSession = tcpSession.value
                 check(tcpSession != null) {
                     "TcpSession instance should be created before creating UdpConnection instance"
                 }
-                udpConnection.value = UdpConnection()
+                udpConnection.value = udpConnectionFactory.create()
             }
-            if (shouldBind) {
-                udpConnection.value!!.bind()
+            if (shouldConnect) {
+                udpConnection.value!!.connect()
             }
         }.launchIn(this)
     }
@@ -158,7 +159,7 @@ class NetworkManager @Inject constructor(
         check(udpConnection != null) {
             "UdpConnection instance must be created before sending detection via network"
         }
-        check(udpConnection.isBound.value) {
+        check(udpConnection.isConnected.value) {
             "UdpConnection must be initialized before sending detection via network"
         }
 

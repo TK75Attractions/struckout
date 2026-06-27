@@ -46,7 +46,7 @@ class ConfigViewModel @Inject constructor(
             tcpIsConnected = connectionState is ConnectionState.NetworkFeatureEnabled
                     && connectionState.tcpInstanceState is InstanceState.Created
                     && connectionState.tcpInstanceState.state is SessionState.Connected,
-            udpIsBound = connectionState is ConnectionState.NetworkFeatureEnabled
+            udpIsConnected = connectionState is ConnectionState.NetworkFeatureEnabled
                     && connectionState.udpInstanceState is InstanceState.Created
                     && connectionState.udpInstanceState.state,
             cameraLocation = cameraLocation,
