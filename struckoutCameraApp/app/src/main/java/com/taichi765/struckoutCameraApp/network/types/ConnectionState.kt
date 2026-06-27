@@ -13,3 +13,15 @@ sealed interface InstanceState<out T> {
     data class Created<T>(val state: T) : InstanceState<T>
     object NotCreated : InstanceState<Nothing>
 }
+
+fun ConnectionState.tcpIsConnected(): Boolean {
+    return this is ConnectionState.NetworkFeatureEnabled
+            && this.tcpInstanceState is InstanceState.Created
+            && this.tcpInstanceState.state is SessionState.Connected
+}
+
+fun ConnectionState.udpIsConnected(): Boolean {
+    return this is ConnectionState.NetworkFeatureEnabled
+            && this.udpInstanceState is InstanceState.Created
+            && this.udpInstanceState.state
+}

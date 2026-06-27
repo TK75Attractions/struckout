@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.TcpSession
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
-import com.taichi765.struckoutCameraApp.network.types.InstanceState
-import com.taichi765.struckoutCameraApp.network.types.SessionState
+import com.taichi765.struckoutCameraApp.network.types.tcpIsConnected
+import com.taichi765.struckoutCameraApp.network.types.udpIsConnected
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,12 +43,8 @@ class ConfigViewModel @Inject constructor(
         ConfigUiState(
             recodingModeEnabled,
             networkFeatureEnabled = connectionState is ConnectionState.NetworkFeatureEnabled,
-            tcpIsConnected = connectionState is ConnectionState.NetworkFeatureEnabled
-                    && connectionState.tcpInstanceState is InstanceState.Created
-                    && connectionState.tcpInstanceState.state is SessionState.Connected,
-            udpIsConnected = connectionState is ConnectionState.NetworkFeatureEnabled
-                    && connectionState.udpInstanceState is InstanceState.Created
-                    && connectionState.udpInstanceState.state,
+            tcpIsConnected = connectionState.tcpIsConnected(),
+            udpIsConnected = connectionState.udpIsConnected(),
             cameraLocation = cameraLocation,
             warningState = warningState
         )
