@@ -34,13 +34,22 @@ class NetworkManager @Inject constructor(
     private val configRepository: ConfigStoreRepository,
     @ApplicationScope private val applicationScope: CoroutineScope,
     private val tcpSessionFactory: TcpSession.Factory,
-    private val udpConnectionFactory: UdpConnection.Factory
+    private val udpConnectionFactory: UdpConnection.Factory,
+    private val synchronizerFactory: Synchronizer.Factory
 ) {
-    private val tcpSession = MutableStateFlow<TcpSession?>(null)
-    private val udpConnection = MutableStateFlow<UdpConnection?>(null)
+    private val _tcpSession = MutableStateFlow<TcpSession?>(null)
+    private val _udpConnection = MutableStateFlow<UdpConnection?>(null)
+    private val _synchronizer = MutableStateFlow<Synchronizer?>(null)
+
+    val currentTcpSession: TcpSession?
+        get() = _tcpSession.value
+    val currentUdpConnection: UdpConnection?
+        get() = _udpConnection.value
+    val currentSynchronizer: Synchronizer?
+        get() = _synchronizer.value
 
     @Suppress("IfThenToElvis")
-    private val tcpState = tcpSession.flatMapLatest { session ->
+    private val _tcpState = _tcpSession.flatMapLatest { session ->
         if (session == null) {
             flowOf(InstanceState.NotCreated)
         } else {
@@ -51,7 +60,7 @@ class NetworkManager @Inject constructor(
     }
 
     @Suppress("IfThenToElvis")
-    private val udpState = udpConnection.flatMapLatest { udpConnection ->
+    private val _udpState = _udpConnection.flatMapLatest { udpConnection ->
         if (udpConnection == null) {
             flowOf(InstanceState.NotCreated)
         } else {
@@ -61,14 +70,28 @@ class NetworkManager @Inject constructor(
         }
     }
 
+    @Suppress("IfThenToElvis")
+    private val _synchronizerState = _synchronizer.flatMapLatest { synchronizer ->
+        if (synchronizer == null) {
+            flowOf(InstanceState.NotCreated)
+        } else {
+            synchronizer.isConnected.map {
+                InstanceState.Created(it)
+            }
+        }
+    }
+
     val state = combine(
         configRepository.networkFeatureEnabled,
-        tcpState,
-        udpState
-    ) { networkFeatureEnabled, tcpState, udpState ->
+        _tcpState,
+        _udpState,
+        _synchronizerState
+    ) { networkFeatureEnabled, tcpState, udpState, synchronizerState ->
         if (networkFeatureEnabled) {
             ConnectionState.NetworkFeatureEnabled(
-                tcpState, udpState
+                tcpInstanceState = tcpState,
+                udpInstanceState = udpState,
+                synchronizerInstanceState = synchronizerState
             )
         } else {
             ConnectionState.NetworkFeatureDisabled
@@ -79,16 +102,18 @@ class NetworkManager @Inject constructor(
         initialValue = ConnectionState.NetworkFeatureDisabled
     )
 
+
     fun start() {
         Timber.tag(TAG).i("ConnectionManager started")
         applicationScope.launch {
             watchTcpConnection()
             watchUdpStatus()
+            watchSynchronizer()
         }
     }
 
     suspend fun retryConnection() {
-        val session = tcpSession.value
+        val session = _tcpSession.value
         check(session != null) {
             "TcpSession instance should be created before retrying connection: state = ${state.value}"
         }
@@ -101,7 +126,7 @@ class NetworkManager @Inject constructor(
 
     private fun CoroutineScope.watchTcpConnection() {
         combine(
-            tcpSession,
+            _tcpSession,
             configRepository.networkFeatureEnabled
         ) { tcpSession, networkFeatureEnabled ->
             Pair(
@@ -111,17 +136,17 @@ class NetworkManager @Inject constructor(
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
-                tcpSession.value = tcpSessionFactory.create()
+                _tcpSession.value = tcpSessionFactory.create()
             }
             if (shouldConnect) {
-                tcpSession.value!!.connect()
+                _tcpSession.value!!.connect()
             }
         }.launchIn(this)
     }
 
     private fun CoroutineScope.watchUdpStatus() {
         combine(
-            udpConnection,
+            _udpConnection,
             configRepository.networkFeatureEnabled
         ) { udpConnection, networkFeatureEnabled ->
             Pair(
@@ -130,10 +155,29 @@ class NetworkManager @Inject constructor(
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
-                udpConnection.value = udpConnectionFactory.create()
+                _udpConnection.value = udpConnectionFactory.create()
             }
             if (shouldConnect) {
-                udpConnection.value!!.connect()
+                _udpConnection.value!!.connect()
+            }
+        }.launchIn(this)
+    }
+
+    private fun CoroutineScope.watchSynchronizer() {
+        combine(
+            _synchronizer,
+            configRepository.networkFeatureEnabled
+        ) { synchronizer, networkFeatureEnabled ->
+            Pair(
+                networkFeatureEnabled && synchronizer == null,
+                networkFeatureEnabled && synchronizer != null && !synchronizer.isConnected.value
+            )
+        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
+            if (shouldCreateInstance) {
+                _synchronizer.value = synchronizerFactory.create()
+            }
+            if (shouldConnect) {
+                _synchronizer.value!!.connect()
             }
         }.launchIn(this)
     }
@@ -142,7 +186,7 @@ class NetworkManager @Inject constructor(
      * TODO: 若干責務外かも
      */
     suspend fun pushDetection(data: DetectionData) {
-        val session = tcpSession.value
+        val session = _tcpSession.value
         check(session != null) {
             "TcpSession instance must be created before sending detection via network"
         }
@@ -150,7 +194,7 @@ class NetworkManager @Inject constructor(
         check(sessionState is SessionState.Connected) {
             "TcpSession must be initialized before sending detection via network"
         }
-        val udpConnection = udpConnection.value
+        val udpConnection = _udpConnection.value
         check(udpConnection != null) {
             "UdpConnection instance must be created before sending detection via network"
         }
@@ -169,6 +213,7 @@ class NetworkManager @Inject constructor(
 
         udpConnection.sendPacket(packet)
     }
+
 
     companion object {
         const val TAG = "ConnectionManager"

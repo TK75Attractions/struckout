@@ -23,7 +23,9 @@ class NetworkManagerUnitTest {
         @MockK tcpSession: TcpSession,
         @MockK tcpSessionFactory: TcpSession.Factory,
         @MockK udpConnection: UdpConnection,
-        @MockK udpConnectionFactory: UdpConnection.Factory
+        @MockK udpConnectionFactory: UdpConnection.Factory,
+        @MockK synchronizer: Synchronizer,
+        @MockK synchronizerFactory: Synchronizer.Factory
     ) = runTest {
         // Arrange
         coJustRun { tcpSession.connect() }
@@ -32,6 +34,9 @@ class NetworkManagerUnitTest {
         coJustRun { udpConnection.connect() }
         every { udpConnectionFactory.create() } returns udpConnection
         every { udpConnection.isConnected } returns MutableStateFlow(false)
+        coJustRun { synchronizer.connect() }
+        every { synchronizerFactory.create() } returns synchronizer
+        every { synchronizer.isConnected } returns MutableStateFlow(false)
 
         val configStoreRepository =
             FakeConfigStoreRepository(initialNetworkFeatureEnabled = false)
@@ -39,7 +44,8 @@ class NetworkManagerUnitTest {
             configRepository = configStoreRepository,
             applicationScope = backgroundScope,
             tcpSessionFactory = tcpSessionFactory,
-            udpConnectionFactory = udpConnectionFactory
+            udpConnectionFactory = udpConnectionFactory,
+            synchronizerFactory = synchronizerFactory
         )
 
         // Act1
@@ -49,6 +55,7 @@ class NetworkManagerUnitTest {
         // Assert1
         coVerify(exactly = 0) { tcpSession.connect() }
         coVerify(exactly = 0) { udpConnection.connect() }
+        coVerify(exactly = 0) { synchronizer.connect() }
 
         // Act2
         configStoreRepository.toggleNetworkFeature()
@@ -59,5 +66,7 @@ class NetworkManagerUnitTest {
         coVerify(exactly = 1) { tcpSession.connect() }
         verify(exactly = 1) { udpConnectionFactory.create() }
         coVerify(exactly = 1) { udpConnection.connect() }
+        verify(exactly = 1) { synchronizerFactory.create() }
+        coVerify(exactly = 1) { synchronizer.connect() }
     }
 }
