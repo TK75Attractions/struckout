@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,17 +16,24 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun RecordingDataScreen() {
     val viewModel = hiltViewModel<RecordingDataViewModel>()
+
     val rowCount by viewModel.rowCount.collectAsState()
+    val syncInProgress by viewModel.syncInProgress.collectAsState()
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("records = $rowCount")
-        Button(onClick = {
-            viewModel.syncLocalDetections()
-        }) {
-            Text("Sync local detections")
+        if (syncInProgress) {
+            CircularProgressIndicator()
+        } else {
+            Button(onClick = {
+                viewModel.syncLocalDetections()
+            }) {
+                Text("Sync local detections")
+            }
         }
     }
 }
