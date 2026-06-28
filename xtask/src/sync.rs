@@ -53,7 +53,7 @@ impl SyncArgs {
         }
 
         stream
-            .write_u8(0)
+            .write_u32(0)
             .await
             .with_context(|| "failed to write delimiter")?;
         println!("succeed to sync frames");
