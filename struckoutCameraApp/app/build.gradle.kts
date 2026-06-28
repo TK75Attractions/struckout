@@ -25,6 +25,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -80,6 +84,8 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.hilt)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
     implementation(project(":opencv"))
     testImplementation(libs.robolectric)
     testImplementation(libs.mockk)
@@ -87,6 +93,7 @@ dependencies {
     testImplementation(libs.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
     androidTestImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -95,6 +102,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     ksp(libs.hilt.compiler)
+    ksp(libs.room.compiler)
+    annotationProcessor(libs.room.compiler)
 }
 
 protobuf {
