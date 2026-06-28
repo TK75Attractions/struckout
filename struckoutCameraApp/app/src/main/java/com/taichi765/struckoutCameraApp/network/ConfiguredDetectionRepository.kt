@@ -2,7 +2,7 @@ package com.taichi765.struckoutCameraApp.network
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
-import com.taichi765.struckoutCameraApp.recording.DiskDetectionRepository
+import com.taichi765.struckoutCameraApp.recording.LocalDetectionRepository
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -11,7 +11,7 @@ import javax.inject.Inject
  */
 class ConfiguredDetectionRepository @Inject constructor(
     private val networkManager: NetworkManager,
-    private val diskDetectionRepository: DiskDetectionRepository,
+    private val localDetectionRepository: LocalDetectionRepository,
     private val configRepository: ConfigStoreRepository,
 ) : DetectionRepository {
 
@@ -21,7 +21,7 @@ class ConfiguredDetectionRepository @Inject constructor(
             networkManager.pushDetection(data)
         }
         if (configRepository.recordingModeEnabled.value) {
-            diskDetectionRepository.pushDetection(data)
+            localDetectionRepository.pushDetection(data)
         }
     }
 
