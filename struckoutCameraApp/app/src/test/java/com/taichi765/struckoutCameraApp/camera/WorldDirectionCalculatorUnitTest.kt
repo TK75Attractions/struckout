@@ -1,4 +1,4 @@
-package com.taichi765.struckoutCameraApp
+package com.taichi765.struckoutCameraApp.camera
 
 import org.junit.jupiter.api.Test
 
