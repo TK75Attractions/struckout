@@ -1,3 +1,5 @@
+name: Android CI
+
 on:
   push: 
     branches: main
@@ -22,6 +24,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: gradle/actions@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
       - name: check
         run: ./gradlew :app:check
