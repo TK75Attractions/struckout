@@ -167,11 +167,10 @@ class TcpSessionImpl(
     }
 
     companion object {
-        const val TAG = "TcpSessionRepository"
+        const val TAG = "TcpSessionImpl"
 
-        const val TCP_REMOTE_ADDRESS = "192.168.1.100"
+        const val TCP_REMOTE_ADDRESS = "192.168.10.110"
 
         const val TCP_REMOTE_PORT = 6060
-        const val DUMMY_CAMERA_ID = 99u
     }
 }

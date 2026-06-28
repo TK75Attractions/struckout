@@ -1,6 +1,26 @@
 [package]
 name = "xtask"
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 
 [dependencies]
+prost = { workspace = true }
+tokio = { workspace = true, features = [
+    "net",
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "io-util",
+    "time",
+] }
+clap = { workspace = true, features = ["derive"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "macros"] }
+dirs = { workspace = true }
+
+[build-dependencies]
+prost-build = { workspace = true }

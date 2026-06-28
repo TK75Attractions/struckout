@@ -2,12 +2,14 @@ package com.taichi765.struckoutCameraApp.network
 
 import androidx.annotation.CheckResult
 import com.google.protobuf.MessageLite
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-inline fun <T : MessageLite> readPacket(
+suspend inline fun <T : MessageLite> readPacket(
     input: InputStream,
     crossinline parser: (ByteArray) -> T
 ): T {
@@ -17,7 +19,9 @@ inline fun <T : MessageLite> readPacket(
         bytesToInt(bytes)
     }
     val bytes = ByteArray(len)
-    input.readNBytes(bytes, 0, len)
+    withContext(Dispatchers.IO) {
+        input.readNBytes(bytes, 0, len)
+    }
     return parser(bytes)
 }
 
@@ -29,11 +33,13 @@ fun bytesToInt(bytes: ByteArray): Int {
     return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt()
 }
 
-fun <P : MessageLite> writePacket(output: OutputStream, packet: P) {
-    val packetBytes = packet.toByteArray()
-    val len = packetBytes.size
-    val buf = ByteBuffer.allocate(4 + len).order(ByteOrder.LITTLE_ENDIAN)
-    buf.putInt(len)
-    buf.put(packetBytes)
-    output.write(buf.array())
+suspend fun <P : MessageLite> writePacket(output: OutputStream, packet: P) {
+    withContext(Dispatchers.IO) {
+        val packetBytes = packet.toByteArray()
+        val len = packetBytes.size
+        val buf = ByteBuffer.allocate(4 + len).order(ByteOrder.LITTLE_ENDIAN)
+        buf.putInt(len)
+        buf.put(packetBytes)
+        output.write(buf.array())
+    }
 }
