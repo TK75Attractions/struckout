@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 
@@ -35,7 +36,11 @@ class SynchronizerImpl : Synchronizer {
             }
             Timber.tag(TAG).i("successfully established TCP connection between server")
 
-            state.value = State.Connected(socket, socket.getOutputStream())
+            state.value = State.Connected(
+                socket,
+                output = socket.getOutputStream(),
+                input = socket.getInputStream()
+            )
         }
     }
 
@@ -45,6 +50,14 @@ class SynchronizerImpl : Synchronizer {
             "TCP is not connected"
         }
         return curState.output
+    }
+
+    override fun getInputStream(): InputStream {
+        val curState = state.value
+        check(curState is State.Connected) {
+            "TCP is not connected"
+        }
+        return curState.input
     }
 
     override fun close() {
@@ -64,12 +77,17 @@ class SynchronizerImpl : Synchronizer {
     }
 
     private sealed interface State {
-        data class Connected(val socket: Socket, val output: OutputStream) : State
+        data class Connected(
+            val socket: Socket,
+            val output: OutputStream,
+            val input: InputStream
+        ) : State
+
         object DisConnected : State
     }
 
     companion object {
-        const val TAG = "TcpSynchronizer"
+        const val TAG = "SynchronizerImpl"
         const val REMOTE_ADDRESS = "192.168.10.110"
         const val REMOTE_PORT = 6262
     }
