@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.FrameID
 import com.taichi765.struckoutCameraApp.camera.types.increment
 import com.taichi765.struckoutCameraApp.camera.types.toULong
-import com.taichi765.struckoutCameraApp.network.DetectionRepository
+import com.taichi765.struckoutCameraApp.config.PushFrameUseCase
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.proto.detectedObject
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
-    private val detectionRepository: DetectionRepository,
+    private val pushFrame: PushFrameUseCase,
     private val cameraRepository: CameraRepository,
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
@@ -51,7 +51,7 @@ class CameraViewModel @Inject constructor(
                 }
             })
         viewModelScope.launch {
-            detectionRepository.pushDetection(data)
+            pushFrame(data)
         }
     }
 

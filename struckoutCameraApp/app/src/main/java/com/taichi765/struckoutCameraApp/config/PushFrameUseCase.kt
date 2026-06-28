@@ -1,21 +1,20 @@
-package com.taichi765.struckoutCameraApp.network
+package com.taichi765.struckoutCameraApp.config
 
-import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.recording.LocalDetectionRepository
 import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * Decide the actual [DetectionRepository] to push detections, based on configurations from [ConfigStoreRepository].
+ * Decide the actual destination to push detections, based on configurations from [ConfigStoreRepository].
  */
-class ConfiguredDetectionRepository @Inject constructor(
+class PushFrameUseCase @Inject constructor(
     private val networkManager: NetworkManager,
     private val localDetectionRepository: LocalDetectionRepository,
     private val configRepository: ConfigStoreRepository,
-) : DetectionRepository {
-
-    override suspend fun pushDetection(data: DetectionData) {
+) {
+    suspend operator fun invoke(data: DetectionData) {
         Timber.tag(TAG).d("networkFeatureEnabled: ${configRepository.networkFeatureEnabled.value}")
         if (configRepository.networkFeatureEnabled.value) {
             networkManager.pushDetection(data)
@@ -26,6 +25,6 @@ class ConfiguredDetectionRepository @Inject constructor(
     }
 
     companion object {
-        const val TAG = "ConfiguredDetectionRepository"
+        const val TAG = "PushFrameUseCase"
     }
 }
