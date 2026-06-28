@@ -35,7 +35,7 @@ class NetworkManager @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope,
     private val tcpSessionFactory: TcpSession.Factory,
     private val udpConnectionFactory: UdpConnection.Factory
-) : DetectionRepository {
+) {
     private val tcpSession = MutableStateFlow<TcpSession?>(null)
     private val udpConnection = MutableStateFlow<UdpConnection?>(null)
 
@@ -141,7 +141,7 @@ class NetworkManager @Inject constructor(
     /**
      * TODO: 若干責務外かも
      */
-    override suspend fun pushDetection(data: DetectionData) {
+    suspend fun pushDetection(data: DetectionData) {
         val session = tcpSession.value
         check(session != null) {
             "TcpSession instance must be created before sending detection via network"

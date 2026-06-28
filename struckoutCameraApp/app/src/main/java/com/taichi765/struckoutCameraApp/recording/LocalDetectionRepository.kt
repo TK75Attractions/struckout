@@ -1,16 +1,15 @@
 package com.taichi765.struckoutCameraApp.recording
 
-import com.taichi765.struckoutCameraApp.network.DetectionRepository
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.proto.udpPacket
+import java.io.OutputStream
 import javax.inject.Inject
 
 /**
  * Saves detections to disk (in protobuf format).
  */
-class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDao) :
-    DetectionRepository {
-    override suspend fun pushDetection(data: DetectionData) {
+class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDao) {
+    suspend fun pushDetection(data: DetectionData) {
         frameDao.insertFrame(
             FrameEntity(
                 timestamp = data.timestamp,
@@ -26,7 +25,7 @@ class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDa
         )
     }
 
-    suspend fun sync() {
+    suspend fun sync(output: OutputStream) {
 
     }
 
