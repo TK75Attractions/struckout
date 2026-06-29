@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.recording
 
+import android.content.ContentResolver
 import android.content.ContentValues
-import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
@@ -13,11 +13,11 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.annotations.Blocking
 import timber.log.Timber
-import java.io.File
+import java.io.FileDescriptor
 import java.nio.ByteBuffer
 import kotlin.properties.Delegates
 
-class VideoEncoder(val context: Context, width: Int, height: Int) {
+class VideoEncoder(private val contentResolver: ContentResolver, width: Int, height: Int) {
     private var trackIdx by Delegates.notNull<Int>()
     private val runState = MutableStateFlow(RunState.Stopped)
     private val frameChannel = Channel<FrameData>(
@@ -63,14 +63,11 @@ class VideoEncoder(val context: Context, width: Int, height: Int) {
         }.getOrThrow()
     }
     private val bufferInfo = MediaCodec.BufferInfo()
-    private val tempFilePath =
-        File.createTempFile("temp.mp4", null, context.cacheDir)
 
-    private val muxer =
-        MediaMuxer(tempFilePath.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4).also {
-            trackIdx = it.addTrack(codec.outputFormat)
-        }
-
+    private val muxer: MediaMuxer? = MediaMuxer(
+        prepareMediaStore(),
+        MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+    ).also { trackIdx = it.addTrack(codec.outputFormat) }
 
     /**
      * Loops until [stop] is called.
@@ -95,7 +92,17 @@ class VideoEncoder(val context: Context, width: Int, height: Int) {
 
             drainEncodedOutputs()
         }
-        // TODO: END_OF_STREAM渡す
+    }
+
+    private fun prepareMediaStore(): FileDescriptor {
+        Timber.tag(TAG).d("flashing recorded video to MediaStore")
+        val values = ContentValues().apply {
+            put(MediaStore.Video.Media.DISPLAY_NAME, "my_video")
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+        }
+        val uri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+            ?: throw IllegalStateException("failed to insert to MediaStore")
+        return contentResolver.openFileDescriptor(uri, "rw")!!.fileDescriptor
     }
 
     private fun drainEncodedOutputs() {
@@ -105,34 +112,21 @@ class VideoEncoder(val context: Context, width: Int, height: Int) {
                 break
             }
             val outputBuf = codec.getOutputBuffer(outputIdx)!!
-            muxer.writeSampleData(outputIdx, outputBuf, bufferInfo)
+            muxer?.writeSampleData(outputIdx, outputBuf, bufferInfo)
             codec.releaseOutputBuffer(outputIdx, false)
         }
     }
 
     fun stop() {
         Timber.tag(TAG).i("stopping VideoEncoder")
+        muxer?.stop()
+        muxer?.release()
         runState.value = RunState.Stopped
     }
 
     suspend fun writeFrame(size: Int, time: Long, frame: ByteBuffer) {
         frameChannel.send(FrameData(size, time, frame))
     }
-
-    private fun flashToMediaStore() {
-        Timber.tag(TAG).d("flashing recoded video to MediaStore")
-        val resolver = context.contentResolver
-        val values = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, "my_video")
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-        }
-        val uri =
-            resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                ?: throw IllegalStateException("failed to insert to MediaStore")
-        resolver.openOutputStream(uri).use {
-        }
-    }
-
 
     private data class FrameData(val size: Int, val time: Long, val data: ByteBuffer)
 
