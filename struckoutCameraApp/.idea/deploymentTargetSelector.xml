@@ -24,7 +24,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="NetworkDisabledPreview">
+      <SelectionState runConfigName="VideoEncoderInstrumentedTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-06-22T10:35:37.656081145Z">
           <Target type="DEFAULT_BOOT">

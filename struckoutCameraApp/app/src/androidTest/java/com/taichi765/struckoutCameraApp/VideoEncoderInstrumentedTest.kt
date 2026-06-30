@@ -55,14 +55,17 @@ class VideoEncoderInstrumentedTest {
             if (encoder == null) {
                 Timber.tag("Test").d("width:${frame.width()}")
                 Timber.tag("Test").d("height: ${frame.height()}")
-                encoder = VideoEncoder(inst.targetContext, frame.width(), frame.height())
+                encoder =
+                    VideoEncoder(inst.targetContext.contentResolver, frame.width(), frame.height())
                 job = CoroutineScope(Dispatchers.Default).launch {
                     encoder.run()
                 }
             }
             val bytes = ByteArray(yuv.total().toInt())
+            yuv.get(0, 0, bytes)
             encoder.writeFrame(bytes.size, 0, ByteBuffer.allocate(bytes.size).put(bytes))
         }
+        encoder!!.stop()
 
         job!!.join()
     }
