@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,6 +37,7 @@ fun CameraScreenRoute(
     CameraScreen(
         image,
         viewModel.analyzer,
+        viewModel::flashVideo
     )
 }
 
@@ -43,6 +45,7 @@ fun CameraScreenRoute(
 private fun CameraScreen(
     image: ImageBitmap?,
     analyzer: MyAnalyzer,
+    onFlashVideo: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -61,6 +64,10 @@ private fun CameraScreen(
                 .fillMaxWidth()
                 .weight(1f)
         )
+
+        Button(onClick = onFlashVideo) {
+            Text("Stop recording")
+        }
     }
 
     LaunchedEffect(Unit) {

@@ -2,10 +2,6 @@ package com.taichi765.struckoutCameraApp.camera
 
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.createBitmap
-import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -16,7 +12,7 @@ import org.opencv.imgproc.Imgproc
 
 class MyAnalyzer(
     val tracker: ObjectTracker,
-    private val withAnalyzeResult: (ImageBitmap, Long, List<Rect>) -> Unit,
+    private val withAnalyzeResult: (Mat, Long, List<Rect>) -> Unit,
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
         image.use { image ->
@@ -36,9 +32,7 @@ class MyAnalyzer(
                 Core.rotate(mat, it, Core.ROTATE_90_CLOCKWISE)
                 it
             }
-            val bitmap = createBitmap(rotated.cols(), rotated.rows())
-            Utils.matToBitmap(rotated, bitmap)
-            withAnalyzeResult(bitmap.asImageBitmap(), timestamp, rects)
+            withAnalyzeResult(rotated, timestamp, rects)
         }
     }
 

@@ -2,12 +2,14 @@ package com.taichi765.struckoutCameraApp.recording
 
 import android.content.ContentResolver
 import android.content.ContentValues
+import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.provider.MediaStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,11 +17,12 @@ import org.jetbrains.annotations.Blocking
 import timber.log.Timber
 import java.io.FileDescriptor
 import java.nio.ByteBuffer
+import javax.inject.Inject
 import kotlin.properties.Delegates
 
 class VideoEncoder(private val contentResolver: ContentResolver, width: Int, height: Int) {
     private var trackIdx by Delegates.notNull<Int>()
-    private val runState = MutableStateFlow(RunState.Stopped)
+    private val runState = MutableStateFlow<RunState>(RunState.Stopped)
     private val frameChannel = Channel<FrameData>(
         capacity = FRAME_CHANNEL_CAP,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -56,6 +59,7 @@ class VideoEncoder(private val contentResolver: ContentResolver, width: Int, hei
         runCatching {
             MediaCodec.createByCodecName(name).apply {
                 configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+                Timber.tag(TAG).i("starting MediaCodec")
                 start()
             }
         }.onFailure {
@@ -64,23 +68,31 @@ class VideoEncoder(private val contentResolver: ContentResolver, width: Int, hei
     }
     private val bufferInfo = MediaCodec.BufferInfo()
 
-    private val muxer: MediaMuxer? = MediaMuxer(
-        prepareMediaStore(),
-        MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
-    ).also { trackIdx = it.addTrack(codec.outputFormat) }
+    private var muxer: MediaMuxer? = null
 
     /**
      * Loops until [stop] is called.
      */
     @Blocking
     suspend fun run() {
+        runState.value = RunState.Running
         while (runState.value == RunState.Running) {
             val inputIdx = codec.dequeueInputBuffer(DEQUEUE_INPUT_BUFFER_TIMEOUT)
             if (inputIdx < 0) {
                 Timber.tag(TAG).d("no buffer available")
             }
+            if (inputIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                muxer = MediaMuxer(
+                    prepareMediaStore(),
+                    MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+                ).also {
+                    trackIdx = it.addTrack(codec.outputFormat)
+                    it.start()
+                }
+            }
             val inputBuf = codec.getInputBuffer(inputIdx)!!
             val frame = frameChannel.receive()
+            Timber.tag(TAG).v("received new frame")
             inputBuf.put(frame.data)
             codec.queueInputBuffer(
                 inputIdx,
@@ -95,7 +107,7 @@ class VideoEncoder(private val contentResolver: ContentResolver, width: Int, hei
     }
 
     private fun prepareMediaStore(): FileDescriptor {
-        Timber.tag(TAG).d("flashing recorded video to MediaStore")
+        Timber.tag(TAG).d("preparing MediaStore")
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, "my_video")
             put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
@@ -133,6 +145,14 @@ class VideoEncoder(private val contentResolver: ContentResolver, width: Int, hei
     private sealed interface RunState {
         object Running : RunState
         object Stopped : RunState
+    }
+
+    class Factory @Inject constructor(
+        @ApplicationContext private val context: Context,
+    ) {
+        fun create(width: Int, height: Int): VideoEncoder {
+            return VideoEncoder(context.contentResolver, width, height)
+        }
     }
 
     companion object {

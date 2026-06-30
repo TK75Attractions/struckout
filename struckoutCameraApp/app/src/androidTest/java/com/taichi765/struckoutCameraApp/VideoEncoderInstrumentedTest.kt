@@ -62,6 +62,7 @@ class VideoEncoderInstrumentedTest {
                 }
             }
             val bytes = ByteArray(yuv.total().toInt())
+            yuv.get(0, 0, bytes)
             encoder.writeFrame(bytes.size, 0, ByteBuffer.allocate(bytes.size).put(bytes))
         }
         encoder!!.stop()

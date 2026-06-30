@@ -2,6 +2,8 @@ package com.taichi765.struckoutCameraApp.camera
 
 import android.os.SystemClock
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.camera.types.FrameID
@@ -14,25 +16,41 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.opencv.android.Utils
+import org.opencv.core.Mat
+import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
     private val pushFrame: PushFrameUseCase,
     private val cameraRepository: CameraRepository,
+    //private val videoEncoderFactory: VideoEncoder.Factory,
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
 
     private var frameId = FrameID(0u)
 
-    val analyzer = MyAnalyzer(cameraRepository.tracker) { image, imageTimestamp, rects ->
+    //private lateinit var videoEncoder: VideoEncoder
+
+    val analyzer = MyAnalyzer(cameraRepository.tracker) { mat, imageTimestamp, rects ->
+        val bitmap = createBitmap(mat.cols(), mat.rows())
+        Utils.matToBitmap(mat, bitmap)
+        val imageBitMap = bitmap.asImageBitmap()
+
+        /*if (!::videoEncoder.isInitialized) {
+            videoEncoder = videoEncoderFactory.create(imageBitMap.width, imageBitMap.height)
+            viewModelScope.launch {
+                videoEncoder.run()
+            }
+        }*/
         if (rects.count() == 0) {
             return@MyAnalyzer
         }
 
         // update properties
-        _contoursImage.value = image
+        _contoursImage.value = imageBitMap
         frameId = frameId.increment()
 
         // create and send packet
@@ -53,6 +71,17 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch {
             pushFrame(data)
         }
+        viewModelScope.launch {
+            val yuv = Mat()
+            Imgproc.cvtColor(mat, yuv, Imgproc.COLOR_BGR2YUV)
+            val bytes = ByteArray(yuv.total().toInt())
+            yuv.get(0, 0, bytes)
+            //videoEncoder.writeFrame(bytes.size, 0, ByteBuffer.allocate(bytes.size).put(bytes))
+        }
+    }
+
+    fun flashVideo() {
+        //videoEncoder.stop()
     }
 
     companion object {
