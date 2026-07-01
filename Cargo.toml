@@ -1,11 +1,13 @@
 [workspace]
-members = ["xtask", "game_master", "ball_watcher"]
+members = ["xtask", "game_master", "ball_watcher", "api/rust"]
 resolver = "3"
 
 [workspace.package]
 edition = "2024"
 
 [workspace.dependencies]
+struckout-proto = { path = "./api/rust/" }
+
 prost = "0.14.3"
 tokio = "1.52.3"
 tracing = "0.1.44"
