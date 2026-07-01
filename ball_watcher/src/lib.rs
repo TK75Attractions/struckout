@@ -11,26 +11,15 @@ use tokio::{net::TcpStream, sync::mpsc};
 use tracing::{error, warn};
 
 use crate::{
-    data_association::associate_objects,
-    kalman::KalmanTrack,
-    protobuf::{CameraLocation, ProjectorPacket, UdpPacket, projector_packet},
-    transport::{TcpTransport, UdpTransport, write_packet},
-    triangulate::triangulate,
+    collision_output::collision_sender,
     types::{CameraId, CollisionPoint3D, GetLayFromDetectedObject},
 };
+use struckout_proto::{CameraLocation, ProjectorPacket, UdpPacket, projector_packet};
 
 mod collision_output;
-pub(crate) mod data_association;
 mod detection_input;
-pub(crate) mod kalman;
 mod tracking;
-pub(crate) mod transport;
-pub(crate) mod triangulate;
 pub(crate) mod types;
-
-pub mod protobuf {
-    include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
-}
 
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
@@ -50,17 +39,15 @@ pub async fn run_main() -> std::io::Result<()> {
         frame_socket.start().await.unwrap();
     });
     let join3 = tokio::spawn(collect_frames(state, frame_rx, collision_tx));
-    #[cfg(feature = "network-projector")]
     let join4 = tokio::spawn(collision_sender(collision_rx));
-    #[cfg(not(feature = "network-projector"))]
-    let join4 = tokio::spawn(async move {
+    /*let join4 = tokio::spawn(async move {
         loop {
             use tracing::trace;
 
             let coll = collision_rx.recv().await.unwrap();
             trace!(target = "collision", ?coll, "detected collision");
         }
-    });
+    });*/
     join1.await.unwrap();
     join2.await.unwrap();
     join3.await.unwrap();
@@ -198,29 +185,4 @@ impl State {
     }
 }
 
-/// Result of [`State::update_assigned_tracks()`]
-#[derive(Debug)]
-struct UpdateTrackResult {
-    assigned_dets_a: Vec<usize>,
-    assigned_dets_b: Vec<usize>,
-    /// (`track_idx`, `collision_point`)
-    collisions: Vec<(usize, CollisionPoint3D)>,
-}
-
-/// Paired frames from two cameras at the same timestamp.
-#[derive(Debug)]
-struct PairedFrames {
-    timestamp_avr: DateTime<Utc>,
-    a: UdpPacket,
-    b: UdpPacket,
-}
-
-impl PairedFrames {
-    fn new(a: (DateTime<Utc>, UdpPacket), b: (DateTime<Utc>, UdpPacket)) -> Self {
-        Self {
-            timestamp_avr: b.0 + (a.0 - b.0) / 2,
-            a: a.1,
-            b: b.1,
-        }
-    }
 }

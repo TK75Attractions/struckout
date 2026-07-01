@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
 use parking_lot::RwLock;
+use struckout_proto::DetectedObject;
 use tracktor::{
     filters::kalman::KalmanFilter,
     models::{ConstantVelocity3D, PositionSensor3D},
@@ -12,9 +13,8 @@ use tracktor::{
 
 use crate::{
     State,
-    data_association::ObjectTrack,
-    protobuf::DetectedObject,
-    types::{CameraId, CollisionPoint3D, Position3D},
+    tracking::data_association::ObjectTrack,
+    types::{CameraId, CollisionPoint3D, Position3D, ToVector3},
 };
 
 const GRAVITY_ACCELERATION: f32 = 9.80665;
@@ -148,7 +148,7 @@ impl KalmanTrack {
             .get(&camera_id.into())
             .unwrap()
             .to_owned()
-            .into()
+            .to_vector3()
     }
 }
 

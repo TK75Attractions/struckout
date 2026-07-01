@@ -3,8 +3,7 @@
 use std::fmt::Debug;
 
 use nalgebra::Vector3;
-
-use crate::protobuf::{CameraLocation, DetectedObject};
+use struckout_proto::{CameraLocation, DetectedObject};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FrameId(u32);
@@ -67,8 +66,8 @@ pub trait ToVector3 {
     fn to_vector3(&self) -> Vector3<f64>;
 }
 
-impl Into<Vector3<f64>> for CameraLocation {
-    fn into(self) -> Vector3<f64> {
+impl ToVector3 for CameraLocation {
+    fn to_vector3(&self) -> Vector3<f64> {
         Vector3::new(self.x, self.y, self.z)
     }
 }

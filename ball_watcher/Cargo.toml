@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = { workspace = true }
 
 [dependencies]
+struckout-proto = { workspace = true }
+
 nalgebra = { version = "0.34.2" }
 tracktor = "0.4.1"
 
@@ -28,11 +30,11 @@ bytes = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
 parking_lot = { workspace = true }
+
+clap = { workspace = true }
 sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
 
 [features]
-default = ["network-projector"]
-network-projector = []
 
 [build-dependencies]
 prost-build = { workspace = true }
