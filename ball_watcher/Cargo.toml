@@ -28,6 +28,7 @@ bytes = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
 parking_lot = { workspace = true }
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
 
 [features]
 default = ["network-projector"]
