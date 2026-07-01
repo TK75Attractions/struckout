@@ -1,0 +1,13 @@
+[package]
+name = "struckout-proto"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+prost = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["io-util"] }
+bytes = { workspace = true }
+
+[build-dependencies]
+prost-build = { workspace = true }
