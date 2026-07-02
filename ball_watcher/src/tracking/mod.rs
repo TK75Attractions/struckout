@@ -16,7 +16,7 @@ pub use kalman::KalmanTrack;
 
 /// Result of [`State::update_assigned_tracks()`]
 #[derive(Debug)]
-struct UpdateTrackResult {
+pub struct UpdateTrackResult {
     assigned_dets_a: Vec<usize>,
     assigned_dets_b: Vec<usize>,
     /// (`track_idx`, `collision_point`)
@@ -25,7 +25,7 @@ struct UpdateTrackResult {
 
 /// Paired frames from two cameras at the same timestamp.
 #[derive(Debug)]
-struct PairedFrames {
+pub struct PairedFrames {
     timestamp_avr: DateTime<Utc>,
     a: UdpPacket,
     b: UdpPacket,

@@ -105,7 +105,7 @@ impl KalmanTrack {
     }
 
     /// Updates filter and check if the object was collided to target plane.
-    pub fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D> {
+    pub fn update_and_check_collision(&mut self, _new_pos: Position3D) -> Option<CollisionPoint3D> {
         //task::spawn_blocking(|| {
 
         /*let Some(idx_a) =

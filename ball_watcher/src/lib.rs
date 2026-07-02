@@ -17,8 +17,8 @@ use crate::{
 };
 use struckout_proto::{CameraLocation, UdpPacket};
 
-mod collision_output;
-mod detection_input;
+pub mod collision_output;
+pub mod detection_input;
 mod tracking;
 pub(crate) mod types;
 
@@ -36,19 +36,19 @@ where
     DI: DetectionInput + Send + 'static,
     CO: CollisionOutput + Send + 'static,
 {
-    pub fn new(detection_input: DI, collision_output: CO) -> Self {
+    pub fn new(detection_input: DI, collision_output: CO, state: Arc<RwLock<State>>) -> Self {
         Self {
             detection_input,
             collision_output,
-            state: Arc::new(RwLock::new(State::new())),
+            state,
         }
     }
 
-    pub async fn run(mut self) -> anyhow::Result<()> {
+    pub async fn run(self) -> anyhow::Result<()> {
         let (frame_tx, frame_rx) = mpsc::channel(FRAME_CHANNEL_BUF);
-        let (collision_tx, mut collision_rx) = mpsc::channel(COLLISION_CHANNEL_BUF);
+        let (collision_tx, collision_rx) = mpsc::channel(COLLISION_CHANNEL_BUF);
 
-        let mut detection_input = self.detection_input;
+        let detection_input = self.detection_input;
         let join1 = tokio::spawn(async move {
             detection_input.start(frame_tx).await.unwrap();
         });
@@ -64,14 +64,14 @@ where
 }
 
 /// Holds application states.
-struct State {
+pub struct State {
     frames: VecDeque<(DateTime<Utc>, UdpPacket)>,
     camera_locs: HashMap<CameraId, CameraLocation>,
     tracks: Vec<KalmanTrack>,
 }
 
 impl State {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             frames: VecDeque::new(),
             camera_locs: HashMap::new(),

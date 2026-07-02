@@ -1,4 +1,10 @@
-use ball_watcher::Application;
+use std::sync::Arc;
+
+use ball_watcher::{
+    Application, State, collision_output::NetworkCollisionOutput,
+    detection_input::NetworkDetectionInput,
+};
+use parking_lot::RwLock;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -9,7 +15,13 @@ async fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let app = Application::new(todo!(), todo!());
+    let state = Arc::new(RwLock::new(State::new()));
+    let detection_input = NetworkDetectionInput::new(Arc::clone(&state))
+        .await
+        .unwrap();
+    let collision_output = NetworkCollisionOutput::connect().await.unwrap();
 
-    //app.run().await.unwrap();
+    let app = Application::new(detection_input, collision_output, Arc::clone(&state));
+
+    app.run().await.unwrap();
 }
