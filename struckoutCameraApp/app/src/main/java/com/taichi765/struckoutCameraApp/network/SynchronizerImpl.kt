@@ -88,7 +88,7 @@ class SynchronizerImpl : Synchronizer {
 
     companion object {
         const val TAG = "SynchronizerImpl"
-        const val REMOTE_ADDRESS = "192.168.10.110"
+        const val REMOTE_ADDRESS = "127.0.0.1"
         const val REMOTE_PORT = 6262
     }
 }
