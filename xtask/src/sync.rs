@@ -3,13 +3,12 @@ use bytes::BytesMut;
 use clap::Args;
 use prost::{DecodeError, Message};
 use sqlx::sqlite::SqlitePoolOptions;
+use struckout_proto::{UdpPacket, read_packet_raw};
 use thiserror::Error;
 use tokio::{
     io::{AsyncRead, AsyncReadExt as _, AsyncWriteExt},
     net::TcpListener,
 };
-
-use crate::proto;
 
 const TCP_PORT: &str = "0.0.0.0:6262";
 
@@ -41,10 +40,10 @@ impl SyncArgs {
         println!("data length: {}", data_length);
 
         for _ in 0..data_length {
-            let (packet, raw): (proto::UdpPacket, _) = read_packet(&mut stream)
+            let mut raw = read_packet_raw(&mut stream)
                 .await
                 .with_context(|| "failed to read packet")?;
-            println!("{:?}", packet.timestamp);
+            let packet = UdpPacket::decode(&mut raw).with_context(|| "failed to decode packet")?;
             let raw: &[u8] = &raw;
             sqlx::query!("INSERT INTO frames VALUES (?, ?)", packet.timestamp, raw)
                 .execute(&pool)
@@ -59,25 +58,4 @@ impl SyncArgs {
         println!("succeed to sync frames");
         Ok(())
     }
-}
-
-/// Reads a protobuf message from `input`.
-///
-/// Note that this function allocates buffer every time so it might not be efficient when the function is called frequently.
-async fn read_packet<T: Message + Default, I: AsyncRead + Unpin>(
-    input: &mut I,
-) -> Result<(T, BytesMut), ReadPacketError> {
-    let len = input.read_u32_le().await?;
-    let mut buf = BytesMut::zeroed(len as usize);
-    input.read_exact(&mut buf).await?;
-    let packet = T::decode(&mut buf)?;
-    Ok((packet, buf))
-}
-
-#[derive(Debug, Error)]
-enum ReadPacketError {
-    #[error(transparent)]
-    ReadFailed(#[from] std::io::Error),
-    #[error(transparent)]
-    DecodeFailed(#[from] DecodeError),
 }

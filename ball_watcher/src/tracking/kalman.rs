@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
 use parking_lot::RwLock;
+use struckout_proto::DetectedObject;
 use tracktor::{
     filters::kalman::KalmanFilter,
     models::{ConstantVelocity3D, PositionSensor3D},
@@ -12,9 +13,8 @@ use tracktor::{
 
 use crate::{
     State,
-    data_association::ObjectTrack,
-    protobuf::DetectedObject,
-    types::{CameraId, CollisionPoint3D, Position3D},
+    tracking::data_association::ObjectTrack,
+    types::{CameraId, CollisionPoint3D, Position3D, ToVector3},
 };
 
 const GRAVITY_ACCELERATION: f32 = 9.80665;
@@ -105,7 +105,7 @@ impl KalmanTrack {
     }
 
     /// Updates filter and check if the object was collided to target plane.
-    pub fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D> {
+    pub fn update_and_check_collision(&mut self, _new_pos: Position3D) -> Option<CollisionPoint3D> {
         //task::spawn_blocking(|| {
 
         /*let Some(idx_a) =
@@ -148,7 +148,7 @@ impl KalmanTrack {
             .get(&camera_id.into())
             .unwrap()
             .to_owned()
-            .into()
+            .to_vector3()
     }
 }
 

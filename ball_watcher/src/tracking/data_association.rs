@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
+use struckout_proto::DetectedObject;
 use tracing::warn;
 use tracktor::assignment::{CostMatrix, hungarian};
 
-use crate::{PairedFrames, protobuf::DetectedObject, types::CameraId};
+use super::PairedFrames;
+use crate::types::CameraId;
 
 /// Tracks an object.
 pub trait ObjectTrack {

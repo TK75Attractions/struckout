@@ -1,17 +1,18 @@
 use nalgebra::Vector3;
+use struckout_proto::CameraLocation;
 
-use crate::{protobuf::CameraLocation, types::Position3D};
+use crate::types::{Position3D, ToVector3};
 
 #[must_use]
-pub(crate) fn triangulate(
+pub fn triangulate(
     camera_loc_1: CameraLocation,
     orientation_1: Vector3<f64>,
     camera_loc_2: CameraLocation,
     orientation_2: Vector3<f64>,
 ) -> Position3D {
     // TODO: From / Intoを使う
-    let p: Vector3<f64> = camera_loc_1.into();
-    let q: Vector3<f64> = camera_loc_2.into();
+    let p: Vector3<f64> = camera_loc_1.to_vector3();
+    let q: Vector3<f64> = camera_loc_2.to_vector3();
     let a = orientation_1;
     let b = orientation_2;
 

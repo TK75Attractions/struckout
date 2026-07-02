@@ -1,7 +1,7 @@
 mod proto {
     include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
 }
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use prost::{DecodeError, EncodeError, Message};
 pub use proto::*;
 use thiserror::Error;
@@ -40,11 +40,18 @@ pub enum WritePacketError {
 pub async fn read_packet<T: Message + Default, I: AsyncRead + Unpin>(
     input: &mut I,
 ) -> Result<T, ReadPacketError> {
+    let mut buf = read_packet_raw(input).await?;
+    let packet = T::decode(&mut buf)?;
+    Ok(packet)
+}
+
+pub async fn read_packet_raw<I: AsyncRead + Unpin>(
+    input: &mut I,
+) -> Result<BytesMut, std::io::Error> {
     let len = input.read_u32_le().await?;
     let mut buf = BytesMut::zeroed(len as usize);
     input.read_exact(&mut buf).await?;
-    let packet = T::decode(&mut buf)?;
-    Ok(packet)
+    Ok(buf)
 }
 
 #[derive(Debug, Error)]

@@ -169,7 +169,7 @@ class TcpSessionImpl(
     companion object {
         const val TAG = "TcpSessionImpl"
 
-        const val TCP_REMOTE_ADDRESS = "192.168.10.110"
+        const val TCP_REMOTE_ADDRESS = "127.0.0.1"
 
         const val TCP_REMOTE_PORT = 6060
     }
