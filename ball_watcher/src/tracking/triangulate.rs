@@ -4,7 +4,7 @@ use struckout_proto::CameraLocation;
 use crate::types::{Position3D, ToVector3};
 
 #[must_use]
-pub(crate) fn triangulate(
+pub fn triangulate(
     camera_loc_1: CameraLocation,
     orientation_1: Vector3<f64>,
     camera_loc_2: CameraLocation,

@@ -9,8 +9,6 @@ use tokio::{
     net::TcpListener,
 };
 
-use crate::proto;
-
 const TCP_PORT: &str = "0.0.0.0:6262";
 
 #[derive(Args)]
@@ -41,7 +39,7 @@ impl SyncArgs {
         println!("data length: {}", data_length);
 
         for _ in 0..data_length {
-            let (packet, raw): (proto::UdpPacket, _) = read_packet(&mut stream)
+            let (packet, raw): (struckout_proto::UdpPacket, _) = read_packet(&mut stream)
                 .await
                 .with_context(|| "failed to read packet")?;
             println!("{:?}", packet.timestamp);

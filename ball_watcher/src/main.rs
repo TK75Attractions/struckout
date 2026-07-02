@@ -1,4 +1,4 @@
-use ball_watcher::run_main;
+use ball_watcher::Application;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -9,5 +9,7 @@ async fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    run_main().await.unwrap();
+    let app = Application::new(todo!(), todo!());
+
+    //app.run().await.unwrap();
 }

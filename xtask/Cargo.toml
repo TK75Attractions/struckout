@@ -22,5 +22,7 @@ bytes = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "macros"] }
 dirs = { workspace = true }
 
+struckout-proto = { workspace = true }
+
 [build-dependencies]
 prost-build = { workspace = true }

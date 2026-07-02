@@ -2241,6 +2241,7 @@ dependencies = [
  "prost",
  "prost-build",
  "sqlx",
+ "struckout-proto",
  "thiserror",
  "tokio",
  "tracing",
