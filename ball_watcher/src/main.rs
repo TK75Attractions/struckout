@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ball_watcher::{
     Application, State, collision_output::NetworkCollisionOutput,
-    detection_input::NetworkDetectionInput,
+    detection_input::NetworkDetectionInput, tracking::KalmanTrack,
 };
 use parking_lot::RwLock;
 use tracing::Level;
@@ -21,7 +21,11 @@ async fn main() {
         .unwrap();
     let collision_output = NetworkCollisionOutput::connect().await.unwrap();
 
-    let app = Application::new(detection_input, collision_output, Arc::clone(&state));
+    let app = Application::<KalmanTrack<Arc<RwLock<State>>>, _, _, _>::new(
+        detection_input,
+        collision_output,
+        Arc::clone(&state),
+    );
 
     app.run().await.unwrap();
 }

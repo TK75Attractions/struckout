@@ -1,23 +1,9 @@
 use std::collections::HashMap;
-
-use chrono::{DateTime, Utc};
-use struckout_proto::DetectedObject;
 use tracing::warn;
 use tracktor::assignment::{CostMatrix, hungarian};
 
 use super::PairedFrames;
-use crate::types::CameraId;
-
-/// Tracks an object.
-pub trait ObjectTrack {
-    /// Predict object location and evaluate scores for each detections.
-    fn evaluate_scores<'a>(
-        &mut self,
-        camera_id: impl Into<CameraId>,
-        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
-        timestamp: DateTime<Utc>,
-    ) -> impl Iterator<Item = f64> + Clone + 'a;
-}
+use crate::tracking::ObjectTrack;
 
 /// Associates detections to known objects (trackers).
 ///
@@ -108,6 +94,13 @@ mod tests {
                 _ => panic!("unknown camera!"),
             };
             ret
+        }
+
+        fn update_and_check_collision(
+            &mut self,
+            new_pos: crate::types::Position3D,
+        ) -> Option<crate::types::CollisionPoint3D> {
+            todo!()
         }
     }
 

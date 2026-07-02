@@ -1,75 +1,76 @@
-use std::collections::HashMap;
-
-use chrono::{DateTime, TimeDelta, TimeZone as _, Utc};
-use struckout_proto::UdpPacket;
-use tracing::warn;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    detection_input::PairedFrames,
     tracking::data_association::associate_objects,
-    types::{CameraId, CollisionPoint3D, GetLayFromDetectedObject as _},
+    types::{CameraId, CollisionPoint3D, GetLayFromDetectedObject as _, Position3D},
 };
 
 mod data_association;
 mod kalman;
 mod triangulate;
+use anyhow::Context;
+use chrono::{DateTime, Utc};
 pub use kalman::KalmanTrack;
+use parking_lot::RwLock;
+use struckout_proto::{CameraLocation, DetectedObject};
+use tokio::sync::mpsc;
 
-/// Result of [`State::update_assigned_tracks()`]
-#[derive(Debug)]
-pub struct UpdateTrackResult {
-    assigned_dets_a: Vec<usize>,
-    assigned_dets_b: Vec<usize>,
-    /// (`track_idx`, `collision_point`)
-    collisions: Vec<(usize, CollisionPoint3D)>,
+pub struct TrackRunner<T, P> {
+    tracks: Vec<T>,
+    camera_loc_provider: P,
 }
 
-/// Paired frames from two cameras at the same timestamp.
-#[derive(Debug)]
-pub struct PairedFrames {
-    timestamp_avr: DateTime<Utc>,
-    a: UdpPacket,
-    b: UdpPacket,
+/// Tracks an object.
+pub trait ObjectTrack {
+    /// Predict object location and evaluate scores for each detections.
+    fn evaluate_scores<'a>(
+        &mut self,
+        camera_id: impl Into<CameraId>,
+        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
+        timestamp: DateTime<Utc>,
+    ) -> impl Iterator<Item = f64> + Clone + 'a;
+
+    fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D>;
 }
 
-impl PairedFrames {
-    fn new(a: (DateTime<Utc>, UdpPacket), b: (DateTime<Utc>, UdpPacket)) -> Self {
-        Self {
-            timestamp_avr: b.0 + (a.0 - b.0) / 2,
-            a: a.1,
-            b: b.1,
-        }
+pub trait CameraLocationProvider: Send + 'static + Clone {
+    fn get(&self, id: CameraId) -> Option<CameraLocation>;
+}
+
+impl CameraLocationProvider for Arc<RwLock<crate::State>> {
+    fn get(&self, id: CameraId) -> Option<CameraLocation> {
+        self.read().camera_locs.get(&id).cloned()
     }
 }
 
-const FRAME_MATCHING_DELTA: TimeDelta = TimeDelta::milliseconds(3);
+impl<T, P> TrackRunner<T, P>
+where
+    T: ObjectTrack,
+    P: CameraLocationProvider,
+{
+    pub fn new(camera_loc_provider: P) -> Self {
+        Self {
+            tracks: Vec::new(),
+            camera_loc_provider,
+        }
+    }
 
-impl crate::State {
-    pub fn update_frame(&mut self, packet: UdpPacket) -> Vec<CollisionPoint3D> {
-        let cur_frame_time = Utc.timestamp_opt(packet.timestamp, 0).unwrap();
-        let cur_frame_cam_id = packet.camera_id;
-        self.frames.push_back((cur_frame_time, packet));
+    pub async fn start(
+        mut self,
+        mut pair_rx: mpsc::Receiver<PairedFrames>,
+        collision_tx: mpsc::Sender<CollisionPoint3D>,
+    ) -> anyhow::Result<()> {
+        loop {
+            let pair = pair_rx
+                .recv()
+                .await
+                .with_context(|| "pair channel has been unexpectedly closed")
+                .unwrap();
+        }
+    }
 
-        // match corresponding frames
-        let idx = {
-            let mut recent_frames = self.frames.iter().enumerate().filter(|(_, (t, p))| {
-                *t - cur_frame_time < FRAME_MATCHING_DELTA && p.camera_id != cur_frame_cam_id
-            });
-            let Some((idx, _)) = recent_frames.next() else {
-                // wait for another camera to send this frame
-                return Vec::new();
-            };
-            if recent_frames.next().is_some() {
-                warn!(
-                    "there was too many frame at the same time. picking first one and ignore others."
-                )
-            }
-            idx
-        };
-
-        let a = self.frames.pop_back().unwrap(); // pushed above
-        let b = self.frames.remove(idx).unwrap(); // idx comes from above block
-        let pair = PairedFrames::new(a, b);
-
+    pub fn update_frame(&mut self, pair: PairedFrames) -> Vec<CollisionPoint3D> {
         let assignments = associate_objects(&mut self.tracks, &pair);
         // known tracks
         let res = self.update_assigned_tracks(&pair, &assignments);
@@ -117,9 +118,15 @@ impl crate::State {
                 assigned_dets_a.push(det_a);
                 assigned_dets_b.push(det_b);
                 let new_pos = triangulate::triangulate(
-                    self.camera_locs.get(&CameraId::new(0)).unwrap().clone(),
+                    self.camera_loc_provider
+                        .get(CameraId::new(0))
+                        .unwrap()
+                        .clone(),
                     pair.a.detected_objects.get(det_a).unwrap().get_lay(),
-                    self.camera_locs.get(&CameraId::new(1)).unwrap().clone(),
+                    self.camera_loc_provider
+                        .get(CameraId::new(1))
+                        .unwrap()
+                        .clone(),
                     pair.b.detected_objects.get(det_b).unwrap().get_lay(),
                 );
                 let track = self.tracks.get_mut(*track_idx).unwrap();
@@ -135,3 +142,15 @@ impl crate::State {
         }
     }
 }
+
+/// Result of [`State::update_assigned_tracks()`]
+#[derive(Debug)]
+pub struct UpdateTrackResult {
+    assigned_dets_a: Vec<usize>,
+    assigned_dets_b: Vec<usize>,
+    /// (`track_idx`, `collision_point`)
+    collisions: Vec<(usize, CollisionPoint3D)>,
+}
+
+#[cfg(test)]
+mod tests {}

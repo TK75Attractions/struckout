@@ -1,6 +1,8 @@
 use std::{io, sync::Arc};
 
+use anyhow::Context;
 use bytes::BytesMut;
+use chrono::DateTime;
 use parking_lot::RwLock;
 use prost::Message as _;
 use struckout_proto::{
@@ -15,14 +17,20 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-use crate::{State, detection_input::DetectionInput, types::CameraId};
+use crate::{
+    State,
+    detection_input::{DetectionInput, FramePairMatcher, PairedFrames},
+    types::CameraId,
+};
 
 const FRAME_UDP_ADDR_DEFAULT: &str = "0.0.0.0:5050";
 const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
+const PAKCET_CHANNEL_BUF: usize = 5;
 
 pub struct NetworkDetectionInput {
     udp_transport: UdpTransport,
     tcp_transport: TcpTransport,
+    matcher: FramePairMatcher,
 }
 
 impl NetworkDetectionInput {
@@ -38,13 +46,33 @@ impl NetworkDetectionInput {
         Ok(Self {
             udp_transport,
             tcp_transport,
+            matcher: FramePairMatcher::new(),
         })
     }
 }
 
 impl DetectionInput for NetworkDetectionInput {
-    async fn start(mut self, frame_tx: mpsc::Sender<UdpPacket>) -> std::io::Result<()> {
-        tokio::spawn(async move { self.udp_transport.start(frame_tx).await });
+    async fn start(mut self, pair_tx: mpsc::Sender<PairedFrames>) -> std::io::Result<()> {
+        let (packet_tx, mut packet_rx) = mpsc::channel(PAKCET_CHANNEL_BUF);
+        tokio::spawn(async move { self.udp_transport.start(packet_tx).await });
+        tokio::spawn(async move {
+            loop {
+                let packet = packet_rx
+                    .recv()
+                    .await
+                    .with_context(|| "packet channel has been unexpectedly closed")
+                    .unwrap();
+                let time = DateTime::from_timestamp(packet.timestamp, 0).unwrap();
+                let pair = self.matcher.pair_frame(time, packet);
+                if let Some(pair) = pair {
+                    pair_tx
+                        .send(pair)
+                        .await
+                        .with_context(|| "pair channel has been unexpectedly closed")
+                        .unwrap();
+                }
+            }
+        });
         tokio::spawn(async move { self.tcp_transport.listen().await });
         Ok(())
     }
