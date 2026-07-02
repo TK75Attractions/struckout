@@ -5,7 +5,7 @@ use tracing::error;
 use crate::{collision_output::CollisionOutput, types::CollisionPoint3D};
 
 // TODO: set actual value
-const PROJECTOR_ADDR: &str = "192.168.00.000";
+const PROJECTOR_ADDR: &str = "127.0.0.1:5125";
 
 pub struct NetworkCollisionOutput {
     stream: TcpStream,
