@@ -4,11 +4,13 @@ use chrono::{DateTime, TimeDelta, TimeZone as _, Utc};
 use struckout_proto::UdpPacket;
 use tokio::sync::mpsc;
 
+mod db;
 mod network;
 pub use network::{NetworkDetectionInput, NetworkDetectionInputCreationError};
 use tracing::warn;
 
 mod sqlite;
+pub use sqlite::SqliteDetectionInput;
 
 pub trait DetectionInput {
     fn start(
@@ -53,8 +55,8 @@ impl FramePairMatcher {
             idx
         };
 
-        let a = self.frames.pop_back().unwrap(); // pushed above
-        let b = self.frames.remove(idx).unwrap(); // idx comes from above block
+        let (_, a) = self.frames.pop_back().unwrap(); // pushed above
+        let (_, b) = self.frames.remove(idx).unwrap(); // idx comes from above block
         Some(PairedFrames::new(a, b))
     }
 }
@@ -68,11 +70,13 @@ pub struct PairedFrames {
 }
 
 impl PairedFrames {
-    fn new(a: (DateTime<Utc>, UdpPacket), b: (DateTime<Utc>, UdpPacket)) -> Self {
+    fn new(a: UdpPacket, b: UdpPacket) -> Self {
+        let a_time = DateTime::from_timestamp_millis(a.timestamp).unwrap();
+        let b_time = DateTime::from_timestamp_millis(b.timestamp).unwrap();
         Self {
-            timestamp_avr: b.0 + (a.0 - b.0) / 2,
-            a: a.1,
-            b: b.1,
+            timestamp_avr: b_time + (a_time - b_time) / 2,
+            a,
+            b,
         }
     }
 }
