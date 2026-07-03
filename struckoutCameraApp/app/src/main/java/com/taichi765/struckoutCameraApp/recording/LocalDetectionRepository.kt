@@ -1,5 +1,6 @@
 package com.taichi765.struckoutCameraApp.recording
 
+import com.taichi765.struckoutCameraApp.InputStreamCompat
 import com.taichi765.struckoutCameraApp.network.bytesToInt
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.network.writePacket
@@ -54,7 +55,7 @@ class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDa
         }
 
         withContext(Dispatchers.IO) {
-            val retCode = bytesToInt(input.readNBytes(4))
+            val retCode = bytesToInt(InputStreamCompat.readNBytes(input, len))
             if (retCode != 0) {
                 throw IOException("failed to sync")
             }
