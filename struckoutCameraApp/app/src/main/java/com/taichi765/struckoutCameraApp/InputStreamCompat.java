@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Compatibility layer for {@link java.io.InputStream}.
  */
-@SuppressWarnings("SpellCheckingInspection")
+@SuppressWarnings({"SpellCheckingInspection", "NonStrictComparisonCanBeEquality"})
 public final class InputStreamCompat {
     private static final int DEFAULT_BUFFER_SIZE = 8192;
 
