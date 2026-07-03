@@ -32,10 +32,10 @@ where
                 new_frame.b.detected_objects.iter(),
                 new_frame.timestamp_avr,
             );
-            for (i, s) in scores_a.enumerate() {
+            for (i, &s) in scores_a.iter().enumerate() {
                 ret1.set(i, obj_idx, s);
             }
-            for (i, s) in scores_b.enumerate() {
+            for (i, &s) in scores_b.iter().enumerate() {
                 ret2.set(i, obj_idx, s);
             }
         }
@@ -69,11 +69,12 @@ where
 mod tests {
     use std::ops::Range;
 
-    use chrono::DateTime;
+    use chrono::{DateTime, Utc};
     use nalgebra::Vector3;
     use rand::random_range;
+    use struckout_proto::{DetectedObject, UdpPacket};
 
-    use crate::{kalman::evaluate_scores_for_detections, protobuf::UdpPacket};
+    use crate::{tracking::kalman::evaluate_scores_for_detections, types::CameraId};
 
     use super::*;
 
@@ -83,17 +84,19 @@ mod tests {
     }
 
     impl ObjectTrack for StubObjectTrack {
-        async fn evaluate_scores<'a>(
+        fn evaluate_scores<'a>(
             &mut self,
             camera_id: impl Into<CameraId>,
             _detections: impl Iterator<Item = &'a DetectedObject> + 'a,
-        ) -> impl Iterator<Item = f64> + Clone + 'a {
-            let ret = match camera_id.into() {
+            _timestamp: DateTime<Utc>,
+        ) -> Vec<f64> {
+            /*let ret = match camera_id.into() {
                 id if id == CameraId::new(0) => self.scores_a.clone().into_iter(),
                 id if id == CameraId::new(1) => self.scores_b.clone().into_iter(),
                 _ => panic!("unknown camera!"),
             };
-            ret
+            ret*/
+            Vec::new()
         }
 
         fn update_and_check_collision(
@@ -192,42 +195,36 @@ mod tests {
                 new_frame.a.detected_objects.iter(),
                 camera_loc_a,
                 predict1,
-            )
-            .collect(),
+            ),
             scores_b: evaluate_scores_for_detections(
                 new_frame.b.detected_objects.iter(),
                 camera_loc_b,
                 predict1,
-            )
-            .collect(),
+            ),
         };
         let track2 = StubObjectTrack {
             scores_a: evaluate_scores_for_detections(
                 new_frame.a.detected_objects.iter(),
                 camera_loc_a,
                 predict2,
-            )
-            .collect(),
+            ),
             scores_b: evaluate_scores_for_detections(
                 new_frame.b.detected_objects.iter(),
                 camera_loc_b,
                 predict2,
-            )
-            .collect(),
+            ),
         };
         let track3 = StubObjectTrack {
             scores_a: evaluate_scores_for_detections(
                 new_frame.a.detected_objects.iter(),
                 camera_loc_a,
                 predict3,
-            )
-            .collect(),
+            ),
             scores_b: evaluate_scores_for_detections(
                 new_frame.b.detected_objects.iter(),
                 camera_loc_b,
                 predict3,
-            )
-            .collect(),
+            ),
         };
         let mut tracks = vec![track1, track2, track3];
 

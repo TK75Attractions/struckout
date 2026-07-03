@@ -115,7 +115,7 @@ where
         camera_id: impl Into<CameraId>,
         detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
         timestamp: DateTime<Utc>,
-    ) -> impl Iterator<Item = f64> + Clone + 'a {
+    ) -> Vec<f64> {
         let state = self.filter.predict(
             &self.kalman_state,
             (timestamp - self.prev_timestamp).as_seconds_f64(),
@@ -178,15 +178,17 @@ pub fn evaluate_scores_for_detections<'a>(
     detections: impl Iterator<Item = &'a DetectedObject> + Clone,
     camera_loc: Vector3<f64>,
     estimated_coord: Vector3<f64>,
-) -> impl Iterator<Item = f64> + Clone {
+) -> Vec<f64> {
     // TODO: minが一定距離より遠かったらNoneにする
-    detections.map(move |obj| {
-        // 点と直線の距離。TODO: 数式があってるか確認
-        let lay = Vector3::new(obj.lay_x.into(), obj.lay_y.into(), obj.lay_z.into());
-        let top = (estimated_coord - camera_loc).cross(&lay).norm();
-        let bottom = lay.norm();
-        (top / bottom).into()
-    })
+    detections
+        .map(move |obj| {
+            // 点と直線の距離。TODO: 数式があってるか確認
+            let lay = Vector3::new(obj.lay_x.into(), obj.lay_y.into(), obj.lay_z.into());
+            let top = (estimated_coord - camera_loc).cross(&lay).norm();
+            let bottom = lay.norm();
+            (top / bottom).into()
+        })
+        .collect()
 }
 
 /// Zips two scores into one score.

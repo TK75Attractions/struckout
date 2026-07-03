@@ -30,9 +30,10 @@ bytes = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
 parking_lot = { workspace = true }
+tempfile = { workspace = true }
 
 clap = { workspace = true, features = ["derive"] }
-sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio", "migrate"] }
 
 [features]
 
