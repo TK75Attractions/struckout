@@ -34,9 +34,9 @@ class CameraViewModel @Inject constructor(
 
     //private lateinit var videoEncoder: VideoEncoder
 
-    val analyzer = MyAnalyzer(cameraRepository.tracker) { mat, imageTimestamp, rects ->
-        val bitmap = createBitmap(mat.cols(), mat.rows())
-        Utils.matToBitmap(mat, bitmap)
+    val analyzer = MyAnalyzer(cameraRepository.tracker) { result ->
+        val bitmap = createBitmap(result.mat.cols(), result.mat.rows())
+        Utils.matToBitmap(result.mat, bitmap)
         val imageBitMap = bitmap.asImageBitmap()
 
         /*if (!::videoEncoder.isInitialized) {
@@ -45,7 +45,7 @@ class CameraViewModel @Inject constructor(
                 videoEncoder.run()
             }
         }*/
-        if (rects.count() == 0) {
+        if (result.bboxes.count() == 0) {
             return@MyAnalyzer
         }
 
@@ -56,16 +56,16 @@ class CameraViewModel @Inject constructor(
         // create and send packet
         val curFrameID = frameId.toULong()
         val data = DetectionData(
-            timestamp = getTimestamp(imageTimestamp),
+            timestamp = getTimestamp(result.imageTimestampMillis),
             frameId = curFrameID,
-            detections = rects.map { rect ->
-                val worldDirection = cameraRepository.calc(rect)
+            detections = result.bboxes.map { bbox ->
+                val worldDirection = cameraRepository.calc(bbox)
                 detectedObject {
                     layX = worldDirection.x
                     layY = worldDirection.y
                     layZ = worldDirection.z
-                    bboxWidth = rect.width
-                    bboxHeight = rect.height
+                    bboxWidth = bbox.width
+                    bboxHeight = bbox.height
                 }
             })
         viewModelScope.launch {
@@ -73,7 +73,7 @@ class CameraViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val yuv = Mat()
-            Imgproc.cvtColor(mat, yuv, Imgproc.COLOR_BGR2YUV)
+            Imgproc.cvtColor(result.mat, yuv, Imgproc.COLOR_BGR2YUV)
             val bytes = ByteArray(yuv.total().toInt())
             yuv.get(0, 0, bytes)
             //videoEncoder.writeFrame(bytes.size, 0, ByteBuffer.allocate(bytes.size).put(bytes))
