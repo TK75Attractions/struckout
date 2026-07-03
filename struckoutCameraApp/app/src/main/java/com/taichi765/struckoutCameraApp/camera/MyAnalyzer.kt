@@ -8,6 +8,7 @@ import org.opencv.core.Mat
 import org.opencv.core.Rect
 import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
+import java.util.concurrent.TimeUnit
 
 
 class MyAnalyzer(
@@ -16,7 +17,7 @@ class MyAnalyzer(
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
         image.use { image ->
-            val timestamp = image.imageInfo.timestamp
+            val timestampMillis = TimeUnit.NANOSECONDS.toMillis(image.imageInfo.timestamp)
             val mat = getMatFromImage(image)
             val rects = tracker.nextFrame(mat)
 
