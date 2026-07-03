@@ -6,3 +6,5 @@ target/
 
 # Ignore .DS_Store file in mac
 **/.DS_Store
+
+/.env

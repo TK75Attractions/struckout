@@ -29,7 +29,7 @@ pub trait ObjectTrack {
         camera_id: impl Into<CameraId>,
         detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
         timestamp: DateTime<Utc>,
-    ) -> impl Iterator<Item = f64> + Clone + 'a;
+    ) -> Vec<f64>;
 
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D>;
 }
