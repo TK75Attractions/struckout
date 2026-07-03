@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use ball_watcher::{
-    Application, State, collision_output::NetworkCollisionOutput,
-    detection_input::NetworkDetectionInput, tracking::KalmanTrack,
+    Application, State,
+    collision_output::NetworkCollisionOutput,
+    detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
+    tracking::KalmanTrack,
 };
 use clap::{Parser, ValueEnum};
 use parking_lot::RwLock;
@@ -33,6 +35,35 @@ enum CollisionOutputKind {
     Csv,
 }
 
+/// [`DetectionInput`] is not dyn compatible, so we need this enum.
+enum DetectionInputImpl {
+    Network(NetworkDetectionInput),
+    Sqlite(SqliteDetectionInput),
+}
+
+impl DetectionInput for DetectionInputImpl {
+    async fn start(
+        self,
+        tx: tokio::sync::mpsc::Sender<ball_watcher::detection_input::PairedFrames>,
+    ) -> std::io::Result<()> {
+        match self {
+            DetectionInputImpl::Network(input) => input.start(tx).await,
+            DetectionInputImpl::Sqlite(input) => input.start(tx).await,
+        }
+    }
+}
+
+impl DetectionInputImpl {
+    async fn new(kind: DetectionInputKind, state: Arc<RwLock<State>>) -> Self {
+        match kind {
+            DetectionInputKind::Network => {
+                DetectionInputImpl::Network(NetworkDetectionInput::new(state).await.unwrap())
+            }
+            DetectionInputKind::Sqlite => DetectionInputImpl::Sqlite(SqliteDetectionInput {}),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -44,12 +75,7 @@ async fn main() {
 
     let state = Arc::new(RwLock::new(State::new()));
 
-    let detection_input = match cli.detection_input {
-        DetectionInputKind::Network => NetworkDetectionInput::new(Arc::clone(&state))
-            .await
-            .unwrap(),
-        DetectionInputKind::Sqlite => todo!(),
-    };
+    let detection_input = DetectionInputImpl::new(cli.detection_input, Arc::clone(&state)).await;
     let collision_output = match cli.collision_output {
         CollisionOutputKind::Network => NetworkCollisionOutput::connect().await.unwrap(),
         CollisionOutputKind::Csv => todo!(),
