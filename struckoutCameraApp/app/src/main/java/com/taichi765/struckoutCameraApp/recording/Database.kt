@@ -31,7 +31,6 @@ interface FrameDao {
     @Insert
     suspend fun insertFrame(frame: FrameEntity)
 
-    // TODO: Flowの方がいいかも
     @Query("SELECT * FROM frames")
     suspend fun loadAll(): List<FrameEntity>
 }
