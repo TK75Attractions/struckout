@@ -1,4 +1,11 @@
 -- Add migration script here
+CREATE TABLE frames(
+    timestamp INTEGAR NOT NULL,
+    session_id TEXT NOT NULL,
+    data BLOB NOT NULL,
+    PRIMARY KEY (timestamp, session_id)
+);
+
 CREATE TABLE players (
     id INTEGAR PRIMARY KEY,
     name TEXT   
