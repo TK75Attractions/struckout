@@ -34,7 +34,7 @@ object Icons {
                             strokeLineCap = StrokeCap.Butt,
                             strokeLineJoin = StrokeJoin.Bevel,
                             strokeLineMiter = 1f,
-                            pathFillType = PathFillType.Companion.NonZero,
+                            pathFillType = PathFillType.NonZero,
                         ) {
                             moveTo(12f, 21f)
                             quadTo(8.23f, 21f, 5.61f, 19.84f)
@@ -107,8 +107,6 @@ object Icons {
     private var _database: ImageVector? = null
 
 
-
-
     @Suppress("CheckReturnValue")
     val photo_camera: ImageVector
         get() {
@@ -133,7 +131,7 @@ object Icons {
                             strokeLineCap = StrokeCap.Butt,
                             strokeLineJoin = StrokeJoin.Bevel,
                             strokeLineMiter = 1f,
-                            pathFillType = PathFillType.Companion.NonZero,
+                            pathFillType = PathFillType.NonZero,
                         ) {
                             moveTo(12f, 17.5f)
                             quadToRelative(1.88f, 0f, 3.19f, -1.31f)

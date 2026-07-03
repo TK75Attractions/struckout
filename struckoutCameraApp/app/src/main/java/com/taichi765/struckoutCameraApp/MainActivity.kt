@@ -13,7 +13,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class MainApplication : Application() {}
+class MainApplication : Application()
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
