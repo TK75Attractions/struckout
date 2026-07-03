@@ -12,7 +12,7 @@ import org.opencv.imgproc.Imgproc
 
 class MyAnalyzer(
     val tracker: ObjectTracker,
-    private val withAnalyzeResult: (Mat, Long, List<Rect>) -> Unit,
+    private val withAnalyzeResult: (AnalyzeResult) -> Unit,
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
         image.use { image ->
@@ -32,7 +32,13 @@ class MyAnalyzer(
                 Core.rotate(mat, it, Core.ROTATE_90_CLOCKWISE)
                 it
             }
-            withAnalyzeResult(rotated, timestamp, rects)
+            withAnalyzeResult(
+                AnalyzeResult(
+                    mat = rotated,
+                    imageTimestampMillis = timestampMillis,
+                    bboxes = rects
+                )
+            )
         }
     }
 
@@ -54,6 +60,12 @@ class MyAnalyzer(
         Imgproc.cvtColor(yuv, mat, Imgproc.COLOR_YUV2RGB_NV21, 3)
         return mat
     }
+
+    data class AnalyzeResult(
+        val mat: Mat,
+        val imageTimestampMillis: Long,
+        val bboxes: List<Rect>
+    )
 
 
     companion object {
