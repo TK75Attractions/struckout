@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.v1;
+
+import "google/protobuf/empty.proto";
+
+// `xtask-sync`から`camera`に返されるやつ
+message UploadResult {
+  oneof data {
+    google.protobuf.Empty success = 1;
+    string db_connection_error = 2;
+    string tcp_error = 3;
+    string packet_decode_error = 4;
+    string db_insert_error = 5;
+  }
+}

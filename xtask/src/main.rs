@@ -12,6 +12,8 @@ enum Commands {
     Sync(SyncArgs),
 }
 
+const DB_PATH_DEFAULT: &str = "sqlite:///home/taichi765/.config/struckout/xtask.db";
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
