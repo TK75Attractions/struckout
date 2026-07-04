@@ -1,26 +1,28 @@
-use std::path::{Path, PathBuf};
-
-use anyhow::Context;
 use bytes::BytesMut;
 use clap::Args;
-use prost::{DecodeError, Message};
+use prost::Message;
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 use struckout_proto::{DetectionsPacket, UploadResult, read_packet_raw, upload_result};
-use thiserror::Error;
 use tokio::{
-    io::{AsyncRead, AsyncReadExt as _, AsyncWriteExt},
+    io::{AsyncReadExt as _, AsyncWriteExt as _},
     net::{TcpListener, TcpStream},
 };
-use tracing::error;
 
 const TCP_PORT: &str = "0.0.0.0:6262";
 
+const DB_PATH_DEFAULT: &str = "sqlite:///home/taichi765/.config/struckout/xtask.db";
+
 #[derive(Args)]
-pub struct SyncArgs {}
+pub struct SyncArgs {
+    /// detectionsを保存するデータベース
+    db_url: Option<String>,
+}
 
 impl SyncArgs {
     /// Returns `true` if an unrecoverable error occured and the proccess should exit with failure.
-    pub async fn run(&self, db_url: &str) -> bool {
+    pub async fn run(self) -> bool {
+        let db_url = self.db_url.unwrap_or(DB_PATH_DEFAULT.to_string());
+
         let listener = match TcpListener::bind(TCP_PORT).await {
             Ok(l) => l,
             Err(e) => {
@@ -40,7 +42,7 @@ impl SyncArgs {
 
         let pool = match SqlitePoolOptions::new()
             .max_connections(1)
-            .connect(db_url)
+            .connect(&db_url)
             .await
         {
             Ok(p) => p,
@@ -77,7 +79,7 @@ async fn handle_inputs(pool: &Pool<Sqlite>, stream: &mut TcpStream) -> UploadRes
     println!("total: {}", total);
 
     for _ in 0..total {
-        let mut raw = match read_packet_raw(&mut stream).await {
+        let mut raw = match read_packet_raw(stream).await {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("failed to read packet from stream: {e:?}");
