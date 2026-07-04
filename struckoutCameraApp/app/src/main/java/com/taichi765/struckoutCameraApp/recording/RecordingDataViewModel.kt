@@ -31,8 +31,8 @@ class RecordingDataViewModel @Inject constructor(
     fun syncLocalDetections() {
         check(networkManager.state.value.synchronizerIsConnected())
         viewModelScope.launch {
-            val out = networkManager.currentSynchronizer!!.getOutputStream()
-            val input = networkManager.currentSynchronizer!!.getInputStream()
+            val out = networkManager.currentLocalDetectionUploader!!.getOutputStream()
+            val input = networkManager.currentLocalDetectionUploader!!.getInputStream()
             syncInProgress.value = true
             localDetectionRepository.syncAll(out, input)
         }

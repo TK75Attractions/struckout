@@ -35,18 +35,18 @@ class NetworkManager @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope,
     private val tcpSessionFactory: TcpSession.Factory,
     private val udpConnectionFactory: UdpConnection.Factory,
-    private val synchronizerFactory: Synchronizer.Factory
+    private val localDetectionUploaderFactory: LocalDetectionUploader.Factory
 ) {
     private val _tcpSession = MutableStateFlow<TcpSession?>(null)
     private val _udpConnection = MutableStateFlow<UdpConnection?>(null)
-    private val _synchronizer = MutableStateFlow<Synchronizer?>(null)
+    private val _localDetectionUploader = MutableStateFlow<LocalDetectionUploader?>(null)
 
     val currentTcpSession: TcpSession?
         get() = _tcpSession.value
     val currentUdpConnection: UdpConnection?
         get() = _udpConnection.value
-    val currentSynchronizer: Synchronizer?
-        get() = _synchronizer.value
+    val currentLocalDetectionUploader: LocalDetectionUploader?
+        get() = _localDetectionUploader.value
 
     @Suppress("IfThenToElvis")
     private val _tcpState = _tcpSession.flatMapLatest { session ->
@@ -71,7 +71,7 @@ class NetworkManager @Inject constructor(
     }
 
     @Suppress("IfThenToElvis")
-    private val _synchronizerState = _synchronizer.flatMapLatest { synchronizer ->
+    private val _synchronizerState = _localDetectionUploader.flatMapLatest { synchronizer ->
         if (synchronizer == null) {
             flowOf(InstanceState.NotCreated)
         } else {
@@ -165,7 +165,7 @@ class NetworkManager @Inject constructor(
 
     private fun CoroutineScope.watchSynchronizer() {
         combine(
-            _synchronizer,
+            _localDetectionUploader,
             configRepository.networkFeatureEnabled
         ) { synchronizer, networkFeatureEnabled ->
             Pair(
@@ -174,10 +174,10 @@ class NetworkManager @Inject constructor(
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
-                _synchronizer.value = synchronizerFactory.create()
+                _localDetectionUploader.value = localDetectionUploaderFactory.create()
             }
             if (shouldConnect) {
-                _synchronizer.value!!.connect()
+                _localDetectionUploader.value!!.connect()
             }
         }.launchIn(this)
     }
