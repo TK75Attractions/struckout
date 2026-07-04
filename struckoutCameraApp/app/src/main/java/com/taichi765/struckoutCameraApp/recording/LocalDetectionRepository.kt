@@ -5,7 +5,7 @@ import com.taichi765.struckoutCameraApp.network.bytesToInt
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.network.writePacket
 import com.taichi765.struckoutCameraApp.proto.Struckout
-import com.taichi765.struckoutCameraApp.proto.udpPacket
+import com.taichi765.struckoutCameraApp.proto.detectionsPacket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -26,12 +26,13 @@ class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDa
         frameDao.insertFrame(
             FrameEntity(
                 timestamp = data.timestamp,
-                data = udpPacket {
+                data = detectionsPacket {
                     cameraId = DUMMY_CAMERA_ID
+                    sessionId = TODO()
                     timestamp = data.timestamp
                     frameId = data.frameId.toLong()
                     data.detections.forEach {
-                        detectedObjects += it
+                        detections += it
                     }
                 }
             )
@@ -50,7 +51,7 @@ class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDa
         }
 
         frames.forEach {
-            val packet = Struckout.UdpPacket.newBuilder().mergeFrom(it.data).build()
+            val packet = Struckout.DetectionsPacket.newBuilder().mergeFrom(it.data).build()
             writePacket(output, packet)
         }
 

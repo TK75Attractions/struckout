@@ -7,7 +7,7 @@ interface UdpConnection {
     val isConnected: StateFlow<Boolean>
 
     suspend fun connect(): Boolean
-    suspend fun sendPacket(packet: Struckout.UdpPacket)
+    suspend fun sendPacket(packet: Struckout.DetectionsPacket)
 
     interface Factory {
         fun create(): UdpConnection

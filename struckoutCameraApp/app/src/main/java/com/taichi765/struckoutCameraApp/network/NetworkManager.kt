@@ -5,7 +5,7 @@ import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.network.types.InstanceState
-import com.taichi765.struckoutCameraApp.proto.udpPacket
+import com.taichi765.struckoutCameraApp.proto.detectionsPacket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -202,12 +202,13 @@ class NetworkManager @Inject constructor(
             "UdpConnection must be initialized before sending detection via network"
         }
 
-        val packet = udpPacket {
+        val packet = detectionsPacket {
             cameraId = sessionState.cameraID.toInt()
+            sessionId = TODO()
             timestamp = data.timestamp
             frameId = data.frameId.toLong()
             data.detections.forEach {
-                detectedObjects += it
+                detections += it
             }
         }
 

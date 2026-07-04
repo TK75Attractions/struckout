@@ -20,7 +20,7 @@ data class FrameEntity(
     @PrimaryKey
     val timestamp: Long,
 
-    val data: Struckout.UdpPacket
+    val data: Struckout.DetectionsPacket
 )
 
 @Dao
@@ -46,11 +46,11 @@ abstract class AppDatabase : RoomDatabase() {
 
 class Converters {
     @TypeConverter
-    fun packetToBlob(packet: Struckout.UdpPacket): ByteArray {
+    fun packetToBlob(packet: Struckout.DetectionsPacket): ByteArray {
         return packet.toByteArray()
     }
 
     @TypeConverter
-    fun blobToPacket(blob: ByteArray): Struckout.UdpPacket =
-        Struckout.UdpPacket.newBuilder().mergeFrom(blob).build()
+    fun blobToPacket(blob: ByteArray): Struckout.DetectionsPacket =
+        Struckout.DetectionsPacket.newBuilder().mergeFrom(blob).build()
 }
