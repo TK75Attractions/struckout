@@ -63,6 +63,10 @@ class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDa
         Timber.tag(TAG).d("successfully synced all local frames")
     }
 
+    suspend fun deleteAll() {
+        frameDao.deleteAll()
+    }
+
     companion object {
         const val TAG = "LocalDetectionRepository"
         const val DUMMY_CAMERA_ID = 99

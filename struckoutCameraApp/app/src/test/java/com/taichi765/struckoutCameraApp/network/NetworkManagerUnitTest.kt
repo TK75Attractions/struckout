@@ -24,8 +24,8 @@ class NetworkManagerUnitTest {
         @MockK tcpSessionFactory: TcpSession.Factory,
         @MockK udpConnection: UdpConnection,
         @MockK udpConnectionFactory: UdpConnection.Factory,
-        @MockK synchronizer: Synchronizer,
-        @MockK synchronizerFactory: Synchronizer.Factory
+        @MockK localDetectionUploader: LocalDetectionUploader,
+        @MockK localDetectionUploaderFactory: LocalDetectionUploader.Factory
     ) = runTest {
         // Arrange
         coJustRun { tcpSession.connect() }
@@ -34,9 +34,9 @@ class NetworkManagerUnitTest {
         coJustRun { udpConnection.connect() }
         every { udpConnectionFactory.create() } returns udpConnection
         every { udpConnection.isConnected } returns MutableStateFlow(false)
-        coJustRun { synchronizer.connect() }
-        every { synchronizerFactory.create() } returns synchronizer
-        every { synchronizer.isConnected } returns MutableStateFlow(false)
+        coJustRun { localDetectionUploader.connect() }
+        every { localDetectionUploaderFactory.create() } returns localDetectionUploader
+        every { localDetectionUploader.isConnected } returns MutableStateFlow(false)
 
         val configStoreRepository =
             FakeConfigStoreRepository(initialNetworkFeatureEnabled = false)
@@ -45,7 +45,7 @@ class NetworkManagerUnitTest {
             applicationScope = backgroundScope,
             tcpSessionFactory = tcpSessionFactory,
             udpConnectionFactory = udpConnectionFactory,
-            synchronizerFactory = synchronizerFactory
+            localDetectionUploaderFactory = localDetectionUploaderFactory
         )
 
         // Act1
@@ -55,7 +55,7 @@ class NetworkManagerUnitTest {
         // Assert1
         coVerify(exactly = 0) { tcpSession.connect() }
         coVerify(exactly = 0) { udpConnection.connect() }
-        coVerify(exactly = 0) { synchronizer.connect() }
+        coVerify(exactly = 0) { localDetectionUploader.connect() }
 
         // Act2
         configStoreRepository.toggleNetworkFeature()
@@ -66,7 +66,7 @@ class NetworkManagerUnitTest {
         coVerify(exactly = 1) { tcpSession.connect() }
         verify(exactly = 1) { udpConnectionFactory.create() }
         coVerify(exactly = 1) { udpConnection.connect() }
-        verify(exactly = 1) { synchronizerFactory.create() }
-        coVerify(exactly = 1) { synchronizer.connect() }
+        verify(exactly = 1) { localDetectionUploaderFactory.create() }
+        coVerify(exactly = 1) { localDetectionUploader.connect() }
     }
 }
