@@ -31,7 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.taichi765.struckoutCameraApp.camera.CameraScreenRoute
 import com.taichi765.struckoutCameraApp.config.ConfigScreenRoute
-import com.taichi765.struckoutCameraApp.recording.RecordingDataScreen
+import com.taichi765.struckoutCameraApp.recording.RecordingDataScreenRoute
 
 val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
@@ -58,7 +58,7 @@ fun App() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("data") {
-                RecordingDataScreen()
+                RecordingDataScreenRoute()
             }
             composable("camera") {
                 CameraScreenRoute()

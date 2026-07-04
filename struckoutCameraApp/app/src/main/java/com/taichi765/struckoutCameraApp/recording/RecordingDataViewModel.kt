@@ -7,6 +7,7 @@ import com.taichi765.struckoutCameraApp.network.types.synchronizerIsConnected
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,6 +25,9 @@ class RecordingDataViewModel @Inject constructor(
 
     val syncInProgress = MutableStateFlow(false)
 
+    private val _showConfirmDeleteDialog = MutableStateFlow(false)
+    val showConfirmDeleteDialog = _showConfirmDeleteDialog.asStateFlow()
+
     fun syncLocalDetections() {
         check(networkManager.state.value.synchronizerIsConnected())
         viewModelScope.launch {
@@ -33,5 +37,22 @@ class RecordingDataViewModel @Inject constructor(
             localDetectionRepository.syncAll(out, input)
         }
         syncInProgress.value = false
+
+        _showConfirmDeleteDialog.value = true
+    }
+
+    fun dismissDelete() {
+        _showConfirmDeleteDialog.value = false
+    }
+
+    fun confirmDelete() {
+        _showConfirmDeleteDialog.value = false
+        viewModelScope.launch {
+            try {
+                localDetectionRepository.deleteAll()
+            } catch (e: Exception) {
+                TODO()
+            }
+        }
     }
 }
