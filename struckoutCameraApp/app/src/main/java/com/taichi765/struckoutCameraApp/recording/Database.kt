@@ -33,6 +33,9 @@ interface FrameDao {
 
     @Query("SELECT * FROM frames")
     suspend fun loadAll(): List<FrameEntity>
+
+    @Query("DELETE FROM frames")
+    suspend fun deleteAll()
 }
 
 @TypeConverters(Converters::class)

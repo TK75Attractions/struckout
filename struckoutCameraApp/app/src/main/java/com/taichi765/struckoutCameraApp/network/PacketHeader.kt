@@ -2,6 +2,7 @@ package com.taichi765.struckoutCameraApp.network
 
 import androidx.annotation.CheckResult
 import com.google.protobuf.MessageLite
+import com.taichi765.struckoutCameraApp.InputStreamCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
@@ -13,14 +14,12 @@ suspend inline fun <T : MessageLite> readPacket(
     input: InputStream,
     crossinline parser: (ByteArray) -> T
 ): T {
-    val len = run {
-        val bytes = ByteArray(4)
-        input.readNBytes(bytes, 0, 4)
-        bytesToInt(bytes)
+    val len = withContext(Dispatchers.IO) {
+        bytesToInt(InputStreamCompat.readNBytes(input, 4))
     }
-    val bytes = ByteArray(len)
-    withContext(Dispatchers.IO) {
-        input.readNBytes(bytes, 0, len)
+
+    val bytes = withContext(Dispatchers.IO) {
+        InputStreamCompat.readNBytes(input, len)
     }
     return parser(bytes)
 }

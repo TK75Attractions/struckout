@@ -14,7 +14,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 
-class SynchronizerImpl : Synchronizer {
+class LocalDetectionUploaderImpl : LocalDetectionUploader {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val state = MutableStateFlow<State>(State.DisConnected)
@@ -70,9 +70,9 @@ class SynchronizerImpl : Synchronizer {
         Timber.tag(TAG).d("successfully closed TCP socket")
     }
 
-    object Factory : Synchronizer.Factory {
-        override fun create(): Synchronizer {
-            return SynchronizerImpl()
+    object Factory : LocalDetectionUploader.Factory {
+        override fun create(): LocalDetectionUploader {
+            return LocalDetectionUploaderImpl()
         }
     }
 

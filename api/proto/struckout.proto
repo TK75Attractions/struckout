@@ -5,15 +5,16 @@ package tk75attractions.struckout.v1;
 option java_package = "com.taichi765.struckoutCameraApp.proto";
 
 // UDPでカメラからサーバに送られるパケット
-message UdpPacket {
+message DetectionsPacket {
   uint32 camera_id = 1;
+  string session_id = 2;
   // UNIX epochからの経過時間
-  int64 timestamp = 2;
-  uint64 frame_id = 3;
-  repeated DetectedObject detected_objects = 4;
+  int64 timestamp = 3;
+  uint64 frame_id = 4;
+  repeated Detection detections = 5;
 }
 
-message DetectedObject {
+message Detection {
   int32 bbox_width = 1;
   int32 bbox_height = 2;
   double lay_x = 3;
