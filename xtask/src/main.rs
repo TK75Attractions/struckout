@@ -15,13 +15,11 @@ enum Commands {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-    match &cli.command {
-        Commands::Sync(args) => match args.run().await {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("sync failed: {:?}", e);
+    match cli.command {
+        Commands::Sync(sync) => {
+            if sync.run().await {
                 std::process::exit(1);
-            }
-        },
+            };
+        }
     }
 }

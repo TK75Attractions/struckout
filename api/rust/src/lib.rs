@@ -1,7 +1,7 @@
 mod proto {
     include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
 }
-use bytes::{Bytes, BytesMut};
+use bytes::BytesMut;
 use prost::{DecodeError, EncodeError, Message};
 pub use proto::*;
 use thiserror::Error;
