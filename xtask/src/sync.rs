@@ -22,6 +22,17 @@ impl SyncArgs {
     /// Returns `true` if an unrecoverable error occured and the proccess should exit with failure.
     pub async fn run(self) -> bool {
         let db_url = self.db_url.unwrap_or(DB_PATH_DEFAULT.to_string());
+        let pool = match SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&db_url)
+            .await
+        {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("failed to connect to database at {}: {e:?}", db_url);
+                return true;
+            }
+        };
 
         let listener = match TcpListener::bind(TCP_PORT).await {
             Ok(l) => l,
@@ -39,18 +50,6 @@ impl SyncArgs {
             }
         };
         println!("connected with {:?}", addr);
-
-        let pool = match SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect(&db_url)
-            .await
-        {
-            Ok(p) => p,
-            Err(e) => {
-                eprintln!("failed to connect to database at {}: {e:?}", db_url);
-                return true;
-            }
-        };
 
         let res = handle_inputs(&pool, &mut stream).await;
         let mut res_packet = BytesMut::new();
