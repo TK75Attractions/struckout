@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -41,7 +44,8 @@ fun ConfigScreenRoute(
         onUpdateCameraLocation = { x, y, z ->
             viewModel.updateCameraLocation(x, y, z)
             onNavigateToCameraScreen()
-        }
+        },
+        onResetSession = viewModel::resetSession
     )
 }
 
@@ -52,44 +56,100 @@ private fun ConfigScreen(
     onToggleNetworkFeature: () -> Unit,
     onDisableNetworkFeature: () -> Unit,
     onUpdateCameraLocation: (CharSequence, CharSequence, CharSequence) -> Unit,
-    onRetryConnection: () -> Unit
+    onRetryConnection: () -> Unit,
+    onResetSession: () -> Unit
 ) {
-    val x = rememberTextFieldState((uiState.cameraLocation?.x ?: 0).toString())
-    val y = rememberTextFieldState((uiState.cameraLocation?.y ?: 0).toString())
-    val z = rememberTextFieldState((uiState.cameraLocation?.z ?: 0).toString())
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (!uiState.networkFeatureEnabled || uiState.tcpIsConnected) {
-            SwitchField("Recording Mode", uiState.recodingModeEnabled) {
-                onToggleRecordingMode()
-            }
-            SwitchField("Network feature", uiState.networkFeatureEnabled) {
-                onToggleNetworkFeature()
-            }
-        }
-        if (uiState.tcpIsConnected) {
-            CameraLocationView(
-                x,
-                y,
-                z,
-                uiState.warningState
-            )
-        }
-
-        ConfirmButton {
-            onUpdateCameraLocation(x.text, y.text, z.text)
-        }
-    }
     if (uiState.networkFeatureEnabled && !uiState.tcpIsConnected) {
         FallbackView(onTryConnect = {
             onRetryConnection()
         }, onDisableNetworkFeature = {
             onDisableNetworkFeature()
         })
+    } else {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            SessionCard(onResetSession = onResetSession)
+
+            FeatureConfigCard(
+                uiState = uiState,
+                onToggleNetworkFeature = onToggleNetworkFeature,
+                onToggleRecordingMode = onToggleRecordingMode,
+                onUpdateCameraLocation = onUpdateCameraLocation
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionCard(onResetSession: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(onClick = onResetSession) {
+                Text("Reset session")
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeatureConfigCard(
+    uiState: ConfigUiState,
+    onToggleRecordingMode: () -> Unit,
+    onToggleNetworkFeature: () -> Unit,
+    onUpdateCameraLocation: (CharSequence, CharSequence, CharSequence) -> Unit,
+) {
+    val x = rememberTextFieldState((uiState.cameraLocation?.x ?: 0).toString())
+    val y = rememberTextFieldState((uiState.cameraLocation?.y ?: 0).toString())
+    val z = rememberTextFieldState((uiState.cameraLocation?.z ?: 0).toString())
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            if (!uiState.networkFeatureEnabled || uiState.tcpIsConnected) {
+                SwitchField("Recording Mode", uiState.recodingModeEnabled) {
+                    onToggleRecordingMode()
+                }
+                SwitchField("Network feature", uiState.networkFeatureEnabled) {
+                    onToggleNetworkFeature()
+                }
+            }
+            if (uiState.tcpIsConnected) {
+                CameraLocationView(
+                    x,
+                    y,
+                    z,
+                    uiState.warningState
+                )
+            }
+
+            ConfirmButton {
+                onUpdateCameraLocation(x.text, y.text, z.text)
+            }
+        }
     }
 }
 
@@ -177,6 +237,7 @@ private fun DisconnectedPreView() {
         onDisableNetworkFeature = {},
         onUpdateCameraLocation = { _, _, _ -> },
         onRetryConnection = {},
+        onResetSession = {}
     )
 }
 
@@ -191,7 +252,8 @@ private fun NetworkDisabledPreview() {
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
         onUpdateCameraLocation = { _, _, _ -> },
-        onRetryConnection = {}
+        onRetryConnection = {},
+        onResetSession = {}
     )
 }
 
@@ -205,5 +267,6 @@ private fun ConnectedPreview() {
         onToggleNetworkFeature = {},
         onDisableNetworkFeature = {},
         onUpdateCameraLocation = { _, _, _ -> },
-        onRetryConnection = {})
+        onRetryConnection = {}, onResetSession = {}
+    )
 }

@@ -63,7 +63,7 @@ class UdpConnectionImpl : UdpConnection {
         }
     }
 
-    override suspend fun sendPacket(packet: Struckout.UdpPacket) {
+    override suspend fun sendPacket(packet: Struckout.DetectionsPacket) {
         val curSocket = socket.value
         check(curSocket != null) {
             "UDP port must be connected to port before sending packet"

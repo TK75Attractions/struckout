@@ -11,7 +11,7 @@ import com.taichi765.struckoutCameraApp.camera.types.increment
 import com.taichi765.struckoutCameraApp.camera.types.toULong
 import com.taichi765.struckoutCameraApp.config.PushFrameUseCase
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
-import com.taichi765.struckoutCameraApp.proto.detectedObject
+import com.taichi765.struckoutCameraApp.proto.detection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +60,7 @@ class CameraViewModel @Inject constructor(
             frameId = curFrameID,
             detections = result.bboxes.map { bbox ->
                 val worldDirection = cameraRepository.calc(bbox)
-                detectedObject {
+                detection {
                     layX = worldDirection.x
                     layY = worldDirection.y
                     layZ = worldDirection.z

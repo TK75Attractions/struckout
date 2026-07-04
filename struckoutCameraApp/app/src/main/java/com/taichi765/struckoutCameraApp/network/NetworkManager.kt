@@ -5,7 +5,7 @@ import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.network.types.InstanceState
-import com.taichi765.struckoutCameraApp.proto.udpPacket
+import com.taichi765.struckoutCameraApp.proto.detectionsPacket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.uuid.Uuid
 
 /**
  * [TcpSession]や[UdpConnection]などネットワーク関連のライフサイクルを管理する。
@@ -185,7 +186,7 @@ class NetworkManager @Inject constructor(
     /**
      * TODO: 若干責務外かも
      */
-    suspend fun pushDetection(data: DetectionData) {
+    suspend fun pushDetection(data: DetectionData, sessionID: Uuid) {
         val session = _tcpSession.value
         check(session != null) {
             "TcpSession instance must be created before sending detection via network"
@@ -202,12 +203,13 @@ class NetworkManager @Inject constructor(
             "UdpConnection must be initialized before sending detection via network"
         }
 
-        val packet = udpPacket {
+        val packet = detectionsPacket {
             cameraId = sessionState.cameraID.toInt()
+            sessionId = sessionID.toString()
             timestamp = data.timestamp
             frameId = data.frameId.toLong()
             data.detections.forEach {
-                detectedObjects += it
+                detections += it
             }
         }
 
