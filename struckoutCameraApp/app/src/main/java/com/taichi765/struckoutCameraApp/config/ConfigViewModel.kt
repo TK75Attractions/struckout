@@ -2,6 +2,7 @@ package com.taichi765.struckoutCameraApp.config
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.taichi765.struckoutCameraApp.CaptureSession
 import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.TcpSession
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
@@ -21,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ConfigViewModel @Inject constructor(
     private val networkManager: NetworkManager,
-    private val configRepository: ConfigStoreRepository
+    private val configRepository: ConfigStoreRepository,
+    private val captureSession: CaptureSession
 ) : ViewModel() {
     /**
      * TODO: [TcpSession]に持たせる
@@ -71,6 +73,10 @@ class ConfigViewModel @Inject constructor(
         viewModelScope.launch {
             configRepository.updateCameraLocation(cameraLocation)
         }
+    }
+
+    fun resetSession() {
+        captureSession.reset()
     }
 
     fun retryConnection() {

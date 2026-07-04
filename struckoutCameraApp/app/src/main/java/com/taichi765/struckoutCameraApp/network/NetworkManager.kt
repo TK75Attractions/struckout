@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.uuid.Uuid
 
 /**
  * [TcpSession]や[UdpConnection]などネットワーク関連のライフサイクルを管理する。
@@ -185,7 +186,7 @@ class NetworkManager @Inject constructor(
     /**
      * TODO: 若干責務外かも
      */
-    suspend fun pushDetection(data: DetectionData) {
+    suspend fun pushDetection(data: DetectionData, sessionID: Uuid) {
         val session = _tcpSession.value
         check(session != null) {
             "TcpSession instance must be created before sending detection via network"
@@ -204,7 +205,7 @@ class NetworkManager @Inject constructor(
 
         val packet = detectionsPacket {
             cameraId = sessionState.cameraID.toInt()
-            sessionId = TODO()
+            sessionId = sessionID.toString()
             timestamp = data.timestamp
             frameId = data.frameId.toLong()
             data.detections.forEach {

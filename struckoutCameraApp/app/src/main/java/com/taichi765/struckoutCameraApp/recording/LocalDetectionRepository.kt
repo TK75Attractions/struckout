@@ -15,6 +15,7 @@ import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject
+import kotlin.uuid.Uuid
 
 /**
  * Saves detections to disk (in protobuf format).
@@ -22,13 +23,13 @@ import javax.inject.Inject
 class LocalDetectionRepository @Inject constructor(private val frameDao: FrameDao) {
     val rowCount = frameDao.countRows()
 
-    suspend fun pushDetection(data: DetectionData) {
+    suspend fun pushDetection(data: DetectionData, sessionID: Uuid) {
         frameDao.insertFrame(
             FrameEntity(
                 timestamp = data.timestamp,
                 data = detectionsPacket {
                     cameraId = DUMMY_CAMERA_ID
-                    sessionId = TODO()
+                    sessionId = sessionID.toString()
                     timestamp = data.timestamp
                     frameId = data.frameId.toLong()
                     data.detections.forEach {
