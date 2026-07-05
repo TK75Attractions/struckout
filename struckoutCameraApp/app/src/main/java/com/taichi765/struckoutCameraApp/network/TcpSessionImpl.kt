@@ -1,12 +1,12 @@
 package com.taichi765.struckoutCameraApp.network
 
+import com.taichi765.struckoutCameraApp.network.TcpSession.ConnectionError
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
 import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -67,51 +67,56 @@ class TcpSessionImpl(
         }.launchIn(scope)
     }
 
-    override suspend fun connect(): Boolean {
+
+    /**
+     * @return `null` is returned if connection succeeds.
+     */
+    override suspend fun connect(): ConnectionError? {
         return withContext(Dispatchers.IO) {
             Timber.tag(TAG).i("connecting to ball_watcher")
             val socket = try {
                 val ret = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
                 Timber.tag(TAG).i("TCP connection has been established successfully")
                 ret
-            } catch (e: Exception) {
-                when (e) {
-                    is TimeoutCancellationException,
-                    is IOException -> {
-                        Timber.tag(TAG).w("failed to connect to TCP server: $e")
-                        return@withContext false
-                    }
-
-                    else -> throw e
-                }
+            } catch (e: IOException) {
+                Timber.tag(TAG).w("failed to connect to TCP server: $e")
+                return@withContext ConnectionError.TcpConnectionFailed(e)
             }
 
             Timber.tag(TAG).i("initializing states via TCP")
-            try {
+            val packet = try {
                 val inputStream = socket.getInputStream()
-                val packet = readPacket(inputStream, Struckout.TcpServerPacket::parseFrom)
-                when (packet.dataCase) {
-                    Struckout.TcpServerPacket.DataCase.CAMERA_ID -> {
-                        val cameraId = packet.cameraId.toUInt()
-                        _connState.value = InternalSessionState.Connected(
-                            socket,
-                            cameraId,
-                        )
-                        Timber.tag(TAG).i("successfully initialized connection states")
-                    }
-
-                    Struckout.TcpServerPacket.DataCase.DATA_NOT_SET -> Timber.tag(TAG)
-                        .w("received invalid TCP packet from server")
-                }
+                readPacket(inputStream, Struckout.TcpServerPacket::parseFrom)
             } catch (e: IOException) {
                 Timber.tag(TAG).w("failed to initialize connection states: $e")
-                return@withContext false
+                return@withContext ConnectionError.InitializationFailed(
+                    ConnectionError.InitializationError.ReadPacketFailed(
+                        e
+                    )
+                )
+            }
+
+            when (packet.dataCase) {
+                Struckout.TcpServerPacket.DataCase.CAMERA_ID -> {
+                    val cameraId = packet.cameraId.toUInt()
+                    _connState.value = InternalSessionState.Connected(
+                        socket,
+                        cameraId,
+                    )
+                    Timber.tag(TAG).i("successfully initialized connection states")
+                }
+
+                Struckout.TcpServerPacket.DataCase.DATA_NOT_SET -> {
+                    Timber.tag(TAG)
+                        .w("received invalid TCP packet from server")
+                    return@withContext ConnectionError.InitializationFailed(ConnectionError.InitializationError.InvalidPacket)
+                }
             }
 
             scope.launch {
                 outputActor(socket.getOutputStream())
             }
-            return@withContext true
+            return@withContext null
         }
     }
 

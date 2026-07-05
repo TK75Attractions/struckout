@@ -1,10 +1,11 @@
 package com.taichi765.struckoutCameraApp.network.types
 
 import com.taichi765.struckoutCameraApp.network.SessionState
+import com.taichi765.struckoutCameraApp.network.TcpSession
 
 sealed interface ConnectionState {
     data class NetworkFeatureEnabled(
-        val tcpInstanceState: InstanceState<SessionState>,
+        val tcpInstanceState: InstanceState<TcpState>,
         val udpInstanceState: InstanceState<Boolean>,
         val synchronizerInstanceState: InstanceState<Boolean>
     ) : ConnectionState
@@ -17,10 +18,12 @@ sealed interface InstanceState<out T> {
     object NotCreated : InstanceState<Nothing>
 }
 
+data class TcpState(val sessionState: SessionState, val lastError: TcpSession.ConnectionError?)
+
 fun ConnectionState.tcpIsConnected(): Boolean {
     return this is ConnectionState.NetworkFeatureEnabled
             && this.tcpInstanceState is InstanceState.Created
-            && this.tcpInstanceState.state is SessionState.Connected
+            && this.tcpInstanceState.state.sessionState is SessionState.Connected
 }
 
 fun ConnectionState.udpIsConnected(): Boolean {

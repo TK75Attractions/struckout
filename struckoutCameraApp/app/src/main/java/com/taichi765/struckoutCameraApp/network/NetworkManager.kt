@@ -5,6 +5,7 @@ import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.network.types.InstanceState
+import com.taichi765.struckoutCameraApp.network.types.TcpState
 import com.taichi765.struckoutCameraApp.proto.detectionsPacket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,6 +40,7 @@ class NetworkManager @Inject constructor(
     private val localDetectionUploaderFactory: LocalDetectionUploader.Factory
 ) {
     private val _tcpSession = MutableStateFlow<TcpSession?>(null)
+    private val _lastTcpError = MutableStateFlow<TcpSession.ConnectionError?>(null)
     private val _udpConnection = MutableStateFlow<UdpConnection?>(null)
     private val _localDetectionUploader = MutableStateFlow<LocalDetectionUploader?>(null)
 
@@ -49,16 +51,22 @@ class NetworkManager @Inject constructor(
     val currentLocalDetectionUploader: LocalDetectionUploader?
         get() = _localDetectionUploader.value
 
-    @Suppress("IfThenToElvis")
-    private val _tcpState = _tcpSession.flatMapLatest { session ->
-        if (session == null) {
-            flowOf(InstanceState.NotCreated)
-        } else {
-            session.state.map {
-                InstanceState.Created(it)
+
+    val tcpState =
+        _tcpSession.flatMapLatest { session ->
+            if (session == null) {
+                flowOf(InstanceState.NotCreated)
+            } else {
+                combine(session.state, _lastTcpError) { state, error ->
+                    InstanceState.Created(
+                        TcpState(
+                            sessionState = state,
+                            lastError = error
+                        )
+                    )
+                }
             }
         }
-    }
 
     @Suppress("IfThenToElvis")
     private val _udpState = _udpConnection.flatMapLatest { udpConnection ->
@@ -84,7 +92,7 @@ class NetworkManager @Inject constructor(
 
     val state = combine(
         configRepository.networkFeatureEnabled,
-        _tcpState,
+        tcpState,
         _udpState,
         _synchronizerState
     ) { networkFeatureEnabled, tcpState, udpState, synchronizerState ->
@@ -140,7 +148,10 @@ class NetworkManager @Inject constructor(
                 _tcpSession.value = tcpSessionFactory.create()
             }
             if (shouldConnect) {
-                _tcpSession.value!!.connect()
+                val error = _tcpSession.value!!.connect()
+                if (error != null) {
+                    _lastTcpError.value = error
+                }
             }
         }.launchIn(this)
     }
