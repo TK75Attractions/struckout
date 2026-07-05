@@ -67,6 +67,9 @@ fun App() {
                 ConfigScreenRoute(
                     onNavigateToCameraScreen = {
                         navController.navigate("camera")
+                    },
+                    onPopBackNavStack = {
+                        navController.popBackStack()
                     }
                 )
             }

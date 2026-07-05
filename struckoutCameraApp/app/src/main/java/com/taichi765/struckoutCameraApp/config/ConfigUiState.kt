@@ -1,28 +1,24 @@
 package com.taichi765.struckoutCameraApp.config
 
-import com.taichi765.struckoutCameraApp.proto.Struckout
-
 data class ConfigUiState(
-    val recodingModeEnabled: Boolean = ConfigStoreRepository.ENABLE_RECORDING_MODE_DEFAULT,
-    val networkFeatureEnabled: Boolean = ConfigStoreRepository.ENABLE_NETWORK_FEATURE_DEFAULT,
-    val udpIsConnected: Boolean = false,
-    val tcpIsConnected: Boolean = false,
-    val cameraLocation: Struckout.CameraLocation? = null,
-    val warningState: WarningState = WarningState()
+    val recodingModeEnabled: Boolean,
+    val detectionOutputKind: DetectionOutputKind,
+    val udpIsConnected: Boolean,
+    val tcpIsConnected: Boolean,
+    val locationX: CharSequence,
+    val locationY: CharSequence,
+    val locationZ: CharSequence,
 )
 
 /**
- * `true`のとき警告を表示する
+ * Creates [ConfigUiState] with default values.
  */
-data class WarningState(
-    val showX: Boolean = false,
-    val showY: Boolean = false,
-    val showZ: Boolean = false
+fun ConfigUiState(): ConfigUiState = ConfigUiState(
+    recodingModeEnabled = ConfigStoreRepository.ENABLE_RECORDING_MODE_DEFAULT,
+    detectionOutputKind = DetectionOutputKind.NONE,
+    udpIsConnected = false,
+    tcpIsConnected = false,
+    locationX = "dummy!",
+    locationY = "dummy!",
+    locationZ = "dummy!",
 )
-
-fun WarningState.isAllOk(): Boolean {
-    if (showX) return false
-    if (showY) return false
-    if (showZ) return false
-    return true
-}

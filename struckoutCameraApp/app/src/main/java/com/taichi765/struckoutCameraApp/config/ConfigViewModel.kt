@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.CaptureSession
 import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.TcpSession
-import com.taichi765.struckoutCameraApp.network.types.ConnectionState
 import com.taichi765.struckoutCameraApp.network.types.tcpIsConnected
 import com.taichi765.struckoutCameraApp.network.types.udpIsConnected
 import com.taichi765.struckoutCameraApp.proto.Struckout
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,7 +27,6 @@ class ConfigViewModel @Inject constructor(
      * TODO: [TcpSession]に持たせる
      */
     private val _cameraLocation = MutableStateFlow<Struckout.CameraLocation?>(null)
-    private val _warningState = MutableStateFlow(WarningState())
 
     /**
      * invariant: `isConnected` should be always `false` if `networkFeature` is disabled.
@@ -38,42 +35,24 @@ class ConfigViewModel @Inject constructor(
      */
     val uiState = combine(
         configRepository.recordingModeEnabled,
+        configRepository.detectionOutputKind,
         networkManager.state,
         _cameraLocation,
-        _warningState
-    ) { recodingModeEnabled, connectionState, cameraLocation, warningState ->
+    ) { recodingModeEnabled, detectionOutputKind, connectionState, cameraLocation ->
         ConfigUiState(
             recodingModeEnabled,
-            networkFeatureEnabled = connectionState is ConnectionState.NetworkFeatureEnabled,
+            detectionOutputKind = detectionOutputKind,
             tcpIsConnected = connectionState.tcpIsConnected(),
             udpIsConnected = connectionState.udpIsConnected(),
-            cameraLocation = cameraLocation,
-            warningState = warningState
+            locationX = (cameraLocation?.x ?: 0).toString(),
+            locationY = (cameraLocation?.y ?: 0).toString(),
+            locationZ = (cameraLocation?.z ?: 0).toString(),
         )
     }.stateIn(
         viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ConfigUiState()
     )
-
-    fun updateCameraLocation(x: CharSequence, y: CharSequence, z: CharSequence) {
-        if (validateCameraLocationState(x, y, z)) return
-
-        Timber.tag(TAG).i("updating camera location")
-        val x = x.toString().toDouble()
-        val y = y.toString().toDouble()
-        val z = z.toString().toDouble()
-
-        val cameraLocation = cameraLocation {
-            this.x = x
-            this.y = y
-            this.z = z
-        }
-
-        viewModelScope.launch {
-            configRepository.updateCameraLocation(cameraLocation)
-        }
-    }
 
     fun resetSession() {
         captureSession.reset()
@@ -85,28 +64,31 @@ class ConfigViewModel @Inject constructor(
         }
     }
 
-    /**
-     * @return `true` if valid, `false` if invalid.
-     */
-    private fun validateCameraLocationState(
-        x: CharSequence,
-        y: CharSequence,
-        z: CharSequence
-    ): Boolean {
-        // reset state
-        _warningState.value = WarningState()
+    fun applyChanges(newState: ConfigUiState) {
+        val oldState = uiState.value
 
-        if (x.any { !it.isDigit() }) {
-            _warningState.value = _warningState.value.copy(showX = true)
+        if (newState.recodingModeEnabled != oldState.recodingModeEnabled) {
+            viewModelScope.launch {
+                configRepository.toggleRecordingMode()
+            }
         }
-        if (y.any { !it.isDigit() }) {
-            _warningState.value = _warningState.value.copy(showY = true)
+
+        val newKind = newState.detectionOutputKind
+        if (newKind != oldState.detectionOutputKind) {
+            viewModelScope.launch {
+                configRepository.setDetectionOutputKind(newKind)
+            }
         }
-        if (z.any { !it.isDigit() }) {
-            _warningState.value = _warningState.value.copy(showZ = true)
+
+        val newLocation =
+            convertCharsToCameraLocation(newState) ?: TODO("あとでUI追加する")
+        if (newLocation != _cameraLocation.value) {
+            viewModelScope.launch {
+                configRepository.updateCameraLocation(newLocation)
+            }
         }
-        return _warningState.value.isAllOk()
     }
+
 
     fun toggleRecordingMode() {
         viewModelScope.launch {
@@ -114,24 +96,22 @@ class ConfigViewModel @Inject constructor(
         }
     }
 
-    fun toggleNetworkFeature() {
-        viewModelScope.launch {
-            configRepository.toggleNetworkFeature()
-        }
-    }
-
-    fun disableNetworkFeature() {
-        check(configRepository.networkFeatureEnabled.value) {
-            "disableNetworkFeature should not be called when it's already disabled"
-        }
-        viewModelScope.launch {
-            configRepository.disableNetworkFeature()
-        }
-    }
-
-
     companion object {
         const val TAG = "ConfigViewModel"
+    }
+}
+
+/**
+ * @return `null` if [CharSequence]s contains invalid characters.
+ */
+private fun convertCharsToCameraLocation(newState: ConfigUiState): Struckout.CameraLocation? {
+    val x = runCatching { newState.locationX.toString().toDouble() }.getOrNull() ?: return null
+    val y = runCatching { newState.locationY.toString().toDouble() }.getOrNull() ?: return null
+    val z = runCatching { newState.locationZ.toString().toDouble() }.getOrNull() ?: return null
+    return cameraLocation {
+        this.x = x
+        this.y = y
+        this.z = z
     }
 }
 
