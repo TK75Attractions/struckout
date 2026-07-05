@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class RecordingDataViewModel @Inject constructor(
+class LocalDataViewModel @Inject constructor(
     private val localDetectionRepository: LocalDetectionRepository,
     private val localDetectionUploader: LocalDetectionUploader
 ) : ViewModel() {

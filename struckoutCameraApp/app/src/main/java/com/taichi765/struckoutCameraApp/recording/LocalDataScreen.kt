@@ -24,14 +24,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @Composable
-fun RecordingDataScreenRoute() {
-    val viewModel = hiltViewModel<RecordingDataViewModel>()
+fun LocalDataScreenRoute() {
+    val viewModel = hiltViewModel<LocalDataViewModel>()
 
     val rowCount by viewModel.rowCount.collectAsState()
     val syncInProgress by viewModel.syncInProgress.collectAsState()
     val showConfirmDeleteDialog by viewModel.showConfirmDeleteDialog.collectAsState()
 
-    RecordingDataScreen(
+    LocalDataScreen(
         rowCount = rowCount,
         syncInProgress = syncInProgress,
         showConfirmDeleteDialog = showConfirmDeleteDialog,
@@ -42,7 +42,7 @@ fun RecordingDataScreenRoute() {
 }
 
 @Composable
-fun RecordingDataScreen(
+fun LocalDataScreen(
     rowCount: Int,
     syncInProgress: Boolean,
     showConfirmDeleteDialog: Boolean,
@@ -108,7 +108,7 @@ fun ConfirmDeleteDialog(onDismissDelete: () -> Unit, onConfirmDelete: () -> Unit
 @Preview
 @Composable
 fun DefaultPreview() {
-    RecordingDataScreen(
+    LocalDataScreen(
         rowCount = 100,
         syncInProgress = false,
         showConfirmDeleteDialog = false,
@@ -120,7 +120,7 @@ fun DefaultPreview() {
 @Preview
 @Composable
 fun SyncInProgressPreview() {
-    RecordingDataScreen(
+    LocalDataScreen(
         rowCount = 100,
         syncInProgress = true,
         showConfirmDeleteDialog = false,
@@ -132,7 +132,7 @@ fun SyncInProgressPreview() {
 @Composable
 @Preview
 fun ConfirmDeletePreview() {
-    RecordingDataScreen(
+    LocalDataScreen(
         rowCount = 100,
         syncInProgress = false,
         showConfirmDeleteDialog = true,
