@@ -2,7 +2,7 @@ package com.taichi765.struckoutCameraApp.recording
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.taichi765.struckoutCameraApp.network.NetworkManager
+import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,7 +14,7 @@ import javax.inject.Inject
 @HiltViewModel
 class RecordingDataViewModel @Inject constructor(
     private val localDetectionRepository: LocalDetectionRepository,
-    private val networkManager: NetworkManager
+    private val localDetectionUploader: LocalDetectionUploader
 ) : ViewModel() {
     val rowCount = localDetectionRepository.rowCount.stateIn(
         scope = viewModelScope,
@@ -22,20 +22,23 @@ class RecordingDataViewModel @Inject constructor(
         initialValue = 0
     )
 
-    val syncInProgress = MutableStateFlow(false)
+    private val _uploadStatus = MutableStateFlow<UploadStatus>(UploadStatus.NotStarted)
+    val uploadStatus = _uploadStatus.asStateFlow()
 
     private val _showConfirmDeleteDialog = MutableStateFlow(false)
     val showConfirmDeleteDialog = _showConfirmDeleteDialog.asStateFlow()
 
     fun syncLocalDetections() {
-        check(networkManager.state.value.synchronizerIsConnected())
         viewModelScope.launch {
-            val out = networkManager.currentLocalDetectionUploader!!.getOutputStream()
-            val input = networkManager.currentLocalDetectionUploader!!.getInputStream()
-            syncInProgress.value = true
-            localDetectionRepository.syncAll(out, input)
+            _uploadStatus.value = UploadStatus.InProgress
+            val frames = localDetectionRepository.loadAll()
+            val error = localDetectionUploader.upload(frames)
+            if (error == null) {
+                _uploadStatus.value = UploadStatus.Succeed
+            } else {
+                _uploadStatus.value = UploadStatus.Error(error)
+            }
         }
-        syncInProgress.value = false
 
         _showConfirmDeleteDialog.value = true
     }
@@ -53,5 +56,21 @@ class RecordingDataViewModel @Inject constructor(
                 TODO()
             }
         }
+    }
+
+    /**
+     * Resets [UploadStatus] before leaving screen.
+     */
+    fun leaveScreen() {
+        _uploadStatus.value = UploadStatus.NotStarted
+    }
+
+    sealed interface UploadStatus {
+        data object NotStarted : UploadStatus
+
+        // TODO: ここで何分の何進んだか管理してもいいかも
+        data object InProgress : UploadStatus
+        data class Error(val error: LocalDetectionUploader.UploadError) : UploadStatus
+        data object Succeed : UploadStatus
     }
 }

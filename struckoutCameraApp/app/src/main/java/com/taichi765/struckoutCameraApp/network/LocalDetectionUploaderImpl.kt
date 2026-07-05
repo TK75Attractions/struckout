@@ -1,5 +1,10 @@
 package com.taichi765.struckoutCameraApp.network
 
+import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.ConnectionError
+import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.UploadError
+import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.recording.FrameEntity
+import com.taichi765.struckoutCameraApp.recording.LocalDetectionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -9,12 +14,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import tk75attractions.struckout.v1.XtaskSync
+import tk75attractions.struckout.v1.XtaskSync.UploadResult.DataCase
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import javax.inject.Inject
 
-class LocalDetectionUploaderImpl : LocalDetectionUploader {
+class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val state = MutableStateFlow<State>(State.DisConnected)
@@ -26,13 +36,13 @@ class LocalDetectionUploaderImpl : LocalDetectionUploader {
         initialValue = false
     )
 
-    override suspend fun connect() {
+    override suspend fun connect(): ConnectionError? {
         withContext(Dispatchers.IO) {
             val socket = try {
                 Socket(REMOTE_ADDRESS, REMOTE_PORT)
             } catch (e: IOException) {
                 Timber.tag(TAG).w("failed to connect to sync server")
-                throw e
+                return@withContext ConnectionError.TcpConnection(e)
             }
             Timber.tag(TAG).i("successfully established TCP connection between server")
 
@@ -42,22 +52,55 @@ class LocalDetectionUploaderImpl : LocalDetectionUploader {
                 input = socket.getInputStream()
             )
         }
+
+        return null
     }
 
-    override fun getOutputStream(): OutputStream {
+    override suspend fun upload(frames: List<FrameEntity>): UploadError? {
+        Timber.tag(LocalDetectionRepository.TAG).i("synchronizing local detections...")
         val curState = state.value
-        check(curState is State.Connected) {
-            "TCP is not connected"
+        if (curState !is State.Connected) {
+            return UploadError.NotConnected
         }
-        return curState.output
-    }
 
-    override fun getInputStream(): InputStream {
-        val curState = state.value
-        check(curState is State.Connected) {
-            "TCP is not connected"
+        val total = frames.count()
+        val header = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(total).array()
+        try {
+            withContext(Dispatchers.IO) {
+                curState.output.write(header)
+            }
+        } catch (e: IOException) {
+            return UploadError.WriteFailed(e)
         }
-        return curState.input
+
+        try {
+            frames.forEach {
+                val packet = Struckout.DetectionsPacket.newBuilder().mergeFrom(it.data).build()
+                writePacket(curState.output, packet)
+            }
+        } catch (e: IOException) {
+            return UploadError.WriteFailed(e)
+        }
+
+        val result = try {
+            readPacket(curState.input, XtaskSync.UploadResult::parseFrom)
+        } catch (e: IOException) {
+            return UploadError.ReadFailed(e)
+        }
+
+        val error = when (result.dataCase) {
+            DataCase.SUCCESS -> null
+            DataCase.DB_CONNECTION_ERROR -> UploadError.ServerError(result.dbConnectionError)
+            DataCase.DB_INSERT_ERROR -> UploadError.ServerError(result.dbInsertError)
+            DataCase.TCP_ERROR -> UploadError.ServerError(result.tcpError)
+            DataCase.PACKET_DECODE_ERROR -> UploadError.ProtocolError(result.packetDecodeError)
+            DataCase.DATA_NOT_SET -> UploadError.ServerError("Received invalid packet")
+        }
+        if (error == null) {
+            Timber.tag(LocalDetectionRepository.TAG).d("successfully synced all local frames")
+        }
+        return error
     }
 
     override fun close() {
