@@ -1,5 +1,6 @@
 package com.taichi765.struckoutCameraApp.network
 
+import androidx.annotation.CheckResult
 import kotlinx.coroutines.flow.StateFlow
 import java.io.Closeable
 import java.io.IOException
@@ -9,6 +10,7 @@ interface TcpSession : SessionStateProvider, Closeable {
     /**
      * @return `null` is returned if connection succeeds.
      */
+    @CheckResult
     suspend fun connect(): ConnectionError?
 
     interface Factory {

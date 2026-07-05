@@ -1,5 +1,6 @@
 package com.taichi765.struckoutCameraApp.network
 
+import androidx.annotation.CheckResult
 import com.taichi765.struckoutCameraApp.proto.Struckout
 import kotlinx.coroutines.flow.StateFlow
 import java.net.SocketException
@@ -10,6 +11,7 @@ interface UdpConnection {
     /**
      * @return `null` if connection succeeds.
      */
+    @CheckResult
     suspend fun connect(): UdpConnectionError?
     suspend fun sendPacket(packet: Struckout.DetectionsPacket)
 
