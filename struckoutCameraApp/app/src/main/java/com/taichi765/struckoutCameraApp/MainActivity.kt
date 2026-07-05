@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         if (BuildConfig.ENABLE_NATS_LOG) {
-            Timber.plant(NatsLoggingTree())
+            TODO("Sentryに置き換え")
         } else {
             Timber.plant(Timber.DebugTree())
         }

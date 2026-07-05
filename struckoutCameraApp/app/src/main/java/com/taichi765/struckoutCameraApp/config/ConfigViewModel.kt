@@ -64,6 +64,9 @@ class ConfigViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Persists temporary changes.
+     */
     fun applyChanges(newState: ConfigUiState) {
         val oldState = uiState.value
 
@@ -86,13 +89,6 @@ class ConfigViewModel @Inject constructor(
             viewModelScope.launch {
                 configRepository.updateCameraLocation(newLocation)
             }
-        }
-    }
-
-
-    fun toggleRecordingMode() {
-        viewModelScope.launch {
-            configRepository.toggleRecordingMode()
         }
     }
 
