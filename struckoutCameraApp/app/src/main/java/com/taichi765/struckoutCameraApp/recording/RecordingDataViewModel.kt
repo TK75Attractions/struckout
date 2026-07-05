@@ -3,7 +3,6 @@ package com.taichi765.struckoutCameraApp.recording
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.network.NetworkManager
-import com.taichi765.struckoutCameraApp.network.types.synchronizerIsConnected
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

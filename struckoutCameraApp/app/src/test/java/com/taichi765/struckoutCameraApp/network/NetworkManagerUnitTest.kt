@@ -146,7 +146,7 @@ class NetworkManagerUnitTest {
         }
 
         // Act 2
-        networkManager.retryConnection()
+        networkManager.retryTcpConnection()
         runCurrent()
     }
 }

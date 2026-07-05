@@ -28,11 +28,6 @@ class ConfigViewModel @Inject constructor(
      */
     private val _cameraLocation = MutableStateFlow<Struckout.CameraLocation?>(null)
 
-    /**
-     * invariant: `isConnected` should be always `false` if `networkFeature` is disabled.
-     *
-     * TODO: isConnectedとnetworkFeatureEnabledをsealed interfaceにする
-     */
     val uiState = combine(
         configRepository.recordingModeEnabled,
         configRepository.detectionOutputKind,
@@ -59,9 +54,7 @@ class ConfigViewModel @Inject constructor(
     }
 
     fun retryConnection() {
-        viewModelScope.launch {
-            networkManager.retryConnection()
-        }
+        networkManager.retryConnection(viewModelScope)
     }
 
     /**

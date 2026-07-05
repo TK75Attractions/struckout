@@ -1,6 +1,7 @@
 package com.taichi765.struckoutCameraApp.network
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.network.types.ConnectionState
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
@@ -37,20 +38,16 @@ class NetworkManager @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope,
     private val tcpSessionFactory: TcpSession.Factory,
     private val udpConnectionFactory: UdpConnection.Factory,
-    private val localDetectionUploaderFactory: LocalDetectionUploader.Factory
 ) {
     private val _tcpSession = MutableStateFlow<TcpSession?>(null)
     private val _lastTcpError = MutableStateFlow<TcpSession.ConnectionError?>(null)
     private val _udpConnection = MutableStateFlow<UdpConnection?>(null)
-    private val _localDetectionUploader = MutableStateFlow<LocalDetectionUploader?>(null)
+    private val _lastUdpError = MutableStateFlow<UdpConnectionError?>(null)
 
     val currentTcpSession: TcpSession?
         get() = _tcpSession.value
     val currentUdpConnection: UdpConnection?
         get() = _udpConnection.value
-    val currentLocalDetectionUploader: LocalDetectionUploader?
-        get() = _localDetectionUploader.value
-
 
     val tcpState =
         _tcpSession.flatMapLatest { session ->
@@ -79,49 +76,94 @@ class NetworkManager @Inject constructor(
         }
     }
 
-    @Suppress("IfThenToElvis")
-    private val _synchronizerState = _localDetectionUploader.flatMapLatest { synchronizer ->
-        if (synchronizer == null) {
-            flowOf(InstanceState.NotCreated)
-        } else {
-            synchronizer.isConnected.map {
-                InstanceState.Created(it)
-            }
-        }
-    }
-
     val state = combine(
-        configRepository.networkFeatureEnabled,
+        configRepository.detectionOutputKind,
         tcpState,
         _udpState,
-        _synchronizerState
-    ) { networkFeatureEnabled, tcpState, udpState, synchronizerState ->
-        if (networkFeatureEnabled) {
-            ConnectionState.NetworkFeatureEnabled(
+    ) { detectionOutputKind, tcpState, udpState ->
+        if (detectionOutputKind == DetectionOutputKind.NETWORK) {
+            ConnectionState.NetworkOutputEnabled(
                 tcpInstanceState = tcpState,
                 udpInstanceState = udpState,
-                synchronizerInstanceState = synchronizerState
             )
         } else {
-            ConnectionState.NetworkFeatureDisabled
+            ConnectionState.NetworkOutputDisabled
         }
     }.stateIn(
         scope = applicationScope,
         started = SharingStarted.Eagerly,
-        initialValue = ConnectionState.NetworkFeatureDisabled
+        initialValue = ConnectionState.NetworkOutputDisabled
     )
-
 
     fun start() {
         Timber.tag(TAG).i("ConnectionManager started")
         applicationScope.launch {
             watchTcpConnection()
             watchUdpStatus()
-            watchSynchronizer()
         }
     }
 
-    suspend fun retryConnection() {
+    private fun CoroutineScope.watchTcpConnection() {
+        combine(
+            _tcpSession,
+            configRepository.detectionOutputKind
+        ) { tcpSession, detectionOutputKind ->
+            Pair(
+                detectionOutputKind == DetectionOutputKind.NETWORK &&
+                        tcpSession == null,
+                detectionOutputKind == DetectionOutputKind.NETWORK && tcpSession != null && tcpSession.state.value !is SessionState.Connected
+            )
+        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
+            if (shouldCreateInstance) {
+                _tcpSession.value = tcpSessionFactory.create()
+            }
+            if (shouldConnect) {
+                val error = _tcpSession.value!!.connect()
+                if (error != null) {
+                    _lastTcpError.value = error
+                }
+            }
+        }.launchIn(this)
+    }
+
+    private fun CoroutineScope.watchUdpStatus() {
+        combine(
+            _udpConnection,
+            configRepository.detectionOutputKind
+        ) { udpConnection, detectionOutputKind ->
+            Pair(
+                detectionOutputKind == DetectionOutputKind.NETWORK && udpConnection == null,
+                detectionOutputKind == DetectionOutputKind.NETWORK && udpConnection != null && !udpConnection.isConnected.value
+            )
+        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
+            if (shouldCreateInstance) {
+                _udpConnection.value = udpConnectionFactory.create()
+            }
+            if (shouldConnect) {
+                val error = _udpConnection.value!!.connect()
+                if (error != null) {
+                    _lastUdpError.value = error
+                }
+            }
+        }.launchIn(this)
+    }
+
+    /**
+     * Retries connection for TCP and UDP.
+     *
+     * This function launches coroutine from [scope] and returns immediately.
+     * You can see the results via [state].
+     */
+    fun retryConnection(scope: CoroutineScope) {
+        scope.launch {
+            retryTcpConnection()
+        }
+        scope.launch {
+            retryUdpConnection()
+        }
+    }
+
+    suspend fun retryTcpConnection() {
         val session = _tcpSession.value
         check(session != null) {
             "TcpSession instance should be created before retrying connection: state = ${state.value}"
@@ -136,67 +178,18 @@ class NetworkManager @Inject constructor(
         }
     }
 
-    private fun CoroutineScope.watchTcpConnection() {
-        combine(
-            _tcpSession,
-            configRepository.networkFeatureEnabled
-        ) { tcpSession, networkFeatureEnabled ->
-            Pair(
-                networkFeatureEnabled &&
-                        tcpSession == null,
-                networkFeatureEnabled && tcpSession != null && tcpSession.state.value !is SessionState.Connected
-            )
+    suspend fun retryUdpConnection() {
+        val udpConn = _udpConnection.value
+        check(udpConn != null) {
+            "UdpConnection instance should be created before retrying UDP connection"
         }
-            .distinctUntilChanged()
-            .onEach { (shouldCreateInstance, shouldConnect) ->
-                if (shouldCreateInstance) {
-                    _tcpSession.value = tcpSessionFactory.create()
-                }
-                if (shouldConnect) {
-                    val error = _tcpSession.value!!.connect()
-                    if (error != null) {
-                        _lastTcpError.value = error
-                    }
-                }
-            }.launchIn(this)
-    }
-
-    private fun CoroutineScope.watchUdpStatus() {
-        combine(
-            _udpConnection,
-            configRepository.networkFeatureEnabled
-        ) { udpConnection, networkFeatureEnabled ->
-            Pair(
-                networkFeatureEnabled && udpConnection == null,
-                networkFeatureEnabled && udpConnection != null && !udpConnection.isConnected.value
-            )
-        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
-            if (shouldCreateInstance) {
-                _udpConnection.value = udpConnectionFactory.create()
-            }
-            if (shouldConnect) {
-                _udpConnection.value!!.connect()
-            }
-        }.launchIn(this)
-    }
-
-    private fun CoroutineScope.watchSynchronizer() {
-        combine(
-            _localDetectionUploader,
-            configRepository.networkFeatureEnabled
-        ) { synchronizer, networkFeatureEnabled ->
-            Pair(
-                networkFeatureEnabled && synchronizer == null,
-                networkFeatureEnabled && synchronizer != null && !synchronizer.isConnected.value
-            )
-        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
-            if (shouldCreateInstance) {
-                _localDetectionUploader.value = localDetectionUploaderFactory.create()
-            }
-            if (shouldConnect) {
-                _localDetectionUploader.value!!.connect()
-            }
-        }.launchIn(this)
+        if (udpConn.isConnected.value) {
+            Timber.tag(TAG).w("retryUdpConnection() is called but it's already connected")
+        }
+        val error = udpConn.connect()
+        if (error != null) {
+            _lastUdpError.value = error
+        }
     }
 
     /**

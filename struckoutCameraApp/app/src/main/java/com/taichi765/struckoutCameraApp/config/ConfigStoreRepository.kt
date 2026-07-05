@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface ConfigStoreRepository : CameraLocationDataSource {
     val recordingModeEnabled: StateFlow<Boolean>
-    val networkFeatureEnabled: StateFlow<Boolean>
     val detectionOutputKind: StateFlow<DetectionOutputKind>
 
     suspend fun setDetectionOutputKind(kind: DetectionOutputKind)

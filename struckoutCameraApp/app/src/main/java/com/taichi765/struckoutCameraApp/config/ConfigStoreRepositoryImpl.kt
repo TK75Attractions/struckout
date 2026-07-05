@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository.Companion.ENABLE_NETWORK_FEATURE_DEFAULT
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository.Companion.ENABLE_RECORDING_MODE_DEFAULT
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.proto.Struckout
@@ -34,14 +33,6 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         scope = scope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ENABLE_RECORDING_MODE_DEFAULT
-    )// アプリケーション全体で共有される状態なのでRepository内でstateInしても不自然ではない
-
-    override val networkFeatureEnabled = context.dataStore.data.map { preferences ->
-        preferences[ENABLE_NETWORK_FEATURE] ?: ENABLE_NETWORK_FEATURE_DEFAULT
-    }.stateIn(
-        scope = scope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ENABLE_NETWORK_FEATURE_DEFAULT
     )// アプリケーション全体で共有される状態なのでRepository内でstateInしても不自然ではない
 
     override val cameraLocation = context.dataStore.data.map { preferences ->
@@ -102,7 +93,6 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         const val TAG = "ConfigStoreRepository"
 
         private val ENABLE_RECORDING_MODE = booleanPreferencesKey("enable_recording_mode")
-        private val ENABLE_NETWORK_FEATURE = booleanPreferencesKey("enable_network")
         private val CAMERA_LOCATION_X = doublePreferencesKey("camera_location_x")
         private val CAMERA_LOCATION_Y = doublePreferencesKey("camera_location_y")
         private val CAMERA_LOCATION_Z = doublePreferencesKey("camera_location_z")

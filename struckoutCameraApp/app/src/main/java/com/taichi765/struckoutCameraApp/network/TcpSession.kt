@@ -6,6 +6,9 @@ import java.io.IOException
 
 
 interface TcpSession : SessionStateProvider, Closeable {
+    /**
+     * @return `null` is returned if connection succeeds.
+     */
     suspend fun connect(): ConnectionError?
 
     interface Factory {

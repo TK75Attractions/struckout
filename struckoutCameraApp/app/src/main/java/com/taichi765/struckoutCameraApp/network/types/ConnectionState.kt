@@ -1,16 +1,20 @@
 package com.taichi765.struckoutCameraApp.network.types
 
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
+import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
 import com.taichi765.struckoutCameraApp.network.SessionState
 import com.taichi765.struckoutCameraApp.network.TcpSession
 
 sealed interface ConnectionState {
-    data class NetworkFeatureEnabled(
+    /**
+     * [DetectionOutputKind] is set to [DetectionOutputKind.NETWORK] in [ConfigStoreRepository].
+     */
+    data class NetworkOutputEnabled(
         val tcpInstanceState: InstanceState<TcpState>,
         val udpInstanceState: InstanceState<Boolean>,
-        val synchronizerInstanceState: InstanceState<Boolean>
     ) : ConnectionState
 
-    object NetworkFeatureDisabled : ConnectionState
+    object NetworkOutputDisabled : ConnectionState
 }
 
 sealed interface InstanceState<out T> {
@@ -21,19 +25,13 @@ sealed interface InstanceState<out T> {
 data class TcpState(val sessionState: SessionState, val lastError: TcpSession.ConnectionError?)
 
 fun ConnectionState.tcpIsConnected(): Boolean {
-    return this is ConnectionState.NetworkFeatureEnabled
+    return this is ConnectionState.NetworkOutputEnabled
             && this.tcpInstanceState is InstanceState.Created
             && this.tcpInstanceState.state.sessionState is SessionState.Connected
 }
 
 fun ConnectionState.udpIsConnected(): Boolean {
-    return this is ConnectionState.NetworkFeatureEnabled
+    return this is ConnectionState.NetworkOutputEnabled
             && this.udpInstanceState is InstanceState.Created
             && this.udpInstanceState.state
-}
-
-fun ConnectionState.synchronizerIsConnected(): Boolean {
-    return this is ConnectionState.NetworkFeatureEnabled
-            && this.synchronizerInstanceState is InstanceState.Created
-            && this.synchronizerInstanceState.state
 }

@@ -67,10 +67,6 @@ class TcpSessionImpl(
         }.launchIn(scope)
     }
 
-
-    /**
-     * @return `null` is returned if connection succeeds.
-     */
     override suspend fun connect(): ConnectionError? {
         return withContext(Dispatchers.IO) {
             Timber.tag(TAG).i("connecting to ball_watcher")

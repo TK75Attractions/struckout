@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.SocketException
 
 
 /**
@@ -43,7 +43,7 @@ class UdpConnectionImpl : UdpConnection {
      * @return
      * Returns whether connecting is succeeded or not.
      */
-    override suspend fun connect(): Boolean {
+    override suspend fun connect(): UdpConnectionError? {
         // TODO: BindErrorとConnectionError分ける
         return withContext(Dispatchers.IO) {
             try {
@@ -55,10 +55,10 @@ class UdpConnectionImpl : UdpConnection {
                 Timber.tag(TAG).i("successfully connected to server via UDP")
 
                 socket.value = newSocket
-                return@withContext true
-            } catch (e: IOException) {
+                return@withContext null
+            } catch (e: SocketException) {
                 Timber.tag(TAG).w("failed to bind port: $e")
-                return@withContext false
+                return@withContext UdpConnectionError.UdpSocketError(e)
             }
         }
     }

@@ -16,10 +16,10 @@ class PushFrameUseCase @Inject constructor(
     private val captureSession: CaptureSession
 ) {
     suspend operator fun invoke(data: DetectionData) {
-        if (configRepository.networkFeatureEnabled.value) {
+        if (configRepository.detectionOutputKind.value == DetectionOutputKind.NETWORK) {
             networkManager.pushDetection(data, captureSession.sessionId)
         }
-        if (configRepository.recordingModeEnabled.value) {
+        if (configRepository.detectionOutputKind.value == DetectionOutputKind.LOCAL) {
             localDetectionRepository.pushDetection(data, captureSession.sessionId)
         }
     }
