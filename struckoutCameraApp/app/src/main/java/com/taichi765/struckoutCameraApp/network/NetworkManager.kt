@@ -130,7 +130,10 @@ class NetworkManager @Inject constructor(
             Timber.tag(TAG).w("retryConnection is called when TCP is already connected")
             return
         }
-        session.connect()
+        val error = session.connect()
+        if (error != null) {
+            _lastTcpError.value = error
+        }
     }
 
     private fun CoroutineScope.watchTcpConnection() {
@@ -143,17 +146,19 @@ class NetworkManager @Inject constructor(
                         tcpSession == null,
                 networkFeatureEnabled && tcpSession != null && tcpSession.state.value !is SessionState.Connected
             )
-        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
-            if (shouldCreateInstance) {
-                _tcpSession.value = tcpSessionFactory.create()
-            }
-            if (shouldConnect) {
-                val error = _tcpSession.value!!.connect()
-                if (error != null) {
-                    _lastTcpError.value = error
+        }
+            .distinctUntilChanged()
+            .onEach { (shouldCreateInstance, shouldConnect) ->
+                if (shouldCreateInstance) {
+                    _tcpSession.value = tcpSessionFactory.create()
                 }
-            }
-        }.launchIn(this)
+                if (shouldConnect) {
+                    val error = _tcpSession.value!!.connect()
+                    if (error != null) {
+                        _lastTcpError.value = error
+                    }
+                }
+            }.launchIn(this)
     }
 
     private fun CoroutineScope.watchUdpStatus() {
