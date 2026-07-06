@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +28,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.UploadError
+import com.taichi765.struckoutCameraApp.recording.LocalDataViewModel.ConnectionStatus
 import com.taichi765.struckoutCameraApp.recording.LocalDataViewModel.UploadStatus
 import java.io.IOException
 
@@ -37,18 +40,21 @@ fun LocalDataScreenRoute() {
 
     val rowCount by viewModel.rowCount.collectAsState()
     val uploadStatus by viewModel.uploadStatus.collectAsState()
+    val connectionStatus by viewModel.connectionStatus.collectAsState()
     val showConfirmDeleteDialog by viewModel.showConfirmDeleteDialog.collectAsState()
     val (showErrorDetail, setShowErrorDetail) = remember { mutableStateOf(false) }
 
     LocalDataScreen(
         rowCount = rowCount,
+        connectionStatus = connectionStatus,
         uploadStatus = uploadStatus,
         showConfirmDeleteDialog = showConfirmDeleteDialog,
         showErrorDetail = showErrorDetail,
         onSyncLocalDetections = viewModel::syncLocalDetections,
         onDismissDelete = viewModel::dismissDelete,
         onConfirmDelete = viewModel::confirmDelete,
-        onSetShowErrorDetail = setShowErrorDetail
+        onSetShowErrorDetail = setShowErrorDetail,
+        onRetryConnection = viewModel::connect
     )
 
     DisposableEffect(Unit) {
@@ -62,12 +68,14 @@ fun LocalDataScreenRoute() {
 fun LocalDataScreen(
     rowCount: Int,
     uploadStatus: UploadStatus,
+    connectionStatus: ConnectionStatus,
     showConfirmDeleteDialog: Boolean,
     showErrorDetail: Boolean,
     onSyncLocalDetections: () -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
-    onSetShowErrorDetail: (Boolean) -> Unit
+    onSetShowErrorDetail: (Boolean) -> Unit,
+    onRetryConnection: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -75,31 +83,50 @@ fun LocalDataScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("records = $rowCount")
-        when (uploadStatus) {
-            is UploadStatus.NotStarted -> {
-                Button(onClick = {
-                    onSyncLocalDetections()
-                }) {
-                    Text("Sync local detections")
+        when (connectionStatus) {
+            is ConnectionStatus.NoAttempts -> LaunchedEffect(Unit) {
+                onRetryConnection()
+            }
+
+            is ConnectionStatus.Error -> when (connectionStatus.error) {
+                is LocalDetectionUploader.ConnectionError.TcpConnection ->
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("サーバーへのTCP接続に失敗しました: ${connectionStatus.error.cause}")
+                        Button(onClick = onRetryConnection) {
+                            Text("リトライ")
+                        }
+                    }
+            }
+
+            is ConnectionStatus.Connected -> when (uploadStatus) {
+                is UploadStatus.NotStarted -> {
+                    Button(onClick = {
+                        onSyncLocalDetections()
+                    }) {
+                        Text("ローカルのデータをアップロード")
+                    }
                 }
-            }
 
-            is UploadStatus.InProgress -> {
-                CircularProgressIndicator()
-            }
-
-            is UploadStatus.Succeed -> {
-                Text("アップロードに成功しました")
-            }
-
-            is UploadStatus.Error -> {
-                Text("アップロードに失敗しました")
-                TextButton(onClick = { onSetShowErrorDetail(true) }) {
-                    Text("詳細")
+                is UploadStatus.InProgress -> {
+                    CircularProgressIndicator()
                 }
 
-                if (showErrorDetail) {
-                    ErrorDetailCard(uploadStatus.error)
+                is UploadStatus.Succeed -> {
+                    Text("アップロードに成功しました")
+                }
+
+                is UploadStatus.Error -> {
+                    Text("アップロードに失敗しました")
+                    TextButton(onClick = { onSetShowErrorDetail(true) }) {
+                        Text("詳細")
+                    }
+
+                    if (showErrorDetail) {
+                        ErrorDetailCard(uploadStatus.error)
+                    }
                 }
             }
         }
@@ -169,19 +196,22 @@ private fun ConfirmDeleteDialog(onDismissDelete: () -> Unit, onConfirmDelete: ()
  */
 @Composable
 private fun DummyLocalDataScreen(
-    rowCount: Int,
-    uploadStatus: UploadStatus,
+    rowCount: Int = 100,
+    connectionStatus: ConnectionStatus = ConnectionStatus.Connected,
+    uploadStatus: UploadStatus = UploadStatus.NotStarted,
     showConfirmDeleteDialog: Boolean = false,
     showErrorDetail: Boolean = false
 ) {
     LocalDataScreen(
         rowCount = rowCount,
+        connectionStatus = connectionStatus,
         uploadStatus = uploadStatus,
         showConfirmDeleteDialog = showConfirmDeleteDialog,
         showErrorDetail = showErrorDetail,
         onSetShowErrorDetail = {}, onSyncLocalDetections = {},
         onDismissDelete = {},
-        onConfirmDelete = {}
+        onConfirmDelete = {},
+        onRetryConnection = {}
     )
 }
 
@@ -189,8 +219,6 @@ private fun DummyLocalDataScreen(
 @Composable
 private fun DefaultPreview() {
     DummyLocalDataScreen(
-        rowCount = 100,
-        uploadStatus = UploadStatus.NotStarted,
     )
 }
 
@@ -198,7 +226,6 @@ private fun DefaultPreview() {
 @Composable
 private fun InProgressPreview() {
     DummyLocalDataScreen(
-        rowCount = 100,
         uploadStatus = UploadStatus.InProgress,
     )
 }
@@ -207,7 +234,6 @@ private fun InProgressPreview() {
 @Preview
 private fun ConfirmDeletePreview() {
     DummyLocalDataScreen(
-        rowCount = 100,
         uploadStatus = UploadStatus.Succeed,
         showConfirmDeleteDialog = true,
     )
@@ -217,7 +243,6 @@ private fun ConfirmDeletePreview() {
 @Composable
 private fun ErrorDetailPreview() {
     DummyLocalDataScreen(
-        rowCount = 100,
         uploadStatus = UploadStatus.Error(
             UploadError.WriteFailed(
                 IOException(
@@ -226,5 +251,15 @@ private fun ErrorDetailPreview() {
             )
         ),
         showErrorDetail = true
+    )
+}
+
+@Preview
+@Composable
+private fun DisConnectedPreview() {
+    DummyLocalDataScreen(
+        connectionStatus = ConnectionStatus.Error(
+            LocalDetectionUploader.ConnectionError.TcpConnection(IOException("Connection refused"))
+        ),
     )
 }

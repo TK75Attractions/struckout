@@ -22,11 +22,19 @@ class LocalDataViewModel @Inject constructor(
         initialValue = 0
     )
 
+    private val _connectionStatus = MutableStateFlow<ConnectionStatus>(ConnectionStatus.NoAttempts)
+    val connectionStatus = _connectionStatus.asStateFlow()
+
     private val _uploadStatus = MutableStateFlow<UploadStatus>(UploadStatus.NotStarted)
     val uploadStatus = _uploadStatus.asStateFlow()
 
     private val _showConfirmDeleteDialog = MutableStateFlow(false)
     val showConfirmDeleteDialog = _showConfirmDeleteDialog.asStateFlow()
+
+
+    init {
+        connect()
+    }
 
     fun syncLocalDetections() {
         viewModelScope.launch {
@@ -36,6 +44,7 @@ class LocalDataViewModel @Inject constructor(
             if (error == null) {
                 _uploadStatus.value = UploadStatus.Succeed
             } else {
+                // TODO: エラーの種類に応じてログとかやる
                 _uploadStatus.value = UploadStatus.Error(error)
             }
         }
@@ -65,6 +74,17 @@ class LocalDataViewModel @Inject constructor(
         _uploadStatus.value = UploadStatus.NotStarted
     }
 
+    fun connect() {
+        viewModelScope.launch {
+            val error = localDetectionUploader.connect()
+            if (error != null) {
+                _connectionStatus.value = ConnectionStatus.Error(error)
+            } else {
+                _connectionStatus.value = ConnectionStatus.Connected
+            }
+        }
+    }
+
     sealed interface UploadStatus {
         data object NotStarted : UploadStatus
 
@@ -72,5 +92,11 @@ class LocalDataViewModel @Inject constructor(
         data object InProgress : UploadStatus
         data class Error(val error: LocalDetectionUploader.UploadError) : UploadStatus
         data object Succeed : UploadStatus
+    }
+
+    sealed interface ConnectionStatus {
+        data object NoAttempts : ConnectionStatus
+        data object Connected : ConnectionStatus
+        data class Error(val error: LocalDetectionUploader.ConnectionError) : ConnectionStatus
     }
 }
