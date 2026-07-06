@@ -37,7 +37,7 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
     )
 
     override suspend fun connect(): ConnectionError? {
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             val socket = try {
                 Socket(REMOTE_ADDRESS, REMOTE_PORT)
             } catch (e: IOException) {
@@ -51,9 +51,8 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
                 output = socket.getOutputStream(),
                 input = socket.getInputStream()
             )
+            return@withContext null
         }
-
-        return null
     }
 
     override suspend fun upload(frames: List<FrameEntity>): UploadError? {

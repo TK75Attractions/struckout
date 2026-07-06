@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,8 +43,10 @@ class LocalDataViewModel @Inject constructor(
             val frames = localDetectionRepository.loadAll()
             val error = localDetectionUploader.upload(frames)
             if (error == null) {
+                Timber.tag(TAG).i("succeeded to upload local data")
                 _uploadStatus.value = UploadStatus.Succeed
             } else {
+                Timber.tag(TAG).w("failed to upload local data: $error")
                 // TODO: エラーの種類に応じてログとかやる
                 _uploadStatus.value = UploadStatus.Error(error)
             }
@@ -78,8 +81,10 @@ class LocalDataViewModel @Inject constructor(
         viewModelScope.launch {
             val error = localDetectionUploader.connect()
             if (error != null) {
+                Timber.tag(TAG).w("failed to connect to xtask-sync server: $error")
                 _connectionStatus.value = ConnectionStatus.Error(error)
             } else {
+                Timber.tag(TAG).i("succeeded to connect to xtask-sync server")
                 _connectionStatus.value = ConnectionStatus.Connected
             }
         }
@@ -98,5 +103,9 @@ class LocalDataViewModel @Inject constructor(
         data object NoAttempts : ConnectionStatus
         data object Connected : ConnectionStatus
         data class Error(val error: LocalDetectionUploader.ConnectionError) : ConnectionStatus
+    }
+
+    companion object {
+        const val TAG = "LocalDataViewModel"
     }
 }
