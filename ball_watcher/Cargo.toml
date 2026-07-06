@@ -37,6 +37,8 @@ rand = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 itertools = { workspace = true }
 tempfile = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 clap = { workspace = true, features = ["derive"] }
 sqlx = { workspace = true, features = [

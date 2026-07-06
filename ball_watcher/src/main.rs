@@ -18,6 +18,8 @@ struct Cli {
     detection_input: DetectionInputKind,
     #[arg(value_enum, long = "output", help = "collisionをどこに送信するか")]
     collision_output: CollisionOutputKind,
+    #[arg(short = 'j', long = "json")]
+    output_to_json: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -110,6 +112,7 @@ async fn main() {
         detection_input,
         collision_output,
         camera_locs.clone(),
+        cli.output_to_json,
     );
 
     app.run().await.unwrap();

@@ -34,8 +34,13 @@ where
     DI: DetectionInput + Send + 'static,
     CO: CollisionOutput + Send + 'static,
 {
-    pub fn new(detection_input: DI, collision_output: CO, camera_locs: P) -> Self {
-        let track_runner = TrackRunner::new(camera_locs.clone());
+    pub fn new(
+        detection_input: DI,
+        collision_output: CO,
+        camera_locs: P,
+        output_to_json: bool,
+    ) -> Self {
+        let track_runner = TrackRunner::new(camera_locs.clone(), output_to_json);
         Self {
             detection_input,
             collision_output,

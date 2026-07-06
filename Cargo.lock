@@ -136,6 +136,8 @@ dependencies = [
  "prost-build",
  "prost-types",
  "rand",
+ "serde",
+ "serde_json",
  "sqlx",
  "struckout-proto",
  "tempfile",

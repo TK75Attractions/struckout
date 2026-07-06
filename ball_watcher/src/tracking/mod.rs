@@ -11,14 +11,17 @@ mod data_association;
 mod kalman;
 mod triangulate;
 use anyhow::Context;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 pub use kalman::KalmanTrack;
+use serde::Serialize;
+use std::fs::File;
 use struckout_proto::Detection;
 use tokio::sync::mpsc;
 
 pub struct TrackRunner<T, P> {
     tracks: Vec<T>,
     camera_loc_provider: P,
+    output_to_json: bool,
 }
 
 /// Tracks an object.
@@ -39,10 +42,11 @@ where
     T: ObjectTrack,
     P: CameraLocationProvider,
 {
-    pub fn new(camera_locs: P) -> Self {
+    pub fn new(camera_locs: P, output_to_json: bool) -> Self {
         Self {
             tracks: Vec::new(),
             camera_loc_provider: camera_locs,
+            output_to_json,
         }
     }
 
@@ -57,6 +61,14 @@ where
                 .await
                 .with_context(|| "pair channel has been unexpectedly closed")
                 .unwrap();
+            let collisions = self.update_frame(pair);
+            for coll in collisions {
+                collision_tx
+                    .send(coll)
+                    .await
+                    .with_context(|| "collision channel has been unexpectedly closed")
+                    .unwrap();
+            }
         }
     }
 
@@ -64,6 +76,13 @@ where
         let assignments = associate_objects(&mut self.tracks, &pair);
         // known tracks
         let res = self.update_assigned_tracks(&pair, &assignments);
+        if self.output_to_json {
+            let prefix = Local::now().to_rfc3339();
+            let file = File::create(format!("~/.config/struckout/tracker/data/{}.json", prefix))
+                .with_context(|| "failed to create file")
+                .unwrap();
+            serde_json::to_writer(file, &res).unwrap();
+        }
         for (track_idx, _) in &res.collisions {
             self.tracks.remove(*track_idx);
         }
@@ -134,7 +153,7 @@ where
 }
 
 /// Result of [`State::update_assigned_tracks()`]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct UpdateTrackResult {
     assigned_dets_a: Vec<usize>,
     assigned_dets_b: Vec<usize>,
