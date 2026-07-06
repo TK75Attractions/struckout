@@ -1,12 +1,13 @@
 #![allow(dead_code)] // temporary allow dead code
-use std::{collections::HashMap, marker::Send};
+use std::{collections::HashMap, marker::Send, sync::Arc};
 
+use parking_lot::RwLock;
 use tokio::sync::mpsc;
 
 use crate::{
     collision_output::CollisionOutput,
     detection_input::DetectionInput,
-    tracking::{CameraLocationProvider, ObjectTrack, TrackRunner},
+    tracking::{ObjectTrack, TrackRunner},
     types::CameraId,
 };
 use struckout_proto::CameraLocation;
@@ -14,7 +15,7 @@ use struckout_proto::CameraLocation;
 pub mod collision_output;
 pub mod detection_input;
 pub mod tracking;
-pub(crate) mod types;
+pub mod types;
 
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
@@ -33,13 +34,18 @@ where
     DI: DetectionInput + Send + 'static,
     CO: CollisionOutput + Send + 'static,
 {
-    pub fn new(detection_input: DI, collision_output: CO, state: P) -> Self {
-        let track_runner = TrackRunner::new(state.clone());
+    pub fn new(
+        detection_input: DI,
+        collision_output: CO,
+        camera_locs: P,
+        output_to_json: bool,
+    ) -> Self {
+        let track_runner = TrackRunner::new(camera_locs.clone(), output_to_json);
         Self {
             detection_input,
             collision_output,
             track_runner,
-            state,
+            state: camera_locs,
         }
     }
 
@@ -67,14 +73,31 @@ where
 }
 
 /// Holds application states.
-pub struct State {
-    camera_locs: HashMap<CameraId, CameraLocation>,
+
+pub struct CameraLocationStore(RwLock<HashMap<CameraId, CameraLocation>>);
+
+impl CameraLocationStore {
+    pub fn new() -> Self {
+        Self(RwLock::new(HashMap::new()))
+    }
 }
 
-impl State {
-    pub fn new() -> Self {
-        Self {
-            camera_locs: HashMap::new(),
-        }
+pub trait CameraLocationProvider: Send + 'static + Clone {
+    fn get(&self, id: CameraId) -> Option<CameraLocation>;
+    fn insert(&self, id: CameraId, loc: CameraLocation);
+    fn next(&self) -> usize;
+}
+
+impl CameraLocationProvider for Arc<CameraLocationStore> {
+    fn get(&self, id: CameraId) -> Option<CameraLocation> {
+        self.0.read().get(&id).cloned()
+    }
+
+    fn insert(&self, id: CameraId, loc: CameraLocation) {
+        self.0.write().insert(id, loc);
+    }
+
+    fn next(&self) -> usize {
+        self.0.read().len()
     }
 }

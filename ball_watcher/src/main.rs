@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use ball_watcher::{
-    Application, State,
-    collision_output::NetworkCollisionOutput,
+    Application, CameraLocationStore,
+    collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
     tracking::KalmanTrack,
+    types::CollisionPoint3D,
 };
 use clap::{Parser, ValueEnum};
-use parking_lot::RwLock;
+use tokio::sync::mpsc;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -17,6 +18,8 @@ struct Cli {
     detection_input: DetectionInputKind,
     #[arg(value_enum, long = "output", help = "collisionをどこに送信するか")]
     collision_output: CollisionOutputKind,
+    #[arg(short = 'j', long = "json")]
+    output_to_json: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -44,7 +47,7 @@ enum DetectionInputImpl {
 impl DetectionInput for DetectionInputImpl {
     async fn start(
         self,
-        tx: tokio::sync::mpsc::Sender<ball_watcher::detection_input::PairedFrames>,
+        tx: mpsc::Sender<ball_watcher::detection_input::PairedFrames>,
     ) -> std::io::Result<()> {
         match self {
             DetectionInputImpl::Network(input) => input.start(tx).await,
@@ -54,12 +57,39 @@ impl DetectionInput for DetectionInputImpl {
 }
 
 impl DetectionInputImpl {
-    async fn new(kind: DetectionInputKind, state: Arc<RwLock<State>>) -> Self {
+    async fn new(kind: DetectionInputKind, camera_locs: Arc<CameraLocationStore>) -> Self {
         match kind {
             DetectionInputKind::Network => {
-                DetectionInputImpl::Network(NetworkDetectionInput::new(state).await.unwrap())
+                DetectionInputImpl::Network(NetworkDetectionInput::new(camera_locs).await.unwrap())
             }
             DetectionInputKind::Sqlite => DetectionInputImpl::Sqlite(SqliteDetectionInput {}),
+        }
+    }
+}
+
+enum CollisionOutputImpl {
+    Network(NetworkCollisionOutput),
+    Csv(CsvCollisionOutput),
+}
+
+impl CollisionOutput for CollisionOutputImpl {
+    async fn start(self, collision_rx: mpsc::Receiver<CollisionPoint3D>) {
+        match self {
+            CollisionOutputImpl::Network(output) => output.start(collision_rx).await,
+            CollisionOutputImpl::Csv(output) => output.start(collision_rx).await,
+        }
+    }
+}
+
+impl CollisionOutputImpl {
+    async fn new(kind: CollisionOutputKind) -> Self {
+        match kind {
+            CollisionOutputKind::Network => {
+                Self::Network(NetworkCollisionOutput::connect().await.unwrap())
+            }
+            CollisionOutputKind::Csv => Self::Csv(CsvCollisionOutput::new(
+                "/home/taichi765/source/dev/struckout/ball_watcher/data/hoge.csv",
+            )),
         }
     }
 }
@@ -73,18 +103,16 @@ async fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let state = Arc::new(RwLock::new(State::new()));
+    let camera_locs = Arc::new(CameraLocationStore::new());
 
-    let detection_input = DetectionInputImpl::new(cli.detection_input, Arc::clone(&state)).await;
-    let collision_output = match cli.collision_output {
-        CollisionOutputKind::Network => NetworkCollisionOutput::connect().await.unwrap(),
-        CollisionOutputKind::Csv => todo!(),
-    };
+    let detection_input = DetectionInputImpl::new(cli.detection_input, camera_locs.clone()).await;
+    let collision_output = CollisionOutputImpl::new(cli.collision_output).await;
 
-    let app = Application::<KalmanTrack<Arc<RwLock<State>>>, _, _, _>::new(
+    let app = Application::<KalmanTrack<Arc<CameraLocationStore>>, _, _, _>::new(
         detection_input,
         collision_output,
-        Arc::clone(&state),
+        camera_locs.clone(),
+        cli.output_to_json,
     );
 
     app.run().await.unwrap();

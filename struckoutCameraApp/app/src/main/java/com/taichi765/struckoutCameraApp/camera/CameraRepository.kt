@@ -36,7 +36,13 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
             characteristics.mapNotNull { it.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION) }
                 .map { CameraIntrinsics(it[0], it[1], it[2], it[3], it[4]) }.let {
                     if (it.count() > 1) {
-                        Timber.tag(TAG).i("There were multiple back camera. selecting first one.")
+                        Timber.tag(TAG).d("There were multiple back camera. selecting first one.")
+                    }
+                    if (it.count() == 0) {
+                        throw IllegalStateException(
+                            "This device does not support LENS_INTRINSIC_CALIBRATION." +
+                                    "You may need to manually measure intrinsics."
+                        )
                     }
                     it[0]
                 }

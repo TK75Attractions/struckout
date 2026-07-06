@@ -18,18 +18,18 @@ where
 {
     // rows are detections and columns are tracks
     let (costs_a, costs_b) = {
-        let mut ret1 = CostMatrix::zeros(new_frame.a.detected_objects.len(), tracks.len());
-        let mut ret2 = CostMatrix::zeros(new_frame.a.detected_objects.len(), tracks.len());
+        let mut ret1 = CostMatrix::zeros(new_frame.a.detections.len(), tracks.len());
+        let mut ret2 = CostMatrix::zeros(new_frame.a.detections.len(), tracks.len());
 
         for (obj_idx, obj) in tracks.iter_mut().enumerate() {
             let scores_a = obj.evaluate_scores(
                 new_frame.a.camera_id,
-                new_frame.a.detected_objects.iter(),
+                new_frame.a.detections.iter(),
                 new_frame.timestamp_avr,
             );
             let scores_b = obj.evaluate_scores(
                 new_frame.b.camera_id,
-                new_frame.b.detected_objects.iter(),
+                new_frame.b.detections.iter(),
                 new_frame.timestamp_avr,
             );
             for (i, &s) in scores_a.iter().enumerate() {
@@ -72,7 +72,7 @@ mod tests {
     use chrono::{DateTime, Utc};
     use nalgebra::Vector3;
     use rand::random_range;
-    use struckout_proto::{DetectedObject, UdpPacket};
+    use struckout_proto::{Detection, DetectionsPacket};
 
     use crate::{tracking::kalman::evaluate_scores_for_detections, types::CameraId};
 
@@ -87,7 +87,7 @@ mod tests {
         fn evaluate_scores<'a>(
             &mut self,
             camera_id: impl Into<CameraId>,
-            _detections: impl Iterator<Item = &'a DetectedObject> + 'a,
+            _detections: impl Iterator<Item = &'a Detection> + 'a,
             _timestamp: DateTime<Utc>,
         ) -> Vec<f64> {
             /*let ret = match camera_id.into() {
@@ -124,14 +124,15 @@ mod tests {
         let frame_id = 5;
         PairedFrames {
             timestamp_avr: DateTime::default(),
-            a: UdpPacket {
+            a: DetectionsPacket {
                 camera_id: 0,
+                session_id: "dummy".to_string(),
                 timestamp: 0,
                 frame_id,
-                detected_objects: true_positions
+                detections: true_positions
                     .iter()
                     .map(|p| measure_noised(*p))
-                    .map(|p| DetectedObject {
+                    .map(|p| Detection {
                         bbox_width: 0,
                         bbox_height: 0,
                         lay_x: p.x,
@@ -140,14 +141,15 @@ mod tests {
                     })
                     .collect(),
             },
-            b: UdpPacket {
+            b: DetectionsPacket {
                 camera_id: 1,
+                session_id: "dummy".to_string(),
                 timestamp: 0,
                 frame_id,
-                detected_objects: true_positions
+                detections: true_positions
                     .iter()
                     .map(|p| measure_noised(*p))
-                    .map(|p| DetectedObject {
+                    .map(|p| Detection {
                         bbox_width: 0,
                         bbox_height: 0,
                         lay_x: p.x,

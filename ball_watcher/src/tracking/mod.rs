@@ -1,24 +1,27 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
+    CameraLocationProvider,
     detection_input::PairedFrames,
     tracking::data_association::associate_objects,
-    types::{CameraId, CollisionPoint3D, GetLayFromDetectedObject as _, Position3D},
+    types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D},
 };
 
 mod data_association;
 mod kalman;
 mod triangulate;
 use anyhow::Context;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 pub use kalman::KalmanTrack;
-use parking_lot::RwLock;
-use struckout_proto::{CameraLocation, DetectedObject};
+use serde::Serialize;
+use std::fs::File;
+use struckout_proto::Detection;
 use tokio::sync::mpsc;
 
 pub struct TrackRunner<T, P> {
     tracks: Vec<T>,
     camera_loc_provider: P,
+    output_to_json: bool,
 }
 
 /// Tracks an object.
@@ -27,21 +30,11 @@ pub trait ObjectTrack {
     fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
-        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
+        detections: impl Iterator<Item = &'a Detection> + Clone + 'a,
         timestamp: DateTime<Utc>,
     ) -> Vec<f64>;
 
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D>;
-}
-
-pub trait CameraLocationProvider: Send + 'static + Clone {
-    fn get(&self, id: CameraId) -> Option<CameraLocation>;
-}
-
-impl CameraLocationProvider for Arc<RwLock<crate::State>> {
-    fn get(&self, id: CameraId) -> Option<CameraLocation> {
-        self.read().camera_locs.get(&id).cloned()
-    }
 }
 
 impl<T, P> TrackRunner<T, P>
@@ -49,10 +42,11 @@ where
     T: ObjectTrack,
     P: CameraLocationProvider,
 {
-    pub fn new(camera_loc_provider: P) -> Self {
+    pub fn new(camera_locs: P, output_to_json: bool) -> Self {
         Self {
             tracks: Vec::new(),
-            camera_loc_provider,
+            camera_loc_provider: camera_locs,
+            output_to_json,
         }
     }
 
@@ -67,6 +61,14 @@ where
                 .await
                 .with_context(|| "pair channel has been unexpectedly closed")
                 .unwrap();
+            let collisions = self.update_frame(pair);
+            for coll in collisions {
+                collision_tx
+                    .send(coll)
+                    .await
+                    .with_context(|| "collision channel has been unexpectedly closed")
+                    .unwrap();
+            }
         }
     }
 
@@ -74,6 +76,13 @@ where
         let assignments = associate_objects(&mut self.tracks, &pair);
         // known tracks
         let res = self.update_assigned_tracks(&pair, &assignments);
+        if self.output_to_json {
+            let prefix = Local::now().to_rfc3339();
+            let file = File::create(format!("~/.config/struckout/tracker/data/{}.json", prefix))
+                .with_context(|| "failed to create file")
+                .unwrap();
+            serde_json::to_writer(file, &res).unwrap();
+        }
         for (track_idx, _) in &res.collisions {
             self.tracks.remove(*track_idx);
         }
@@ -122,12 +131,12 @@ where
                         .get(CameraId::new(0))
                         .unwrap()
                         .clone(),
-                    pair.a.detected_objects.get(det_a).unwrap().get_lay(),
+                    pair.a.detections.get(det_a).unwrap().get_lay(),
                     self.camera_loc_provider
                         .get(CameraId::new(1))
                         .unwrap()
                         .clone(),
-                    pair.b.detected_objects.get(det_b).unwrap().get_lay(),
+                    pair.b.detections.get(det_b).unwrap().get_lay(),
                 );
                 let track = self.tracks.get_mut(*track_idx).unwrap();
                 let coll = track.update_and_check_collision(new_pos);
@@ -144,7 +153,7 @@ where
 }
 
 /// Result of [`State::update_assigned_tracks()`]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct UpdateTrackResult {
     assigned_dets_a: Vec<usize>,
     assigned_dets_b: Vec<usize>,

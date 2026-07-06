@@ -20,6 +20,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
+import java.net.SocketException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject
@@ -37,7 +38,7 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
     )
 
     override suspend fun connect(): ConnectionError? {
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             val socket = try {
                 Socket(REMOTE_ADDRESS, REMOTE_PORT)
             } catch (e: IOException) {
@@ -51,9 +52,8 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
                 output = socket.getOutputStream(),
                 input = socket.getInputStream()
             )
+            return@withContext null
         }
-
-        return null
     }
 
     override suspend fun upload(frames: List<FrameEntity>): UploadError? {
@@ -70,6 +70,11 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
             withContext(Dispatchers.IO) {
                 curState.output.write(header)
             }
+        } catch (e: SocketException) {
+            Timber.tag(TAG)
+                .w("it seems TCP socket has been broken. you can recreate socket by calling connect() again.")
+            state.value = State.DisConnected
+            return UploadError.WriteFailed(e)
         } catch (e: IOException) {
             return UploadError.WriteFailed(e)
         }

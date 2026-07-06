@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use chrono::{DateTime, TimeDelta, TimeZone as _, Utc};
-use struckout_proto::UdpPacket;
+use struckout_proto::DetectionsPacket;
 use tokio::sync::mpsc;
 
 mod db;
@@ -22,7 +22,7 @@ pub trait DetectionInput {
 const FRAME_MATCHING_DELTA: TimeDelta = TimeDelta::milliseconds(3);
 
 pub struct FramePairMatcher {
-    frames: VecDeque<(DateTime<Utc>, UdpPacket)>,
+    frames: VecDeque<(DateTime<Utc>, DetectionsPacket)>,
 }
 
 impl FramePairMatcher {
@@ -33,7 +33,11 @@ impl FramePairMatcher {
     }
 
     // TODO: テスト書く
-    fn pair_frame(&mut self, _time: DateTime<Utc>, packet: UdpPacket) -> Option<PairedFrames> {
+    fn pair_frame(
+        &mut self,
+        _time: DateTime<Utc>,
+        packet: DetectionsPacket,
+    ) -> Option<PairedFrames> {
         let cur_frame_time = Utc.timestamp_opt(packet.timestamp, 0).unwrap();
         let cur_frame_cam_id = packet.camera_id;
         self.frames.push_back((cur_frame_time, packet));
@@ -65,12 +69,12 @@ impl FramePairMatcher {
 #[derive(Debug)]
 pub struct PairedFrames {
     pub timestamp_avr: DateTime<Utc>,
-    pub a: UdpPacket,
-    pub b: UdpPacket,
+    pub a: DetectionsPacket,
+    pub b: DetectionsPacket,
 }
 
 impl PairedFrames {
-    fn new(a: UdpPacket, b: UdpPacket) -> Self {
+    fn new(a: DetectionsPacket, b: DetectionsPacket) -> Self {
         let a_time = DateTime::from_timestamp_millis(a.timestamp).unwrap();
         let b_time = DateTime::from_timestamp_millis(b.timestamp).unwrap();
         Self {

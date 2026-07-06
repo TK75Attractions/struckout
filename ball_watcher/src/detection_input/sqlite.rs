@@ -1,7 +1,7 @@
 use anyhow::Context;
-use prost::Message;
+use prost::Message as _;
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
-use struckout_proto::UdpPacket;
+use struckout_proto::DetectionsPacket;
 use tokio::sync::mpsc;
 use tracing::warn;
 
@@ -23,9 +23,9 @@ impl DetectionInput for SqliteDetectionInput {
 
         for (a, b) in frames.into_iter().tuples() {
             let data: &[u8] = &a.data;
-            let a_packet = UdpPacket::decode(data).unwrap(); // TODO: handle error
+            let a_packet = DetectionsPacket::decode(data).unwrap(); // TODO: handle error
             let data: &[u8] = &b.data;
-            let b_packet = UdpPacket::decode(data).unwrap();
+            let b_packet = DetectionsPacket::decode(data).unwrap();
             if a.timestamp != a_packet.timestamp {
                 warn!("invalid record: timestamp is different");
                 continue;
@@ -99,11 +99,12 @@ mod tests {
                 let timestamp = time.timestamp_millis();
 
                 let mut buf = BytesMut::new();
-                UdpPacket {
+                DetectionsPacket {
                     camera_id: 0,
+                    session_id: "dummy".to_string(),
                     timestamp,
                     frame_id: 0,
-                    detected_objects: Vec::new(),
+                    detections: Vec::new(),
                 }
                 .encode(&mut buf)
                 .unwrap();

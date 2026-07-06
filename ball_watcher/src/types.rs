@@ -3,7 +3,8 @@
 use std::fmt::Debug;
 
 use nalgebra::Vector3;
-use struckout_proto::{CameraLocation, DetectedObject};
+use serde::Serialize;
+use struckout_proto::{CameraLocation, Detection};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FrameId(u32);
@@ -55,7 +56,7 @@ impl From<Vector3<f64>> for Position3D {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct CollisionPoint3D {
     pub x: f64,
     pub y: f64,
@@ -78,11 +79,11 @@ impl ToVector3 for Position3D {
     }
 }
 
-pub trait GetLayFromDetectedObject {
+pub trait GetLayFromDetection {
     fn get_lay(&self) -> Vector3<f64>;
 }
 
-impl GetLayFromDetectedObject for DetectedObject {
+impl GetLayFromDetection for Detection {
     fn get_lay(&self) -> Vector3<f64> {
         Vector3::new(self.lay_x, self.lay_y, self.lay_z)
     }
