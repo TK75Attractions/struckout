@@ -14,7 +14,7 @@ use struckout_proto::CameraLocation;
 pub mod collision_output;
 pub mod detection_input;
 pub mod tracking;
-pub(crate) mod types;
+pub mod types;
 
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
