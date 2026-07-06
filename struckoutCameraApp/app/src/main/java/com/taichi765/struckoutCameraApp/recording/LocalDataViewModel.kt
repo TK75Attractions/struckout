@@ -3,10 +3,15 @@ package com.taichi765.struckoutCameraApp.recording
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader
+import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.ConnectionError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -23,8 +28,28 @@ class LocalDataViewModel @Inject constructor(
         initialValue = 0
     )
 
-    private val _connectionStatus = MutableStateFlow<ConnectionStatus>(ConnectionStatus.NoAttempts)
-    val connectionStatus = _connectionStatus.asStateFlow()
+    /**
+     * Will be reset when [LocalDetectionUploader.connect] has succeeded.
+     */
+    private val _lastConnectionError =
+        MutableStateFlow<ConnectionError?>(null)
+
+    val connectionStatus = combine(
+        localDetectionUploader.isConnected,
+        _lastConnectionError
+    ) { isConnected, lastConnectionError ->
+        if (isConnected) {
+            ConnectionStatus.Connected
+        } else if (lastConnectionError == null) {
+            ConnectionStatus.NoAttempts
+        } else {
+            ConnectionStatus.Error(lastConnectionError)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = ConnectionStatus.NoAttempts
+    )
 
     private val _uploadStatus = MutableStateFlow<UploadStatus>(UploadStatus.NotStarted)
     val uploadStatus = _uploadStatus.asStateFlow()
@@ -34,7 +59,9 @@ class LocalDataViewModel @Inject constructor(
 
 
     init {
-        connect()
+        connectionStatus.filterIsInstance<ConnectionStatus.NoAttempts>().onEach {
+            connect()
+        }.launchIn(viewModelScope)
     }
 
     fun uploadLocalDetections() {
@@ -45,14 +72,13 @@ class LocalDataViewModel @Inject constructor(
             if (error == null) {
                 Timber.tag(TAG).i("succeeded to upload local data")
                 _uploadStatus.value = UploadStatus.Succeed
+                _showConfirmDeleteDialog.value = true
             } else {
                 Timber.tag(TAG).w("failed to upload local data: $error")
                 // TODO: エラーの種類に応じてログとかやる
                 _uploadStatus.value = UploadStatus.Error(error)
             }
         }
-
-        _showConfirmDeleteDialog.value = true
     }
 
     fun dismissDelete() {
@@ -82,10 +108,10 @@ class LocalDataViewModel @Inject constructor(
             val error = localDetectionUploader.connect()
             if (error != null) {
                 Timber.tag(TAG).w("failed to connect to xtask-sync server: $error")
-                _connectionStatus.value = ConnectionStatus.Error(error)
+                _lastConnectionError.value = error
             } else {
                 Timber.tag(TAG).i("succeeded to connect to xtask-sync server")
-                _connectionStatus.value = ConnectionStatus.Connected
+                _lastConnectionError.value = null
             }
         }
     }
@@ -100,9 +126,13 @@ class LocalDataViewModel @Inject constructor(
     }
 
     sealed interface ConnectionStatus {
+        /**
+         * When [connectionStatus] is set to [ConnectionStatus.NoAttempts], [LocalDataViewModel] automatically
+         * tries to connect [LocalDetectionUploader].
+         */
         data object NoAttempts : ConnectionStatus
         data object Connected : ConnectionStatus
-        data class Error(val error: LocalDetectionUploader.ConnectionError) : ConnectionStatus
+        data class Error(val error: ConnectionError) : ConnectionStatus
     }
 
     companion object {

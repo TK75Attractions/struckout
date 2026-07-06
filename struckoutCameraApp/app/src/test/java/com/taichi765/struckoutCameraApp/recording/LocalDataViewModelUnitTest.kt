@@ -108,6 +108,41 @@ class LocalDataViewModelUnitTest {
     }
 
     @Test
+    fun `LocalDataViewModel retries connection after existing connection is aborted`(
+        @MockK localDetectionRepository: LocalDetectionRepository,
+        @MockK localDetectionUploader: LocalDetectionUploader,
+    ) = runTest {
+        // Arrange
+        val isConnected = MutableStateFlow(false)
+        coEvery { localDetectionUploader.connect() } answers {
+            isConnected.value = true
+            null
+        }
+        every { localDetectionUploader.isConnected } returns isConnected.asStateFlow()
+        every { localDetectionRepository.rowCount } returns flowOf(100)
+
+        val viewModel = LocalDataViewModel(
+            localDetectionRepository = localDetectionRepository,
+            localDetectionUploader = localDetectionUploader
+        )
+
+        // Assert
+        backgroundScope.launch {
+            viewModel.connectionStatus.test {
+                assert(awaitItem() is ConnectionStatus.NoAttempts)
+                assert(awaitItem() is ConnectionStatus.Connected)
+                assert(awaitItem() is ConnectionStatus.NoAttempts)
+                assert(awaitItem() is ConnectionStatus.Connected)
+            }
+        }
+        runCurrent()
+
+        // Act
+        isConnected.value = false
+        runCurrent()
+    }
+
+    @Test
     fun `uploadStatus is updated while uploading`(
         @MockK localDetectionRepository: LocalDetectionRepository,
         @MockK localDetectionUploader: LocalDetectionUploader,
