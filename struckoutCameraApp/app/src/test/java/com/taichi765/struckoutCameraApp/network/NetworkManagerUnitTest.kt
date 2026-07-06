@@ -2,9 +2,9 @@ package com.taichi765.struckoutCameraApp.network
 
 import app.cash.turbine.test
 import com.taichi765.struckoutCameraApp.FakeConfigStoreRepository
+import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
 import com.taichi765.struckoutCameraApp.network.types.InstanceState
 import io.mockk.coEvery
-import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.IOException
+import java.net.SocketException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MockKExtension::class)
@@ -30,28 +31,24 @@ class NetworkManagerUnitTest {
         @MockK tcpSessionFactory: TcpSession.Factory,
         @MockK udpConnection: UdpConnection,
         @MockK udpConnectionFactory: UdpConnection.Factory,
-        @MockK localDetectionUploader: LocalDetectionUploader,
-        @MockK localDetectionUploaderFactory: LocalDetectionUploader.Factory
     ) = runTest {
         // Arrange
         coEvery { tcpSession.connect() } returns null
         every { tcpSessionFactory.create() } returns tcpSession
         every { tcpSession.state } returns MutableStateFlow(SessionState.DisConnected)
-        coJustRun { udpConnection.connect() }
+        coEvery { udpConnection.connect() } returns UdpConnectionError.UdpSocketError(
+            SocketException("Stub!")
+        )
         every { udpConnectionFactory.create() } returns udpConnection
         every { udpConnection.isConnected } returns MutableStateFlow(false)
-        coJustRun { localDetectionUploader.connect() }
-        every { localDetectionUploaderFactory.create() } returns localDetectionUploader
-        every { localDetectionUploader.isConnected } returns MutableStateFlow(false)
 
         val configStoreRepository =
-            FakeConfigStoreRepository(initialNetworkFeatureEnabled = false)
+            FakeConfigStoreRepository(initialDetectionOutput = DetectionOutputKind.NONE)
         val networkManager = NetworkManager(
             configRepository = configStoreRepository,
             applicationScope = backgroundScope,
             tcpSessionFactory = tcpSessionFactory,
             udpConnectionFactory = udpConnectionFactory,
-            localDetectionUploaderFactory = localDetectionUploaderFactory
         )
 
         // Act 1
@@ -61,10 +58,9 @@ class NetworkManagerUnitTest {
         // Assert 1
         coVerify(exactly = 0) { tcpSession.connect() }
         coVerify(exactly = 0) { udpConnection.connect() }
-        coVerify(exactly = 0) { localDetectionUploader.connect() }
 
         // Act 2
-        configStoreRepository.toggleNetworkFeature()
+        configStoreRepository.setDetectionOutputKind(DetectionOutputKind.NETWORK)
         runCurrent()
 
         // Assert 2
@@ -72,8 +68,6 @@ class NetworkManagerUnitTest {
         coVerify(exactly = 1) { tcpSession.connect() }
         verify(exactly = 1) { udpConnectionFactory.create() }
         coVerify(exactly = 1) { udpConnection.connect() }
-        verify(exactly = 1) { localDetectionUploaderFactory.create() }
-        coVerify(exactly = 1) { localDetectionUploader.connect() }
     }
 
     @Test
@@ -82,8 +76,6 @@ class NetworkManagerUnitTest {
         @MockK tcpSessionFactory: TcpSession.Factory,
         @MockK udpConnection: UdpConnection,
         @MockK udpConnectionFactory: UdpConnection.Factory,
-        @MockK localDetectionUploader: LocalDetectionUploader,
-        @MockK localDetectionUploaderFactory: LocalDetectionUploader.Factory
     ) = runTest {
         val sessionState = MutableStateFlow<SessionState>(SessionState.DisConnected)
         // Arrange
@@ -92,21 +84,19 @@ class NetworkManagerUnitTest {
         )
         every { tcpSessionFactory.create() } returns tcpSession
         every { tcpSession.state } returns sessionState
-        coEvery { udpConnection.connect() } returns true
+        coEvery { udpConnection.connect() } returns UdpConnectionError.UdpSocketError(
+            SocketException("Stub!")
+        )
         every { udpConnection.isConnected } returns MutableStateFlow(false)
         every { udpConnectionFactory.create() } returns udpConnection
-        coJustRun { localDetectionUploader.connect() }
-        every { localDetectionUploader.isConnected } returns MutableStateFlow(false)
-        every { localDetectionUploaderFactory.create() } returns localDetectionUploader
 
-        val configStoreRepository = FakeConfigStoreRepository(initialNetworkFeatureEnabled = true)
+        val configStoreRepository = FakeConfigStoreRepository()
 
         val networkManager = NetworkManager(
             configRepository = configStoreRepository,
             applicationScope = backgroundScope,
             tcpSessionFactory = tcpSessionFactory,
             udpConnectionFactory = udpConnectionFactory,
-            localDetectionUploaderFactory = localDetectionUploaderFactory
         )
 
         backgroundScope.launch {

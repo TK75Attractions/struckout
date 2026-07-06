@@ -14,7 +14,6 @@ interface ConfigStoreRepository : CameraLocationDataSource {
 
     companion object {
         const val ENABLE_RECORDING_MODE_DEFAULT = false
-        const val ENABLE_NETWORK_FEATURE_DEFAULT = true
     }
 }
 
