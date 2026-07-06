@@ -3,7 +3,6 @@ use std::{io, sync::Arc};
 use anyhow::Context;
 use bytes::BytesMut;
 use chrono::DateTime;
-use parking_lot::RwLock;
 use prost::Message as _;
 use struckout_proto::{
     DetectionsPacket, ReadPacketError, TcpClientPacket, TcpServerPacket, read_packet,
@@ -18,7 +17,7 @@ use tokio::{
 use tracing::{info, warn};
 
 use crate::{
-    State,
+    CameraLocationProvider as _, CameraLocationStore,
     detection_input::{DetectionInput, FramePairMatcher, PairedFrames},
     types::CameraId,
 };
@@ -35,12 +34,12 @@ pub struct NetworkDetectionInput {
 
 impl NetworkDetectionInput {
     pub async fn new(
-        state: Arc<RwLock<State>>,
+        camera_locs: Arc<CameraLocationStore>,
     ) -> Result<Self, NetworkDetectionInputCreationError> {
         let udp_transport = UdpTransport::new()
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Udp(e))?;
-        let tcp_transport = TcpTransport::new(state)
+        let tcp_transport = TcpTransport::new(camera_locs)
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Tcp(e))?;
         Ok(Self {
@@ -116,11 +115,11 @@ impl UdpTransport {
 pub struct TcpTransport {
     listener: TcpListener,
     join_handles: Vec<JoinHandle<()>>,
-    state: Arc<RwLock<State>>,
+    camera_locs: Arc<CameraLocationStore>,
 }
 
 impl TcpTransport {
-    pub async fn new(state: Arc<RwLock<State>>) -> std::io::Result<Self> {
+    pub async fn new(camera_locs: Arc<CameraLocationStore>) -> std::io::Result<Self> {
         // TODO: retry with other port if port is already used
         info!(
             port = CAMERA_LOC_TCP_ADDR_DEFAULT,
@@ -131,7 +130,7 @@ impl TcpTransport {
         Ok(Self {
             listener,
             join_handles: Vec::new(),
-            state,
+            camera_locs,
         })
     }
 
@@ -144,7 +143,8 @@ impl TcpTransport {
 
                     self.init_conneciton(writer).await;
 
-                    let join = tokio::spawn(Self::handle_stream(Arc::clone(&self.state), reader));
+                    let join =
+                        tokio::spawn(Self::handle_stream(Arc::clone(&self.camera_locs), reader));
                     self.join_handles.push(join);
                 }
                 Err(_e) => {
@@ -156,16 +156,16 @@ impl TcpTransport {
     }
 
     async fn init_conneciton(&mut self, mut writer: tcp::OwnedWriteHalf) {
-        let next_camera_id = self.state.read().camera_locs.len();
+        let next_camera_id = self.camera_locs.next() as u32;
         info!("camera id for new device is {}", next_camera_id);
         let packet = TcpServerPacket {
-            data: Some(tcp_server_packet::Data::CameraId(next_camera_id as u32)),
+            data: Some(tcp_server_packet::Data::CameraId(next_camera_id)),
         };
 
         write_packet(packet, &mut writer).await.unwrap();
     }
 
-    async fn handle_stream(state: Arc<RwLock<State>>, mut reader: tcp::OwnedReadHalf) {
+    async fn handle_stream(camera_locs: Arc<CameraLocationStore>, mut reader: tcp::OwnedReadHalf) {
         loop {
             let res = read_packet::<TcpClientPacket, _>(&mut reader).await;
 
@@ -188,10 +188,7 @@ impl TcpTransport {
                     }
                     let camera_loc = loc_data.camera_location.unwrap(); // checked above
                     info!(value = ?camera_loc,"camera location updated");
-                    state
-                        .write()
-                        .camera_locs
-                        .insert(CameraId::new(loc_data.camera_id), camera_loc);
+                    camera_locs.insert(CameraId::new(loc_data.camera_id), camera_loc);
                 }
                 None => {
                     warn!("TcpClientPacket was empty");

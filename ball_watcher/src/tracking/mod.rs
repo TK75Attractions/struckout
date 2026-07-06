@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
+    CameraLocationProvider,
     detection_input::PairedFrames,
     tracking::data_association::associate_objects,
     types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D},
@@ -12,8 +13,7 @@ mod triangulate;
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 pub use kalman::KalmanTrack;
-use parking_lot::RwLock;
-use struckout_proto::{CameraLocation, Detection};
+use struckout_proto::Detection;
 use tokio::sync::mpsc;
 
 pub struct TrackRunner<T, P> {
@@ -34,25 +34,15 @@ pub trait ObjectTrack {
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D>;
 }
 
-pub trait CameraLocationProvider: Send + 'static + Clone {
-    fn get(&self, id: CameraId) -> Option<CameraLocation>;
-}
-
-impl CameraLocationProvider for Arc<RwLock<crate::State>> {
-    fn get(&self, id: CameraId) -> Option<CameraLocation> {
-        self.read().camera_locs.get(&id).cloned()
-    }
-}
-
 impl<T, P> TrackRunner<T, P>
 where
     T: ObjectTrack,
     P: CameraLocationProvider,
 {
-    pub fn new(camera_loc_provider: P) -> Self {
+    pub fn new(camera_locs: P) -> Self {
         Self {
             tracks: Vec::new(),
-            camera_loc_provider,
+            camera_loc_provider: camera_locs,
         }
     }
 

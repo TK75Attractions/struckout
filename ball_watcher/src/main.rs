@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
 use ball_watcher::{
-    Application, State,
+    Application, CameraLocationStore,
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
     tracking::KalmanTrack,
     types::CollisionPoint3D,
 };
 use clap::{Parser, ValueEnum};
-use parking_lot::RwLock;
 use tokio::sync::mpsc;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
@@ -56,10 +55,10 @@ impl DetectionInput for DetectionInputImpl {
 }
 
 impl DetectionInputImpl {
-    async fn new(kind: DetectionInputKind, state: Arc<RwLock<State>>) -> Self {
+    async fn new(kind: DetectionInputKind, camera_locs: Arc<CameraLocationStore>) -> Self {
         match kind {
             DetectionInputKind::Network => {
-                DetectionInputImpl::Network(NetworkDetectionInput::new(state).await.unwrap())
+                DetectionInputImpl::Network(NetworkDetectionInput::new(camera_locs).await.unwrap())
             }
             DetectionInputKind::Sqlite => DetectionInputImpl::Sqlite(SqliteDetectionInput {}),
         }
@@ -102,15 +101,15 @@ async fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let state = Arc::new(RwLock::new(State::new()));
+    let camera_locs = Arc::new(CameraLocationStore::new());
 
-    let detection_input = DetectionInputImpl::new(cli.detection_input, Arc::clone(&state)).await;
+    let detection_input = DetectionInputImpl::new(cli.detection_input, camera_locs.clone()).await;
     let collision_output = CollisionOutputImpl::new(cli.collision_output).await;
 
-    let app = Application::<KalmanTrack<Arc<RwLock<State>>>, _, _, _>::new(
+    let app = Application::<KalmanTrack<Arc<CameraLocationStore>>, _, _, _>::new(
         detection_input,
         collision_output,
-        Arc::clone(&state),
+        camera_locs.clone(),
     );
 
     app.run().await.unwrap();
