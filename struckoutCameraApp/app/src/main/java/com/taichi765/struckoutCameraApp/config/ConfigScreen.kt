@@ -1,11 +1,15 @@
 package com.taichi765.struckoutCameraApp.config
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
@@ -13,76 +17,156 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @Composable
 fun ConfigScreenRoute(
-    onNavigateToCameraScreen: () -> Unit
+    onNavigateToCameraScreen: () -> Unit,
+    onPopBackNavStack: () -> Unit
 ) {
     val viewModel = hiltViewModel<ConfigViewModel>()
-    val uiState by viewModel.uiState.collectAsState()
+    val savedState by viewModel.uiState.collectAsState()
+
+    var editingState by remember { mutableStateOf(savedState) }
+
+    val radioOptions = listOf("Network", "Local", "None")
+    val (selectedOption, setSelectedOption) = remember { mutableStateOf(radioOptions[0]) }
+    val x = rememberTextFieldState(savedState.locationX.toString())
+    val y = rememberTextFieldState(savedState.locationY.toString())
+    val z = rememberTextFieldState(savedState.locationZ.toString())
+
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
 
     ConfigScreen(
-        uiState,
-        onToggleNetworkFeature = viewModel::toggleNetworkFeature,
-        onToggleRecordingMode = viewModel::toggleRecordingMode,
+        uiState = editingState,
+        x = x,
+        y = y,
+        z = z,
+        onToggleRecordingMode = {
+            editingState =
+                editingState.copy(recodingModeEnabled = !editingState.recodingModeEnabled)
+        },
+        onSetDetectionOutput = { kind ->
+            editingState = editingState.copy(detectionOutputKind = kind)
+        },
+        showDiscardDialog = showDiscardDialog,
+        radioOptions = radioOptions,
+        selectedOption = selectedOption,
+        onOptionSelected = { option ->
+            setSelectedOption(option)
+            val kind = textToDetectionOutputKind(option)
+                ?: throw IllegalStateException("Unknown radio option: $option")
+            editingState = editingState.copy(detectionOutputKind = kind)
+        },
         onRetryConnection = viewModel::retryConnection,
-        onDisableNetworkFeature = viewModel::disableNetworkFeature,
-        onUpdateCameraLocation = { x, y, z ->
-            viewModel.updateCameraLocation(x, y, z)
+        onApplyChanges = {
+            editingState = editingState
+                .copy(
+                    locationX = x.text,
+                    locationY = y.text,
+                    locationZ = z.text
+                )
+            viewModel.applyChanges(editingState)
             onNavigateToCameraScreen()
         },
-        onResetSession = viewModel::resetSession
+        onDiscardChanges = {
+            showDiscardDialog = false
+            onPopBackNavStack()
+        }
     )
+
+    // TODO: BackHandlerだと戻る動作しかフックできないのでNavControllerのラッパーを作る
+    BackHandler(savedState != editingState) {
+        showDiscardDialog = true
+    }
+}
+
+private fun textToDetectionOutputKind(text: String): DetectionOutputKind? {
+    return when (text) {
+        "Network" -> DetectionOutputKind.NETWORK
+        "Local" -> DetectionOutputKind.LOCAL
+        "None" -> DetectionOutputKind.NONE
+        else -> null
+    }
 }
 
 @Composable
 private fun ConfigScreen(
     uiState: ConfigUiState,
+    showDiscardDialog: Boolean,
+    radioOptions: List<String>,
+    selectedOption: String,
+    x: TextFieldState,
+    y: TextFieldState,
+    z: TextFieldState,
     onToggleRecordingMode: () -> Unit,
-    onToggleNetworkFeature: () -> Unit,
-    onDisableNetworkFeature: () -> Unit,
-    onUpdateCameraLocation: (CharSequence, CharSequence, CharSequence) -> Unit,
     onRetryConnection: () -> Unit,
-    onResetSession: () -> Unit
+    onSetDetectionOutput: (DetectionOutputKind) -> Unit,
+    onOptionSelected: (String) -> Unit,
+    onApplyChanges: () -> Unit,
+    onDiscardChanges: () -> Unit
 ) {
-    if (uiState.networkFeatureEnabled && !uiState.tcpIsConnected) {
+
+
+    if (uiState.detectionOutputKind == DetectionOutputKind.NETWORK && !uiState.tcpIsConnected) {
         FallbackView(onTryConnect = {
             onRetryConnection()
-        }, onDisableNetworkFeature = {
-            onDisableNetworkFeature()
-        })
+        }, onSetDetectionOutput = onSetDetectionOutput)
     } else {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SessionCard(onResetSession = onResetSession)
 
             FeatureConfigCard(
                 uiState = uiState,
-                onToggleNetworkFeature = onToggleNetworkFeature,
+                radioOptions = radioOptions,
+                selectedOption = selectedOption,
+                onOptionSelected = onOptionSelected,
                 onToggleRecordingMode = onToggleRecordingMode,
-                onUpdateCameraLocation = onUpdateCameraLocation
             )
+
+            if (uiState.tcpIsConnected) {
+                CameraLocationInput(
+                    x,
+                    y,
+                    z,
+                )
+            }
+
+            ConfirmButton(onClick = onApplyChanges)
         }
+    }
+
+    if (showDiscardDialog) {
+        DiscardDialog(onDiscardChanges = onDiscardChanges, onApplyChanges = onApplyChanges)
     }
 }
 
+// TODO: 別のところに移す
 @Composable
 private fun SessionCard(onResetSession: () -> Unit) {
     Card(
@@ -108,14 +192,11 @@ private fun SessionCard(onResetSession: () -> Unit) {
 @Composable
 private fun FeatureConfigCard(
     uiState: ConfigUiState,
+    radioOptions: List<String>,
+    selectedOption: String,
     onToggleRecordingMode: () -> Unit,
-    onToggleNetworkFeature: () -> Unit,
-    onUpdateCameraLocation: (CharSequence, CharSequence, CharSequence) -> Unit,
+    onOptionSelected: (String) -> Unit
 ) {
-    val x = rememberTextFieldState((uiState.cameraLocation?.x ?: 0).toString())
-    val y = rememberTextFieldState((uiState.cameraLocation?.y ?: 0).toString())
-    val z = rememberTextFieldState((uiState.cameraLocation?.z ?: 0).toString())
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -128,26 +209,55 @@ private fun FeatureConfigCard(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            if (!uiState.networkFeatureEnabled || uiState.tcpIsConnected) {
-                SwitchField("Recording Mode", uiState.recodingModeEnabled) {
-                    onToggleRecordingMode()
-                }
-                SwitchField("Network feature", uiState.networkFeatureEnabled) {
-                    onToggleNetworkFeature()
-                }
+            SwitchField("Recording Mode", uiState.recodingModeEnabled) {
+                onToggleRecordingMode()
             }
-            if (uiState.tcpIsConnected) {
-                CameraLocationView(
-                    x,
-                    y,
-                    z,
-                    uiState.warningState
-                )
-            }
+            DetectionOutputKindSelection(
+                radioOptions = radioOptions,
+                selectedOption = selectedOption,
+                onOptionSelected = onOptionSelected
+            )
+        }
+    }
+}
 
-            ConfirmButton {
-                onUpdateCameraLocation(x.text, y.text, z.text)
+@Composable
+private fun DetectionOutputKindSelection(
+    radioOptions: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Column(modifier = Modifier.selectableGroup()) {
+            Text(
+                text = "検知結果の出力先",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            radioOptions.forEach { text ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .selectable(
+                            selected = (text == selectedOption),
+                            onClick = { onOptionSelected(text) },
+                            role = Role.RadioButton
+                        )
+                        .padding(horizontal = 16.dp)
+                ) {
+                    RadioButton(selected = (text == selectedOption), onClick = null)
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
             }
         }
     }
@@ -163,42 +273,31 @@ private fun SwitchField(text: String, checked: Boolean, onCheckedChange: (Boolea
 }
 
 @Composable
-private fun CameraLocationView(
+private fun CameraLocationInput(
     x: TextFieldState,
     y: TextFieldState,
     z: TextFieldState,
-    warningState: WarningState,
 ) {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Camera Location", fontSize = 24.sp)
-        PositionField("x", x, warningState.showX)
-        PositionField("y", y, warningState.showY)
-        PositionField("z", z, warningState.showZ)
-    }
-}
-
-@Composable
-private fun FallbackView(onTryConnect: () -> Unit, onDisableNetworkFeature: () -> Unit) {
-    Column(
+    Card(
         modifier = Modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp, alignment = Alignment.CenterVertically)
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
-        Text("Network feature is enabled but TCP is not connected.")
-
-        Button(onClick = onTryConnect) {
-            Text("Retry connection")
-        }
-        Button(onClick = onDisableNetworkFeature) {
-            Text("Disable network feature")
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Camera Location", fontSize = 24.sp)
+            PositionField("x", x)
+            PositionField("y", y)
+            PositionField("z", z)
         }
     }
 }
 
 
 @Composable
-private fun PositionField(text: String, textState: TextFieldState, showWarning: Boolean) {
+private fun PositionField(text: String, textState: TextFieldState) {
     TextField(
         textState,
         label = { Text(text) },
@@ -212,8 +311,59 @@ private fun PositionField(text: String, textState: TextFieldState, showWarning: 
             }
         }
     )
-    if (showWarning) {
-        Text("error: cameraPositionには数字しか入力できません")
+}
+
+@Composable
+private fun DiscardDialog(onDiscardChanges: () -> Unit, onApplyChanges: () -> Unit) {
+    Dialog(onDismissRequest = onDiscardChanges) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(375.dp)
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("設定の変更を保存しますか？")
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = onDiscardChanges) {
+                        Text("破棄")
+                    }
+                    TextButton(onClick = onApplyChanges) {
+                        Text("保存")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FallbackView(
+    onTryConnect: () -> Unit,
+    onSetDetectionOutput: (DetectionOutputKind) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, alignment = Alignment.CenterVertically)
+    ) {
+        Text("Detection output is set to 'Network', but TCP is not connected.")
+
+        Button(onClick = onTryConnect) {
+            Text("Retry connection")
+        }
+        Button(onClick = { onSetDetectionOutput(DetectionOutputKind.NONE) }) {
+            Text("Change detection output to 'None'")
+        }
+        Button(onClick = { onSetDetectionOutput(DetectionOutputKind.LOCAL) }) {
+            Text("Change detection output to 'Local'")
+        }
     }
 }
 
@@ -224,49 +374,64 @@ private fun ConfirmButton(onClick: () -> Unit) {
     }
 }
 
-@Preview(name = "Network enabled but not connected")
+/**
+ * [ConfigScreen] filled with dummy parameters. This should be only used from the function marked as [Preview].
+ */
 @Composable
-private fun DisconnectedPreView() {
+private fun DummyConfigScreen(
+    uiState: ConfigUiState,
+    showDiscardDialog: Boolean = false,
+    radioOptions: List<String> = listOf("Network", "Local", "None"),
+    selectedOption: String = "Network",
+    x: TextFieldState = TextFieldState(),
+    y: TextFieldState = TextFieldState(),
+    z: TextFieldState = TextFieldState()
+) {
     ConfigScreen(
-        uiState = ConfigUiState(
-            tcpIsConnected = false,
-            networkFeatureEnabled = true
-        ),
+        uiState = uiState,
+        showDiscardDialog = showDiscardDialog,
+        radioOptions = radioOptions,
+        selectedOption = selectedOption,
+        x = x,
+        y = y,
+        z = z,
         onToggleRecordingMode = {},
-        onToggleNetworkFeature = {},
-        onDisableNetworkFeature = {},
-        onUpdateCameraLocation = { _, _, _ -> },
         onRetryConnection = {},
-        onResetSession = {}
+        onSetDetectionOutput = {},
+        onOptionSelected = {},
+        onApplyChanges = {},
+        onDiscardChanges = {}
     )
 }
 
-@Preview(name = "Network feature disabled")
+@Preview(name = "Network enabled but not connected")
+@Composable
+private fun DisconnectedPreView() {
+    DummyConfigScreen(
+        uiState = ConfigUiState().copy(
+            tcpIsConnected = false,
+            detectionOutputKind = DetectionOutputKind.NETWORK
+        ),
+    )
+}
+
+@Preview(name = "Not using network output")
 @Composable
 private fun NetworkDisabledPreview() {
-    ConfigScreen(
-        uiState = ConfigUiState(
-            networkFeatureEnabled = false
+    DummyConfigScreen(
+        uiState = ConfigUiState().copy(
+            detectionOutputKind = DetectionOutputKind.LOCAL
         ),
-        onToggleRecordingMode = {},
-        onToggleNetworkFeature = {},
-        onDisableNetworkFeature = {},
-        onUpdateCameraLocation = { _, _, _ -> },
-        onRetryConnection = {},
-        onResetSession = {}
     )
 }
 
 @Preview(name = "Network connected")
 @Composable
 private fun ConnectedPreview() {
-    ConfigScreen(
-        uiState = ConfigUiState(
+    DummyConfigScreen(
+        uiState = ConfigUiState().copy(
+            detectionOutputKind = DetectionOutputKind.NETWORK,
             tcpIsConnected = true
-        ), onToggleRecordingMode = {},
-        onToggleNetworkFeature = {},
-        onDisableNetworkFeature = {},
-        onUpdateCameraLocation = { _, _, _ -> },
-        onRetryConnection = {}, onResetSession = {}
+        ),
     )
 }
