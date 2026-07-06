@@ -6,8 +6,8 @@ use chrono::DateTime;
 use parking_lot::RwLock;
 use prost::Message as _;
 use struckout_proto::{
-    ReadPacketError, TcpClientPacket, TcpServerPacket, UdpPacket, read_packet, tcp_client_packet,
-    tcp_server_packet, write_packet,
+    DetectionsPacket, ReadPacketError, TcpClientPacket, TcpServerPacket, read_packet,
+    tcp_client_packet, tcp_server_packet, write_packet,
 };
 use thiserror::Error;
 use tokio::{
@@ -102,11 +102,11 @@ impl UdpTransport {
         })
     }
 
-    pub async fn start(&mut self, frame_tx: mpsc::Sender<UdpPacket>) -> std::io::Result<()> {
+    pub async fn start(&mut self, frame_tx: mpsc::Sender<DetectionsPacket>) -> std::io::Result<()> {
         loop {
             let (_len, _addr) = self.socket.recv_from(&mut self.buf).await?;
 
-            let packet = UdpPacket::decode(&mut self.buf)?;
+            let packet = DetectionsPacket::decode(&mut self.buf)?;
             frame_tx.send(packet).await.unwrap();
         }
     }

@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     detection_input::PairedFrames,
     tracking::data_association::associate_objects,
-    types::{CameraId, CollisionPoint3D, GetLayFromDetectedObject as _, Position3D},
+    types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D},
 };
 
 mod data_association;
@@ -13,7 +13,7 @@ use anyhow::Context;
 use chrono::{DateTime, Utc};
 pub use kalman::KalmanTrack;
 use parking_lot::RwLock;
-use struckout_proto::{CameraLocation, DetectedObject};
+use struckout_proto::{CameraLocation, Detection};
 use tokio::sync::mpsc;
 
 pub struct TrackRunner<T, P> {
@@ -27,7 +27,7 @@ pub trait ObjectTrack {
     fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
-        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
+        detections: impl Iterator<Item = &'a Detection> + Clone + 'a,
         timestamp: DateTime<Utc>,
     ) -> Vec<f64>;
 
@@ -122,12 +122,12 @@ where
                         .get(CameraId::new(0))
                         .unwrap()
                         .clone(),
-                    pair.a.detected_objects.get(det_a).unwrap().get_lay(),
+                    pair.a.detections.get(det_a).unwrap().get_lay(),
                     self.camera_loc_provider
                         .get(CameraId::new(1))
                         .unwrap()
                         .clone(),
-                    pair.b.detected_objects.get(det_b).unwrap().get_lay(),
+                    pair.b.detections.get(det_b).unwrap().get_lay(),
                 );
                 let track = self.tracks.get_mut(*track_idx).unwrap();
                 let coll = track.update_and_check_collision(new_pos);

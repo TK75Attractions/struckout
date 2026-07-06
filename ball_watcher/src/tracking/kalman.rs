@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
-use struckout_proto::DetectedObject;
+use struckout_proto::Detection;
 use tracktor::{
     filters::kalman::KalmanFilter,
     models::{ConstantVelocity3D, PositionSensor3D},
@@ -113,7 +113,7 @@ where
     fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
-        detections: impl Iterator<Item = &'a DetectedObject> + Clone + 'a,
+        detections: impl Iterator<Item = &'a Detection> + Clone + 'a,
         timestamp: DateTime<Utc>,
     ) -> Vec<f64> {
         let state = self.filter.predict(
@@ -175,7 +175,7 @@ where
 
 /// Evaluates scores for each detections.
 pub fn evaluate_scores_for_detections<'a>(
-    detections: impl Iterator<Item = &'a DetectedObject> + Clone,
+    detections: impl Iterator<Item = &'a Detection> + Clone,
     camera_loc: Vector3<f64>,
     estimated_coord: Vector3<f64>,
 ) -> Vec<f64> {
