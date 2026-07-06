@@ -50,7 +50,7 @@ fun LocalDataScreenRoute() {
         uploadStatus = uploadStatus,
         showConfirmDeleteDialog = showConfirmDeleteDialog,
         showErrorDetail = showErrorDetail,
-        onSyncLocalDetections = viewModel::syncLocalDetections,
+        onSyncLocalDetections = viewModel::uploadLocalDetections,
         onDismissDelete = viewModel::dismissDelete,
         onConfirmDelete = viewModel::confirmDelete,
         onSetShowErrorDetail = setShowErrorDetail,

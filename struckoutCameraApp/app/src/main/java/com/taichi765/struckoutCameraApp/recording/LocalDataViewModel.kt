@@ -36,7 +36,7 @@ class LocalDataViewModel @Inject constructor(
         connect()
     }
 
-    fun syncLocalDetections() {
+    fun uploadLocalDetections() {
         viewModelScope.launch {
             _uploadStatus.value = UploadStatus.InProgress
             val frames = localDetectionRepository.loadAll()
