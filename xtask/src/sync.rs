@@ -10,7 +10,7 @@ use tokio::{
 
 const TCP_PORT: &str = "0.0.0.0:6262";
 
-const DB_PATH_DEFAULT: &str = "sqlite:///home/taichi765/.config/struckout/xtask.db";
+const DB_PATH_DEFAULT: &str = "sqlite:///home/taichi765/.config/struckout/dev.db";
 
 #[derive(Args)]
 pub struct SyncArgs {
@@ -60,8 +60,15 @@ impl SyncArgs {
             return true;
         };
 
-        println!("succeed to sync frames");
-        return false;
+        if res
+            .data
+            .is_some_and(|d| matches!(d, upload_result::Data::Success(())))
+        {
+            println!("succeed to sync frames");
+            return false;
+        } else {
+            return true;
+        }
     }
 }
 
