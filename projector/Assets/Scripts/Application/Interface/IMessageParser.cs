@@ -1,4 +1,4 @@
-namespace Struckout.Infrastructure
+namespace Struckout.Application
 {
     public interface IMessageParser<T>
     {

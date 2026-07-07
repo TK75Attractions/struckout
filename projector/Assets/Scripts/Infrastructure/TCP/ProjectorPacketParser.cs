@@ -1,4 +1,5 @@
 using Tk75Attractions.Struckout.V1;
+using Struckout.Application;
 
 namespace Struckout.Infrastructure
 {

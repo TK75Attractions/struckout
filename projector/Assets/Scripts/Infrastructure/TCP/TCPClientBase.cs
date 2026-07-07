@@ -61,7 +61,7 @@ namespace Struckout.Infrastructure
             Debug.Log("CalledDisposeAsync");
             if (!_isConnected || _tcpClient == null)
             {
-                Debug.Log("bbb");
+                Debug.Log("Failed To Connect");
             }
 
             try
