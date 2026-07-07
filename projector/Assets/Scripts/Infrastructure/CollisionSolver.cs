@@ -29,7 +29,7 @@ namespace Struckout.Application
                     {
                         var targetPoint = target.Coordinate;
                         var distance = Math.Pow(collisionPoint.X - targetPoint.X, 2) + Math.Pow(collisionPoint.Y - targetPoint.Y, 2);
-                        return distance <= target.Size*target.Size;
+                        return distance <= target.RadiusSquared;
                     }
                 default:
                     throw new Exception($"Unsupported target type {target.Type}");

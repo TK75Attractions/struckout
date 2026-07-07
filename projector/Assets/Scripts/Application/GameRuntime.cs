@@ -56,6 +56,7 @@ namespace Struckout.Application
             {
                 _collisionTargetAction?.Invoke(hitTarget);
                 _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
+                _state.AddTargets(_targetGenerator.GenerateTargets(1,50));
             }
         }
     }

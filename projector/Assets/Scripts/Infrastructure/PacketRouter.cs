@@ -14,13 +14,13 @@ namespace Struckout.Infrastructure
 
         public event Action<StartGameRequest> OnGameStartReceived;
 
-        private IMainThreadDispatcher mainThreadDispatcher;
+        private readonly IMainThreadDispatcher _mainThreadDispatcher;
 
         public PacketRouter(
             IMainThreadDispatcher dispatcher
         )
         {
-            mainThreadDispatcher = dispatcher;
+            _mainThreadDispatcher = dispatcher;
         }
         
         public void RoutePacket(ProjectorPacket packet)
@@ -31,14 +31,14 @@ namespace Struckout.Infrastructure
                     {
                         if(packet == null || packet.Message == null) break;
                         Action action = () => OnStringMessageReceived(packet.Message);
-                        mainThreadDispatcher.Enqueue(action);
+                        _mainThreadDispatcher.Enqueue(action);
                         break;
                     }
                 case ProjectorPacket.PayloadOneofCase.Point:
                     {
                         if(packet == null || packet.Point == null) break;
                         Action action = () => OnCollisionReceived(packet.Point);
-                        mainThreadDispatcher.Enqueue(action);
+                        _mainThreadDispatcher.Enqueue(action);
                         break;
                     }
                 default:
@@ -53,7 +53,7 @@ namespace Struckout.Infrastructure
             {
                 case MasterPacket.PayloadOneofCase.Request:
                     Action action = () => OnGameStartReceived(packet.Request);
-                    mainThreadDispatcher.Enqueue(action);
+                    _mainThreadDispatcher.Enqueue(action);
                     break;
             }
         }
