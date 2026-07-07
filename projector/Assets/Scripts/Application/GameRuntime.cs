@@ -31,6 +31,7 @@ namespace Struckout.Application
         public void GameSetup()
         {
             _state.AddTargets(_targetGenerator.GenerateTargets(4, 8));
+            AddCollisionTargetAction(_state.RemoveTarget);
             UpdateUI();
         }
 
@@ -51,7 +52,7 @@ namespace Struckout.Application
 
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
-            if(_collisionSolver.TryGetCollision(collisionPoint,_state.Targets,out Target hitTarget))
+            if(_collisionSolver.TryCollision(collisionPoint, _state.Targets, out Target hitTarget))
             {
                 _collisionTargetAction?.Invoke(hitTarget);
                 _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
