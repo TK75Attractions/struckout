@@ -19,6 +19,9 @@ namespace Struckout.Infrastructure
 
             return result;
         }
+
+        public IReadOnlyList<Target> GenerateTargets(int num, float size, IReadOnlyList<Target> existTarget) => GenerateTargets(num, size);
+
         public Target GenerateTarget(TargetType type, float X, float Y, float size)
         {
             TargetCoordinate coordinate = new(
