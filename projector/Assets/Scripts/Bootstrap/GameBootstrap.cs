@@ -6,33 +6,33 @@ namespace Struckout.Bootstrap
 {
     public class GameBootstrap
     {
-        private GameRuntime runtime;
-        private readonly ISensorProvider sensorProvider;
-        private readonly IUIService service;
+        private readonly GameRuntime _runtime;
+        private readonly ISensorProvider _sensorProvider;
+        private readonly IUIService _service;
 
 
         public GameBootstrap(
             GameRuntime runtime,
-            ISensorProvider SensorProvider,
-            IUIService UIService
+            ISensorProvider sensorProvider,
+            IUIService uiService
         )
         {
-            this.runtime = runtime;
-            sensorProvider = SensorProvider;
-            service = UIService;
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _sensorProvider = sensorProvider ?? throw new ArgumentNullException(nameof(sensorProvider));
+            _service = uiService ?? throw new ArgumentNullException(nameof(uiService));
         }
 
         internal async UniTask Initialize(
             RuntimeContext context
             )
         {
-            if(service == null) throw new Exception("There are no IUIService in uiService");
+            if(_service == null) throw new Exception("There are no IUIService in uiService");
             
-            context.PacketRouter.OnCollisionReceived += sensorProvider.GetSensorData;
-            sensorProvider.OnCollisionReceived += runtime.CollisionDetected;
+            context.PacketRouter.OnCollisionReceived += _sensorProvider.GetSensorData;
+            _sensorProvider.OnCollisionReceived += _runtime.CollisionDetected;
 
-            runtime.AddCollisionTargetAction(service.OnCollisionTarget);
-            runtime.GameSetup();   
+            _runtime.AddCollisionTargetAction(_service.OnCollisionTarget);
+            _runtime.GameSetup();   
         }
     }
 }
