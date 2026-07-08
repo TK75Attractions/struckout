@@ -128,8 +128,6 @@ private fun ConfigScreen(
     onApplyChanges: () -> Unit,
     onDiscardChanges: () -> Unit
 ) {
-
-
     if (uiState.detectionOutputKind == DetectionOutputKind.NETWORK && !uiState.tcpIsConnected) {
         FallbackView(onTryConnect = {
             onRetryConnection()
@@ -140,7 +138,6 @@ private fun ConfigScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             FeatureConfigCard(
                 uiState = uiState,
                 radioOptions = radioOptions,
@@ -204,7 +201,7 @@ private fun FeatureConfigCard(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
