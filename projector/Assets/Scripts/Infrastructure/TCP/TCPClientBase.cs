@@ -25,6 +25,8 @@ namespace Struckout.Infrastructure
         private bool isRegister = false;
         private readonly SemaphoreSlim _slim = new(1, 1);
 
+        private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
+
         public TCPClientBase(IMessageParser<T> parser)
         {
             _parser = parser;
@@ -43,10 +45,10 @@ namespace Struckout.Infrastructure
 
             try
             {
-                _state = ConnectionState.Connecting;
+                Transit(ConnectionState.Connecting);
                 if (!isRegister)
                 {
-                    _state = ConnectionState.Failed;
+                    Transit(ConnectionState.Failed);
                     throw new Exception("Haven't been register port");
                 }
                 
@@ -55,13 +57,13 @@ namespace Struckout.Infrastructure
                 {
                     await _tcpClient.ConnectAsync(_host, _port);
                     _networkStream = _tcpClient.GetStream();
-                    _state = ConnectionState.Connected;
+                    Transit(ConnectionState.Connected);
                     Debug.Log("Connected to TCP server.");
                 }
                 catch (Exception ex)
                 {
                     Debug.Log($"Error connecting to TCP server: {ex.Message}");
-                    _state = ConnectionState.Failed;
+                    Transit(ConnectionState.Failed);
                     return false;
                 }
 
@@ -71,6 +73,7 @@ namespace Struckout.Infrastructure
                     _receiveTask = ReceiveDataAsync(_receiveCancellationToken.Token);
                     return true;
                 }
+
                 return false;
             }
             finally
@@ -88,7 +91,7 @@ namespace Struckout.Infrastructure
                 if (_state != ConnectionState.Connected && _state != ConnectionState.Connecting) return;
                 if(_tcpClient == null) Debug.Log("Failed To Disconnect");
                 
-                _state = ConnectionState.Disconnecting;
+                Transit(ConnectionState.Disconnecting);
                 
                 _receiveCancellationToken?.Cancel();
                 try
@@ -104,7 +107,7 @@ namespace Struckout.Infrastructure
                     _networkStream?.Dispose();
                     _tcpClient?.Dispose();
 
-                    _state = ConnectionState.Disconnected;
+                    Transit(ConnectionState.Disconnected);
                 }
 
                 Debug.Log("Done");
@@ -115,6 +118,27 @@ namespace Struckout.Infrastructure
             {
                 _slim.Release();
             }
+        }
+
+        public async Task<bool> ConnectRetryAsync(int maxattempts)
+        {
+            for(int attempt = 0; attempt < maxattempts; attempt++)
+            {
+                try
+                {
+                    if(await ConnectAsync())
+                    {
+                        return true;
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Debug.LogWarning($"Connect attempt failed because of {ex}");
+                }
+            
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+            }
+            return false;
         }
 
         private async Task ReceiveDataAsync(CancellationToken token)
