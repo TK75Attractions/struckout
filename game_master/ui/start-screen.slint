@@ -1,0 +1,19 @@
+import { Button } from "std-widgets.slint";
+global Adopter {
+    callback click();
+}
+
+export component StartScreen {
+    HorizontalLayout {
+        alignment: LayoutAlignment.center;
+
+        Button {
+            text: "スタート";
+            clicked => {
+                Adopter.click();
+            }
+        }
+    }
+}
+
+export { Adopter as StartScreenAdopter }

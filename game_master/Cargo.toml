@@ -23,6 +23,9 @@ parking_lot = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 itertools = { workspace = true }
+derive_more = { workspace = true, features = ["debug"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 sqlx = { workspace = true, features = [
     "sqlite",
@@ -35,6 +38,7 @@ slint = { version = "1.17.1", features = [
     "backend-winit",
     "renderer-femtovg-wgpu",
 ] }
+i-slint-core = { version = "=1.17.1" }
 
 [build-dependencies]
 slint-build = { version = "1.17.1" }

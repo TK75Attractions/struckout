@@ -1,13 +1,32 @@
 import { AboutSlint, VerticalBox } from "std-widgets.slint";
+import { TopBar } from "top-bar.slint";
+import { StartScreen } from "start-screen.slint";
+import { NameInputScreen } from "name-input-screen.slint";
+import { DifficulitySelectScreen } from "difficulity-select-screen.slint";
+import { PlayingScreen } from "playing-screen.slint";
+import { ScoreScreen } from "score-screen.slint";
+import { RankingScreen } from "ranking-screen.slint";
+
+export { StartScreenAdopter }from "./start-screen.slint";
+
+enum NavRoute {
+    Start,
+    NameInput,
+    DifficulitySelect,
+    Playing,
+    Score,
+    Ranking,
+}
 
 export component AppWindow inherits Window {
-    VerticalBox {
-        Text {
-            text: "Hello World!";
-        }
+    in property <NavRoute> nav-route;
 
-        AboutSlint {
-            preferred-height: 150px;
-        }
-    }
+    top-bar := TopBar { }
+
+    if nav-route == NavRoute.Start: StartScreen { }
+    if nav-route == NavRoute.NameInput: NameInputScreen { }
+    if nav-route == NavRoute.DifficulitySelect:DifficulitySelectScreen { }
+    if nav-route == NavRoute.Playing: PlayingScreen { }
+    if nav-route == NavRoute.Score: ScoreScreen { }
+    if nav-route == NavRoute.Ranking: RankingScreen { }
 }

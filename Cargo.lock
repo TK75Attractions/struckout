@@ -1961,9 +1961,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "backon",
+ "derive_more",
  "futures",
+ "i-slint-core",
  "itertools 0.15.0",
  "parking_lot",
+ "serde",
+ "serde_json",
  "slint",
  "slint-build",
  "sqlx",
