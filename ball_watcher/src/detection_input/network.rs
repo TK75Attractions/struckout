@@ -17,7 +17,7 @@ use tokio::{
 use tracing::{info, warn};
 
 use crate::{
-    CameraLocationProvider as _, CameraLocationStore,
+    CameraLocationStore,
     detection_input::{DetectionInput, FramePairMatcher, PairedFrames},
     types::CameraId,
 };
@@ -93,7 +93,6 @@ pub struct UdpTransport {
 
 impl UdpTransport {
     pub async fn new() -> std::io::Result<Self> {
-        // TODO: retry with other port if port is already used
         let socket = UdpSocket::bind(FRAME_UDP_ADDR_DEFAULT).await?;
         Ok(Self {
             socket,
@@ -120,7 +119,6 @@ pub struct TcpTransport {
 
 impl TcpTransport {
     pub async fn new(camera_locs: Arc<CameraLocationStore>) -> std::io::Result<Self> {
-        // TODO: retry with other port if port is already used
         info!(
             port = CAMERA_LOC_TCP_ADDR_DEFAULT,
             "trying to bind port for `CameraLocationListener`"
@@ -148,8 +146,7 @@ impl TcpTransport {
                     self.join_handles.push(join);
                 }
                 Err(_e) => {
-                    // TODO: handle errors
-                    todo!()
+                    todo!("handle errors")
                 }
             }
         }

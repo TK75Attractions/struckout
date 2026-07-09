@@ -20,24 +20,23 @@ pub mod types;
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
 
-pub struct Application<T, P, DI, CO> {
+pub struct Application<T, DI, CO> {
     detection_input: DI,
     collision_output: CO,
-    track_runner: TrackRunner<T, P>,
-    state: P,
+    track_runner: TrackRunner<T>,
+    camera_locs: Arc<CameraLocationStore>,
 }
 
-impl<T, P, DI, CO> Application<T, P, DI, CO>
+impl<T, DI, CO> Application<T, DI, CO>
 where
     T: ObjectTrack + Send + 'static,
-    P: CameraLocationProvider,
     DI: DetectionInput + Send + 'static,
     CO: CollisionOutput + Send + 'static,
 {
     pub fn new(
         detection_input: DI,
         collision_output: CO,
-        camera_locs: P,
+        camera_locs: Arc<CameraLocationStore>,
         output_to_json: bool,
     ) -> Self {
         let track_runner = TrackRunner::new(camera_locs.clone(), output_to_json);
@@ -45,7 +44,7 @@ where
             detection_input,
             collision_output,
             track_runner,
-            state: camera_locs,
+            camera_locs,
         }
     }
 
@@ -82,13 +81,7 @@ impl CameraLocationStore {
     }
 }
 
-pub trait CameraLocationProvider: Send + 'static + Clone {
-    fn get(&self, id: CameraId) -> Option<CameraLocation>;
-    fn insert(&self, id: CameraId, loc: CameraLocation);
-    fn next(&self) -> usize;
-}
-
-impl CameraLocationProvider for Arc<CameraLocationStore> {
+impl CameraLocationStore {
     fn get(&self, id: CameraId) -> Option<CameraLocation> {
         self.0.read().get(&id).cloned()
     }

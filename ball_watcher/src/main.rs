@@ -108,7 +108,7 @@ async fn main() {
     let detection_input = DetectionInputImpl::new(cli.detection_input, camera_locs.clone()).await;
     let collision_output = CollisionOutputImpl::new(cli.collision_output).await;
 
-    let app = Application::<KalmanTrack<Arc<CameraLocationStore>>, _, _, _>::new(
+    let app = Application::<KalmanTrack, _, _>::new(
         detection_input,
         collision_output,
         camera_locs.clone(),
