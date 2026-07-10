@@ -19,6 +19,7 @@ mod nav;
 mod player_repository;
 mod state_ext;
 mod viewmodels;
+mod worker;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/dev.db";
 
