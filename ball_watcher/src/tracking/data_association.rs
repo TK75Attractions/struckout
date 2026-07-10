@@ -3,66 +3,80 @@ use tracing::warn;
 use tracktor::assignment::{CostMatrix, hungarian};
 
 use super::PairedFrames;
-use crate::tracking::ObjectTrack;
+use crate::tracking::{ObjectTrack, TrackId};
 
 /// Associates detections to known objects (trackers).
 ///
 /// Returns `tracker_idx` -> (`detection_idx_a`, `detection_idx_b`).
 /// detection_idx will be `None` if detection is likely new object.
 pub fn associate_objects<T>(
-    tracks: &mut Vec<T>,
+    tracks: &mut HashMap<TrackId, T>,
     new_frame: &PairedFrames,
-) -> HashMap<usize, (Option<usize>, Option<usize>)>
+) -> HashMap<TrackId, (Option<usize>, Option<usize>)>
 where
     T: ObjectTrack,
 {
     // rows are detections and columns are tracks
-    let (costs_a, costs_b) = {
-        let mut ret1 = CostMatrix::zeros(new_frame.a.detections.len(), tracks.len());
-        let mut ret2 = CostMatrix::zeros(new_frame.a.detections.len(), tracks.len());
-
-        for (obj_idx, obj) in tracks.iter_mut().enumerate() {
-            let scores_a = obj.evaluate_scores(
-                new_frame.a.camera_id,
-                new_frame.a.detections.iter(),
-                new_frame.timestamp_avr,
-            );
-            let scores_b = obj.evaluate_scores(
-                new_frame.b.camera_id,
-                new_frame.b.detections.iter(),
-                new_frame.timestamp_avr,
-            );
-            for (i, &s) in scores_a.iter().enumerate() {
-                ret1.set(i, obj_idx, s);
-            }
-            for (i, &s) in scores_b.iter().enumerate() {
-                ret2.set(i, obj_idx, s);
-            }
-        }
-
-        (ret1, ret2)
-    };
+    let (costs_a, costs_b, idx_to_id) = create_cost_matrix(new_frame, tracks);
 
     let assignment_a = hungarian(&costs_a).unwrap();
     let assignment_b = hungarian(&costs_b).unwrap();
 
     // FIXME: aでinsert()しなかった場合get_mut().unwrap()でpanicしそう、テスト書く
     let mut ret = HashMap::new();
-    for (det_idx, track_idx) in assignment_a.mapping.iter().enumerate() {
+    for (det_idx, &track_idx) in assignment_a.mapping.iter().enumerate() {
         let Some(track_idx) = track_idx else {
             continue;
         };
-        ret.insert(*track_idx, (Some(det_idx), None));
+        let id = idx_to_id.get(&track_idx).unwrap();
+        ret.insert(*id, (Some(det_idx), None));
     }
-    for (det_idx, track_idx) in assignment_b.mapping.iter().enumerate() {
+    for (det_idx, &track_idx) in assignment_b.mapping.iter().enumerate() {
         let Some(track_idx) = track_idx else {
             warn!(det_idx, "hungarian assignment didn't match the column");
             continue;
         };
-        let dets = ret.get_mut(track_idx).unwrap();
+        let id = idx_to_id.get(&track_idx).unwrap();
+        let dets = ret.get_mut(id).unwrap();
         dets.1 = Some(det_idx);
     }
     ret
+}
+
+/// rows are tracks (workers), columns are detections (jobs).
+fn create_cost_matrix<T>(
+    frame: &PairedFrames,
+    tracks: &mut HashMap<TrackId, T>,
+) -> (CostMatrix, CostMatrix, HashMap<usize, TrackId>)
+where
+    T: ObjectTrack,
+{
+    let mut idx_to_id = HashMap::new();
+
+    let mut ret1 = CostMatrix::zeros(frame.a.detections.len(), tracks.len());
+    let mut ret2 = CostMatrix::zeros(frame.a.detections.len(), tracks.len());
+
+    for (track_idx, (track_id, track)) in tracks.iter_mut().enumerate() {
+        let scores_a = track.evaluate_scores(
+            frame.a.camera_id,
+            frame.a.detections.iter(),
+            frame.timestamp_avr,
+        );
+        let scores_b = track.evaluate_scores(
+            frame.b.camera_id,
+            frame.b.detections.iter(),
+            frame.timestamp_avr,
+        );
+        for (i, &s) in scores_a.iter().enumerate() {
+            ret1.set(track_idx, i, s);
+        }
+        for (i, &s) in scores_b.iter().enumerate() {
+            ret2.set(track_idx, i, s);
+        }
+        idx_to_id.insert(track_idx, *track_id);
+    }
+
+    (ret1, ret2, idx_to_id)
 }
 
 #[cfg(test)]
@@ -74,7 +88,10 @@ mod tests {
     use rand::random_range;
     use struckout_proto::{Detection, DetectionsPacket};
 
-    use crate::{tracking::kalman::evaluate_scores_for_detections, types::CameraId};
+    use crate::{
+        tracking::{TrackIdGenerator, kalman::evaluate_scores_for_detections},
+        types::CameraId,
+    };
 
     use super::*;
 
@@ -97,6 +114,19 @@ mod tests {
             };
             ret*/
             Vec::new()
+        }
+
+        fn id(&self) -> crate::tracking::TrackId {
+            todo!()
+        }
+
+        fn new(
+            id: crate::tracking::TrackId,
+            initial_position: Vector3<f64>,
+            timestamp: DateTime<Utc>,
+            camera_loc_provider: std::sync::Arc<crate::CameraLocationStore>,
+        ) -> Self {
+            todo!()
         }
 
         fn update_and_check_collision(
@@ -228,7 +258,11 @@ mod tests {
                 predict3,
             ),
         };
-        let mut tracks = vec![track1, track2, track3];
+        let id_gen = TrackIdGenerator::new();
+        let id_1 = id_gen.next();
+        let id_2 = id_gen.next();
+        let id_3 = id_gen.next();
+        let mut tracks = vec![(id_1, track1), (id_2, track2), (id_3, track3)].into();
 
         let assignment = associate_objects(&mut tracks, &new_frame);
         assert_eq!(assignment.len(), 3);

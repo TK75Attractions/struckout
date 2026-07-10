@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
@@ -11,7 +11,8 @@ use tracktor::{
 };
 
 use crate::{
-    tracking::{CameraLocationProvider, ObjectTrack},
+    CameraLocationStore,
+    tracking::{ObjectTrack, TrackId},
     types::{CameraId, CollisionPoint3D, Position3D, ToVector3},
 };
 
@@ -20,59 +21,24 @@ const GRAVITY_ACCELERATION: f32 = 9.80665;
 type TheKalmanFilter = KalmanFilter<f64, ConstantVelocity3D<f64>, PositionSensor3D<f64>, 6, 3>;
 
 /// Tracks an object using `Kalman filter`. This would be created per an object.
-pub struct KalmanTrack<P> {
-    obj_id: ObjectId,
+pub struct KalmanTrack {
+    id: TrackId,
     input_mtx: Vector3<f32>,
     filter: TheKalmanFilter,
     kalman_state: KalmanState<f64, 6>,
     prev_timestamp: DateTime<Utc>,
-    camera_loc_provider: P,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ObjectId(usize);
-
-impl ObjectId {
-    #[must_use]
-    pub fn next(&self) -> Self {
-        Self(self.0 + 1)
-    }
+    camera_locs: Arc<CameraLocationStore>,
 }
 
 const DELTA_T: f32 = Duration::from_millis(16).as_secs_f32();
 
-impl<P> KalmanTrack<P>
-where
-    P: CameraLocationProvider,
-{
-    pub fn new(
-        obj_id: ObjectId,
+impl ObjectTrack for KalmanTrack {
+    fn new(
+        id: TrackId,
         initial_position: Vector3<f64>,
         timestamp: DateTime<Utc>,
-        camera_loc_provider: P,
+        camera_loc_provider: Arc<CameraLocationStore>,
     ) -> Self {
-        /*let f = {
-            let identity = Matrix3::<f32>::identity();
-            let delta_t = identity * DELTA_T;
-            let zeros = Matrix3::<f32>::zeros();
-
-            let mut ret = Matrix6::<f32>::zeros();
-            ret.fixed_view_mut::<3, 3>(0, 0).copy_from(&identity);
-            ret.fixed_view_mut::<3, 3>(3, 0).copy_from(&zeros);
-            ret.fixed_view_mut::<3, 3>(0, 3).copy_from(&delta_t);
-            ret.fixed_view_mut::<3, 3>(3, 3).copy_from(&identity);
-            ret
-        };
-        let b = {
-            let identity = Matrix3::<f32>::identity();
-            let top = ((DELTA_T * DELTA_T) / 2.) * identity;
-            let bottom = DELTA_T * identity;
-            let mut ret = Matrix6x3::zeros();
-            ret.fixed_view_mut::<3, 3>(0, 0).copy_from(&top);
-            ret.fixed_view_mut::<3, 3>(3, 0).copy_from(&bottom);
-            ret
-        };*/
-
         // TODO: set proper value
         let transition = ConstantVelocity3D::new(1.0, 0.99);
         let sensor = PositionSensor3D::new(5.0, 0.95);
@@ -92,24 +58,19 @@ where
         let kalman_state = KalmanState::new(initial_state, initial_cov);
 
         Self {
-            obj_id,
+            id,
             input_mtx: Vector3::new(0., 0., -GRAVITY_ACCELERATION),
             filter,
             kalman_state,
             prev_timestamp: timestamp,
-            camera_loc_provider,
+            camera_locs: camera_loc_provider,
         }
     }
 
-    pub fn obj_id(&self) -> ObjectId {
-        self.obj_id
+    fn id(&self) -> TrackId {
+        self.id
     }
-}
 
-impl<P> ObjectTrack for KalmanTrack<P>
-where
-    P: CameraLocationProvider,
-{
     fn evaluate_scores<'a>(
         &mut self,
         camera_id: impl Into<CameraId>,
@@ -129,47 +90,26 @@ where
         self.kalman_state = state;
         evaluate_scores_for_detections(
             detections,
-            self.camera_loc_provider
-                .get(camera_id.into())
-                .unwrap()
-                .to_vector3(),
+            self.camera_locs.get(camera_id.into()).unwrap().to_vector3(),
             estimated_coord,
         )
     }
 
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D> {
-        //task::spawn_blocking(|| {
-
-        /*let Some(idx_a) =
-            evaluate_scores_for_objects(pair.a.detected_objects.iter(), cam_loc_a, estimated_coord)
-        else {
-            // there was no object in this frame
-            return;
-        };
-
-        let Some(idx_b) =
-            evaluate_scores_for_objects(pair.b.detected_objects.iter(), cam_loc_b, estimated_coord)
-        else {
-            warn!(
-                camera_id_a = pair.a.camera_id,
-                camera_id_b = pair.b.camera_id,
-                timestamp = ?pair.timestamp_avr,
-                "there was some object in the frame from `camera A` but it's not in `camera B`"
-            );
-            return;
-        };*/
-
-        // `idx` must exist because it comes from `find_corresponding_object()`
-        //let lay_a = pair.a.detected_objects.get(idx_a).unwrap().get_lay();
-        //let lay_b = pair.b.detected_objects.get(idx_b).unwrap().get_lay();
-
-        //let measured_coord = triangulate(cam_loc_a, lay_a, cam_loc_b, lay_b).to_vector3();
-
-        //self.filter.update(measured_coord).unwrap();
-        //})
-        //.await
-        //.unwrap();
-        todo!()
+        let measurement = Vector::from_svector(new_pos.to_vector3());
+        let estimate = self
+            .filter
+            .update(&self.kalman_state, &measurement)
+            .unwrap(); // FIXME: たぶんunwrapしないほうがいい
+        if estimate.mean.get(0).copied().unwrap() <= 0. {
+            Some(CollisionPoint3D {
+                x: 0., // FIXME: ちゃんと計算する
+                y: estimate.mean.get(1).copied().unwrap(),
+                z: estimate.mean.get(2).copied().unwrap(),
+            })
+        } else {
+            None
+        }
     }
 }
 
