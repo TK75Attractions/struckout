@@ -22,7 +22,7 @@ impl CsvCollisionOutput {
 
 impl CollisionOutput for CsvCollisionOutput {
     async fn start(self, mut collision_rx: mpsc::Receiver<CollisionPoint3D>) {
-        fs::create_dir_all(&self.csv_path)
+        fs::create_dir_all(self.csv_path.parent().unwrap())
             .await
             .with_context(|| {
                 format!(
