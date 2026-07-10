@@ -4,7 +4,10 @@ use ball_watcher::{
     Application, CameraLocationStore,
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
-    tracking::KalmanTrack,
+    tracking::{
+        EmptyEventLogger, EventLogger, JsonEventLogger, KalmanTrack, SentryEventLogger,
+        TrackingEventsDto,
+    },
     types::CollisionPoint3D,
 };
 use chrono::Local;
@@ -110,6 +113,43 @@ fn csv_path_default() -> PathBuf {
     ret
 }
 
+enum EventLoggerImpl {
+    Json(JsonEventLogger),
+    #[allow(dead_code)] // 後で追加する
+    Sentry(SentryEventLogger),
+    Empty(EmptyEventLogger),
+}
+
+impl EventLoggerImpl {
+    fn new(cli: &Cli) -> Self {
+        if cli.output_to_json {
+            Self::Json(JsonEventLogger::new(json_log_output_dir()))
+        //}else if  {
+        //    Self::Sentry(SentryEventLogger::new())
+        } else {
+            Self::Empty(EmptyEventLogger)
+        }
+    }
+}
+
+impl EventLogger for EventLoggerImpl {
+    fn push_events(&mut self, events: TrackingEventsDto) {
+        match self {
+            EventLoggerImpl::Json(l) => l.push_events(events),
+            EventLoggerImpl::Sentry(l) => l.push_events(events),
+            EventLoggerImpl::Empty(l) => l.push_events(events),
+        }
+    }
+}
+
+fn json_log_output_dir() -> PathBuf {
+    let mut ret = dirs::config_dir().unwrap();
+    ret.push("struckout/");
+    ret.push("tracker/");
+    ret.push("json/");
+    ret
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -123,12 +163,13 @@ async fn main() {
 
     let detection_input = DetectionInputImpl::new(cli.detection_input, camera_locs.clone()).await;
     let collision_output = CollisionOutputImpl::new(&cli).await;
+    let event_logger = EventLoggerImpl::new(&cli);
 
-    let app = Application::<KalmanTrack, _, _>::new(
+    let app = Application::<KalmanTrack, _, _, _>::new(
         detection_input,
         collision_output,
         camera_locs.clone(),
-        cli.output_to_json,
+        event_logger,
     );
 
     app.run().await.unwrap();

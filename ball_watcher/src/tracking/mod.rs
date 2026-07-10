@@ -8,23 +8,25 @@ use crate::{
 };
 
 mod data_association;
+mod event;
+pub use event::*;
 mod kalman;
-mod triangulate;
-use anyhow::Context;
-use chrono::{DateTime, Local, Utc};
 pub use kalman::KalmanTrack;
+mod triangulate;
+
+use anyhow::Context;
+use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
 use struckout_proto::Detection;
 use tokio::sync::mpsc;
 use tracing::trace;
 
-pub struct TrackRunner<T> {
+pub struct TrackRunner<T, EL> {
     tracks: HashMap<TrackId, T>,
     camera_locs: Arc<CameraLocationStore>,
-    output_to_json: bool,
     id_gen: TrackIdGenerator,
+    event_logger: EL,
 }
 
 /// Tracks an object.
@@ -49,16 +51,17 @@ pub trait ObjectTrack {
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D>;
 }
 
-impl<Track> TrackRunner<Track>
+impl<Track, EL> TrackRunner<Track, EL>
 where
     Track: ObjectTrack,
+    EL: EventLogger,
 {
-    pub fn new(camera_locs: Arc<CameraLocationStore>, output_to_json: bool) -> Self {
+    pub fn new(camera_locs: Arc<CameraLocationStore>, event_logger: EL) -> Self {
         Self {
             tracks: HashMap::new(),
             camera_locs,
-            output_to_json,
             id_gen: TrackIdGenerator::new(),
+            event_logger,
         }
     }
 
@@ -73,7 +76,7 @@ where
                 .await
                 .with_context(|| "pair channel has been unexpectedly closed")
                 .unwrap();
-            let collisions = self.update_frame(pair);
+            let (collisions, events) = self.update_frame(pair);
             for coll in collisions {
                 collision_tx
                     .send(coll)
@@ -81,24 +84,20 @@ where
                     .with_context(|| "collision channel has been unexpectedly closed")
                     .unwrap();
             }
+            self.event_logger.push_events(events);
         }
     }
 
-    fn update_frame(&mut self, pair: PairedFrames) -> Vec<CollisionPoint3D> {
+    fn update_frame(&mut self, pair: PairedFrames) -> (Vec<CollisionPoint3D>, TrackingEventsDto) {
         let assignments = associate_objects(&mut self.tracks, &pair);
+        let mut events = Vec::new();
         // known tracks
         let res = self.update_assigned_tracks(&pair, &assignments);
-        if self.output_to_json {
-            let prefix = Local::now().to_rfc3339();
-            let file = File::create(format!("~/.config/struckout/tracker/data/{}.json", prefix))
-                .with_context(|| "failed to create file")
-                .unwrap();
-            serde_json::to_writer(file, &res).unwrap();
-        }
         for (track_id, _) in &res.collisions {
             trace!(?track_id, "detected collision");
             self.tracks.remove(track_id);
         }
+        events.push(TrackingEventBodyDto::UpdateTrack(res.clone())); // OPTIM: 無駄clone
 
         // dropped tracks
         assignments
@@ -113,17 +112,25 @@ where
             .for_each(|track_id| {
                 // FIXME: 数フレーム待ってから削除すると良いかも
                 self.tracks.remove(track_id);
+                events.push(TrackingEventBodyDto::DropTrack(*track_id));
             });
 
         // new track
-        // TODO
         let new_tracks: Vec<Track> =
             create_new_tracks(&self.id_gen, &assignments, &pair, self.camera_locs.clone());
         for t in new_tracks {
             self.tracks.insert(t.id(), t);
+            events.push(TrackingEventBodyDto::NewTrack);
         }
 
-        res.collisions.into_iter().map(|(_, coll)| coll).collect()
+        let colls = res.collisions.into_iter().map(|(_, coll)| coll).collect();
+        (
+            colls,
+            TrackingEventsDto {
+                timestamp: pair.timestamp_avr,
+                events,
+            },
+        )
     }
 
     /// Updates tracks based on assignment.
@@ -236,7 +243,7 @@ where
 }
 
 /// Result of [`TrackRunner::update_assigned_tracks()`]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignedTrackResult {
     assigned_dets_a: Vec<usize>,
     assigned_dets_b: Vec<usize>,
