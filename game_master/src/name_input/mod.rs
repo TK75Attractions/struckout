@@ -40,7 +40,7 @@ impl NameInputViewModel {
     fn on_push_character(&self, char: SharedString) {
         trace!("NameInputViewModel::on_push_character");
 
-        assert_eq!(char.len(), 1, "character length must 1");
+        assert_eq!(char.chars().count(), 1, "character length must 1");
         let old_text = (self.state.player_name_text_getter)();
         let new_text = old_text + &char;
         (self.state.player_name_text_setter)(new_text);
