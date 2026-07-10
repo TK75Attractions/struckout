@@ -51,7 +51,8 @@ enum PlayerRepositoryMessage {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct PlayerEntity {
-    id: i64,
+    /// This should be always true.
+    id: Option<i64>,
     name: String,
 }
 

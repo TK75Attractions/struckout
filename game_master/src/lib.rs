@@ -23,7 +23,7 @@ mod state_ext;
 mod viewmodels;
 mod worker;
 
-const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/dev.db";
+const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/game_master_dev.db";
 
 struct Application {
     nav_controller: NavController,
@@ -47,6 +47,9 @@ impl ViewModelOwner {
 /// Container for repositories.
 struct RepositoryOwner {
     pub player: Rc<PlayerRepository>,
+    /// チャンネルを生存させるために必要
+    #[allow(dead_code)]
+    pub worker: WorkerThread,
 }
 
 impl RepositoryOwner {
@@ -68,6 +71,7 @@ impl RepositoryOwner {
             .expect("failed to connec to database");
         Self {
             player: Rc::new(PlayerRepository::new(pool, &worker)),
+            worker,
         }
     }
 }
