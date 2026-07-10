@@ -127,6 +127,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "dirs",
  "futures",
  "futures-util",
  "itertools 0.15.0",
@@ -243,6 +244,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]

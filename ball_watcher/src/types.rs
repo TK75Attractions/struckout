@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 
 use nalgebra::Vector3;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use struckout_proto::{CameraLocation, Detection};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -56,7 +56,7 @@ impl From<Vector3<f64>> for Position3D {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CollisionPoint3D {
     pub x: f64,
     pub y: f64,

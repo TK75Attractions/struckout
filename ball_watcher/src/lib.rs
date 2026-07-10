@@ -20,26 +20,27 @@ pub mod types;
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
 
-pub struct Application<T, DI, CO> {
+pub struct Application<T, DI, CO, EL> {
     detection_input: DI,
     collision_output: CO,
-    track_runner: TrackRunner<T>,
+    track_runner: TrackRunner<T, EL>,
     camera_locs: Arc<CameraLocationStore>,
 }
 
-impl<T, DI, CO> Application<T, DI, CO>
+impl<T, DI, CO, EL> Application<T, DI, CO, EL>
 where
     T: ObjectTrack + Send + 'static,
     DI: DetectionInput + Send + 'static,
     CO: CollisionOutput + Send + 'static,
+    EL: tracking::EventLogger + Send + 'static,
 {
     pub fn new(
         detection_input: DI,
         collision_output: CO,
         camera_locs: Arc<CameraLocationStore>,
-        output_to_json: bool,
+        event_logger: EL,
     ) -> Self {
-        let track_runner = TrackRunner::new(camera_locs.clone(), output_to_json);
+        let track_runner = TrackRunner::new(camera_locs.clone(), event_logger);
         Self {
             detection_input,
             collision_output,

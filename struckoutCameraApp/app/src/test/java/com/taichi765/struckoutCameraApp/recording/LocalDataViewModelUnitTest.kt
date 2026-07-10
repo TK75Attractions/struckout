@@ -114,7 +114,8 @@ class LocalDataViewModelUnitTest {
     ) = runTest {
         // Arrange
         val isConnected = MutableStateFlow(false)
-        coEvery { localDetectionUploader.connect() } answers {
+        coEvery { localDetectionUploader.connect() } coAnswers {
+            delay(100.milliseconds)
             isConnected.value = true
             null
         }
