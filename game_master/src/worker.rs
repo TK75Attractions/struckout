@@ -1,10 +1,12 @@
+use std::pin::Pin;
+
 use tokio::sync::mpsc;
 
 const WORKER_CHANNEL_BUF: usize = 8;
 
 /// A thread to run async codes.
 pub struct WorkerThread {
-    tx: mpsc::Sender<Box<dyn Future<Output = ()> + Send + Unpin + 'static>>,
+    tx: mpsc::Sender<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>,
 }
 
 // TODO: 停止できるようにする
@@ -16,7 +18,7 @@ impl WorkerThread {
     }
 
     #[tokio::main]
-    async fn run(mut rx: mpsc::Receiver<Box<dyn Future<Output = ()> + Send + Unpin + 'static>>) {
+    async fn run(mut rx: mpsc::Receiver<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>) {
         loop {
             let fut = rx.recv().await.unwrap();
             let _join = tokio::spawn(fut);
@@ -25,8 +27,8 @@ impl WorkerThread {
 
     pub fn spawn<F>(&self, fut: F)
     where
-        F: Future<Output = ()> + Send + Unpin + 'static,
+        F: Future<Output = ()> + Send + 'static,
     {
-        self.tx.blocking_send(Box::new(fut)).unwrap();
+        self.tx.blocking_send(Box::pin(fut)).unwrap();
     }
 }

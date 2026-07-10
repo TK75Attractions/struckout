@@ -1,12 +1,14 @@
 use std::{cell::OnceCell, rc::Rc};
 
 use slint::ComponentHandle;
-use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::sqlite::SqlitePoolOptions;
+use tokio::sync::oneshot;
 
 use crate::{
     nav::NavController,
     player_repository::PlayerRepository,
     viewmodels::start_screen::{self, StartScreenViewModel},
+    worker::WorkerThread,
 };
 
 mod ui {
@@ -48,14 +50,29 @@ struct RepositoryOwner {
 }
 
 impl RepositoryOwner {
-    fn new(pool: Pool<Sqlite>) -> Self {
+    fn new() -> Self {
+        let worker = WorkerThread::new();
+        let (tx, rx) = oneshot::channel();
+        worker.spawn(async move {
+            let res = SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(SQLITE_DEFAULT_URL)
+                .await;
+            tx.send(res).unwrap();
+        });
+
+        // FIXME: 普通にブロックする. slint::spawn_local()など
+        let pool = rx
+            .blocking_recv()
+            .unwrap()
+            .expect("failed to connec to database");
         Self {
-            player: Rc::new(PlayerRepository::new(pool)),
+            player: Rc::new(PlayerRepository::new(pool, &worker)),
         }
     }
 }
 
-pub async fn run_main() {
+pub fn run_main() {
     let ui = ui::AppWindow::new().unwrap();
 
     let nav_controller = NavController::new(ui::NavRoute::Start, {
@@ -67,17 +84,11 @@ pub async fn run_main() {
         }
     });
 
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(SQLITE_DEFAULT_URL)
-        .await
-        .expect("failed to connect to database");
-
     let application = Application {
         nav_controller,
         ui,
         viewmodels: ViewModelOwner::new(),
-        repositories: RepositoryOwner::new(pool.clone()),
+        repositories: RepositoryOwner::new(),
     };
 
     start_screen::init(&application);
