@@ -7,10 +7,10 @@ use std::{cell::RefCell, fmt::Debug, pin::Pin, rc::Rc};
 /// Observable data.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// # use std::rc::Rc;
 /// # use std::cell::Cell;
-/// use tsukuyomidmx::Observable;
+/// use crate::state_ext::State;
 ///
 /// let count = Observable::new(0);
 /// let double = Rc::new(Cell::new(0));

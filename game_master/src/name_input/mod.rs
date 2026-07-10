@@ -22,7 +22,7 @@ struct NameInputState {
 }
 
 impl NameInputViewModel {
-    pub fn new(player_repo: Rc<PlayerRepository>, state: NameInputState) -> Self {
+    fn new(player_repo: Rc<PlayerRepository>, state: NameInputState) -> Self {
         Self { player_repo, state }
     }
 
@@ -62,7 +62,7 @@ impl NameInputViewModel {
         trace!("NameInputViewModel::on_submit_name");
 
         let name = (self.state.player_name_text_getter)();
-        self.player_repo.insert_player(name);
+        self.player_repo.insert_player(name); // TODO: result受け取る
     }
 }
 

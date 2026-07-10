@@ -1927,6 +1927,7 @@ dependencies = [
  "slint-build",
  "sqlx",
  "struckout-proto",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tokio-stream",

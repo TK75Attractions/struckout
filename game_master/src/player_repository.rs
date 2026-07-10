@@ -1,4 +1,5 @@
 use sqlx::{Pool, Sqlite};
+use thiserror::Error;
 use tokio::sync::mpsc;
 
 use crate::worker::WorkerThread;
@@ -34,8 +35,24 @@ impl PlayerRepository {
     }
 }
 
+/// Error type for [`PlayerRepository::insert_player()`].
+#[derive(Debug, Error)]
+pub enum InsertPlayerError {
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+    #[error("Player name {0} is already in use")]
+    NameAlredyInUse(String),
+}
+
 enum PlayerRepositoryMessage {
     InsertPlayer(String),
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+struct PlayerEntity {
+    id: i64,
+    name: String,
 }
 
 struct PlayerRepositoryInner {
@@ -47,10 +64,51 @@ impl PlayerRepositoryInner {
         Self { pool }
     }
 
-    async fn insert_player(&self, name: impl Into<String>) -> Result<(), sqlx::Error> {
-        sqlx::query!("INSERT INTO players (name) VALUES (?)", name.into())
+    async fn insert_player(&self, name: impl Into<String>) -> Result<(), InsertPlayerError> {
+        let name = name.into();
+        let existing =
+            sqlx::query_as!(PlayerEntity, "SELECT * FROM players WHERE name == ?", &name)
+                .fetch_optional(&self.pool)
+                .await?;
+        if existing.is_some() {
+            return Err(InsertPlayerError::NameAlredyInUse(name.into()));
+        }
+        sqlx::query!("INSERT INTO players (name) VALUES (?)", &name)
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::sqlite::SqlitePoolOptions;
+    use tempfile::NamedTempFile;
+
+    use super::*;
+    #[tokio::test]
+    async fn insert_player_returns_error_when_name_already_in_use() {
+        let file = NamedTempFile::new().unwrap();
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&file.path().to_string_lossy())
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+
+        let player_name = "bob";
+        sqlx::query!(
+            "INSERT INTO players (id, name) VALUES (?, ?)",
+            0,
+            player_name
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = PlayerRepositoryInner::new(pool.clone());
+        let res = repo.insert_player(player_name).await;
+        assert!(res.is_err());
     }
 }
