@@ -30,7 +30,7 @@ namespace Struckout.Application
 
         public void GameSetup()
         {
-            _state.AddTargets(_targetGenerator.GenerateTargets(4, 8));
+            _state.AddTargets(_targetGenerator,4,TargetType.Circle);
             AddCollisionTargetAction(_state.RemoveTarget);
             UpdateUI();
         }
@@ -56,7 +56,7 @@ namespace Struckout.Application
             {
                 _collisionTargetAction?.Invoke(hitTarget);
                 _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
-                _state.AddTargets(_targetGenerator.GenerateTargets(1,50));
+                _state.AddTargets(_targetGenerator,1,TargetType.Circle);
             }
         }
     }

@@ -14,6 +14,7 @@ namespace Struckout.Infrastructure
         private bool _isConnected;
         CancellationTokenSource _receiveCancellationToken;
         Task task;
+
         public async Task<bool> ConnectAsync()
         {
             _isConnected = true;
@@ -21,6 +22,7 @@ namespace Struckout.Infrastructure
             task = ReceieveCollision(_receiveCancellationToken.Token);
             return true;
         }
+        
         public async Task DisconnectAsync()
         {
             _isConnected = false;

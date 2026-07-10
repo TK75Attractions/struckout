@@ -5,8 +5,7 @@ namespace Struckout.Application
 {
     public interface ITargetGenerator
     {
-        IReadOnlyList<Target> GenerateTargets(int num, float size);
-        IReadOnlyList<Target> GenerateTargets(int num, float size, IReadOnlyList<Target> existTarget);
-        Target GenerateTarget(TargetType targetType,float X, float Y, float size);
+        Target GenerateTarget(TargetType type, IReadOnlyList<Target> existTarget);
+        IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> existTarget);
     }
 }

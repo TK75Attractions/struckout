@@ -20,7 +20,7 @@ namespace Struckout.Application
         {
             foreach (var target in targets)
             {
-                AddTarget(target);
+                _targets.Add(target);
             }   
         }
 
@@ -39,10 +39,15 @@ namespace Struckout.Application
             Score -= score;
         }
 
-        public void AddTarget(Target target)
+        public void AddTargets(ITargetGenerator generator, int num, TargetType type)
         {
-            if (_targets.Contains(target)) throw new Exception("Add Existing Target");
-            _targets.Add(target);
+            var targets = generator.GenerateTargets(num, type, Targets);
+            
+            foreach (var target in targets)
+            {
+                if (_targets.Contains(target)) throw new Exception("Add Existing Target");
+                _targets.Add(target);
+            }
         }
 
         public void RemoveTarget(Target target)
