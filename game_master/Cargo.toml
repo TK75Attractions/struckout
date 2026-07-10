@@ -35,8 +35,8 @@ sqlx = { workspace = true, features = [
 ] }
 
 slint = { version = "1.17.1", features = [
-    "backend-winit",
-    "renderer-femtovg-wgpu",
+    #"backend-winit",
+    #"renderer-femtovg-wgpu",
 ] }
 i-slint-core = { version = "=1.17.1" }
 

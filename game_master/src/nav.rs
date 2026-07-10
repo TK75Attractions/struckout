@@ -2,6 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::ui;
 
+#[derive(Debug)]
 pub struct NavController(Rc<RefCell<NavControllerInner<Box<dyn Fn(ui::NavRoute)>>>>);
 
 impl NavController {
@@ -27,7 +28,9 @@ impl Clone for NavController {
     }
 }
 
+#[derive(derive_more::Debug)]
 struct NavControllerInner<F> {
+    #[debug(skip)]
     route_property_setter: F,
 }
 
