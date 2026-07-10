@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use ball_watcher::{
     Application, CameraLocationStore,
@@ -7,6 +7,7 @@ use ball_watcher::{
     tracking::KalmanTrack,
     types::CollisionPoint3D,
 };
+use chrono::Local;
 use clap::{Parser, ValueEnum};
 use tokio::sync::mpsc;
 use tracing::Level;
@@ -18,8 +19,11 @@ struct Cli {
     detection_input: DetectionInputKind,
     #[arg(value_enum, long = "output", help = "collisionをどこに送信するか")]
     collision_output: CollisionOutputKind,
+    /// JSONに追跡結果を出力する
     #[arg(short = 'j', long = "json")]
     output_to_json: bool,
+    #[arg(short = 'c', long = "csv_path")]
+    csv_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -82,16 +86,28 @@ impl CollisionOutput for CollisionOutputImpl {
 }
 
 impl CollisionOutputImpl {
-    async fn new(kind: CollisionOutputKind) -> Self {
-        match kind {
+    async fn new(cli: &Cli) -> Self {
+        match &cli.collision_output {
             CollisionOutputKind::Network => {
                 Self::Network(NetworkCollisionOutput::connect().await.unwrap())
             }
-            CollisionOutputKind::Csv => Self::Csv(CsvCollisionOutput::new(
-                "/home/taichi765/source/dev/struckout/ball_watcher/data/hoge.csv",
-            )),
+            CollisionOutputKind::Csv => {
+                // OPTIM: 無駄なclone
+                let path = cli.csv_path.clone().unwrap_or_else(|| csv_path_default());
+                Self::Csv(CsvCollisionOutput::new(path))
+            }
         }
     }
+}
+
+fn csv_path_default() -> PathBuf {
+    let mut ret = dirs::config_dir().unwrap();
+    ret.push("struckout/");
+    ret.push("tracker/");
+    ret.push("csv/");
+    let fname = format!("{}.csv", Local::now().format("%Y%m%d_%H%M"));
+    ret.push(fname);
+    ret
 }
 
 #[tokio::main]
@@ -106,7 +122,7 @@ async fn main() {
     let camera_locs = Arc::new(CameraLocationStore::new());
 
     let detection_input = DetectionInputImpl::new(cli.detection_input, camera_locs.clone()).await;
-    let collision_output = CollisionOutputImpl::new(cli.collision_output).await;
+    let collision_output = CollisionOutputImpl::new(&cli).await;
 
     let app = Application::<KalmanTrack, _, _>::new(
         detection_input,

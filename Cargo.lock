@@ -127,6 +127,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "dirs",
  "futures",
  "futures-util",
  "itertools 0.15.0",
