@@ -31,7 +31,7 @@ namespace Struckout.Unity
             builder.Register<ICollisionSolver,CollisionSolver>(Lifetime.Singleton);
             builder.Register<IPointCalculator, FakePointCalculator>(Lifetime.Singleton);
             builder.Register<ISensorProvider, FakeSensorProvider>(Lifetime.Singleton);
-            builder.Register<ITargetGenerator, FakeTargetGenerator>(Lifetime.Singleton);
+            builder.Register<ITargetGenerator, TargetGenerator>(Lifetime.Singleton);
 
             builder.Register<NetworkBootstrap>(Lifetime.Singleton);
             builder.Register<GameBootstrap>(Lifetime.Singleton);

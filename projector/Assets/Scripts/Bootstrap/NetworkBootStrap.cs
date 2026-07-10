@@ -2,7 +2,8 @@ using Struckout.Application;
 using Tk75Attractions.Struckout.V1;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using Struckout.Infrastructure;
+using System;
+using Struckout.Domain;
 
 
 namespace Struckout.Bootstrap
@@ -19,13 +20,16 @@ namespace Struckout.Bootstrap
             IPacketRouter packetRouter
         )
         {
-            _client = clientService;
-            _master = masterService;
-            _packetRouter = packetRouter;
+            _client = clientService ?? throw new ArgumentNullException(nameof(clientService));
+            _master = masterService ?? throw new ArgumentNullException(nameof(masterService));
+            _packetRouter = packetRouter ?? throw new ArgumentNullException(nameof(packetRouter));
         }
 
-        internal async UniTask Initialize()
+        internal async UniTask<NetworkConnectionResult> Initialize()
         {   
+            if(_client == null || _master == null || _packetRouter == null)
+                return NetworkConnectionResult.InvalidConfiguration;
+
             _packetRouter.OnStringMessageReceived += OnReceiveMessage;
             
             
@@ -36,10 +40,12 @@ namespace Struckout.Bootstrap
             _master.RegisterPort("127.0.0.1", 5001);
 
             bool isSuccessfullyClientConnect = await _client.ConnectAsync();
+            if(!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
+
             bool isSuccessfullyMasterConnect = await _master.ConnectAsync();
+            if(!isSuccessfullyMasterConnect) return NetworkConnectionResult.MasterConnectFailed;
             
-            bool isSuccessfullyConnect = isSuccessfullyClientConnect && isSuccessfullyMasterConnect;
-            if(!isSuccessfullyConnect) throw new System.Exception("Failed to connect successfully");
+            return NetworkConnectionResult.Success;
         }
 
         private void OnReceiveMessage(TestMessage message)

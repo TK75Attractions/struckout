@@ -44,7 +44,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
-      "Google.ProtoBuf >= 3.35.1"
+      "Google.Protobuf >= 3.35.1"
     ]
   },
   "packageFolders": {
@@ -94,7 +94,7 @@
         "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
-          "Google.ProtoBuf": {
+          "Google.Protobuf": {
             "target": "Package",
             "version": "[3.35.1, )"
           }
@@ -115,7 +115,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",
