@@ -5,6 +5,7 @@ enum KeyBoardMode { Hiragana, Katakana }
 global Adopter {
     in property <string> player-name-text;
     in property <KeyBoardMode> keyboard-mode;
+    in property <string> error-msg;
     callback switch-keyboard-mode();
     callback push-character(char: string);
     callback remove-character();
@@ -449,6 +450,13 @@ export component NameInputScreen inherits Rectangle {
 
             Text {
                 text: Adopter.player-name-text;
+            }
+        }
+
+        if Adopter.error-msg != "": Rectangle {
+            Text {
+                text: Adopter.error-msg;
+                color: red;
             }
         }
 

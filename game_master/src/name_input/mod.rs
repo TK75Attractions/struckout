@@ -1,29 +1,42 @@
 use std::rc::Rc;
 
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 use crate::{
     Application,
-    player_repository::PlayerRepository,
-    ui::{self, KeyBoardMode},
+    nav::NavController,
+    player_repository::{InsertPlayerError, PlayerRepository},
+    ui::{self, KeyBoardMode, NavRoute},
 };
 
 pub struct NameInputViewModel {
     player_repo: Rc<PlayerRepository>,
+    nav_controller: NavController,
     state: NameInputState,
 }
 
+#[allow(dead_code)] // propertyを網羅したいため
 struct NameInputState {
-    keyboard_mode_getter: Box<dyn Fn() -> KeyBoardMode>,
-    keyboard_mode_setter: Box<dyn Fn(KeyBoardMode)>,
-    player_name_text_getter: Box<dyn Fn() -> SharedString>,
-    player_name_text_setter: Box<dyn Fn(SharedString)>,
+    keyboard_mode_getter: Rc<dyn Fn() -> KeyBoardMode>,
+    keyboard_mode_setter: Rc<dyn Fn(KeyBoardMode)>,
+    player_name_text_getter: Rc<dyn Fn() -> SharedString>,
+    player_name_text_setter: Rc<dyn Fn(SharedString)>,
+    error_msg_getter: Rc<dyn Fn() -> SharedString>,
+    error_msg_setter: Rc<dyn Fn(SharedString)>,
 }
 
 impl NameInputViewModel {
-    fn new(player_repo: Rc<PlayerRepository>, state: NameInputState) -> Self {
-        Self { player_repo, state }
+    fn new(
+        player_repo: Rc<PlayerRepository>,
+        nav_controller: NavController,
+        state: NameInputState,
+    ) -> Self {
+        Self {
+            player_repo,
+            nav_controller,
+            state,
+        }
     }
 
     fn on_switch_keyboard_mode(&self) {
@@ -62,7 +75,20 @@ impl NameInputViewModel {
         trace!("NameInputViewModel::on_submit_name");
 
         let name = (self.state.player_name_text_getter)();
-        self.player_repo.insert_player(name); // TODO: result受け取る
+        let set_msg = Rc::clone(&self.state.error_msg_setter);
+        let nav_controller = self.nav_controller.clone();
+        self.player_repo.insert_player(name, move |res| match res {
+            Ok(()) => {
+                nav_controller.navigate(NavRoute::DifficulitySelect);
+            }
+            Err(InsertPlayerError::NameAlredyInUse(name)) => {
+                set_msg(format!("'{}'はすでに使われています", name).to_shared_string());
+            }
+            Err(InsertPlayerError::Sqlx(e)) => {
+                set_msg("プログラム内部でエラーが発生しました".to_shared_string());
+                error!(?e, "error occured while inserting player");
+            }
+        });
     }
 }
 
@@ -76,25 +102,34 @@ pub fn init(application: &Application) {
 
     let adopter = application.ui.global::<ui::NameInputAdopter>();
     let state = NameInputState {
-        keyboard_mode_getter: Box::new({
+        keyboard_mode_getter: Rc::new({
             let adopter_weak = adopter.as_weak();
             move || adopter_weak.unwrap().get_keyboard_mode()
         }),
-        keyboard_mode_setter: Box::new({
+        keyboard_mode_setter: Rc::new({
             let adopter_weak = adopter.as_weak();
             move |mode| adopter_weak.unwrap().set_keyboard_mode(mode)
         }),
-        player_name_text_getter: Box::new({
+        player_name_text_getter: Rc::new({
             let adopter_weak = adopter.as_weak();
             move || adopter_weak.unwrap().get_player_name_text()
         }),
-        player_name_text_setter: Box::new({
+        player_name_text_setter: Rc::new({
             let adopter_weak = adopter.as_weak();
             move |val| adopter_weak.unwrap().set_player_name_text(val)
+        }),
+        error_msg_getter: Rc::new({
+            let adopter_weak = adopter.as_weak();
+            move || adopter_weak.unwrap().get_error_msg()
+        }),
+        error_msg_setter: Rc::new({
+            let adopter_weak = adopter.as_weak();
+            move |val| adopter_weak.unwrap().set_error_msg(val)
         }),
     };
     let viewmodel = Rc::new(NameInputViewModel::new(
         Rc::clone(&application.repositories.player),
+        application.nav_controller.clone(),
         state,
     ));
 

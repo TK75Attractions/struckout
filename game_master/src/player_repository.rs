@@ -1,37 +1,58 @@
 use sqlx::{Pool, Sqlite};
 use thiserror::Error;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 use crate::worker::WorkerThread;
 
 const MESSAGE_CHANNEL_BUF: usize = 4;
 
 pub struct PlayerRepository {
-    tx: mpsc::Sender<PlayerRepositoryMessage>,
+    msg_tx: mpsc::Sender<(
+        PlayerRepositoryMessage,
+        oneshot::Sender<PlayerRepositoryResponse>,
+    )>,
 }
 
 impl PlayerRepository {
     pub fn new(pool: Pool<Sqlite>, worker: &WorkerThread) -> Self {
-        let (tx, mut rx) = mpsc::channel(MESSAGE_CHANNEL_BUF);
+        let (msg_tx, mut msg_rx) = mpsc::channel::<(
+            PlayerRepositoryMessage,
+            oneshot::Sender<PlayerRepositoryResponse>,
+        )>(MESSAGE_CHANNEL_BUF);
         let inner = PlayerRepositoryInner::new(pool);
         worker.spawn(async move {
             loop {
-                let msg = rx.recv().await.unwrap();
+                let (msg, res_tx): (_, _) = msg_rx.recv().await.unwrap();
                 match msg {
                     PlayerRepositoryMessage::InsertPlayer(name) => {
-                        inner.insert_player(name).await.expect("todo");
+                        let res = inner.insert_player(name).await;
+                        res_tx
+                            .send(PlayerRepositoryResponse::InsertPlayer(res))
+                            .unwrap();
                     }
                 }
             }
         });
-        Self { tx }
+        Self { msg_tx }
     }
 
-    // TODO: oneshotとかでResult受け取りたい
-    pub fn insert_player(&self, name: impl Into<String>) {
-        self.tx
-            .blocking_send(PlayerRepositoryMessage::InsertPlayer(name.into()))
+    pub fn insert_player<F>(&self, name: impl Into<String>, cb: F)
+    where
+        F: FnOnce(Result<(), InsertPlayerError>) + 'static,
+    {
+        let (res_tx, res_rx) = oneshot::channel();
+        self.msg_tx
+            .blocking_send((PlayerRepositoryMessage::InsertPlayer(name.into()), res_tx))
             .unwrap();
+        slint::spawn_local(async move {
+            #[allow(irrefutable_let_patterns)]// 将来的にメソッド触れる可能性があるので
+            let PlayerRepositoryResponse::InsertPlayer(res) = res_rx.await.unwrap() else {
+                panic!(
+                    "PlayerRepositoryMessage::InsertPlayer should return PlayerRepositoryResponse::InsertPlayer"
+                );
+            };
+            cb(res);
+        }).unwrap();
     }
 }
 
@@ -44,8 +65,14 @@ pub enum InsertPlayerError {
     NameAlredyInUse(String),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum PlayerRepositoryMessage {
     InsertPlayer(String),
+}
+
+#[derive(Debug)]
+enum PlayerRepositoryResponse {
+    InsertPlayer(Result<(), InsertPlayerError>),
 }
 
 #[allow(dead_code)]
