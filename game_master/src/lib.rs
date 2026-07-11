@@ -19,8 +19,8 @@ mod data;
 mod name_input;
 mod nav;
 mod player_repository;
+mod presentation;
 mod state_ext;
-mod viewmodels;
 mod worker;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/game_master_dev.db";
