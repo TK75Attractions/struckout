@@ -89,6 +89,9 @@ macro_rules! state_struct {
 
 pub mod difficulity_select;
 pub mod name_input;
+pub mod playing;
+pub mod ranking;
+pub mod score;
 pub mod start;
 
 /// Wraps slint's property.
@@ -120,4 +123,8 @@ impl<T> Clone for PropertyWrapper<T> {
 pub fn init(application: &Application) {
     start::init(application);
     name_input::init(application);
+    difficulity_select::init(application);
+    playing::init(application);
+    score::init(application);
+    ranking::init(application);
 }
