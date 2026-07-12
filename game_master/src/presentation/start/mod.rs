@@ -11,10 +11,8 @@ pub struct StartScreenViewModel {
 }
 
 impl StartScreenViewModel {
-    pub fn new(application: &Application) -> Self {
-        Self {
-            nav_controller: application.nav_controller.clone(),
-        }
+    pub fn new(nav_controller: NavController) -> Self {
+        Self { nav_controller }
     }
 
     pub fn on_click(&self) {
@@ -23,11 +21,13 @@ impl StartScreenViewModel {
     }
 }
 
-pub fn init(application: &Application) {
+pub fn init<PT>(application: &Application<PT>) {
     debug!("initializing StartScreen");
     let adopter = application.ui.global::<ui::StartScreenAdopter>();
 
-    let viewmodel = Rc::new(StartScreenViewModel::new(application));
+    let viewmodel = Rc::new(StartScreenViewModel::new(
+        application.nav_controller.clone(),
+    ));
 
     adopter.on_click({
         let viewmodel = Rc::clone(&viewmodel);

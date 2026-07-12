@@ -4,6 +4,7 @@ enum Difficulity { Normal, Hard, VeryHard }
 
 global Adopter {
     in property <Difficulity> selected-difficulity;
+    in property <string> error-msg;
 
     callback select-difficulity(val: Difficulity);
     callback start-game();

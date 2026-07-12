@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::Application;
+use crate::{Application, data::projector::ProjectorConnection};
 
 /// Binds viewmodel's callback to slint adopter.
 macro_rules! bind_callback {
@@ -130,11 +130,14 @@ impl<T> Clone for PropertyWrapper<T> {
     }
 }
 
-pub fn init(application: &Application) {
+pub fn init<PT>(application: &Application<PT>)
+where
+    PT: ProjectorConnection + 'static,
+{
     start::init(application);
     name_input::init(application);
     difficulity_select::init(application);
-    playing::init(application);
-    score::init(application);
-    ranking::init(application);
+    // playing::init(application);
+    // score::init(application);
+    // ranking::init(application);
 }

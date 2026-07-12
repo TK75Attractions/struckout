@@ -94,7 +94,7 @@ fn pop_player_name(old_text: SharedString) -> SharedString {
     old_text[0..old_text.len() - 1].to_shared_string()
 }
 
-pub fn init(application: &Application) {
+pub fn init<PT>(application: &Application<PT>) {
     debug!("initializing NameInputViewModel");
 
     let adopter = application.ui.global::<ui::NameInputAdopter>();

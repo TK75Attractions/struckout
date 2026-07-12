@@ -1,11 +1,13 @@
-use std::{cell::OnceCell, rc::Rc};
-
 use slint::ComponentHandle;
 use sqlx::sqlite::SqlitePoolOptions;
+use std::cell::RefCell;
+use std::{cell::OnceCell, rc::Rc};
 use tokio::sync::oneshot;
 
 use crate::{
-    data::player::PlayerRepository, nav::NavController, presentation::start::StartScreenViewModel,
+    data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
+    nav::NavController,
+    presentation::start::StartScreenViewModel,
     worker::WorkerThread,
 };
 
@@ -21,11 +23,11 @@ mod worker;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/game_master_dev.db";
 
-struct Application {
+struct Application<PT> {
     nav_controller: NavController,
     ui: ui::AppWindow,
     viewmodels: ViewModelOwner,
-    repositories: RepositoryOwner,
+    repositories: RepositoryOwner<PT>,
 }
 
 struct ViewModelOwner {
@@ -41,14 +43,14 @@ impl ViewModelOwner {
 }
 
 /// Container for repositories.
-struct RepositoryOwner {
+struct RepositoryOwner<PT> {
     pub player: Rc<PlayerRepository>,
-    /// チャンネルを生存させるために必要
-    #[allow(dead_code)]
+    pub projector: Rc<RefCell<PT>>,
+    #[allow(dead_code)] // チャンネルを生存させるために必要
     pub worker: WorkerThread,
 }
 
-impl RepositoryOwner {
+impl RepositoryOwner<ProjectorConnectionImpl> {
     fn new() -> Self {
         let worker = WorkerThread::new();
         let (tx, rx) = oneshot::channel();
@@ -67,6 +69,7 @@ impl RepositoryOwner {
             .expect("failed to connec to database");
         Self {
             player: Rc::new(PlayerRepository::new(pool, &worker)),
+            projector: todo!(),
             worker,
         }
     }

@@ -1,5 +1,5 @@
 use crate::Application;
 
-pub fn init(application: &Application){
+pub fn init<PT>(application: &Application<PT>) {
     todo!()
 }
