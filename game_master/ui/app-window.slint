@@ -1,16 +1,22 @@
 import { AboutSlint, VerticalBox } from "std-widgets.slint";
 import { TopBar } from "top-bar.slint";
-import { StartScreen } from "start-screen.slint";
-import { NameInputScreen } from "../src/name_input/name-input-screen.slint";
+import { StartScreen } from "../src/presentation/start/start-screen.slint";
+import {
+    NameInputScreen,
+} from "../src/presentation/name_input/name-input-screen.slint";
 import {
     DifficulitySelectScreen,
-} from "difficulity-select-screen.slint";
+} from "../src/presentation/difficulity_select/difficulity-select-screen.slint";
 import { PlayingScreen } from "playing-screen.slint";
 import { ScoreScreen } from "score-screen.slint";
 import { RankingScreen } from "ranking-screen.slint";
 
-export { StartScreenAdopter }from "./start-screen.slint";
-export { NameInputAdopter }from "../src/name_input/name-input-screen.slint";
+export {
+    StartScreenAdopter,
+}from "../src/presentation/start//start-screen.slint";
+export {
+    NameInputAdopter,
+}from "../src/presentation/name_input/name-input-screen.slint";
 
 enum NavRoute {
     Start,

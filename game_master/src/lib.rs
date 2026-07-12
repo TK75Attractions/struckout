@@ -5,9 +5,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 use tokio::sync::oneshot;
 
 use crate::{
-    nav::NavController,
-    player_repository::PlayerRepository,
-    viewmodels::start_screen::{self, StartScreenViewModel},
+    data::player::PlayerRepository, nav::NavController, presentation::start::StartScreenViewModel,
     worker::WorkerThread,
 };
 
@@ -16,9 +14,7 @@ mod ui {
 }
 
 mod data;
-mod name_input;
 mod nav;
-mod player_repository;
 mod presentation;
 mod state_ext;
 mod worker;
@@ -95,8 +91,7 @@ pub fn run_main() {
         repositories: RepositoryOwner::new(),
     };
 
-    start_screen::init(&application);
-    name_input::init(&application);
+    presentation::init(&application);
 
     application.ui.run().unwrap();
 }
