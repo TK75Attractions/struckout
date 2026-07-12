@@ -1,0 +1,27 @@
+import { Button } from "std-widgets.slint";
+global Adopter {
+    in property <string> error-msg;
+
+    callback retry-connection();
+}
+
+export component ConnectionFailedScreen inherits Rectangle {
+    VerticalLayout {
+        cross-axis-alignment: CrossAxisAlignment.center;
+        alignment: LayoutAlignment.center;
+
+        Text {
+            text: Adopter.error-msg;
+        }
+
+        Button {
+            text: "接続のリトライ";
+
+            clicked => {
+                Adopter.retry-connection();
+            }
+        }
+    }
+}
+
+export { Adopter as ConnectionFailedAdopter }

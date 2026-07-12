@@ -100,6 +100,7 @@ pub enum NavRoute {
     Score,
     Ranking,
     Fallback(String),
+    ConnectionFailed(String),
 }
 
 impl Into<ui::NavRoute> for NavRoute {
@@ -112,6 +113,7 @@ impl Into<ui::NavRoute> for NavRoute {
             Self::Score => ui::NavRoute::Score,
             Self::Ranking => ui::NavRoute::DifficulitySelect,
             Self::Fallback(_) => ui::NavRoute::Fallback,
+            Self::ConnectionFailed(_) => ui::NavRoute::ConnectionFailed,
         }
     }
 }

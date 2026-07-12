@@ -21,10 +21,6 @@ impl FallbackViewModel {
             state: FallbackState::new(&adopter),
         }
     }
-
-    pub fn load(&self, msg: impl Into<SharedString>) {
-        self.state.msg.set(msg.into());
-    }
 }
 
 pub struct FallbackDestination {
