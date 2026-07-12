@@ -1,6 +1,10 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::{Application, data::projector::ProjectorConnection};
+use crate::{
+    Application,
+    data::projector::{BindError, ProjectorConnection},
+    nav::NavRoute,
+};
 
 /// Binds viewmodel's callback to slint adopter.
 macro_rules! bind_callback {
@@ -146,9 +150,7 @@ pub fn init<PT>(application: &Application<PT>)
 where
     PT: ProjectorConnection + 'static,
 {
-    start::init(application);
-    name_input::init(application);
-    difficulity_select::init(application);
+    unimplemented!("いずれ消す")
     // playing::init(application);
     // score::init(application);
     // ranking::init(application);

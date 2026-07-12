@@ -6,10 +6,11 @@ use tracing::{debug, error, trace};
 use crate::{
     Application,
     data::player::{InsertPlayerError, PlayerRepository},
-    nav::NavController,
-    ui::{self, KeyBoardMode, NavRoute},
+    nav::{NavController, NavDestination, NavRoute},
+    ui::{self, KeyBoardMode},
 };
 
+#[derive(Debug)]
 pub struct NameInputViewModel {
     player_repo: Rc<PlayerRepository>,
     nav_controller: NavController,
@@ -94,32 +95,57 @@ fn pop_player_name(old_text: SharedString) -> SharedString {
     old_text[0..old_text.len() - 1].to_shared_string()
 }
 
-pub fn init<PT>(application: &Application<PT>) {
-    debug!("initializing NameInputViewModel");
+pub struct NameInputDestination {
+    nav_controller: NavController,
+    adopter: slint::Weak<ui::NameInputAdopter<'static>>,
+    player_repo: Rc<PlayerRepository>,
+}
 
-    let adopter = application.ui.global::<ui::NameInputAdopter>();
-    let state = NameInputState::new(&adopter);
-    let viewmodel = Rc::new(NameInputViewModel::new(
-        Rc::clone(&application.repositories.player),
-        application.nav_controller.clone(),
-        state,
-    ));
+impl NameInputDestination {
+    pub fn new<PT>(application: &Application<PT>) -> Self {
+        Self {
+            nav_controller: application.nav_controller.clone(),
+            adopter: application.ui.global::<ui::NameInputAdopter>().as_weak(),
+            player_repo: application.repositories.player.clone(),
+        }
+    }
+}
 
-    macro_rules! cb {
-        ($name: ident) => {
-            bind_callback!(adopter, viewmodel, $name);
+impl NavDestination for NameInputDestination {
+    fn load(&self, route: &NavRoute) {
+        debug!("loading NameInputViewModel");
+        let NavRoute::NameInput = route else {
+            panic!("matched variant should be given");
         };
+
+        let adopter = self.adopter.unwrap();
+
+        let viewmodel = Rc::new(NameInputViewModel::new(
+            Rc::clone(&self.player_repo),
+            self.nav_controller.clone(),
+            NameInputState::new(&adopter),
+        ));
+
+        macro_rules! cb {
+            ($name: ident) => {
+                bind_callback!(adopter, viewmodel, $name);
+            };
+        }
+
+        adopter.on_push_character({
+            let viewmodel = Rc::clone(&viewmodel);
+            move |char| {
+                viewmodel.on_push_character(char);
+            }
+        });
+        cb!(switch_keyboard_mode);
+        cb!(remove_character);
+        cb!(submit_name);
     }
 
-    adopter.on_push_character({
-        let viewmodel = Rc::clone(&viewmodel);
-        move |char| {
-            viewmodel.on_push_character(char);
-        }
-    });
-    cb!(switch_keyboard_mode);
-    cb!(remove_character);
-    cb!(submit_name);
+    fn matches(&self, route: &NavRoute) -> bool {
+        matches!(route, &NavRoute::NameInput)
+    }
 }
 
 #[cfg(test)]

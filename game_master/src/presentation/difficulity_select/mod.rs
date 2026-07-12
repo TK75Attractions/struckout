@@ -6,11 +6,18 @@ use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use crate::{
     Application,
     data::projector::{ProjectorConnection, StartGameError},
-    nav::NavController,
-    ui::{self, NavRoute},
+    nav::{NavController, NavDestination, NavRoute},
+    ui,
 };
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 
+state_struct!(
+    DifficulitySelect,
+    selected_difficulity => ui::Difficulity,
+    error_msg => SharedString
+);
+
+#[derive(Debug)]
 pub struct DifficulitySelectViewModel<PT> {
     nav_controller: NavController,
     state: DifficulitySelectState,
@@ -58,35 +65,59 @@ where
     }
 }
 
-state_struct!(
-    DifficulitySelect,
-    selected_difficulity => ui::Difficulity,
-    error_msg => SharedString
-);
+pub struct DifficultySelectDestination<PT> {
+    adopter: slint::Weak<ui::DifficulitySelectAdopter<'static>>,
+    nav_controller: NavController,
+    projector_transport: Rc<RefCell<PT>>,
+}
 
-pub fn init<PT>(application: &Application<PT>)
+impl<PT> DifficultySelectDestination<PT> {
+    pub fn new(application: &Application<PT>) -> Self {
+        Self {
+            adopter: application
+                .ui
+                .global::<ui::DifficulitySelectAdopter>()
+                .as_weak(),
+            nav_controller: application.nav_controller.clone(),
+            projector_transport: application.repositories.projector.clone(),
+        }
+    }
+}
+
+impl<PT> NavDestination for DifficultySelectDestination<PT>
 where
     PT: ProjectorConnection + 'static,
 {
-    let adopter = application.ui.global::<ui::DifficulitySelectAdopter>();
-    let state = DifficulitySelectState::new(&adopter);
-    let viewmodel = Rc::new(DifficulitySelectViewModel::new(
-        application.nav_controller.clone(),
-        state,
-        Rc::clone(&application.repositories.projector),
-    ));
-
-    macro_rules! cb {
-        ($name:ident) => {
-            bind_callback!(adopter, viewmodel, $name);
+    fn load(&self, route: &NavRoute) {
+        debug!("loading DifficultySelectViewModel");
+        let NavRoute::DifficulitySelect = route else {
+            panic!("matched variant should be given");
         };
+
+        let adopter = self.adopter.unwrap();
+
+        let viewmodel = Rc::new(DifficulitySelectViewModel::new(
+            self.nav_controller.clone(),
+            DifficulitySelectState::new(&adopter),
+            self.projector_transport.clone(),
+        ));
+
+        macro_rules! cb {
+            ($name: ident) => {
+                bind_callback!(adopter, viewmodel, $name);
+            };
+        }
+
+        cb!(start_game);
+        adopter.on_select_difficulity({
+            let viewmodel = Rc::clone(&viewmodel);
+            move |d| {
+                viewmodel.on_select_difficulity(d);
+            }
+        });
     }
 
-    cb!(start_game);
-    adopter.on_select_difficulity({
-        let viewmodel = Rc::clone(&viewmodel);
-        move |d| {
-            viewmodel.on_select_difficulity(d);
-        }
-    });
+    fn matches(&self, route: &NavRoute) -> bool {
+        matches!(route, &NavRoute::DifficulitySelect)
+    }
 }

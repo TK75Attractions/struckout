@@ -1,9 +1,13 @@
 use std::rc::Rc;
 
-use slint::ComponentHandle;
+use slint::{ComponentHandle, Global};
 use tracing::{debug, trace};
 
-use crate::{Application, nav::NavController, ui};
+use crate::{
+    Application,
+    nav::{NavController, NavDestination, NavRoute},
+    ui,
+};
 
 #[derive(Debug)]
 pub struct StartScreenViewModel {
@@ -17,24 +21,42 @@ impl StartScreenViewModel {
 
     pub fn on_click(&self) {
         trace!("StartScreen::on_click()");
-        self.nav_controller.navigate(ui::NavRoute::NameInput);
+        self.nav_controller.navigate(NavRoute::NameInput);
     }
 }
 
-pub fn init<PT>(application: &Application<PT>) {
-    debug!("initializing StartScreen");
-    let adopter = application.ui.global::<ui::StartScreenAdopter>();
+pub struct StartScreenDestination {
+    adopter: slint::Weak<ui::StartScreenAdopter<'static>>,
+    nav_controller: NavController,
+}
 
-    let viewmodel = Rc::new(StartScreenViewModel::new(
-        application.nav_controller.clone(),
-    ));
-
-    adopter.on_click({
-        let viewmodel = Rc::clone(&viewmodel);
-        move || {
-            viewmodel.on_click();
+impl StartScreenDestination {
+    pub fn new<PT>(application: &Application<PT>) -> Self {
+        Self {
+            adopter: application.ui.global::<ui::StartScreenAdopter>().as_weak(),
+            nav_controller: application.nav_controller.clone(),
         }
-    });
+    }
+}
 
-    application.viewmodels.start_screen.set(viewmodel).unwrap();
+impl NavDestination for StartScreenDestination {
+    fn load(&self, route: &NavRoute) {
+        let NavRoute::Start = route else {
+            panic!("matched variant should be given");
+        };
+
+        let adopter = self.adopter.unwrap();
+        let viewmodel = Rc::new(StartScreenViewModel::new(self.nav_controller.clone()));
+
+        adopter.on_click({
+            let viewmodel = Rc::clone(&viewmodel);
+            move || {
+                viewmodel.on_click();
+            }
+        });
+    }
+
+    fn matches(&self, route: &NavRoute) -> bool {
+        matches!(route, &NavRoute::Start)
+    }
 }
