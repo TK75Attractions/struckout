@@ -1921,6 +1921,7 @@ dependencies = [
  "i-slint-core",
  "itertools 0.15.0",
  "parking_lot",
+ "pastey 0.2.3",
  "serde",
  "serde_json",
  "slint",
