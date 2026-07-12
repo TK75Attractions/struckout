@@ -7,10 +7,7 @@ use tokio::sync::oneshot;
 use crate::{
     data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
     nav::{NavController, NavHost},
-    presentation::{
-        difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
-        name_input::NameInputDestination, start::StartScreenDestination,
-    },
+    presentation::register_destinations,
     worker::WorkerThread,
 };
 
@@ -84,17 +81,12 @@ pub fn run_main() {
     };
 
     let mut nav_host = NavHost::new();
-    nav_host.register(StartScreenDestination::new(&application));
-    nav_host.register(NameInputDestination::new(&application));
-    nav_host.register(DifficultySelectDestination::new(&application));
-    nav_host.register(FallbackDestination::new(&application));
+    register_destinations(&mut nav_host, &application);
     application
         .nav_controller
         .subscribe_on_navigate(move |route| {
             nav_host.on_navigate(route);
         });
-
-    presentation::init(&application);
 
     application.ui.run().unwrap();
 }

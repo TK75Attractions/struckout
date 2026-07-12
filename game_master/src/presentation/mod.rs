@@ -3,7 +3,11 @@ use std::{fmt::Debug, rc::Rc};
 use crate::{
     Application,
     data::projector::{BindError, ProjectorConnection},
-    nav::NavRoute,
+    nav::{NavHost, NavRoute},
+    presentation::{
+        difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
+        name_input::NameInputDestination, start::StartScreenDestination,
+    },
 };
 
 /// Binds viewmodel's callback to slint adopter.
@@ -148,12 +152,29 @@ impl<T> Clone for PropertyWrapper<T> {
     }
 }
 
-pub fn init<PT>(application: &Application<PT>)
+fn init_connection<PT>(application: &Application<PT>)
+where
+    PT: ProjectorConnection,
+{
+    let transport = application.repositories.projector.borrow_mut();
+    let nav_controller = application.nav_controller.clone();
+    transport.bind(move |res| match res {
+        Ok(()) => {}
+
+        Err(BindError::AlreadyBound) => panic!("this should be first attempt to bind port"),
+        Err(BindError::Other(e)) => {
+            nav_controller.navigate(NavRoute::Fallback(format!("failed to bind port: {}", e)));
+        }
+    });
+}
+
+/// Registers each [`NavDestination`][crate::nav::NavDestination]s at [`NavHost`].
+pub fn register_destinations<PT>(nav_host: &mut NavHost, application: &Application<PT>)
 where
     PT: ProjectorConnection + 'static,
 {
-    unimplemented!("いずれ消す")
-    // playing::init(application);
-    // score::init(application);
-    // ranking::init(application);
+    nav_host.register(StartScreenDestination::new(&application));
+    nav_host.register(NameInputDestination::new(&application));
+    nav_host.register(DifficultySelectDestination::new(&application));
+    nav_host.register(FallbackDestination::new(&application));
 }
