@@ -7,7 +7,7 @@ use tokio::sync::oneshot;
 use crate::{
     data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
     nav::{NavController, NavHost},
-    presentation::register_destinations,
+    presentation::{init_connection, register_destinations},
     worker::WorkerThread,
 };
 
@@ -87,6 +87,9 @@ pub fn run_main() {
         .subscribe_on_navigate(move |route| {
             nav_host.on_navigate(route);
         });
+
+    // NavHostを初期化したあとで
+    init_connection(&application);
 
     application.ui.run().unwrap();
 }

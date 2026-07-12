@@ -41,6 +41,8 @@ impl StartScreenDestination {
 
 impl NavDestination for StartScreenDestination {
     fn load(&self, route: &NavRoute) {
+        debug!("loading StartScreenViewModel");
+
         let NavRoute::Start = route else {
             panic!("matched variant should be given");
         };

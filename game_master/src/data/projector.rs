@@ -1,9 +1,10 @@
-use std::cell::OnceCell;
+use std::{cell::OnceCell, time::Duration};
 use struckout_proto::{MasterPacket, WritePacketError, master_packet, write_packet};
 use thiserror::Error;
 use tokio::{
     net::{TcpListener, tcp},
     sync::{mpsc, oneshot},
+    time::{error::Elapsed, timeout},
 };
 use tracing::info;
 
@@ -131,7 +132,7 @@ impl ProjectorTransportInner {
 
     async fn listen(&mut self) -> Result<(), ListenError> {
         let listener = self.listener.get().ok_or(ListenError::PortNotBound)?;
-        let (stream, addr) = listener.accept().await?;
+        let (stream, addr) = timeout(Duration::from_mins(1), listener.accept()).await??;
         info!(?addr, "accepted TCP connection with projector");
         let (reader, writer) = stream.into_split();
         self.conn_state = ConnectionState::Connected { reader, writer };
@@ -179,6 +180,8 @@ pub enum StartGameError {
 pub enum ListenError {
     #[error("port is not bound and TCP listner not created")]
     PortNotBound,
+    #[error("listener timed out")]
+    Timeout(#[from] Elapsed),
     #[error(transparent)]
     Tcp(#[from] std::io::Error),
 }
