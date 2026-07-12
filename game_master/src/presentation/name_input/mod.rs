@@ -7,7 +7,6 @@ use crate::{
     Application,
     data::player::{InsertPlayerError, PlayerRepository},
     nav::NavController,
-    presentation::PropertyWrapper,
     ui::{self, KeyBoardMode, NavRoute},
 };
 
@@ -18,7 +17,7 @@ pub struct NameInputViewModel {
 }
 
 state_struct!(
-    NameInputState,
+    NameInput,
     keyboard_mode => KeyBoardMode,
     player_name_text => SharedString,
     error_msg => SharedString

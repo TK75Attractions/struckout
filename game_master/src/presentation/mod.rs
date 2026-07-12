@@ -7,7 +7,7 @@ macro_rules! bind_callback {
     ($adopter:ident, $viewmodel:ident, $name:ident) => {
         pastey::paste! {
             $adopter.[<on_ $name>]({
-                let viewmodel = Rc::clone(&$viewmodel);
+                let viewmodel = std::rc::Rc::clone(&$viewmodel);
                 move || {
                     viewmodel.[<on_ $name>]();
                 }
@@ -16,15 +16,17 @@ macro_rules! bind_callback {
     };
 }
 
+/// Part of [`state_struct`]. This macro requires [`slint::Global`] to exist in scope.
 macro_rules! property {
     ($adopter:ident, $name: ident) => {
         pastey::paste! {
-            PropertyWrapper {
-                getter: Rc::new({
+
+            crate::presentation::PropertyWrapper {
+                getter: std::rc::Rc::new({
                     let adopter_weak = $adopter.as_weak();
                     move || adopter_weak.unwrap().[<get_ $name>]()
                 }),
-                setter: Rc::new({
+                setter: std::rc::Rc::new({
                     let adopter_weak = $adopter.as_weak();
                     move |$name| adopter_weak.unwrap().[<set_ $name>]($name)
                 })
@@ -49,6 +51,9 @@ macro_rules! property {
 /// This is equivalent to:
 ///
 /// ```
+/// use crate::{presentation::PropertyWrapper, ui::KeyboardMode};
+/// use slint::SharedString;
+///
 /// #[allow(dead_code)]
 /// struct NameInputState {
 ///     keyboard_mode: PropertyWrapper<KeyBoardMode>,
@@ -67,20 +72,25 @@ macro_rules! property {
 /// }
 /// ```
 macro_rules! state_struct {
-    ($struct_name:ident, $($name: ident => $typ: ty),*) => {
-        #[allow(dead_code)] // propertyを網羅したいため
-        struct $struct_name {
-            $(
-                $name: PropertyWrapper<$typ>,
-            )*
-        }
+    ($module_name:ident, $($name: ident => $typ: ty),*) => {
+        #[allow(unused_imports)]// Used in property! macro.
+        use slint::Global as _;
 
-        impl $struct_name {
-            fn new(adopter: &ui::NameInputAdopter) -> Self {
-                Self {
-                    $(
-                        $name: property!(adopter, $name),
-                    )*
+        pastey::paste!{
+            #[allow(dead_code)] // propertyを網羅したいため
+            struct [<$module_name:camel State>] {
+                $(
+                    $name: crate::presentation::PropertyWrapper<$typ>,
+                )*
+            }
+
+            impl [<$module_name:camel State>] {
+                fn new(adopter: &ui::[<$module_name:camel Adopter>]) -> Self {
+                    Self {
+                        $(
+                            $name: property!(adopter, $name),
+                        )*
+                    }
                 }
             }
         }
