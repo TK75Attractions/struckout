@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::Debug, rc::Rc};
 
 use crate::{Application, data::projector::ProjectorConnection};
 
@@ -78,6 +78,7 @@ macro_rules! state_struct {
 
         pastey::paste!{
             #[allow(dead_code)] // propertyを網羅したいため
+            #[derive(Debug)]
             struct [<$module_name:camel State>] {
                 $(
                     $name: crate::presentation::PropertyWrapper<$typ>,
@@ -117,6 +118,17 @@ impl<T> PropertyWrapper<T> {
 
     fn set(&self, val: T) {
         (self.setter)(val)
+    }
+}
+
+impl<T> Debug for PropertyWrapper<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PropertyWrapper")
+            .field("value", &(self.getter)())
+            .finish()
     }
 }
 
