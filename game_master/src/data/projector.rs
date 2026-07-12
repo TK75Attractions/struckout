@@ -1,3 +1,4 @@
+use std::cell::OnceCell;
 use struckout_proto::{MasterPacket, WritePacketError, master_packet, write_packet};
 use thiserror::Error;
 use tokio::{
@@ -14,12 +15,17 @@ const COMMAND_CHANNEL_BUF: usize = 8;
 const MSG_CHANNEL_BUF: usize = 8;
 
 pub trait ProjectorConnection {
-    fn listen(&self) -> std::io::Result<()>;
-    fn start_game(
-        &mut self,
-        difficulty: impl Into<struckout_proto::Difficulty>,
-        cb: impl FnOnce(Result<(), StartGameError>) + 'static,
-    );
+    fn bind<F>(&self, cb: F)
+    where
+        F: FnOnce(Result<(), BindError>) + 'static;
+
+    fn listen<F>(&self, cb: F)
+    where
+        F: FnOnce(Result<(), ListenError>) + 'static;
+
+    fn start_game<F>(&mut self, difficulty: impl Into<struckout_proto::Difficulty>, cb: F)
+    where
+        F: FnOnce(Result<(), StartGameError>) + 'static;
 }
 
 pub struct ProjectorConnectionImpl {
@@ -27,10 +33,9 @@ pub struct ProjectorConnectionImpl {
 }
 
 impl ProjectorConnectionImpl {
-    /// Binds TCP port.
-    pub async fn new(worker: &WorkerThread) -> Result<Self, std::io::Error> {
+    pub fn new(worker: &WorkerThread) -> Self {
         let (msg_tx, mut msg_rx) = mpsc::channel(MSG_CHANNEL_BUF);
-        let mut inner = ProjectorTransportInner::bind().await?;
+        let mut inner = ProjectorTransportInner::new();
         worker.spawn(async move {
             loop {
                 let (msg, res_tx): (Command, oneshot::Sender<Response>) =
@@ -40,31 +45,40 @@ impl ProjectorConnectionImpl {
                         let res = inner.start_game(difficulty).await;
                         res_tx.send(Response::StartGame(res)).unwrap();
                     }
+                    Command::Listen => {
+                        let res = inner.listen().await;
+                        res_tx.send(Response::Listen(res)).unwrap();
+                    }
+                    Command::Bind => {
+                        let res = inner.bind().await;
+                        res_tx.send(Response::Bind(res)).unwrap();
+                    }
                 }
             }
         });
 
-        Ok(Self { msg_tx })
+        Self { msg_tx }
     }
 }
 
 impl ProjectorConnection for ProjectorConnectionImpl {
-    fn listen(&self) -> std::io::Result<()> {
-        todo!();
-    }
+    async_wrapper!(bind());
 
-    fn start_game(
-        &mut self,
-        difficulty: impl Into<struckout_proto::Difficulty>,
-        cb: impl FnOnce(Result<(), StartGameError>) + 'static,
-    ) {
+    async_wrapper!(
+        /// Callback is called when client requested connection and the connection was established.
+        listen() -> ListenError
+    );
+
+    fn start_game<F>(&mut self, difficulty: impl Into<struckout_proto::Difficulty>, cb: F)
+    where
+        F: FnOnce(Result<(), StartGameError>) + 'static,
+    {
         let difficulty = difficulty.into();
         let (res_tx, res_rx) = oneshot::channel();
         self.msg_tx
             .blocking_send((Command::StartGame(difficulty), res_tx))
             .unwrap();
         slint::spawn_local(async move {
-            #[allow(irrefutable_let_patterns)] // 後で他のも追加するつもりなので
             let Response::StartGame(res) = res_rx.await.unwrap() else {
                 panic!("Command::StartGame should return Response::StartGame");
             };
@@ -76,31 +90,48 @@ impl ProjectorConnection for ProjectorConnectionImpl {
 
 #[derive(Debug)]
 enum Command {
+    /// See [`ProjectorTransportInner::start_game()`]
     StartGame(struckout_proto::Difficulty),
+    /// See [`ProjectorTransportInner::listen()`]
+    Listen,
+    /// See [`ProjectorTransportInner::bind()`]
+    Bind,
 }
 
 #[derive(Debug)]
 enum Response {
+    /// See [`ProjectorTransportInner::start_game()`]
     StartGame(Result<(), StartGameError>),
+    /// See [`ProjectorTransportInner::listen()`]
+    Listen(Result<(), ListenError>),
+    /// See [`ProjectorTransportInner::bind()`]
+    Bind(Result<(), BindError>),
 }
 
 struct ProjectorTransportInner {
-    listener: TcpListener,
+    listener: OnceCell<TcpListener>,
     conn_state: ConnectionState,
 }
 
 impl ProjectorTransportInner {
-    async fn bind() -> std::io::Result<Self> {
-        let listener = TcpListener::bind(PROJECTOR_PORT).await?;
-
-        Ok(Self {
-            listener,
+    fn new() -> Self {
+        Self {
+            listener: OnceCell::new(),
             conn_state: ConnectionState::DisConnected,
-        })
+        }
     }
 
-    async fn listen(&mut self) -> std::io::Result<()> {
-        let (stream, addr) = self.listener.accept().await?;
+    async fn bind(&mut self) -> Result<(), BindError> {
+        let listener = TcpListener::bind(PROJECTOR_PORT).await?;
+        self.listener
+            .set(listener)
+            .map_err(|_| BindError::AlreadyBound)?;
+        Ok(())
+    }
+
+    async fn listen(&mut self) -> Result<(), ListenError> {
+        let listener = self.listener.get().ok_or(ListenError::PortNotBound)?;
+        let (stream, addr) = listener.accept().await?;
         info!(?addr, "accepted TCP connection with projector");
         let (reader, writer) = stream.into_split();
         self.conn_state = ConnectionState::Connected { reader, writer };
@@ -134,12 +165,31 @@ impl ProjectorTransportInner {
     }
 }
 
+/// Error type used in [ProjectorConnection::start_game()].
 #[derive(Debug, Error)]
 pub enum StartGameError {
     #[error("TCP is not connected")]
     NotConnected,
     #[error(transparent)]
     Tcp(#[from] std::io::Error),
+}
+
+/// Error type used in [ProjectorConnection::listen()].
+#[derive(Debug, Error)]
+pub enum ListenError {
+    #[error("port is not bound and TCP listner not created")]
+    PortNotBound,
+    #[error(transparent)]
+    Tcp(#[from] std::io::Error),
+}
+
+/// Error type used in [ProjectorConnection::bind()].
+#[derive(Debug, Error)]
+pub enum BindError {
+    #[error("TCP port is already bound")]
+    AlreadyBound,
+    #[error(transparent)]
+    Other(#[from] std::io::Error),
 }
 
 enum ConnectionState {
