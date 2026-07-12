@@ -90,6 +90,7 @@ macro_rules! state_struct {
             }
 
             impl [<$module_name:camel State>] {
+                #[allow(dead_code)] // いずれ全部使う
                 fn new(adopter: &ui::[<$module_name:camel Adopter>]) -> Self {
                     Self {
                         $(
@@ -103,6 +104,7 @@ macro_rules! state_struct {
 }
 
 pub mod difficulity_select;
+pub mod fallback;
 pub mod name_input;
 pub mod playing;
 pub mod ranking;

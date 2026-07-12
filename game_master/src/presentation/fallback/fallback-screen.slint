@@ -1,0 +1,15 @@
+global Adopter {
+    in property <string> msg;
+}
+
+/// ゲーム開始前の初期設定段階で表示する画面。
+/// ゲーム開始後に起きたエラーはエラーが起きた画面で表示する。
+export component FallbackScreen inherits Rectangle {
+    background: Colors.red;
+
+    Text {
+        text: Adopter.msg;
+    }
+}
+
+export { Adopter as FallbackAdopter }

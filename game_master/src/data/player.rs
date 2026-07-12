@@ -6,7 +6,9 @@ use crate::worker::WorkerThread;
 
 const MESSAGE_CHANNEL_BUF: usize = 4;
 
+#[derive(derive_more::Debug)]
 pub struct PlayerRepository {
+    #[debug(skip)]
     msg_tx: mpsc::Sender<(
         PlayerRepositoryMessage,
         oneshot::Sender<PlayerRepositoryResponse>,
