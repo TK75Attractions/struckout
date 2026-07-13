@@ -11,7 +11,7 @@ sealed interface ConnectionState {
      */
     data class NetworkOutputEnabled(
         val tcpInstanceState: InstanceState<TcpState>,
-        val udpInstanceState: InstanceState<Boolean>,
+        val dataConnInstanceState: InstanceState<Boolean>,
     ) : ConnectionState
 
     object NetworkOutputDisabled : ConnectionState
@@ -32,6 +32,6 @@ fun ConnectionState.tcpIsConnected(): Boolean {
 
 fun ConnectionState.udpIsConnected(): Boolean {
     return this is ConnectionState.NetworkOutputEnabled
-            && this.udpInstanceState is InstanceState.Created
-            && this.udpInstanceState.state
+            && this.dataConnInstanceState is InstanceState.Created
+            && this.dataConnInstanceState.state
 }

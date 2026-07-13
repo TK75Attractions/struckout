@@ -29,18 +29,18 @@ class NetworkManagerUnitTest {
     fun `NetworkManager creates TcpSession and UdpConnection after network feature enabled`(
         @MockK tcpSession: TcpSession,
         @MockK tcpSessionFactory: TcpSession.Factory,
-        @MockK udpConnection: UdpConnection,
-        @MockK udpConnectionFactory: UdpConnection.Factory,
+        @MockK dataConnection: DataConnection,
+        @MockK udpConnectionFactory: DataConnection.Factory,
     ) = runTest {
         // Arrange
         coEvery { tcpSession.connect() } returns null
         every { tcpSessionFactory.create() } returns tcpSession
         every { tcpSession.state } returns MutableStateFlow(SessionState.DisConnected)
-        coEvery { udpConnection.connect() } returns UdpConnectionError.UdpSocketError(
+        coEvery { dataConnection.connect() } returns DataConnectionError.TcpConnectionFailed(
             SocketException("Stub!")
         )
-        every { udpConnectionFactory.create() } returns udpConnection
-        every { udpConnection.isConnected } returns MutableStateFlow(false)
+        every { udpConnectionFactory.create() } returns dataConnection
+        every { dataConnection.isConnected } returns MutableStateFlow(false)
 
         val configStoreRepository =
             FakeConfigStoreRepository(initialDetectionOutput = DetectionOutputKind.NONE)
@@ -48,7 +48,7 @@ class NetworkManagerUnitTest {
             configRepository = configStoreRepository,
             applicationScope = backgroundScope,
             tcpSessionFactory = tcpSessionFactory,
-            udpConnectionFactory = udpConnectionFactory,
+            dataConnectionFactory = udpConnectionFactory,
         )
 
         // Act 1
@@ -57,7 +57,7 @@ class NetworkManagerUnitTest {
 
         // Assert 1
         coVerify(exactly = 0) { tcpSession.connect() }
-        coVerify(exactly = 0) { udpConnection.connect() }
+        coVerify(exactly = 0) { dataConnection.connect() }
 
         // Act 2
         configStoreRepository.setDetectionOutputKind(DetectionOutputKind.NETWORK)
@@ -67,15 +67,15 @@ class NetworkManagerUnitTest {
         verify(exactly = 1) { tcpSessionFactory.create() }
         coVerify(exactly = 1) { tcpSession.connect() }
         verify(exactly = 1) { udpConnectionFactory.create() }
-        coVerify(exactly = 1) { udpConnection.connect() }
+        coVerify(exactly = 1) { dataConnection.connect() }
     }
 
     @Test
     fun `tcpState updates after connection failed and succeeded`(
         @MockK tcpSession: TcpSession,
         @MockK tcpSessionFactory: TcpSession.Factory,
-        @MockK udpConnection: UdpConnection,
-        @MockK udpConnectionFactory: UdpConnection.Factory,
+        @MockK dataConnection: DataConnection,
+        @MockK dataConnectionFactory: DataConnection.Factory,
     ) = runTest {
         val sessionState = MutableStateFlow<SessionState>(SessionState.DisConnected)
         // Arrange
@@ -84,11 +84,11 @@ class NetworkManagerUnitTest {
         )
         every { tcpSessionFactory.create() } returns tcpSession
         every { tcpSession.state } returns sessionState
-        coEvery { udpConnection.connect() } returns UdpConnectionError.UdpSocketError(
+        coEvery { dataConnection.connect() } returns DataConnectionError.TcpConnectionFailed(
             SocketException("Stub!")
         )
-        every { udpConnection.isConnected } returns MutableStateFlow(false)
-        every { udpConnectionFactory.create() } returns udpConnection
+        every { dataConnection.isConnected } returns MutableStateFlow(false)
+        every { dataConnectionFactory.create() } returns dataConnection
 
         val configStoreRepository = FakeConfigStoreRepository()
 
@@ -96,7 +96,7 @@ class NetworkManagerUnitTest {
             configRepository = configStoreRepository,
             applicationScope = backgroundScope,
             tcpSessionFactory = tcpSessionFactory,
-            udpConnectionFactory = udpConnectionFactory,
+            dataConnectionFactory = dataConnectionFactory,
         )
 
         backgroundScope.launch {

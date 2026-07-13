@@ -27,7 +27,7 @@ import javax.inject.Singleton
 import kotlin.uuid.Uuid
 
 /**
- * [TcpSession]や[UdpConnection]などネットワーク関連のライフサイクルを管理する。
+ * [TcpSession]や[DataConnection]などネットワーク関連のライフサイクルを管理する。
  *
  * 管理されたクラスには直接アクセスするのではなく[NetworkManager]を介してアクセスすべし。
  */
@@ -37,17 +37,17 @@ class NetworkManager @Inject constructor(
     private val configRepository: ConfigStoreRepository,
     @ApplicationScope private val applicationScope: CoroutineScope,
     private val tcpSessionFactory: TcpSession.Factory,
-    private val udpConnectionFactory: UdpConnection.Factory,
+    private val dataConnectionFactory: DataConnection.Factory,
 ) {
     private val _tcpSession = MutableStateFlow<TcpSession?>(null)
     private val _lastTcpError = MutableStateFlow<TcpSession.ConnectionError?>(null)
-    private val _udpConnection = MutableStateFlow<UdpConnection?>(null)
-    private val _lastUdpError = MutableStateFlow<UdpConnectionError?>(null)
+    private val _dataConnection = MutableStateFlow<DataConnection?>(null)
+    private val _lastDataConnError = MutableStateFlow<DataConnectionError?>(null)
 
     val currentTcpSession: TcpSession?
         get() = _tcpSession.value
-    val currentUdpConnection: UdpConnection?
-        get() = _udpConnection.value
+    val currentDataConnection: DataConnection?
+        get() = _dataConnection.value
 
     val tcpState =
         _tcpSession.flatMapLatest { session ->
@@ -66,11 +66,11 @@ class NetworkManager @Inject constructor(
         }
 
     @Suppress("IfThenToElvis")
-    private val _udpState = _udpConnection.flatMapLatest { udpConnection ->
-        if (udpConnection == null) {
+    private val _dataConnState = _dataConnection.flatMapLatest { dataConn ->
+        if (dataConn == null) {
             flowOf(InstanceState.NotCreated)
         } else {
-            udpConnection.isConnected.map {
+            dataConn.isConnected.map {
                 InstanceState.Created(it)
             }
         }
@@ -79,12 +79,12 @@ class NetworkManager @Inject constructor(
     val state = combine(
         configRepository.detectionOutputKind,
         tcpState,
-        _udpState,
-    ) { detectionOutputKind, tcpState, udpState ->
+        _dataConnState,
+    ) { detectionOutputKind, tcpState, dataConnState ->
         if (detectionOutputKind == DetectionOutputKind.NETWORK) {
             ConnectionState.NetworkOutputEnabled(
                 tcpInstanceState = tcpState,
-                udpInstanceState = udpState,
+                dataConnInstanceState = dataConnState,
             )
         } else {
             ConnectionState.NetworkOutputDisabled
@@ -99,7 +99,7 @@ class NetworkManager @Inject constructor(
         Timber.tag(TAG).i("ConnectionManager started")
         applicationScope.launch {
             watchTcpConnection()
-            watchUdpStatus()
+            watchDataConnectionStatus()
         }
     }
 
@@ -126,30 +126,30 @@ class NetworkManager @Inject constructor(
         }.launchIn(this)
     }
 
-    private fun CoroutineScope.watchUdpStatus() {
+    private fun CoroutineScope.watchDataConnectionStatus() {
         combine(
-            _udpConnection,
+            _dataConnection,
             configRepository.detectionOutputKind
-        ) { udpConnection, detectionOutputKind ->
+        ) { dataConnection, detectionOutputKind ->
             Pair(
-                detectionOutputKind == DetectionOutputKind.NETWORK && udpConnection == null,
-                detectionOutputKind == DetectionOutputKind.NETWORK && udpConnection != null && !udpConnection.isConnected.value
+                detectionOutputKind == DetectionOutputKind.NETWORK && dataConnection == null,
+                detectionOutputKind == DetectionOutputKind.NETWORK && dataConnection != null && !dataConnection.isConnected.value
             )
         }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
             if (shouldCreateInstance) {
-                _udpConnection.value = udpConnectionFactory.create()
+                _dataConnection.value = dataConnectionFactory.create()
             }
             if (shouldConnect) {
-                val error = _udpConnection.value!!.connect()
+                val error = _dataConnection.value!!.connect()
                 if (error != null) {
-                    _lastUdpError.value = error
+                    _lastDataConnError.value = error
                 }
             }
         }.launchIn(this)
     }
 
     /**
-     * Retries connection for TCP and UDP.
+     * Retries connection for TCP control and TCP data.
      *
      * This function launches coroutine from [scope] and returns immediately.
      * You can see the results via [state].
@@ -159,17 +159,19 @@ class NetworkManager @Inject constructor(
             retryTcpConnection()
         }
         scope.launch {
-            retryUdpConnection()
+            retryDataConnection()
         }
     }
 
     suspend fun retryTcpConnection() {
-        val session = _tcpSession.value
-        check(session != null) {
-            "TcpSession instance should be created before retrying connection: state = ${state.value}"
+        val session = _tcpSession.value ?: run {
+            Timber.tag(TAG).d("tcpSession was null, creating new one")
+            _tcpSession.value = tcpSessionFactory.create()
+            _tcpSession.value!!
         }
         if (session.state.value is SessionState.Connected) {
-            Timber.tag(TAG).w("retryConnection is called when TCP is already connected")
+            Timber.tag(TAG)
+                .w("retryTcpConnection(): retryConnection is called when TCP is already connected")
             return
         }
         val error = session.connect()
@@ -178,17 +180,18 @@ class NetworkManager @Inject constructor(
         }
     }
 
-    suspend fun retryUdpConnection() {
-        val udpConn = _udpConnection.value
-        check(udpConn != null) {
-            "UdpConnection instance should be created before retrying UDP connection"
+    suspend fun retryDataConnection() {
+        val dataConn = _dataConnection.value ?: run {
+            Timber.tag(TAG).d("retryDataConnection(): dataConnection was null, creating new one")
+            _dataConnection.value = dataConnectionFactory.create()
+            _dataConnection.value!!
         }
-        if (udpConn.isConnected.value) {
-            Timber.tag(TAG).w("retryUdpConnection() is called but it's already connected")
+        if (dataConn.isConnected.value) {
+            Timber.tag(TAG).w("retryDataConnection() is called but it's already connected")
         }
-        val error = udpConn.connect()
+        val error = dataConn.connect()
         if (error != null) {
-            _lastUdpError.value = error
+            _lastDataConnError.value = error
         }
     }
 
@@ -204,12 +207,12 @@ class NetworkManager @Inject constructor(
         check(sessionState is SessionState.Connected) {
             "TcpSession must be initialized before sending detection via network"
         }
-        val udpConnection = _udpConnection.value
-        check(udpConnection != null) {
-            "UdpConnection instance must be created before sending detection via network"
+        val dataConnection = _dataConnection.value
+        check(dataConnection != null) {
+            "DataConnection instance must be created before sending detection via network"
         }
-        check(udpConnection.isConnected.value) {
-            "UdpConnection must be initialized before sending detection via network"
+        check(dataConnection.isConnected.value) {
+            "DataConnection must be initialized before sending detection via network"
         }
 
         val packet = detectionsPacket {
@@ -222,7 +225,7 @@ class NetworkManager @Inject constructor(
             }
         }
 
-        udpConnection.sendPacket(packet)
+        dataConnection.sendPacket(packet)
     }
 
 
