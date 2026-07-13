@@ -10,9 +10,8 @@ pub fn triangulate(
     camera_loc_2: CameraLocation,
     orientation_2: Vector3<f64>,
 ) -> Position3D {
-    // TODO: From / Intoを使う
-    let p: Vector3<f64> = camera_loc_1.to_vector3();
-    let q: Vector3<f64> = camera_loc_2.to_vector3();
+    let p = camera_loc_1.to_vector3();
+    let q = camera_loc_2.to_vector3();
     let a = orientation_1;
     let b = orientation_2;
 

@@ -5,12 +5,14 @@ use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 use struckout_proto::{DetectionsPacket, UploadResult, read_packet_raw, upload_result};
 use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _},
-    net::{TcpListener, TcpStream},
+    net::{TcpListener, tcp},
+    sync::mpsc,
+    try_join,
 };
 
 const TCP_PORT: &str = "0.0.0.0:6262";
 
-const DB_PATH_DEFAULT: &str = "sqlite:///home/taichi765/.config/struckout/xtask.db";
+const DB_PATH_DEFAULT: &str = "sqlite:///home/taichi765/.config/struckout/dev.db";
 
 #[derive(Args)]
 pub struct SyncArgs {
@@ -42,7 +44,7 @@ impl SyncArgs {
             }
         };
         println!("waiting for client...");
-        let (mut stream, addr) = match listener.accept().await {
+        let (stream, addr) = match listener.accept().await {
             Ok(ret) => ret,
             Err(e) => {
                 eprintln!("failed to accept connection: {e:?}");
@@ -50,24 +52,32 @@ impl SyncArgs {
             }
         };
         println!("connected with {:?}", addr);
+        let (reader, mut writer) = stream.into_split();
 
-        let res = handle_inputs(&pool, &mut stream).await;
+        let res = handle_inputs(pool, reader).await;
         let mut res_packet = BytesMut::new();
         res.encode(&mut res_packet).unwrap();
 
-        if let Err(e) = stream.write_all(&res_packet).await {
+        if let Err(e) = writer.write_all(&res_packet).await {
             eprintln!("failed to write result to the client: {e:?}");
             return true;
         };
 
-        println!("succeed to sync frames");
-        return false;
+        if res
+            .data
+            .is_some_and(|d| matches!(d, upload_result::Data::Success(())))
+        {
+            println!("succeed to sync frames");
+            return false;
+        } else {
+            return true;
+        }
     }
 }
 
-async fn handle_inputs(pool: &Pool<Sqlite>, stream: &mut TcpStream) -> UploadResult {
+async fn handle_inputs(pool: Pool<Sqlite>, mut stream: tcp::OwnedReadHalf) -> UploadResult {
     let total = match stream.read_u32_le().await {
-        Ok(i) => i,
+        Ok(i) => i as usize,
         Err(e) => {
             eprintln!("failed to read header: {e:?}");
             return UploadResult {
@@ -77,26 +87,57 @@ async fn handle_inputs(pool: &Pool<Sqlite>, stream: &mut TcpStream) -> UploadRes
     };
     println!("total: {}", total);
 
+    let (tx, rx) = mpsc::channel(total);
+    let res = try_join! {
+        read_inputs(stream, total, tx),
+        insert_data(pool, rx)
+    };
+    match res {
+        Ok(_) => UploadResult {
+            data: Some(upload_result::Data::Success(())),
+        },
+        Err(e) => e,
+    }
+}
+
+/// Invariant: [`UploadResult`] is never [`Success`][upload_result::Data::Success].
+async fn read_inputs(
+    mut stream: tcp::OwnedReadHalf,
+    total: usize,
+    tx: mpsc::Sender<(BytesMut, DetectionsPacket)>,
+) -> Result<(), UploadResult> {
     for _ in 0..total {
-        let mut raw = match read_packet_raw(stream).await {
+        let raw = match read_packet_raw(&mut stream).await {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("failed to read packet from stream: {e:?}");
-                return UploadResult {
+                return Err(UploadResult {
                     data: Some(upload_result::Data::TcpError(e.to_string())),
-                };
-            }
-        };
-        let packet = match DetectionsPacket::decode(&mut raw) {
-            Ok(p) => p,
-            Err(e) => {
-                eprintln!("failed to decode proto packet: {e:?}");
-                return UploadResult {
-                    data: Some(upload_result::Data::PacketDecodeError(e.to_string())),
-                };
+                });
             }
         };
 
+        // OPTIM: ここのクローンどうにかならんかな
+        let packet = match DetectionsPacket::decode(raw.clone()) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("failed to decode proto packet: {e:?}");
+                return Err(UploadResult {
+                    data: Some(upload_result::Data::PacketDecodeError(e.to_string())),
+                });
+            }
+        };
+        tx.send((raw, packet)).await.unwrap();
+    }
+    Ok(())
+}
+
+/// Invariant: [`UploadResult`] is always [`DbInsertError`][upload_result::Data::DbInsertError].
+async fn insert_data(
+    pool: Pool<Sqlite>,
+    mut rx: mpsc::Receiver<(BytesMut, DetectionsPacket)>,
+) -> Result<(), UploadResult> {
+    while let Some((raw, packet)) = rx.recv().await {
         let session_id = packet.session_id;
         let raw: &[u8] = &raw;
         let res = sqlx::query!(
@@ -105,18 +146,15 @@ async fn handle_inputs(pool: &Pool<Sqlite>, stream: &mut TcpStream) -> UploadRes
             session_id,
             raw
         )
-        .execute(pool)
+        .execute(&pool)
         .await;
 
         if let Err(e) = res {
             eprintln!("failed to insert data into database: {e:?}");
-            return UploadResult {
+            return Err(UploadResult {
                 data: Some(upload_result::Data::DbInsertError(e.to_string())),
-            };
-        };
+            });
+        }
     }
-
-    UploadResult {
-        data: Some(upload_result::Data::Success(())),
-    }
+    Ok(())
 }

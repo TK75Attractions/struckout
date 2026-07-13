@@ -40,10 +40,13 @@ pub enum WritePacketError {
 pub async fn read_packet<T: Message + Default, I: AsyncRead + Unpin>(
     input: &mut I,
 ) -> Result<T, ReadPacketError> {
-    let mut buf = read_packet_raw(input).await?;
-    let packet = T::decode(&mut buf)?;
+    let buf = read_packet_raw(input).await?;
+    let packet = T::decode(buf)?;
     Ok(packet)
 }
+
+// OPTIM: バッファを再利用するならBytesMutの方が早そう.
+// 都度アロケートするんだったらVecと変わらない.
 
 pub async fn read_packet_raw<I: AsyncRead + Unpin>(
     input: &mut I,

@@ -28,8 +28,8 @@ import javax.inject.Inject
 class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val state = MutableStateFlow<State>(State.DisConnected)
-    override val isConnected = state.map { state ->
+    private val _state = MutableStateFlow<State>(State.DisConnected)
+    override val isConnected = _state.map { state ->
         state is State.Connected
     }.stateIn(
         scope = scope,
@@ -37,8 +37,17 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
         initialValue = false
     )
 
+    /**
+     * If the socket is already connected, it returns `null` immediately.
+     */
     override suspend fun connect(): ConnectionError? {
         return withContext(Dispatchers.IO) {
+            if (_state.value is State.Connected) {
+                Timber.tag(TAG)
+                    .w("LocalDetectionUploader#connect() is called, but it's already connected")
+                return@withContext null
+            }
+
             val socket = try {
                 Socket(REMOTE_ADDRESS, REMOTE_PORT)
             } catch (e: IOException) {
@@ -47,7 +56,7 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
             }
             Timber.tag(TAG).i("successfully established TCP connection between server")
 
-            state.value = State.Connected(
+            _state.value = State.Connected(
                 socket,
                 output = socket.getOutputStream(),
                 input = socket.getInputStream()
@@ -58,7 +67,7 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
 
     override suspend fun upload(frames: List<FrameEntity>): UploadError? {
         Timber.tag(LocalDetectionRepository.TAG).i("synchronizing local detections...")
-        val curState = state.value
+        val curState = _state.value
         if (curState !is State.Connected) {
             return UploadError.NotConnected
         }
@@ -73,7 +82,7 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
         } catch (e: SocketException) {
             Timber.tag(TAG)
                 .w("it seems TCP socket has been broken. you can recreate socket by calling connect() again.")
-            state.value = State.DisConnected
+            _state.value = State.DisConnected
             return UploadError.WriteFailed(e)
         } catch (e: IOException) {
             return UploadError.WriteFailed(e)
@@ -109,7 +118,7 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
     }
 
     override fun close() {
-        val curState = state.value
+        val curState = _state.value
         if (curState !is State.Connected) {
             Timber.tag(TAG).d("close() is called, but it's not connected now")
             return

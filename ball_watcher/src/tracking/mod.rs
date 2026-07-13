@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::{cell::Cell, collections::HashMap, sync::Arc};
 
 use crate::{
-    CameraLocationProvider,
+    CameraLocationStore,
     detection_input::PairedFrames,
-    tracking::data_association::associate_objects,
-    types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D},
+    tracking::{data_association::associate_objects, triangulate::triangulate},
+    types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D, ToVector3},
 };
 
 mod data_association;
@@ -13,19 +13,31 @@ mod triangulate;
 use anyhow::Context;
 use chrono::{DateTime, Local, Utc};
 pub use kalman::KalmanTrack;
-use serde::Serialize;
+use nalgebra::Vector3;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use struckout_proto::Detection;
 use tokio::sync::mpsc;
+use tracing::trace;
 
-pub struct TrackRunner<T, P> {
-    tracks: Vec<T>,
-    camera_loc_provider: P,
+pub struct TrackRunner<T> {
+    tracks: HashMap<TrackId, T>,
+    camera_locs: Arc<CameraLocationStore>,
     output_to_json: bool,
+    id_gen: TrackIdGenerator,
 }
 
 /// Tracks an object.
 pub trait ObjectTrack {
+    fn new(
+        id: TrackId,
+        initial_position: Vector3<f64>,
+        timestamp: DateTime<Utc>,
+        camera_loc_provider: Arc<CameraLocationStore>,
+    ) -> Self;
+
+    fn id(&self) -> TrackId;
+
     /// Predict object location and evaluate scores for each detections.
     fn evaluate_scores<'a>(
         &mut self,
@@ -37,16 +49,16 @@ pub trait ObjectTrack {
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D>;
 }
 
-impl<T, P> TrackRunner<T, P>
+impl<Track> TrackRunner<Track>
 where
-    T: ObjectTrack,
-    P: CameraLocationProvider,
+    Track: ObjectTrack,
 {
-    pub fn new(camera_locs: P, output_to_json: bool) -> Self {
+    pub fn new(camera_locs: Arc<CameraLocationStore>, output_to_json: bool) -> Self {
         Self {
-            tracks: Vec::new(),
-            camera_loc_provider: camera_locs,
+            tracks: HashMap::new(),
+            camera_locs,
             output_to_json,
+            id_gen: TrackIdGenerator::new(),
         }
     }
 
@@ -72,7 +84,7 @@ where
         }
     }
 
-    pub fn update_frame(&mut self, pair: PairedFrames) -> Vec<CollisionPoint3D> {
+    fn update_frame(&mut self, pair: PairedFrames) -> Vec<CollisionPoint3D> {
         let assignments = associate_objects(&mut self.tracks, &pair);
         // known tracks
         let res = self.update_assigned_tracks(&pair, &assignments);
@@ -83,8 +95,9 @@ where
                 .unwrap();
             serde_json::to_writer(file, &res).unwrap();
         }
-        for (track_idx, _) in &res.collisions {
-            self.tracks.remove(*track_idx);
+        for (track_id, _) in &res.collisions {
+            trace!(?track_id, "detected collision");
+            self.tracks.remove(track_id);
         }
 
         // dropped tracks
@@ -97,23 +110,32 @@ where
                     None
                 }
             })
-            .for_each(|track_idx| todo!("dropped track: {}", track_idx));
+            .for_each(|track_id| {
+                // FIXME: 数フレーム待ってから削除すると良いかも
+                self.tracks.remove(track_id);
+            });
 
         // new track
         // TODO
+        let new_tracks: Vec<Track> =
+            create_new_tracks(&self.id_gen, &assignments, &pair, self.camera_locs.clone());
+        for t in new_tracks {
+            self.tracks.insert(t.id(), t);
+        }
 
         res.collisions.into_iter().map(|(_, coll)| coll).collect()
     }
 
     /// Updates tracks based on assignment.
-    pub fn update_assigned_tracks(
+    fn update_assigned_tracks(
         &mut self,
         pair: &PairedFrames,
-        assignments: &HashMap<usize, (Option<usize>, Option<usize>)>,
-    ) -> UpdateTrackResult {
+        assignments: &HashMap<TrackId, (Option<usize>, Option<usize>)>,
+    ) -> AssignedTrackResult {
         let mut assigned_dets_a = Vec::new();
         let mut assigned_dets_b = Vec::new();
-        let mut collisions = Vec::new();
+        let mut assigned_tracks = Vec::new();
+        let mut collisions = HashMap::new();
         assignments
             .iter()
             .filter_map(|(track, (a, b))| {
@@ -123,43 +145,124 @@ where
                     None
                 }
             })
-            .for_each(|(track_idx, (det_a, det_b))| {
+            .for_each(|(track_id, (det_a, det_b))| {
                 assigned_dets_a.push(det_a);
                 assigned_dets_b.push(det_b);
-                let new_pos = triangulate::triangulate(
-                    self.camera_loc_provider
-                        .get(CameraId::new(0))
-                        .unwrap()
-                        .clone(),
+                assigned_tracks.push(*track_id);
+                let new_pos = triangulate(
+                    self.camera_locs.get(CameraId::new(0)).unwrap().clone(),
                     pair.a.detections.get(det_a).unwrap().get_lay(),
-                    self.camera_loc_provider
-                        .get(CameraId::new(1))
-                        .unwrap()
-                        .clone(),
+                    self.camera_locs.get(CameraId::new(1)).unwrap().clone(),
                     pair.b.detections.get(det_b).unwrap().get_lay(),
                 );
-                let track = self.tracks.get_mut(*track_idx).unwrap();
+                let track = self.tracks.get_mut(track_id).unwrap();
                 let coll = track.update_and_check_collision(new_pos);
                 if let Some(coll) = coll {
-                    collisions.push((*track_idx, coll));
+                    collisions.insert(*track_id, coll);
                 }
             });
-        UpdateTrackResult {
+        AssignedTrackResult {
             assigned_dets_a,
             assigned_dets_b,
+            assigned_tracks,
             collisions,
         }
     }
 }
 
-/// Result of [`State::update_assigned_tracks()`]
+fn create_new_tracks<Track>(
+    id_gen: &TrackIdGenerator,
+    assignments: &HashMap<TrackId, (Option<usize>, Option<usize>)>,
+    pair: &PairedFrames,
+    camera_locs: Arc<CameraLocationStore>,
+) -> Vec<Track>
+where
+    Track: ObjectTrack,
+{
+    let assigned_dets_a = assignments
+        .iter()
+        .filter_map(|(_, (a, _))| *a)
+        .collect::<Vec<_>>();
+    let remaining_dets_a = pair
+        .a
+        .detections
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, _)| {
+            if assigned_dets_a.contains(&idx) {
+                Some(idx)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    let assigned_dets_b = assignments
+        .iter()
+        .filter_map(|(_, (_, b))| *b)
+        .collect::<Vec<_>>();
+    let remaining_dets_b = pair
+        .b
+        .detections
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, _)| {
+            if assigned_dets_b.contains(&idx) {
+                Some(idx)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(remaining_dets_a.len(), remaining_dets_b.len());
+
+    remaining_dets_a
+        .iter()
+        .zip(remaining_dets_b.iter())
+        .map(|(det_a, det_b)| {
+            let loc_a = camera_locs.get(pair.a.camera_id.into()).unwrap();
+            let lay_a = pair.a.detections[*det_a].get_lay();
+            let loc_b = camera_locs.get(pair.b.camera_id.into()).unwrap();
+            let lay_b = pair.b.detections[*det_b].get_lay();
+            let pos = triangulate(loc_a, lay_a, loc_b, lay_b);
+            let next_id = id_gen.next();
+            Track::new(
+                next_id,
+                pos.to_vector3(),
+                pair.timestamp_avr,
+                camera_locs.clone(),
+            )
+        })
+        .collect()
+}
+
+/// Result of [`TrackRunner::update_assigned_tracks()`]
 #[derive(Debug, Serialize)]
-pub struct UpdateTrackResult {
+pub struct AssignedTrackResult {
     assigned_dets_a: Vec<usize>,
     assigned_dets_b: Vec<usize>,
-    /// (`track_idx`, `collision_point`)
-    collisions: Vec<(usize, CollisionPoint3D)>,
+    assigned_tracks: Vec<TrackId>,
+    collisions: HashMap<TrackId, CollisionPoint3D>,
 }
+
+struct TrackIdGenerator {
+    next: Cell<usize>,
+}
+
+impl TrackIdGenerator {
+    pub fn new() -> Self {
+        Self { next: Cell::new(0) }
+    }
+
+    pub fn next(&self) -> TrackId {
+        let next = self.next.get();
+        self.next.set(next + 1);
+        TrackId(next)
+    }
+}
+
+/// Newtype to represent unique track id.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackId(usize);
 
 #[cfg(test)]
 mod tests {}
