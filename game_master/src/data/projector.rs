@@ -14,6 +14,7 @@ use crate::{ui, worker::WorkerThread};
 const PROJECTOR_PORT: &str = "192.10.100.10:5252";
 const COMMAND_CHANNEL_BUF: usize = 8;
 const MSG_CHANNEL_BUF: usize = 8;
+const SCORE_CHANNEL_BUF: usize = 8;
 
 pub trait ProjectorConnection {
     fn bind<F>(&self, cb: F)
@@ -36,7 +37,8 @@ pub struct ProjectorConnectionImpl {
 impl ProjectorConnectionImpl {
     pub fn new(worker: &WorkerThread) -> Self {
         let (msg_tx, mut msg_rx) = mpsc::channel(MSG_CHANNEL_BUF);
-        let mut inner = ProjectorTransportInner::new();
+        let (score_tx, score_rx) = mpsc::channel(SCORE_CHANNEL_BUF);
+        let mut inner = ProjectorTransportInner::new(score_tx);
         worker.spawn(async move {
             loop {
                 let (msg, res_tx): (Command, oneshot::Sender<Response>) =
@@ -55,6 +57,11 @@ impl ProjectorConnectionImpl {
                         res_tx.send(Response::Bind(res)).unwrap();
                     }
                 }
+            }
+        });
+        worker.spawn(async move {
+            loop {
+                let score = score_rx.recv().await.unwrap();
             }
         });
 
@@ -112,13 +119,15 @@ enum Response {
 struct ProjectorTransportInner {
     listener: OnceCell<TcpListener>,
     conn_state: ConnectionState,
+    score_tx: mpsc::Sender<u32>,
 }
 
 impl ProjectorTransportInner {
-    fn new() -> Self {
+    fn new(score_tx: mpsc::Sender<u32>) -> Self {
         Self {
             listener: OnceCell::new(),
             conn_state: ConnectionState::DisConnected,
+            score_tx,
         }
     }
 

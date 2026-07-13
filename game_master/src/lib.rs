@@ -8,6 +8,7 @@ use crate::{
     data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
     nav::{NavController, NavHost},
     presentation::{init_connection, register_destinations},
+    session::SessionManager,
     worker::WorkerThread,
 };
 
@@ -18,6 +19,7 @@ mod ui {
 mod data;
 mod nav;
 mod presentation;
+mod session;
 mod state_ext;
 mod worker;
 
@@ -27,6 +29,7 @@ struct Application<PT> {
     nav_controller: NavController,
     ui: ui::AppWindow,
     repositories: RepositoryOwner<PT>,
+    session_manager: Rc<RefCell<SessionManager>>,
 }
 
 /// Container for repositories.

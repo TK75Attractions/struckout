@@ -1,5 +1,29 @@
-export component PlayingScreen {
-    Text {
-        text: "Playing";
+global Adopter {
+    in property <int> score;
+    in property <string> remaining-time;
+}
+
+export component PlayingScreen inherits Rectangle {
+    VerticalLayout {
+        cross-axis-alignment: CrossAxisAlignment.center;
+
+        HorizontalLayout {
+            Text {
+                text: "残り時間: ";
+            }
+
+            Text {
+                text: Adopter.remaining-time;
+            }
+        }
+
+        Rectangle {
+            Text {
+                text: Adopter.score;
+                font-size: 36pt;
+            }
+        }
     }
 }
+
+export { Adopter as PlayingAdopter }

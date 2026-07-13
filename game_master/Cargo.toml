@@ -28,6 +28,7 @@ pastey = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tempfile = { workspace = true }
+chrono = { workspace = true }
 
 sqlx = { workspace = true, features = [
     "sqlite",
