@@ -1,0 +1,66 @@
+import { AboutSlint, VerticalBox } from "std-widgets.slint";
+import { TopBar } from "top-bar.slint";
+import { StartScreen } from "./start/start-screen.slint";
+import {
+    NameInputScreen,
+} from "./name_input/name-input-screen.slint";
+import {
+    DifficulitySelectScreen,
+} from "./difficulity_select/difficulity-select-screen.slint";
+import { PlayingScreen } from "./playing/playing-screen.slint";
+import { ScoreScreen } from "./score/score-screen.slint";
+import { RankingScreen } from "./ranking/ranking-screen.slint";
+import { FallbackScreen } from "fallback/fallback-screen.slint";
+import {
+    ConnectionFailedScreen,
+} from "connection_failed/connection-failed-screen.slint";
+
+export {
+    StartScreenAdopter,
+}from "./start//start-screen.slint";
+export {
+    NameInputAdopter,
+}from "./name_input/name-input-screen.slint";
+export {
+    DifficulitySelectAdopter,
+}from "./difficulity_select/difficulity-select-screen.slint";
+export { FallbackAdopter }from "./fallback/fallback-screen.slint";
+export {
+    ConnectionFailedAdopter,
+}from "./connection_failed/connection-failed-screen.slint";
+export { PlayingAdopter }from "./playing/playing-screen.slint";
+
+
+enum NavRoute {
+    Start,
+    NameInput,
+    DifficulitySelect,
+    Playing,
+    Score,
+    Ranking,
+    Fallback,
+    ConnectionFailed,
+}
+
+export component AppWindow inherits Window {
+    full-screen: true;
+
+    in property <NavRoute> nav-route;
+
+    //VerticalLayout {
+        top-bar := TopBar { }
+
+    Rectangle {
+        y: top-bar.height;
+
+        if nav-route == NavRoute.Start: StartScreen { }
+        if nav-route == NavRoute.NameInput: NameInputScreen { }
+        if nav-route == NavRoute.DifficulitySelect:DifficulitySelectScreen { }
+        if nav-route == NavRoute.Playing: PlayingScreen { }
+        if nav-route == NavRoute.Score: ScoreScreen { }
+        if nav-route == NavRoute.Ranking: RankingScreen { }
+        if nav-route == NavRoute.Fallback: FallbackScreen { }
+        if nav-route == NavRoute.ConnectionFailed: ConnectionFailedScreen { }
+    }
+    //}
+}

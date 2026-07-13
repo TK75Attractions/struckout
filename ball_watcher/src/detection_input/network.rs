@@ -1,16 +1,14 @@
 use std::{io, sync::Arc};
 
 use anyhow::Context;
-use bytes::BytesMut;
 use chrono::DateTime;
-use prost::Message as _;
 use struckout_proto::{
     DetectionsPacket, ReadPacketError, TcpClientPacket, TcpServerPacket, read_packet,
     tcp_client_packet, tcp_server_packet, write_packet,
 };
 use thiserror::Error;
 use tokio::{
-    net::{TcpListener, UdpSocket, tcp},
+    net::{TcpListener, tcp},
     sync::mpsc,
     task::JoinHandle,
 };
@@ -22,12 +20,12 @@ use crate::{
     types::CameraId,
 };
 
-const FRAME_UDP_ADDR_DEFAULT: &str = "0.0.0.0:5050";
+const DATA_ADDR_DEFAULT: &str = "0.0.0.0:5050";
 const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
 const PAKCET_CHANNEL_BUF: usize = 5;
 
 pub struct NetworkDetectionInput {
-    udp_transport: UdpTransport,
+    data_transport: DataTransport,
     tcp_transport: TcpTransport,
     matcher: FramePairMatcher,
 }
@@ -36,14 +34,14 @@ impl NetworkDetectionInput {
     pub async fn new(
         camera_locs: Arc<CameraLocationStore>,
     ) -> Result<Self, NetworkDetectionInputCreationError> {
-        let udp_transport = UdpTransport::new()
+        let data_transport = DataTransport::new()
             .await
-            .map_err(|e| NetworkDetectionInputCreationError::Udp(e))?;
+            .map_err(|e| NetworkDetectionInputCreationError::Data(e))?;
         let tcp_transport = TcpTransport::new(camera_locs)
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Tcp(e))?;
         Ok(Self {
-            udp_transport,
+            data_transport,
             tcp_transport,
             matcher: FramePairMatcher::new(),
         })
@@ -53,7 +51,7 @@ impl NetworkDetectionInput {
 impl DetectionInput for NetworkDetectionInput {
     async fn start(mut self, pair_tx: mpsc::Sender<PairedFrames>) -> std::io::Result<()> {
         let (packet_tx, mut packet_rx) = mpsc::channel(PAKCET_CHANNEL_BUF);
-        tokio::spawn(async move { self.udp_transport.start(packet_tx).await });
+        tokio::spawn(async move { self.data_transport.listen(packet_tx).await });
         tokio::spawn(async move {
             loop {
                 let packet = packet_rx
@@ -81,31 +79,55 @@ impl DetectionInput for NetworkDetectionInput {
 pub enum NetworkDetectionInputCreationError {
     #[error("failed to create TcpTransport: {:?}",.0)]
     Tcp(#[source] std::io::Error),
-    #[error("failed to create UdpTransport: {:?}",.0)]
-    Udp(#[source] std::io::Error),
+    #[error("failed to create DataTransport: {:?}",.0)]
+    Data(#[source] std::io::Error),
 }
 
 /// UDP Socket to receive frames from cameras.
-pub struct UdpTransport {
-    socket: UdpSocket,
-    buf: BytesMut,
+pub struct DataTransport {
+    listener: TcpListener,
+    join_handles: Vec<JoinHandle<Result<(), ReadPacketError>>>,
 }
 
-impl UdpTransport {
+impl DataTransport {
     pub async fn new() -> std::io::Result<Self> {
-        let socket = UdpSocket::bind(FRAME_UDP_ADDR_DEFAULT).await?;
+        info!(
+            port = DATA_ADDR_DEFAULT,
+            "trying to bind port for `DataTransport`"
+        );
+        let listener = TcpListener::bind(DATA_ADDR_DEFAULT).await?;
+        info!("succeed to bind port for `DataTransport`");
         Ok(Self {
-            socket,
-            buf: BytesMut::new(),
+            listener,
+            join_handles: Vec::new(),
         })
     }
 
-    pub async fn start(&mut self, frame_tx: mpsc::Sender<DetectionsPacket>) -> std::io::Result<()> {
+    pub async fn listen(&mut self, packet_tx: mpsc::Sender<DetectionsPacket>) {
         loop {
-            let (_len, _addr) = self.socket.recv_from(&mut self.buf).await?;
+            match self.listener.accept().await {
+                Ok((stream, addr)) => {
+                    info!(?addr, "accepted new connection");
+                    let (reader, _writer) = stream.into_split();
 
-            let packet = DetectionsPacket::decode(&mut self.buf)?;
-            frame_tx.send(packet).await.unwrap();
+                    let join = tokio::spawn(Self::handle_input(packet_tx.clone(), reader));
+                    self.join_handles.push(join);
+                }
+                Err(_e) => {
+                    todo!("handle errors")
+                }
+            }
+        }
+    }
+
+    pub async fn handle_input(
+        packet_tx: mpsc::Sender<DetectionsPacket>,
+        mut reader: tcp::OwnedReadHalf,
+    ) -> Result<(), ReadPacketError> {
+        loop {
+            let packet: DetectionsPacket = read_packet(&mut reader).await?;
+
+            packet_tx.send(packet).await.unwrap();
         }
     }
 }

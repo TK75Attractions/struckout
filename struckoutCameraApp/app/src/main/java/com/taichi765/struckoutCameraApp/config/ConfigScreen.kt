@@ -48,7 +48,7 @@ fun ConfigScreenRoute(
     val viewModel = hiltViewModel<ConfigViewModel>()
     val savedState by viewModel.uiState.collectAsState()
 
-    var editingState by remember { mutableStateOf(savedState) }
+    var editingState by remember { mutableStateOf(savedState.copy()) }
 
     val radioOptions = listOf("Network", "Local", "None")
     val (selectedOption, setSelectedOption) = remember { mutableStateOf(radioOptions[0]) }

@@ -1,0 +1,72 @@
+use crate::{
+    Application,
+    nav::{NavController, NavDestination, NavRoute},
+    session::{RemainingTime, SessionManager},
+    ui,
+};
+use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use std::{cell::RefCell, rc::Rc};
+use tracing::debug;
+
+state_struct!(Playing,
+    score => i32,
+    remaining_time => SharedString
+);
+
+struct PlayingViewModel {
+    nav_controller: NavController,
+    state: PlayingState,
+}
+
+impl PlayingViewModel {
+    fn on_score_changed(&self, cur_score: u32) {
+        self.state.score.set(cur_score.try_into().unwrap());
+    }
+
+    fn on_remaining_time_changed(&self, remaining_time: &RemainingTime) {
+        self.state
+            .remaining_time
+            .set(format!("{}", remaining_time).to_shared_string());
+    }
+}
+
+pub struct PlayingDestination {
+    adopter: slint::Weak<ui::PlayingAdopter<'static>>,
+    nav_controller: NavController,
+    session_manager: Rc<RefCell<SessionManager>>,
+}
+
+impl PlayingDestination {
+    pub fn new<PT>(application: &Application<PT>) -> Self {
+        Self {
+            adopter: application.ui.global::<ui::PlayingAdopter>().as_weak(),
+            nav_controller: application.nav_controller.clone(),
+            session_manager: application.session_manager.clone(),
+        }
+    }
+}
+
+impl NavDestination for PlayingDestination {
+    fn load(&self, route: &NavRoute) {
+        debug!("loading PlayingViewModel");
+
+        let NavRoute::Playing = route else {
+            panic!("matched variant should be given");
+        };
+
+        let adopter = self.adopter.unwrap();
+        let viewmodel = PlayingViewModel {
+            nav_controller: self.nav_controller.clone(),
+            state: PlayingState::new(&adopter),
+        };
+
+        let session_manager = self.session_manager.borrow_mut();
+        session_manager.subscribe_on_score_change(|score| viewmodel.on_score_changed(score));
+        session_manager
+            .subscribe_on_remaining_time_change(|t| viewmodel.on_remaining_time_changed(t));
+    }
+
+    fn matches(&self, route: &NavRoute) -> bool {
+        matches!(route, &NavRoute::Playing)
+    }
+}

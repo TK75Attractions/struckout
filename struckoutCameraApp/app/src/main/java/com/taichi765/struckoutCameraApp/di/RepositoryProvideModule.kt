@@ -1,9 +1,9 @@
 package com.taichi765.struckoutCameraApp.di
 
+import com.taichi765.struckoutCameraApp.network.DataConnection
+import com.taichi765.struckoutCameraApp.network.DataConnectionImpl
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploaderImpl
-import com.taichi765.struckoutCameraApp.network.UdpConnection
-import com.taichi765.struckoutCameraApp.network.UdpConnectionImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,7 +13,7 @@ import dagger.hilt.components.SingletonComponent
 @Module
 object RepositoryProvideModule {
     @Provides
-    fun provideUdpConnectionFactory(): UdpConnection.Factory = UdpConnectionImpl.Factory
+    fun provideUdpConnectionFactory(): DataConnection.Factory = DataConnectionImpl.Factory
 
     @Provides
     fun provideTcpSynchronizerFactory(): LocalDetectionUploader.Factory =

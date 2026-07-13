@@ -1,0 +1,85 @@
+import { Button } from "std-widgets.slint";
+
+enum Difficulity { Normal, Hard, VeryHard }
+
+global Adopter {
+    in property <Difficulity> selected-difficulity;
+    in property <string> error-msg;
+
+    callback select-difficulity(val: Difficulity);
+    callback start-game();
+}
+
+component DifficulityButton {
+    in property <string> text;
+    in property <bool> highlighted;
+    callback clicked();
+
+    Button {
+        text: root.text;
+        primary: root.highlighted;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component StartGameButton {
+    callback clicked();
+
+    Button {
+        text: "スタート";
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component DifficulitySelectScreen inherits Rectangle {
+    VerticalLayout {
+        padding-top: 16px;
+
+        VerticalLayout {
+            DifficulityButton {
+                text: "NORMAL";
+                highlighted: Adopter.selected-difficulity == Difficulity.Normal;
+
+                clicked => {
+                    Adopter.select-difficulity(Difficulity.Normal);
+                }
+            }
+
+            DifficulityButton {
+                text: "HARD";
+                highlighted: Adopter.selected-difficulity == Difficulity.Hard;
+
+                clicked => {
+                    Adopter.select-difficulity(Difficulity.Hard);
+                }
+            }
+
+            DifficulityButton {
+                text: "VERY HARD";
+                highlighted: Adopter.selected-difficulity == Difficulity.VeryHard;
+
+                clicked => {
+                    Adopter.select-difficulity(Difficulity.VeryHard);
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: LayoutAlignment.end;
+
+            StartGameButton {
+                clicked => {
+                    Adopter.start-game();
+                }
+            }
+        }
+    }
+}
+
+export { Adopter as DifficulitySelectAdopter }

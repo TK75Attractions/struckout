@@ -1,0 +1,488 @@
+
+import { Icons } from "../icons.slint";
+enum KeyBoardMode { Hiragana, Katakana }
+
+global Adopter {
+    in property <string> player-name-text;
+    in property <KeyBoardMode> keyboard-mode;
+    in property <string> error-msg;
+    callback switch-keyboard-mode();
+    callback push-character(char: string);
+    callback remove-character();
+    callback submit-name();
+}
+
+component KeyButton {
+    in property <string> text;
+    callback clicked();
+
+    Rectangle {
+        border-color: black;
+        border-width: 4px;
+
+        Text {
+            text: text;
+        }
+
+        touch := TouchArea {
+            clicked => {
+                root.clicked();
+            }
+        }
+    }
+}
+
+component KeyboardBody inherits Rectangle {
+    in property <length> spacing;
+    in property <KeyBoardMode> mode;
+    callback text-added(text: string);
+
+    HorizontalLayout {
+        spacing: spacing;
+
+        VerticalLayout {
+            spacing: spacing;
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "わ" : "ワ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "わ" : "ワ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "を" : "ヲ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "を" : "ヲ")
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ん" : "ン";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ん" : "ン");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ら" : "ラ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ら" : "ラ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "り" : "リ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "り" : "リ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "る" : "ル";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "る" : "ル");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "れ" : "レ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "れ" : "レ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ろ" : "ロ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ろ" : "ロ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "や" : "ヤ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "や" : "ヤ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ゆ" : "ユ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ゆ" : "ユ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "よ" : "ヨ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "よ" : "ヨ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ま" : "マ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ま" : "マ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "み" : "ミ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "み" : "ミ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "む" : "ム";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "む" : "ム");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "め" : "メ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "め" : "メ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "も" : "モ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "も" : "モ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "は" : "ハ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "は" : "ハ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ひ" : "ヒ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ひ" : "ヒ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ふ" : "フ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ふ" : "フ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "へ" : "ヘ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "へ" : "ヘ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ほ" : "ホ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ほ" : "ホ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "な" : "ナ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "な" : "ナ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "に" : "ニ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "に" : "ニ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ぬ" : "ヌ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ぬ" : "ヌ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ね" : "ネ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ね" : "ネ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "の" : "ノ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "の" : "ノ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "た" : "タ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "た" : "タ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "ち" : "チ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "ち" : "チ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "つ" : "ツ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "つ" : "ツ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "て" : "テ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "て" : "テ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "と" : "ト";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "と" : "ト");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "さ" : "サ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "さ" : "サ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "し" : "シ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "し" : "シ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "す" : "ス";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "す" : "ス");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "せ" : "セ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "せ" : "セ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "そ" : "ソ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "そ" : "ソ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "か" : "カ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "か" : "カ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "き" : "キ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "き" : "キ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "く" : "ク";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "く" : "ク");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "け" : "ケ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "け" : "ケ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "こ" : "コ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "こ" : "コ");
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: spacing;
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "あ" : "ア";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "あ" : "ア");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "い" : "イ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "い" : "イ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "う" : "ウ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "う" : "ウ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "え" : "エ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "え" : "エ");
+                }
+            }
+
+            KeyButton {
+                text: mode == KeyBoardMode.Hiragana ? "お" : "オ";
+                clicked => {
+                    root.text-added(mode == KeyBoardMode.Hiragana ? "お" : "オ");
+                }
+            }
+        }
+    }
+}
+
+component KeyboardBottomBar inherits Rectangle {
+    callback switch-keyboard-mode();
+    callback click-backspace();
+    callback submit-name();
+
+    HorizontalLayout {
+        Rectangle {
+            Text {
+                text: "あア";
+            }
+
+            touch1 := TouchArea {
+                clicked => {
+                    root.switch-keyboard-mode();
+                }
+            }
+        }
+
+        Rectangle {
+            Image {
+                source: Icons.backspace;
+            }
+
+            touch2 := TouchArea {
+                clicked => {
+                    root.click-backspace();
+                }
+            }
+        }
+
+        Rectangle {
+            Image {
+                source: Icons.arrow-forward;
+            }
+
+            touch3 := TouchArea {
+                clicked => {
+                    root.submit-name();
+                }
+            }
+        }
+    }
+}
+
+export component NameInputScreen inherits Rectangle {
+
+    VerticalLayout {
+        alignment: LayoutAlignment.stretch;
+
+        Rectangle {
+            border-color: black;
+            border-width: 4px;
+
+            Text {
+                text: Adopter.player-name-text;
+            }
+        }
+
+        if Adopter.error-msg != "": Rectangle {
+            Text {
+                text: Adopter.error-msg;
+                color: red;
+            }
+        }
+
+        KeyboardBody {
+            spacing: 4px;
+            mode: Adopter.keyboard-mode;
+
+            text-added(text) => {
+                Adopter.push-character(text);
+            }
+        }
+
+        KeyboardBottomBar {
+            switch-keyboard-mode => {
+                Adopter.switch-keyboard-mode();
+            }
+
+            click-backspace => {
+                Adopter.remove-character();
+            }
+
+            submit-name => {
+                Adopter.submit-name();
+            }
+        }
+    }
+}
+
+export { Adopter as NameInputAdopter }

@@ -9,18 +9,13 @@ enum Difficulty {
   DIFFICULTY_VERYHARD = 3;
 }
 
-message StartGameRequest {
+message StartGame {
   Difficulty difficulty = 1;
 }
 
-message StartGameResponse {}
 
 message MasterPacket {
   oneof payload {
-    StartGameRequest request = 1;
+    StartGame start_game = 1;
   }
-}
-
-service MasterToProjectorService {
-  rpc StartGame(StartGameRequest) returns (StartGameResponse);
 }

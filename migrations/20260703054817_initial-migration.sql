@@ -8,7 +8,7 @@ CREATE TABLE frames(
 
 CREATE TABLE players (
     id INTEGAR PRIMARY KEY,
-    name TEXT   
+    name TEXT NOT NULL
 );
 
 CREATE TABLE scores (
