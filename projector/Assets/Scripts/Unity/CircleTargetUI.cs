@@ -1,6 +1,5 @@
 using UnityEngine;
 using Struckout.Domain;
-using System.Drawing;
 
 namespace Struckout.Unity
 {
@@ -13,10 +12,10 @@ namespace Struckout.Unity
             _target = target;
 
             RectTransform rect = GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(target.Coordinate.X,target.Coordinate.Y);
+            rect.anchoredPosition = new Vector2(target.Coordinate.X, target.Coordinate.Y);
 
             // Treat Target.Size as the radius of the circle.
-            rect.localScale = new Vector3(target.Radius, target.Radius, 1);
+            rect.localScale = new Vector3(target.Radius/2, target.Radius/2, 1);
         }
 
         public void OnCollision()

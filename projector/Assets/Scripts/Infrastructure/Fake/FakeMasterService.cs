@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace Struckout.Infrastructure
 {
-    public class FakeClientService : IClientService<ProjectorPacket>
+    public class FakeMasterService : IClientService<MasterPacket>
     {
         public void RegisterPort(string host,int port){}
-        public event Action<ProjectorPacket> OnReceived;
+        public event Action<MasterPacket> OnReceived;
         private bool _isConnected;
         CancellationTokenSource _receiveCancellationToken;
         Task task;
@@ -25,7 +25,7 @@ namespace Struckout.Infrastructure
         
         public async Task DisconnectAsync()
         {
-            Debug.Log("Disconnect Fake");
+            Debug.Log("Disconnect Master");
             _isConnected = false;
             _receiveCancellationToken.Cancel();
             await task;
@@ -40,17 +40,10 @@ namespace Struckout.Infrastructure
                 
                 float x = (float)random.NextDouble()*4;
                 float y = (float)random.NextDouble()*4;
-                ProjectorPacket ProjectorPacket = new ProjectorPacket
-                {
-                    Point = new CollisionPoint
-                    {
-                        X = x,
-                        Y = y  
-                    }
-                };
+                MasterPacket packet = new MasterPacket();
                 Debug.Log(x.ToString() + " " + y.ToString());
 
-                OnReceived?.Invoke(ProjectorPacket);
+                OnReceived?.Invoke(packet);
                 await Task.Delay(1000, token);
             }
         }
