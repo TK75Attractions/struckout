@@ -89,6 +89,7 @@ namespace Struckout.Unity
                 ITargetUI targetui = transform.GetComponent<ITargetUI>();
                 if(targetui == null) return;
                 targetui.OnCollision();
+                _targetToTransform.Remove(target);
             }
             catch (Exception ex)
             {

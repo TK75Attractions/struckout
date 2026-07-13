@@ -1,7 +1,6 @@
 using Struckout.Application;
 using System.Collections.Generic;
 using Tk75Attractions.Struckout.V1;
-using UnityEngine;
 
 namespace Struckout.Bootstrap
 {

@@ -7,12 +7,13 @@ using System.Threading;
 using System.IO;
 using UnityEngine;
 using Struckout.Application;
+using Struckout.Domain;
 
 namespace Struckout.Infrastructure
 {
     public class TCPClientBase<T> : IClientService<T>
     {
-        bool _isConnected = false;
+        ConnectionState _state = ConnectionState.Disconnected;
         private string _host;
         private int _port;
         private TcpClient _tcpClient;
@@ -20,8 +21,16 @@ namespace Struckout.Infrastructure
         private CancellationTokenSource _receiveCancellationToken;
         public event Action<T> OnReceived;
         private Task _receiveTask;
-        private IMessageParser<T> parser;
+        private readonly IMessageParser<T> _parser;
         private bool isRegister = false;
+        private readonly SemaphoreSlim _slim = new(1, 1);
+
+        private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
+
+        public TCPClientBase(IMessageParser<T> parser)
+        {
+            _parser = parser;
+        }
 
         public void RegisterPort(string host, int port)
         {
@@ -32,61 +41,109 @@ namespace Struckout.Infrastructure
 
         public async Task<bool> ConnectAsync()
         {
-            if (!isRegister) throw new Exception("Haven't been register port");
-            _tcpClient = new();
+            await _slim.WaitAsync();
+
             try
             {
-                await _tcpClient.ConnectAsync(_host, _port);
-                _networkStream = _tcpClient.GetStream();
-                _isConnected = true;
-                Debug.Log("Connected to TCP server.");
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"Error connecting to TCP server: {ex.Message}");
+                Transit(ConnectionState.Connecting);
+                if (!isRegister)
+                {
+                    Transit(ConnectionState.Failed);
+                    throw new Exception("Haven't been register port");
+                }
+                
+                _tcpClient = new();
+                try
+                {
+                    await _tcpClient.ConnectAsync(_host, _port);
+                    _networkStream = _tcpClient.GetStream();
+                    Transit(ConnectionState.Connected);
+                    Debug.Log("Connected to TCP server.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log($"Error connecting to TCP server: {ex.Message}");
+                    Transit(ConnectionState.Failed);
+                    return false;
+                }
+
+                if (_state == ConnectionState.Connected)
+                {
+                    _receiveCancellationToken = new CancellationTokenSource();
+                    _receiveTask = ReceiveDataAsync(_receiveCancellationToken.Token);
+                    return true;
+                }
+
                 return false;
             }
-
-            if (_isConnected)
+            finally
             {
-                _receiveCancellationToken = new CancellationTokenSource();
-                _receiveTask = ReceiveDataAsync(_receiveCancellationToken.Token);
-                return true;
+                _slim.Release();
             }
-            return false;
         }
 
         public async Task DisconnectAsync()
         {
-            Debug.Log("CalledDisposeAsync");
-            if (!_isConnected || _tcpClient == null)
-            {
-                Debug.Log("bbb");
-            }
-
+            await _slim.WaitAsync();
+            
             try
             {
-                _receiveCancellationToken.Cancel();
-                _networkStream?.Dispose();
-                _tcpClient?.Dispose();
-
-                _isConnected = false;
-                await _receiveTask;
+                if (_state != ConnectionState.Connected && _state != ConnectionState.Connecting) return;
+                if(_tcpClient == null) Debug.Log("Failed To Disconnect");
                 
-                Debug.Log("Disconnected from TCP server.");
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"Error closing connection to TCP server: {ex.Message}");
-            }
-            Debug.Log("Done");
+                Transit(ConnectionState.Disconnecting);
+                
+                _receiveCancellationToken?.Cancel();
+                try
+                {
+                    if(_receiveTask != null) await _receiveTask;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log($"Error closing connection to TCP server: {ex.Message}");
+                }
+                finally
+                {
+                    _networkStream?.Dispose();
+                    _tcpClient?.Dispose();
 
-            await Task.CompletedTask;
+                    Transit(ConnectionState.Disconnected);
+                }
+
+                Debug.Log("Done");
+
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _slim.Release();
+            }
+        }
+
+        public async Task<bool> ConnectRetryAsync(int maxattempts)
+        {
+            for(int attempt = 0; attempt < maxattempts; attempt++)
+            {
+                try
+                {
+                    if(await ConnectAsync())
+                    {
+                        return true;
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Debug.LogWarning($"Connect attempt failed because of {ex}");
+                }
+            
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+            }
+            return false;
         }
 
         private async Task ReceiveDataAsync(CancellationToken token)
         {
-            while (_isConnected && !token.IsCancellationRequested)
+            while (_state == ConnectionState.Connected && !token.IsCancellationRequested)
             {
                 byte[] data;
                 if (_tcpClient == null || _networkStream == null) break;
@@ -123,7 +180,7 @@ namespace Struckout.Infrastructure
                 T packet;
                 try
                 {
-                    packet = parser.MessageParse(data);
+                    packet = _parser.MessageParse(data);
                 }
                 catch (InvalidProtocolBufferException ex)
                 {

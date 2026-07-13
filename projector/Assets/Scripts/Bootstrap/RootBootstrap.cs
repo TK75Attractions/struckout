@@ -2,6 +2,7 @@ using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System;
 using VContainer.Unity;
+using Struckout.Domain;
 
 namespace Struckout.Bootstrap
 {
@@ -31,8 +32,23 @@ namespace Struckout.Bootstrap
         {
             _runtimeContext.AddDestroyEvent(_networkBootstrap);
 
-            await _networkBootstrap.Initialize();
-            await _gameBootstrap.Initialize(_runtimeContext);
+            NetworkConnectionResult result = await _networkBootstrap.Initialize();
+
+            switch (result)
+            {
+                case NetworkConnectionResult.Success:
+                    await _gameBootstrap.Initialize(_runtimeContext);
+                    break;
+                case NetworkConnectionResult.ClientConnectFailed:
+                    throw new Exception("Client connect failed");
+                case NetworkConnectionResult.MasterConnectFailed:
+                    throw new Exception("Master connect failed");
+                case NetworkConnectionResult.InvalidConfiguration:
+                    throw new Exception("There are no enough injections");
+                default:
+                    throw new InvalidOperationException("Unknown result");
+            }
+            
         }
         
 
@@ -46,7 +62,7 @@ namespace Struckout.Bootstrap
 
             if (destroyList == null)
             {
-                Debug.Log("aaa");
+                Debug.Log("The DestroyList is null");
             }
 
             foreach (var destroy in destroyList)

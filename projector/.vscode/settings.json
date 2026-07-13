@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "projector_Unity.slnx"
+    "dotnet.defaultSolution": "projector.slnx"
 }
