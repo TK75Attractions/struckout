@@ -1,11 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    Application,
     data::projector::{ListenError, ProjectorConnection},
     nav::{NavController, NavDestination, NavRoute},
     ui,
 };
-use slint::{SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use tracing::debug;
 
 state_struct!(ConnectionFailed, error_msg => SharedString);
@@ -46,6 +47,19 @@ pub struct ConnectionFailedDestination<PT> {
     adopter: slint::Weak<ui::ConnectionFailedAdopter<'static>>,
     nav_controller: NavController,
     projector_transport: Rc<RefCell<PT>>,
+}
+
+impl<PT> ConnectionFailedDestination<PT> {
+    pub fn new(application: &Application<PT>) -> Self {
+        Self {
+            adopter: application
+                .ui
+                .global::<ui::ConnectionFailedAdopter>()
+                .as_weak(),
+            nav_controller: application.nav_controller.clone(),
+            projector_transport: application.repositories.projector.clone(),
+        }
+    }
 }
 
 impl<PT> NavDestination for ConnectionFailedDestination<PT>

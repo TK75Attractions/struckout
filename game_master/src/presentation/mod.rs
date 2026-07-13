@@ -5,6 +5,7 @@ use crate::{
     data::projector::{BindError, ListenError, ProjectorConnection},
     nav::{NavHost, NavRoute},
     presentation::{
+        connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
         name_input::NameInputDestination, start::StartScreenDestination,
     },
@@ -207,4 +208,5 @@ where
     nav_host.register(NameInputDestination::new(&application));
     nav_host.register(DifficultySelectDestination::new(&application));
     nav_host.register(FallbackDestination::new(&application));
+    nav_host.register(ConnectionFailedDestination::new(&application));
 }
