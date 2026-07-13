@@ -25,6 +25,7 @@ namespace Struckout.Infrastructure
         
         public async Task DisconnectAsync()
         {
+            Debug.Log("Disconnect Fake");
             _isConnected = false;
             _receiveCancellationToken.Cancel();
             await task;
