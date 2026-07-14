@@ -12,7 +12,7 @@ use tokio::{
     sync::mpsc,
     task::JoinHandle,
 };
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::{
     CameraLocationStore,
@@ -104,12 +104,14 @@ impl DataTransport {
     }
 
     pub async fn listen(&mut self, packet_tx: mpsc::Sender<DetectionsPacket>) {
+        let mut writers = Vec::new();
         loop {
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
-                    info!(?addr, "accepted new connection");
-                    let (reader, _writer) = stream.into_split();
+                    info!(?addr, "accepted new connection in DataTransport");
+                    let (reader, writer) = stream.into_split();
 
+                    writers.push(writer);
                     let join = tokio::spawn(Self::handle_input(packet_tx.clone(), reader));
                     self.join_handles.push(join);
                 }
@@ -155,13 +157,16 @@ impl TcpTransport {
     }
 
     pub async fn listen(&mut self) {
+        let mut writers = Vec::new();
         loop {
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
-                    info!(?addr, "accepted new connection");
-                    let (reader, writer) = stream.into_split();
+                    info!(?addr, "accepted new connection for TcpTransport");
+                    let (reader, mut writer) = stream.into_split();
 
-                    self.init_conneciton(writer).await;
+                    self.init_conneciton(&mut writer).await;
+                    debug!(?addr, "initialized connection");
+                    writers.push(writer);
 
                     let join =
                         tokio::spawn(Self::handle_stream(Arc::clone(&self.camera_locs), reader));
@@ -174,14 +179,14 @@ impl TcpTransport {
         }
     }
 
-    async fn init_conneciton(&mut self, mut writer: tcp::OwnedWriteHalf) {
+    async fn init_conneciton(&mut self, writer: &mut tcp::OwnedWriteHalf) {
         let next_camera_id = self.camera_locs.next() as u32;
         info!("camera id for new device is {}", next_camera_id);
         let packet = TcpServerPacket {
             data: Some(tcp_server_packet::Data::CameraId(next_camera_id)),
         };
 
-        write_packet(packet, &mut writer).await.unwrap();
+        write_packet(packet, writer).await.unwrap();
     }
 
     async fn handle_stream(camera_locs: Arc<CameraLocationStore>, mut reader: tcp::OwnedReadHalf) {
@@ -206,7 +211,7 @@ impl TcpTransport {
                         continue;
                     }
                     let camera_loc = loc_data.camera_location.unwrap(); // checked above
-                    info!(value = ?camera_loc,"camera location updated");
+                    info!(id = loc_data.camera_id, value = ?camera_loc, "camera location updated");
                     camera_locs.insert(CameraId::new(loc_data.camera_id), camera_loc);
                 }
                 None => {
