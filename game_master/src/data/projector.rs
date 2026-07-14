@@ -24,9 +24,9 @@ pub trait ProjectorConnection {
     where
         F: FnOnce(Result<(), BindError>) + 'static;
 
-    fn listen<F>(&self, cb: F)
+    fn connect<F>(&self, cb: F)
     where
-        F: FnOnce(Result<(), ListenError>) + 'static;
+        F: FnOnce(Result<(), ConnectError>) + 'static;
 
     fn start_game<F>(&mut self, difficulty: impl Into<struckout_proto::Difficulty>, cb: F)
     where
@@ -54,9 +54,9 @@ impl ProjectorConnectionImpl {
                         let res = inner.start_game(difficulty).await;
                         res_tx.send(Response::StartGame(res)).unwrap();
                     }
-                    Command::Listen => {
+                    Command::Connect => {
                         let res = inner.connect().await;
-                        res_tx.send(Response::Listen(res)).unwrap();
+                        res_tx.send(Response::Connect(res)).unwrap();
                     }
                     Command::Bind => {
                         let res = inner.bind().await;
@@ -78,7 +78,7 @@ impl ProjectorConnection for ProjectorConnectionImpl {
 
     async_wrapper!(
         /// Callback is called when client requested connection and the connection was established.
-        listen() -> ListenError
+        connect() -> ConnectError
     );
 
     fn start_game<F>(&mut self, difficulty: impl Into<struckout_proto::Difficulty>, cb: F)
@@ -119,7 +119,7 @@ enum Command {
     /// See [`ProjectorTransportInner::start_game()`]
     StartGame(struckout_proto::Difficulty),
     /// See [`ProjectorTransportInner::connect()`]
-    Listen,
+    Connect,
     /// See [`ProjectorTransportInner::bind()`]
     Bind,
 }
@@ -129,7 +129,7 @@ enum Response {
     /// See [`ProjectorTransportInner::start_game()`]
     StartGame(Result<(), StartGameError>),
     /// See [`ProjectorTransportInner::connect()`]
-    Listen(Result<(), ListenError>),
+    Connect(Result<(), ConnectError>),
     /// See [`ProjectorTransportInner::bind()`]
     Bind(Result<(), BindError>),
 }
@@ -157,9 +157,9 @@ impl ProjectorTransportInner {
         Ok(())
     }
 
-    async fn connect(&mut self) -> Result<(), ListenError> {
-        let listener = self.listener.get().ok_or(ListenError::PortNotBound)?;
-        let (stream, addr) = timeout(Duration::from_mins(1), listener.accept()).await??;
+    async fn connect(&mut self) -> Result<(), ConnectError> {
+        let listener = self.listener.get().ok_or(ConnectError::PortNotBound)?;
+        let (stream, addr) = timeout(Duration::from_secs(30), listener.accept()).await??;
         info!(?addr, "accepted TCP connection with projector");
         let (mut reader, writer) = stream.into_split();
         self.conn_state = ConnectionState::Connected { writer };
@@ -225,7 +225,7 @@ pub enum StartGameError {
 
 /// Error type used in [ProjectorConnection::listen()].
 #[derive(Debug, Error)]
-pub enum ListenError {
+pub enum ConnectError {
     #[error("port is not bound and TCP listner not created")]
     PortNotBound,
     #[error("listener timed out")]

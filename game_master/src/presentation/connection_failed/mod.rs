@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     Application,
-    data::projector::{ListenError, ProjectorConnection},
+    data::projector::{ConnectError, ProjectorConnection},
     nav::{NavController, NavDestination, NavRoute},
     ui,
 };
@@ -22,20 +22,20 @@ where
     PT: ProjectorConnection,
 {
     fn on_retry_connection(&self) {
-        self.projector_transport.borrow_mut().listen({
+        self.projector_transport.borrow_mut().connect({
             let nav_controller = self.nav_controller.clone();
             let error_msg = self.state.error_msg.clone();
             move |res| match res {
                 Ok(()) => {
                     nav_controller.navigate(NavRoute::Start); // TODO: プレイ中に接続が切れた時どうするか
                 }
-                Err(ListenError::PortNotBound) => {
+                Err(ConnectError::PortNotBound) => {
                     panic!("port should be always bound when ConnectionFailedScreen is shown")
                 }
-                Err(ListenError::Timeout(_)) => {
+                Err(ConnectError::Timeout(_)) => {
                     error_msg.set("タイムアウトしました".to_shared_string());
                 }
-                Err(ListenError::Tcp(e)) => {
+                Err(ConnectError::Tcp(e)) => {
                     error_msg.set(format!("接続に失敗しました: {}", e).to_shared_string());
                 }
             }
