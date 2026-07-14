@@ -18,6 +18,12 @@ struct PlayingViewModel {
     state: PlayingState,
 }
 
+impl PlayingViewModel {
+    fn on_session_ends(&self) {
+        self.nav_controller.navigate(NavRoute::Score);
+    }
+}
+
 impl SessionSubscriber for PlayingViewModel {
     fn on_score_changed(&self, score: u32) {
         self.state.score.set(score.try_into().unwrap());
@@ -55,13 +61,19 @@ impl NavDestination for PlayingDestination {
         };
 
         let adopter = self.adopter.unwrap();
-        let viewmodel = PlayingViewModel {
+        let viewmodel = Rc::new(PlayingViewModel {
             nav_controller: self.nav_controller.clone(),
             state: PlayingState::new(&adopter),
-        };
+        });
 
         let mut session_manager = self.session_manager.borrow_mut();
-        session_manager.subscribe(viewmodel);
+        session_manager.subscribe(Rc::clone(&viewmodel));
+        session_manager.start_session({
+            let viewmodel = viewmodel.clone();
+            move || {
+                viewmodel.on_session_ends();
+            }
+        });
     }
 
     fn matches(&self, route: &NavRoute) -> bool {

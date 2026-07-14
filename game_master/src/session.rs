@@ -44,7 +44,8 @@ impl SessionManager {
         Self(inner)
     }
 
-    pub fn start_session(&mut self) {
+    /// `cb` is called when session ends.
+    pub fn start_session(&mut self, cb: impl FnOnce() + 'static) {
         {
             let mut guard = self.0.write();
             guard.session = Some(Session::new());
@@ -60,7 +61,7 @@ impl SessionManager {
                     let session = guard.session.as_mut().expect("session should be started");
                     let is_end = session.remaining_time.count_down();
                     if is_end {
-                        tx.send(());
+                        tx.blocking_send(()).unwrap();
                     }
                 }
                 let guard = this.read();
@@ -73,12 +74,16 @@ impl SessionManager {
         slint::spawn_local(async move {
             rx.recv().await.unwrap();
             timer.stop();
+            cb();
         })
         .unwrap();
     }
 
-    pub fn subscribe(&mut self, sub: impl SessionSubscriber + 'static) {
-        self.0.write().subscriber = Some(Box::new(sub));
+    pub fn subscribe<T>(&mut self, sub: Rc<T>)
+    where
+        T: SessionSubscriber + 'static,
+    {
+        self.0.write().subscriber = Some(sub);
     }
 }
 
@@ -119,7 +124,7 @@ impl RemainingTime {
 
 struct SessionManagerInner {
     session: Option<Session>,
-    subscriber: Option<Box<dyn SessionSubscriber + 'static>>,
+    subscriber: Option<Rc<dyn SessionSubscriber + 'static>>,
 }
 
 impl SessionManagerInner {
