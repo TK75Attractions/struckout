@@ -7,6 +7,7 @@ use crate::{
     Application,
     data::projector::{ProjectorConnection, StartGameError},
     nav::{NavController, NavDestination, NavRoute},
+    session::SessionManager,
     ui,
 };
 use tracing::{debug, error, trace};
@@ -22,6 +23,7 @@ pub struct DifficulitySelectViewModel<PT> {
     nav_controller: NavController,
     state: DifficulitySelectState,
     projector_transport: Rc<RefCell<PT>>,
+    session_manager: Rc<RefCell<SessionManager>>,
 }
 
 impl<PT> DifficulitySelectViewModel<PT>
@@ -32,11 +34,13 @@ where
         nav_controller: NavController,
         state: DifficulitySelectState,
         projector_transport: Rc<RefCell<PT>>,
+        session_manager: Rc<RefCell<SessionManager>>,
     ) -> Self {
         Self {
             nav_controller,
             state,
             projector_transport,
+            session_manager,
         }
     }
 
@@ -50,7 +54,7 @@ where
         let difficulty = self.state.selected_difficulity.get();
         let error_msg = self.state.error_msg.clone();
         let nav_controller = self.nav_controller.clone();
-        self.projector_transport
+        self.projector_transport // TODO: SessionManagerに移すかも
             .borrow_mut()
             .start_game(difficulty, move |res| match res {
                 Ok(()) => {
@@ -62,6 +66,7 @@ where
                     error_msg.set("ネットワーク接続に失敗しました".to_shared_string());
                 }
             });
+        self.session_manager.borrow_mut().start_session();
     }
 }
 
@@ -69,6 +74,7 @@ pub struct DifficultySelectDestination<PT> {
     adopter: slint::Weak<ui::DifficulitySelectAdopter<'static>>,
     nav_controller: NavController,
     projector_transport: Rc<RefCell<PT>>,
+    session_manager: Rc<RefCell<SessionManager>>,
 }
 
 impl<PT> DifficultySelectDestination<PT> {
@@ -80,6 +86,7 @@ impl<PT> DifficultySelectDestination<PT> {
                 .as_weak(),
             nav_controller: application.nav_controller.clone(),
             projector_transport: application.repositories.projector.clone(),
+            session_manager: application.session_manager.clone(),
         }
     }
 }
@@ -100,6 +107,7 @@ where
             self.nav_controller.clone(),
             DifficulitySelectState::new(&adopter),
             self.projector_transport.clone(),
+            self.session_manager.clone(),
         ));
 
         macro_rules! cb {

@@ -16,7 +16,6 @@ use crate::{ui, worker::WorkerThread};
 
 // TODO: set actual value
 const PROJECTOR_PORT: &str = "192.10.100.10:5252";
-const COMMAND_CHANNEL_BUF: usize = 8;
 const MSG_CHANNEL_BUF: usize = 8;
 const SCORE_CHANNEL_BUF: usize = 8;
 
