@@ -76,11 +76,16 @@ pub fn run_main() {
             ui.set_nav_route(route.into());
         }
     });
+    let repositories = RepositoryOwner::new();
+    let session_manager = Rc::new(RefCell::new(SessionManager::new(
+        repositories.projector.clone(),
+    )));
 
     let application = Application {
         nav_controller,
         ui,
-        repositories: RepositoryOwner::new(),
+        session_manager,
+        repositories,
     };
 
     let mut nav_host = NavHost::new();

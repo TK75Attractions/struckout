@@ -13,9 +13,16 @@ message StartGame {
   Difficulty difficulty = 1;
 }
 
-
-message MasterPacket {
+// game-masterからprojectorに送られるパケット
+message MasterProjectorPacket {
   oneof payload {
     StartGame start_game = 1;
+  }
+}
+
+// projectorからgame-masterに送られるパケット
+message ProjectorMasterPacket {
+  oneof payload {
+    uint32 score = 1;
   }
 }

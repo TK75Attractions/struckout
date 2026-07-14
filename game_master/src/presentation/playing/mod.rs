@@ -1,7 +1,7 @@
 use crate::{
     Application,
     nav::{NavController, NavDestination, NavRoute},
-    session::{RemainingTime, SessionManager},
+    session::{RemainingTime, SessionManager, SessionSubscriber},
     ui,
 };
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
@@ -18,9 +18,9 @@ struct PlayingViewModel {
     state: PlayingState,
 }
 
-impl PlayingViewModel {
-    fn on_score_changed(&self, cur_score: u32) {
-        self.state.score.set(cur_score.try_into().unwrap());
+impl SessionSubscriber for PlayingViewModel {
+    fn on_score_changed(&self, score: u32) {
+        self.state.score.set(score.try_into().unwrap());
     }
 
     fn on_remaining_time_changed(&self, remaining_time: &RemainingTime) {
@@ -60,10 +60,8 @@ impl NavDestination for PlayingDestination {
             state: PlayingState::new(&adopter),
         };
 
-        let session_manager = self.session_manager.borrow_mut();
-        session_manager.subscribe_on_score_change(|score| viewmodel.on_score_changed(score));
-        session_manager
-            .subscribe_on_remaining_time_change(|t| viewmodel.on_remaining_time_changed(t));
+        let mut session_manager = self.session_manager.borrow_mut();
+        session_manager.subscribe(viewmodel);
     }
 
     fn matches(&self, route: &NavRoute) -> bool {

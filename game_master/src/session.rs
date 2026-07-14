@@ -1,44 +1,57 @@
-use std::fmt::Display;
+use parking_lot::RwLock;
+use std::{cell::RefCell, fmt::Display, rc::Rc, sync::Arc};
 
 use chrono::Duration;
-use tokio::sync::mpsc;
 
-use crate::worker::WorkerThread;
+use crate::data::projector::ProjectorConnection;
 
 const TIMELIMIT: RemainingTime = RemainingTime { mins: 1, secs: 30 };
 
-pub struct SessionManager {
-    session: Option<Session>,
-    on_score_change: Option<Box<dyn FnMut(u32)>>,
-    on_remaining_time_change: Option<Box<dyn FnMut(&RemainingTime)>>,
-}
+pub struct SessionManager(Arc<RwLock<SessionManagerInner>>);
 
 impl SessionManager {
-    pub fn new(worker: &WorkerThread, score_rx: mpsc::Receiver<u32>) -> Self {
-        let inner = SessionManagerInner::new(score_rx);
-        worker.spawn(async move {
-            inner.start().await;
-        });
-        Self {
-            session: None,
-            on_score_change: None,
-            on_remaining_time_change: None,
-        }
+    pub fn new<PT>(projector_transport: Rc<RefCell<PT>>) -> Self
+    where
+        PT: ProjectorConnection,
+    {
+        let inner = Arc::new(RwLock::new(SessionManagerInner::new()));
+
+        slint::spawn_local({
+            let mut score_rx = projector_transport.borrow_mut().take_rx().unwrap();
+            let inner = Arc::clone(&inner);
+            async move {
+                let score = score_rx
+                    .recv()
+                    .await
+                    .unwrap()
+                    .expect("todo: receiving score from projector failed");
+                let mut guard = inner.write();
+                {
+                    let Some(session) = &mut guard.session else {
+                        panic!("recieved score from projector, but session not started");
+                    };
+                    session.cur_score += score;
+                }
+                if let Some(sub) = &guard.subscriber {
+                    // session always exists (checked above)
+                    sub.on_score_changed(guard.session.as_ref().unwrap().cur_score);
+                }
+            }
+        })
+        .unwrap();
+
+        Self(inner)
     }
 
-    pub fn subscribe_on_score_change<F>(&mut self, f: F)
-    where
-        F: FnMut(u32),
-    {
-        self.on_score_change = Some(Box::new(f));
+    pub fn subscribe(&mut self, sub: impl SessionSubscriber + 'static) {
+        self.0.write().subscriber = Some(Box::new(sub));
     }
+}
 
-    pub fn subscribe_on_remaining_time_change<F>(&mut self, f: F)
-    where
-        F: FnMut(&RemainingTime),
-    {
-        self.on_remaining_time_change = Some(Box::new(f));
-    }
+pub trait SessionSubscriber {
+    fn on_score_changed(&self, score: u32);
+
+    fn on_remaining_time_changed(&self, remaining_time: &RemainingTime);
 }
 
 #[derive(Debug, Clone)]
@@ -54,18 +67,15 @@ impl Display for RemainingTime {
 }
 
 struct SessionManagerInner {
-    time_tx: mpsc::Sender<RemainingTime>,
-    remaining_time: RemainingTime,
+    session: Option<Session>,
+    subscriber: Option<Box<dyn SessionSubscriber + 'static>>,
 }
 
 impl SessionManagerInner {
-    fn new(score_rx: mpsc::Receiver<u32>) -> Self {
-        Self { score_rx }
-    }
-
-    async fn start(&mut self) {
-        loop {
-            self.score_rx
+    fn new() -> Self {
+        Self {
+            session: None,
+            subscriber: None,
         }
     }
 }
