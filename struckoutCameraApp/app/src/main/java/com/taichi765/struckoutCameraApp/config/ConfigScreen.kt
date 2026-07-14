@@ -60,7 +60,8 @@ fun ConfigScreenRoute(
 
 
     ConfigScreen(
-        uiState = editingState,
+        recordingModeEnabled = editingState.recodingModeEnabled,
+        connectionFailed = savedState.detectionOutputKind == DetectionOutputKind.NETWORK && !savedState.tcpIsConnected,
         x = x,
         y = y,
         z = z,
@@ -114,7 +115,8 @@ private fun textToDetectionOutputKind(text: String): DetectionOutputKind? {
 
 @Composable
 private fun ConfigScreen(
-    uiState: ConfigUiState,
+    recordingModeEnabled: Boolean,
+    connectionFailed: Boolean,
     showDiscardDialog: Boolean,
     radioOptions: List<String>,
     selectedOption: String,
@@ -128,7 +130,7 @@ private fun ConfigScreen(
     onApplyChanges: () -> Unit,
     onDiscardChanges: () -> Unit
 ) {
-    if (uiState.detectionOutputKind == DetectionOutputKind.NETWORK && !uiState.tcpIsConnected) {
+    if (connectionFailed) {
         FallbackView(onTryConnect = {
             onRetryConnection()
         }, onSetDetectionOutput = onSetDetectionOutput)
@@ -139,20 +141,19 @@ private fun ConfigScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             FeatureConfigCard(
-                uiState = uiState,
+                recordingModeEnabled = recordingModeEnabled,
                 radioOptions = radioOptions,
                 selectedOption = selectedOption,
                 onOptionSelected = onOptionSelected,
                 onToggleRecordingMode = onToggleRecordingMode,
             )
 
-            if (uiState.tcpIsConnected) {
-                CameraLocationInput(
-                    x,
-                    y,
-                    z,
-                )
-            }
+            CameraLocationInput(
+                x,
+                y,
+                z,
+            )
+
 
             ConfirmButton(onClick = onApplyChanges)
         }
@@ -188,7 +189,7 @@ private fun SessionCard(onResetSession: () -> Unit) {
 
 @Composable
 private fun FeatureConfigCard(
-    uiState: ConfigUiState,
+    recordingModeEnabled: Boolean,
     radioOptions: List<String>,
     selectedOption: String,
     onToggleRecordingMode: () -> Unit,
@@ -206,7 +207,7 @@ private fun FeatureConfigCard(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SwitchField("Recording Mode", uiState.recodingModeEnabled) {
+            SwitchField("Recording Mode", recordingModeEnabled) {
                 onToggleRecordingMode()
             }
             DetectionOutputKindSelection(
@@ -376,7 +377,8 @@ private fun ConfirmButton(onClick: () -> Unit) {
  */
 @Composable
 private fun DummyConfigScreen(
-    uiState: ConfigUiState,
+    recordingModeEnabled: Boolean = true,
+    connectionFailed: Boolean = false,
     showDiscardDialog: Boolean = false,
     radioOptions: List<String> = listOf("Network", "Local", "None"),
     selectedOption: String = "Network",
@@ -385,7 +387,8 @@ private fun DummyConfigScreen(
     z: TextFieldState = TextFieldState()
 ) {
     ConfigScreen(
-        uiState = uiState,
+        recordingModeEnabled = recordingModeEnabled,
+        connectionFailed = connectionFailed,
         showDiscardDialog = showDiscardDialog,
         radioOptions = radioOptions,
         selectedOption = selectedOption,
@@ -405,10 +408,8 @@ private fun DummyConfigScreen(
 @Composable
 private fun DisconnectedPreView() {
     DummyConfigScreen(
-        uiState = ConfigUiState().copy(
-            tcpIsConnected = false,
-            detectionOutputKind = DetectionOutputKind.NETWORK
-        ),
+        connectionFailed = true,
+        selectedOption = "Network",
     )
 }
 
@@ -416,9 +417,7 @@ private fun DisconnectedPreView() {
 @Composable
 private fun NetworkDisabledPreview() {
     DummyConfigScreen(
-        uiState = ConfigUiState().copy(
-            detectionOutputKind = DetectionOutputKind.LOCAL
-        ),
+        selectedOption = "Local",
     )
 }
 
@@ -426,9 +425,7 @@ private fun NetworkDisabledPreview() {
 @Composable
 private fun ConnectedPreview() {
     DummyConfigScreen(
-        uiState = ConfigUiState().copy(
-            detectionOutputKind = DetectionOutputKind.NETWORK,
-            tcpIsConnected = true
-        ),
+        selectedOption = "Network",
+        connectionFailed = false
     )
 }
