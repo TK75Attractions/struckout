@@ -50,7 +50,7 @@ where
         let difficulty = self.state.selected_difficulity.get();
         let error_msg = self.state.error_msg.clone();
         let nav_controller = self.nav_controller.clone();
-        self.projector_transport
+        self.projector_transport // TODO: SessionManagerに移すかも
             .borrow_mut()
             .start_game(difficulty, move |res| match res {
                 Ok(()) => {

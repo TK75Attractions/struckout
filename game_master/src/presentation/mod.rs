@@ -7,7 +7,8 @@ use crate::{
     presentation::{
         connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
-        name_input::NameInputDestination, start::StartScreenDestination,
+        name_input::NameInputDestination, playing::PlayingDestination,
+        start::StartScreenDestination,
     },
 };
 use tokio::sync::oneshot;
@@ -209,4 +210,5 @@ where
     nav_host.register(DifficultySelectDestination::new(&application));
     nav_host.register(FallbackDestination::new(&application));
     nav_host.register(ConnectionFailedDestination::new(&application));
+    nav_host.register(PlayingDestination::new(&application));
 }

@@ -1,7 +1,7 @@
 use crate::{
     Application,
     nav::{NavController, NavDestination, NavRoute},
-    session::{RemainingTime, SessionManager},
+    session::{RemainingTime, SessionManager, SessionSubscriber},
     ui,
 };
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
@@ -19,8 +19,14 @@ struct PlayingViewModel {
 }
 
 impl PlayingViewModel {
-    fn on_score_changed(&self, cur_score: u32) {
-        self.state.score.set(cur_score.try_into().unwrap());
+    fn on_session_ends(&self) {
+        self.nav_controller.navigate(NavRoute::Score);
+    }
+}
+
+impl SessionSubscriber for PlayingViewModel {
+    fn on_score_changed(&self, score: u32) {
+        self.state.score.set(score.try_into().unwrap());
     }
 
     fn on_remaining_time_changed(&self, remaining_time: &RemainingTime) {
@@ -55,15 +61,19 @@ impl NavDestination for PlayingDestination {
         };
 
         let adopter = self.adopter.unwrap();
-        let viewmodel = PlayingViewModel {
+        let viewmodel = Rc::new(PlayingViewModel {
             nav_controller: self.nav_controller.clone(),
             state: PlayingState::new(&adopter),
-        };
+        });
 
-        let session_manager = self.session_manager.borrow_mut();
-        session_manager.subscribe_on_score_change(|score| viewmodel.on_score_changed(score));
-        session_manager
-            .subscribe_on_remaining_time_change(|t| viewmodel.on_remaining_time_changed(t));
+        let mut session_manager = self.session_manager.borrow_mut();
+        session_manager.subscribe(Rc::clone(&viewmodel));
+        session_manager.start_session({
+            let viewmodel = viewmodel.clone();
+            move || {
+                viewmodel.on_session_ends();
+            }
+        });
     }
 
     fn matches(&self, route: &NavRoute) -> bool {

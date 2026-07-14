@@ -1925,6 +1925,7 @@ dependencies = [
  "itertools 0.15.0",
  "parking_lot",
  "pastey 0.2.3",
+ "prost",
  "serde",
  "serde_json",
  "slint",

@@ -1,5 +1,9 @@
+use prost::DecodeError;
 use std::{cell::OnceCell, time::Duration};
-use struckout_proto::{MasterPacket, WritePacketError, master_packet, write_packet};
+use struckout_proto::{
+    MasterProjectorPacket, ProjectorMasterPacket, ReadPacketError, WritePacketError,
+    master_projector_packet, projector_master_packet, read_packet, write_packet,
+};
 use thiserror::Error;
 use tokio::{
     net::{TcpListener, tcp},
@@ -12,7 +16,6 @@ use crate::{ui, worker::WorkerThread};
 
 // TODO: set actual value
 const PROJECTOR_PORT: &str = "192.10.100.10:5252";
-const COMMAND_CHANNEL_BUF: usize = 8;
 const MSG_CHANNEL_BUF: usize = 8;
 const SCORE_CHANNEL_BUF: usize = 8;
 
@@ -28,10 +31,13 @@ pub trait ProjectorConnection {
     fn start_game<F>(&mut self, difficulty: impl Into<struckout_proto::Difficulty>, cb: F)
     where
         F: FnOnce(Result<(), StartGameError>) + 'static;
+
+    fn take_rx(&mut self) -> Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>;
 }
 
 pub struct ProjectorConnectionImpl {
     msg_tx: mpsc::Sender<(Command, oneshot::Sender<Response>)>,
+    score_rx: Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>,
 }
 
 impl ProjectorConnectionImpl {
@@ -49,7 +55,7 @@ impl ProjectorConnectionImpl {
                         res_tx.send(Response::StartGame(res)).unwrap();
                     }
                     Command::Listen => {
-                        let res = inner.listen().await;
+                        let res = inner.connect().await;
                         res_tx.send(Response::Listen(res)).unwrap();
                     }
                     Command::Bind => {
@@ -59,13 +65,11 @@ impl ProjectorConnectionImpl {
                 }
             }
         });
-        worker.spawn(async move {
-            loop {
-                let score = score_rx.recv().await.unwrap();
-            }
-        });
 
-        Self { msg_tx }
+        Self {
+            msg_tx,
+            score_rx: Some(score_rx),
+        }
     }
 }
 
@@ -94,13 +98,27 @@ impl ProjectorConnection for ProjectorConnectionImpl {
         })
         .unwrap();
     }
+
+    fn take_rx(&mut self) -> Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>> {
+        self.score_rx.take()
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+pub enum ScoreReceivedError {
+    #[error(transparent)]
+    ReadFailed(#[from] std::io::Error),
+    #[error(transparent)]
+    DecodeFailed(#[from] DecodeError),
+    #[error("packet received from projector was empty")]
+    EmptyPacket,
+}
+
+#[derive(derive_more::Debug)]
 enum Command {
     /// See [`ProjectorTransportInner::start_game()`]
     StartGame(struckout_proto::Difficulty),
-    /// See [`ProjectorTransportInner::listen()`]
+    /// See [`ProjectorTransportInner::connect()`]
     Listen,
     /// See [`ProjectorTransportInner::bind()`]
     Bind,
@@ -110,7 +128,7 @@ enum Command {
 enum Response {
     /// See [`ProjectorTransportInner::start_game()`]
     StartGame(Result<(), StartGameError>),
-    /// See [`ProjectorTransportInner::listen()`]
+    /// See [`ProjectorTransportInner::connect()`]
     Listen(Result<(), ListenError>),
     /// See [`ProjectorTransportInner::bind()`]
     Bind(Result<(), BindError>),
@@ -119,11 +137,11 @@ enum Response {
 struct ProjectorTransportInner {
     listener: OnceCell<TcpListener>,
     conn_state: ConnectionState,
-    score_tx: mpsc::Sender<u32>,
+    score_tx: mpsc::Sender<Result<u32, ScoreReceivedError>>,
 }
 
 impl ProjectorTransportInner {
-    fn new(score_tx: mpsc::Sender<u32>) -> Self {
+    fn new(score_tx: mpsc::Sender<Result<u32, ScoreReceivedError>>) -> Self {
         Self {
             listener: OnceCell::new(),
             conn_state: ConnectionState::DisConnected,
@@ -139,12 +157,33 @@ impl ProjectorTransportInner {
         Ok(())
     }
 
-    async fn listen(&mut self) -> Result<(), ListenError> {
+    async fn connect(&mut self) -> Result<(), ListenError> {
         let listener = self.listener.get().ok_or(ListenError::PortNotBound)?;
         let (stream, addr) = timeout(Duration::from_mins(1), listener.accept()).await??;
         info!(?addr, "accepted TCP connection with projector");
-        let (reader, writer) = stream.into_split();
-        self.conn_state = ConnectionState::Connected { reader, writer };
+        let (mut reader, writer) = stream.into_split();
+        self.conn_state = ConnectionState::Connected { writer };
+
+        let score_tx = self.score_tx.clone();
+        tokio::spawn(async move {
+            loop {
+                let res: Result<ProjectorMasterPacket, ReadPacketError> =
+                    read_packet::<ProjectorMasterPacket, _>(&mut reader).await;
+                let res = match res {
+                    Ok(ProjectorMasterPacket { payload: None }) => {
+                        Err(ScoreReceivedError::EmptyPacket)
+                    }
+                    Ok(ProjectorMasterPacket {
+                        payload: Some(projector_master_packet::Payload::Score(s)),
+                    }) => Ok(s),
+                    Err(ReadPacketError::ReadFailed(e)) => Err(ScoreReceivedError::ReadFailed(e)),
+                    Err(ReadPacketError::DecodeFailed(e)) => {
+                        Err(ScoreReceivedError::DecodeFailed(e))
+                    }
+                };
+                score_tx.send(res).await.unwrap();
+            }
+        });
         Ok(())
     }
 
@@ -152,12 +191,12 @@ impl ProjectorTransportInner {
         &mut self,
         difficulty: struckout_proto::Difficulty,
     ) -> Result<(), StartGameError> {
-        let ConnectionState::Connected { reader: _, writer } = &mut self.conn_state else {
+        let ConnectionState::Connected { writer } = &mut self.conn_state else {
             return Err(StartGameError::NotConnected);
         };
 
-        let packet = MasterPacket {
-            payload: Some(master_packet::Payload::StartGame(
+        let packet = MasterProjectorPacket {
+            payload: Some(master_projector_packet::Payload::StartGame(
                 struckout_proto::StartGame {
                     difficulty: difficulty.into(),
                 },
@@ -205,10 +244,7 @@ pub enum BindError {
 }
 
 enum ConnectionState {
-    Connected {
-        reader: tcp::OwnedReadHalf,
-        writer: tcp::OwnedWriteHalf,
-    },
+    Connected { writer: tcp::OwnedWriteHalf },
     DisConnected,
 }
 
