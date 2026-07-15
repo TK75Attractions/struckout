@@ -49,11 +49,8 @@ export component AppWindow inherits Window {
 
         in property <NavRoute> nav-route;
 
-        //VerticalLayout {
-        top-bar := TopBar { }
-
-        Rectangle {
-            y: top-bar.height;
+        VerticalLayout {
+            top-bar := TopBar { }
 
             if nav-route == NavRoute.Start: StartScreen { }
             if nav-route == NavRoute.NameInput: NameInputScreen { }
@@ -65,5 +62,4 @@ export component AppWindow inherits Window {
             if nav-route == NavRoute.ConnectionFailed: ConnectionFailedScreen { }
             if nav-route == NavRoute.Connecting: ConnectingScreen { }
         }
-    //}
     }
