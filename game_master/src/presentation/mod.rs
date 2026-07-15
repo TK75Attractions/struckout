@@ -5,7 +5,7 @@ use crate::{
     data::projector::{BindError, ConnectError, ProjectorConnection},
     nav::{NavHost, NavRoute},
     presentation::{
-        connection_failed::ConnectionFailedDestination,
+        connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
         name_input::NameInputDestination, playing::PlayingDestination, score::ScoreDestination,
         start::StartScreenDestination,
@@ -111,6 +111,7 @@ macro_rules! state_struct {
     }
 }
 
+pub mod connecting;
 pub mod connection_failed;
 pub mod difficulity_select;
 pub mod fallback;
@@ -191,7 +192,6 @@ where
     })
     .unwrap();
     slint::spawn_local(async move {
-        // OPTIM: がっつりブロックしてる, bind()はそこまで時間かからないか?
         let guard = transport_clone.borrow_mut();
         if start_rx.await.unwrap().is_err() {
             return;
@@ -233,6 +233,7 @@ where
     nav_host.register(ConnectionFailedDestination::new(&application));
     nav_host.register(PlayingDestination::new(&application));
     nav_host.register(ScoreDestination::new(&application));
+    nav_host.register(ConnectingDestination::new(&application));
 }
 
 #[cfg(test)]
