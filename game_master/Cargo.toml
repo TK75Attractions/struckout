@@ -24,6 +24,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 itertools = { workspace = true }
 derive_more = { workspace = true, features = ["debug"] }
+derive-getters = { workspace = true, features = ["auto_copy_getters"] }
 pastey = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -43,6 +44,9 @@ slint = { version = "1.17.1", features = [
     #"renderer-femtovg-wgpu",
 ] }
 i-slint-core = { version = "=1.17.1" }
+
+[dev-dependencies]
+i-slint-backend-testing = { version = "=1.17.1" }
 
 [build-dependencies]
 slint-build = { version = "1.17.1" }

@@ -1,5 +1,49 @@
-export component ScoreScreen {
+
+
+import { Button } from "std-widgets.slint";
+enum Rank {
+    S,
+    A,
+    B,
+    C,
+}
+
+global Adopter {
+    in property <Rank> rank;
+    in property <int> score;
+
+    callback next-clicked();
+}
+
+component RankIcon {
+    in property <Rank> rank;
+
     Text {
-        text: "Score";
+        text: "S";
     }
 }
+
+export component ScoreScreen inherits Rectangle {
+    VerticalLayout {
+
+        HorizontalLayout {
+            RankIcon {
+                rank: Adopter.rank;
+            }
+
+            Text {
+                text: Adopter.score;
+            }
+        }
+
+        Button {
+            text: "次へ";
+
+            clicked => {
+                Adopter.next-clicked();
+            }
+        }
+    }
+}
+
+export { Adopter as ScoreAdopter }

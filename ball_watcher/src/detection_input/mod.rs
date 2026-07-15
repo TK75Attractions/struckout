@@ -7,7 +7,7 @@ use tokio::sync::mpsc;
 mod db;
 mod network;
 pub use network::{NetworkDetectionInput, NetworkDetectionInputCreationError};
-use tracing::warn;
+use tracing::{trace, warn};
 
 mod sqlite;
 pub use sqlite::SqliteDetectionInput;
@@ -58,6 +58,7 @@ impl FramePairMatcher {
             }
             idx
         };
+        trace!(time = ?cur_frame_time, "created pair");
 
         let (_, a) = self.frames.pop_back().unwrap(); // pushed above
         let (_, b) = self.frames.remove(idx).unwrap(); // idx comes from above block

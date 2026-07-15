@@ -1,4 +1,7 @@
-use std::{fs::File, path::PathBuf};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+};
 
 use chrono::{DateTime, Duration, Local, Utc};
 use serde::{Deserialize, Serialize};
@@ -49,6 +52,7 @@ impl EventLogger for JsonEventLogger {
         if self.file.is_none() {
             let fname = format!("{}", Local::now().format("%Y%m%d_%H%M"));
             let fpath = self.dir.join(fname);
+            fs::create_dir_all(fpath.parent().unwrap()).expect("faild to create parent dirs");
             let file = File::create(fpath).expect("failed to create file");
 
             self.file = Some(file)

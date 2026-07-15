@@ -52,9 +52,9 @@ where
         let nav_controller = self.nav_controller.clone();
         self.projector_transport // TODO: SessionManagerに移すかも
             .borrow_mut()
-            .start_game(difficulty, move |res| match res {
+            .start_game(difficulty.clone(), move |res| match res {
                 Ok(()) => {
-                    nav_controller.navigate(NavRoute::Playing);
+                    nav_controller.navigate(NavRoute::Playing(difficulty));
                 }
                 Err(StartGameError::NotConnected) => panic!("should be already connected"),
                 Err(StartGameError::Tcp(e)) => {

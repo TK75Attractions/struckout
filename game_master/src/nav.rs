@@ -6,6 +6,7 @@
 //! - [`NavDestination`]
 
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use tracing::debug;
 
 use crate::ui;
 
@@ -92,11 +93,12 @@ impl Clone for NavController {
 /// Navigation routes. Unlike [`ui::NavRoute`], each route can have arguments
 /// like [Jetpack's Navigation3](https://developer.android.com/guide/navigation?hl=ja).
 #[allow(dead_code)] // いずれ全部カバーする
+#[derive(Debug, Clone)]
 pub enum NavRoute {
     Start,
     NameInput,
     DifficulitySelect,
-    Playing,
+    Playing(ui::Difficulity),
     Score,
     Ranking,
     Fallback(String),
@@ -109,7 +111,7 @@ impl Into<ui::NavRoute> for NavRoute {
             Self::Start => ui::NavRoute::Start,
             Self::NameInput => ui::NavRoute::NameInput,
             Self::DifficulitySelect => ui::NavRoute::DifficulitySelect,
-            Self::Playing => ui::NavRoute::Playing,
+            Self::Playing(_) => ui::NavRoute::Playing,
             Self::Score => ui::NavRoute::Score,
             Self::Ranking => ui::NavRoute::DifficulitySelect,
             Self::Fallback(_) => ui::NavRoute::Fallback,
@@ -151,6 +153,7 @@ impl NavControllerInner {
     }
 
     fn navigate(&mut self, route: NavRoute) {
+        debug!(?route, "navigating");
         if let Some(on_navigate) = &mut self.on_navigate {
             (on_navigate.as_mut())(&route);
         }

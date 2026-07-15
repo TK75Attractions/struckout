@@ -45,6 +45,7 @@ impl CollisionOutput for CsvCollisionOutput {
                 .await
                 .with_context(|| "failed to write collision to CSV file")
                 .unwrap();
+            file.flush().await.expect("failed to flush CSV file");
         }
     }
 }

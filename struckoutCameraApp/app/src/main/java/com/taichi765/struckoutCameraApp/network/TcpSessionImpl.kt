@@ -12,9 +12,9 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,13 +56,13 @@ class TcpSessionImpl(
 
 
     init {
-        cameraLocationDataSource.cameraLocation.onEach { location ->
-            val curState = _connState.value
-            if (curState !is InternalSessionState.Connected) {
+        combine(cameraLocationDataSource.cameraLocation, _connState) { location, connState ->
+            if (connState !is InternalSessionState.Connected) {
                 Timber.tag(TAG)
                     .w("camera location was updated but cannot sync change to TCP server: TCP is not connected")
-                return@onEach
+                return@combine
             }
+            Timber.tag(TAG).d("updating cameraLocation")
             outChannel.send(OutputAction.UpdateCameraLocation(location))
         }.launchIn(scope)
     }

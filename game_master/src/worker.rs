@@ -38,10 +38,7 @@ impl WorkerThread {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
-    };
+    use tokio::sync::oneshot;
 
     #[test]
     fn worker_spawns_task_immediately() {

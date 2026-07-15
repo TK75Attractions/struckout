@@ -3,6 +3,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tokio::sync::oneshot;
+use tracing::info;
 
 use crate::{
     data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
@@ -99,5 +100,6 @@ pub fn run_main() {
     // NavHostを初期化したあとで
     init_connection(&application);
 
+    info!("starting event loop");
     application.ui.run().unwrap();
 }
