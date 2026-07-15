@@ -74,6 +74,9 @@ fun ConfigScreenRoute(
         onSetDetectionOutput = { kind ->
             editingState = editingState.copy(detectionOutputKind = kind)
         },
+        onSetDetectionOutputImmediately = { kind ->
+
+        },
         showDiscardDialog = showDiscardDialog,
         radioOptions = radioOptions,
         selectedOption = selectedOption,
@@ -128,6 +131,7 @@ private fun ConfigScreen(
     onToggleRecordingMode: () -> Unit,
     onRetryConnection: () -> Unit,
     onSetDetectionOutput: (DetectionOutputKind) -> Unit,
+    onSetDetectionOutputImmediately: (DetectionOutputKind) -> Unit,
     onOptionSelected: (String) -> Unit,
     onApplyChanges: () -> Unit,
     onDiscardChanges: () -> Unit
@@ -135,7 +139,7 @@ private fun ConfigScreen(
     if (connectionFailed) {
         FallbackView(onTryConnect = {
             onRetryConnection()
-        }, onSetDetectionOutput = onSetDetectionOutput)
+        }, onSetDetectionOutput = onSetDetectionOutputImmediately)
     } else {
         Column(
             modifier = Modifier

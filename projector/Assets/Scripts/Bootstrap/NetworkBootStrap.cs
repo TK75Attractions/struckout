@@ -11,12 +11,12 @@ namespace Struckout.Bootstrap
     public class NetworkBootstrap : IAsyncDestroy
     {
         private readonly IClientService<ProjectorPacket> _client;
-        private readonly IClientService<MasterPacket> _master;
+        private readonly IClientService<MasterProjectorPacket> _master;
         private readonly IPacketRouter _packetRouter;
 
         public NetworkBootstrap(
             IClientService<ProjectorPacket> clientService,
-            IClientService<MasterPacket> masterService,
+            IClientService<MasterProjectorPacket> masterService,
             IPacketRouter packetRouter
         )
         {
@@ -26,25 +26,25 @@ namespace Struckout.Bootstrap
         }
 
         internal async UniTask<NetworkConnectionResult> Initialize()
-        {   
-            if(_client == null || _master == null || _packetRouter == null)
+        {
+            if (_client == null || _master == null || _packetRouter == null)
                 return NetworkConnectionResult.InvalidConfiguration;
 
             _packetRouter.OnStringMessageReceived += OnReceiveMessage;
-            
-            
+
+
             _client.OnReceived += _packetRouter.RoutePacket;
             _master.OnReceived += _packetRouter.RoutePacket;
 
             _client.RegisterPort("127.0.0.1", 5000);
-            _master.RegisterPort("172.18.0.103", 5001);
+            _master.RegisterPort("172.18.208.1", 5001);
 
             bool isSuccessfullyClientConnect = await _client.ConnectAsync();
-            if(!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
+            if (!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
 
             bool isSuccessfullyMasterConnect = await _master.ConnectAsync();
-            if(!isSuccessfullyMasterConnect) return NetworkConnectionResult.MasterConnectFailed;
-            
+            if (!isSuccessfullyMasterConnect) return NetworkConnectionResult.MasterConnectFailed;
+
             return NetworkConnectionResult.Success;
         }
 
@@ -59,7 +59,7 @@ namespace Struckout.Bootstrap
             if (_client == null) return;
             _client.OnReceived -= _packetRouter.RoutePacket;
             _packetRouter.OnStringMessageReceived -= OnReceiveMessage;
-            
+
             await _client.DisconnectAsync();
             await _master.DisconnectAsync();
         }

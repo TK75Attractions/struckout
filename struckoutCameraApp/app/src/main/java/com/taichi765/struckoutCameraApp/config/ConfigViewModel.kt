@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -82,6 +83,13 @@ class ConfigViewModel @Inject constructor(
             viewModelScope.launch {
                 configRepository.updateCameraLocation(newLocation)
             }
+        }
+    }
+
+    fun setDetectionOutputKind(kind: DetectionOutputKind) {
+        Timber.tag(TAG).d("setting detectionOutputKind to $kind")
+        viewModelScope.launch {
+            configRepository.setDetectionOutputKind(kind)
         }
     }
 

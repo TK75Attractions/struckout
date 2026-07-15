@@ -12,7 +12,7 @@ namespace Struckout.Infrastructure
         public event Action<TestMessage> OnStringMessageReceived;
         public event Action<CollisionPoint> OnCollisionReceived;
 
-        public event Action<StartGameRequest> OnGameStartReceived;
+        public event Action<StartGame> OnGameStartReceived;
 
         private readonly IMainThreadDispatcher _mainThreadDispatcher;
 
@@ -22,21 +22,21 @@ namespace Struckout.Infrastructure
         {
             _mainThreadDispatcher = dispatcher;
         }
-        
+
         public void RoutePacket(ProjectorPacket packet)
         {
             switch (packet.PayloadCase)
             {
                 case ProjectorPacket.PayloadOneofCase.Message:
                     {
-                        if(packet == null || packet.Message == null) break;
+                        if (packet == null || packet.Message == null) break;
                         Action action = () => OnStringMessageReceived(packet.Message);
                         _mainThreadDispatcher.Enqueue(action);
                         break;
                     }
                 case ProjectorPacket.PayloadOneofCase.Point:
                     {
-                        if(packet == null || packet.Point == null) break;
+                        if (packet == null || packet.Point == null) break;
                         Action action = () => OnCollisionReceived(packet.Point);
                         _mainThreadDispatcher.Enqueue(action);
                         break;
@@ -47,12 +47,12 @@ namespace Struckout.Infrastructure
             }
         }
 
-        public void RoutePacket(MasterPacket packet)
+        public void RoutePacket(MasterProjectorPacket packet)
         {
             switch (packet.PayloadCase)
             {
-                case MasterPacket.PayloadOneofCase.Request:
-                    Action action = () => OnGameStartReceived(packet.Request);
+                case MasterProjectorPacket.PayloadOneofCase.StartGame:
+                    Action action = () => OnGameStartReceived(packet.StartGame);
                     _mainThreadDispatcher.Enqueue(action);
                     break;
             }

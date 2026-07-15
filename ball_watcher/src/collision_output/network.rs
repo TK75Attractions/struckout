@@ -1,11 +1,13 @@
 use struckout_proto::{CollisionPoint, ProjectorPacket, projector_packet, write_packet};
-use tokio::{net::TcpStream, sync::mpsc};
-use tracing::error;
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::mpsc,
+};
+use tracing::{error, info};
 
 use crate::{collision_output::CollisionOutput, types::CollisionPoint3D};
 
-// TODO: set actual value
-const PROJECTOR_ADDR: &str = "127.0.0.1:5125";
+const PROJECTOR_ADDR: &str = "0.0.0.0:5000";
 
 pub struct NetworkCollisionOutput {
     stream: TcpStream,
@@ -13,7 +15,10 @@ pub struct NetworkCollisionOutput {
 
 impl NetworkCollisionOutput {
     pub async fn connect() -> Result<Self, std::io::Error> {
-        let stream = TcpStream::connect(PROJECTOR_ADDR).await?;
+        let listener = TcpListener::bind(PROJECTOR_ADDR).await?;
+        info!(addr = PROJECTOR_ADDR, "listening for projector");
+        let (stream, addr) = listener.accept().await?;
+        info!(?addr, "accepted TCP connection from projector");
         Ok(Self { stream })
     }
 }
