@@ -2,16 +2,17 @@ use std::{fmt::Debug, rc::Rc};
 
 use crate::{
     Application,
-    data::projector::{BindError, ListenError, ProjectorConnection},
+    data::projector::{BindError, ConnectError, ProjectorConnection},
     nav::{NavHost, NavRoute},
     presentation::{
         connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
-        name_input::NameInputDestination, playing::PlayingDestination,
+        name_input::NameInputDestination, playing::PlayingDestination, score::ScoreDestination,
         start::StartScreenDestination,
     },
 };
 use tokio::sync::oneshot;
+use tracing::{debug, info};
 
 /// Binds viewmodel's callback to slint adopter.
 macro_rules! bind_callback {
@@ -158,46 +159,66 @@ impl<T> Clone for PropertyWrapper<T> {
 
 pub fn init_connection<PT>(application: &Application<PT>)
 where
-    PT: ProjectorConnection,
+    PT: ProjectorConnection + 'static,
 {
-    let transport = application.repositories.projector.borrow_mut();
+    debug!("initializing connection");
+
+    let transport = application.repositories.projector.clone();
+    let transport_clone = application.repositories.projector.clone();
     let (start_tx, start_rx) = oneshot::channel();
 
-    transport.bind({
-        let nav_controller = application.nav_controller.clone();
+    let nav_controller = application.nav_controller.clone();
+    let nav_controller2 = nav_controller.clone();
 
-        move |res| match res {
-            Ok(()) => {
-                start_tx.send(()).unwrap();
+    slint::spawn_local(async move {
+        let guard = transport.borrow_mut();
+        guard.bind({
+            let nav_controller = nav_controller.clone();
+            move |res| match res {
+                Ok(()) => {
+                    info!("successfully bound port for TCP");
+                    start_tx.send(Ok(())).unwrap();
+                }
+                Err(BindError::AlreadyBound) => panic!("this should be first attempt to bind port"),
+                Err(BindError::Other(e)) => {
+                    start_tx.send(Err(())).unwrap();
+                    nav_controller
+                        .navigate(NavRoute::Fallback(format!("failed to bind port: {}", e)));
+                    return;
+                }
             }
-            Err(BindError::AlreadyBound) => panic!("this should be first attempt to bind port"),
-            Err(BindError::Other(e)) => {
-                nav_controller.navigate(NavRoute::Fallback(format!("failed to bind port: {}", e)));
-                return;
+        });
+    })
+    .unwrap();
+    slint::spawn_local(async move {
+        // OPTIM: がっつりブロックしてる, bind()はそこまで時間かからないか?
+        let guard = transport_clone.borrow_mut();
+        if start_rx.await.unwrap().is_err() {
+            return;
+        };
+        info!("connecting to projector");
+        guard.connect({
+            move |res| match res {
+                Ok(()) => {
+                    info!("connection succeeds");
+                    nav_controller2.navigate(NavRoute::Start);
+                }
+                Err(ConnectError::PortNotBound) => panic!("bound just before"),
+                Err(ConnectError::Tcp(e)) => {
+                    nav_controller2.navigate(NavRoute::ConnectionFailed(format!(
+                        "failed to accept connection: {}",
+                        e
+                    )));
+                }
+                Err(ConnectError::Timeout(_)) => {
+                    nav_controller2.navigate(NavRoute::ConnectionFailed(
+                        "タイムアウトしました".to_string(),
+                    ));
+                }
             }
-        }
-    });
-
-    // OPTIM: がっつりブロックしてる, bind()はそこまで時間かからないか?
-    start_rx.blocking_recv().unwrap();
-    transport.listen({
-        let nav_controller = application.nav_controller.clone();
-        move |res| match res {
-            Ok(()) => {}
-            Err(ListenError::PortNotBound) => panic!("bound just before"),
-            Err(ListenError::Tcp(e)) => {
-                nav_controller.navigate(NavRoute::ConnectionFailed(format!(
-                    "failed to accept connection: {}",
-                    e
-                )));
-            }
-            Err(ListenError::Timeout(_)) => {
-                nav_controller.navigate(NavRoute::ConnectionFailed(
-                    "タイムアウトしました".to_string(),
-                ));
-            }
-        }
-    });
+        });
+    })
+    .unwrap();
 }
 
 /// Registers each [`NavDestination`][crate::nav::NavDestination]s at [`NavHost`].

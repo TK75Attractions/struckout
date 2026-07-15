@@ -10,12 +10,12 @@ use tokio::{
     sync::{mpsc, oneshot},
     time::{error::Elapsed, timeout},
 };
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{ui, worker::WorkerThread};
 
 // TODO: set actual value
-const PROJECTOR_PORT: &str = "192.10.100.10:5252";
+const PROJECTOR_PORT: &str = "0.0.0.0:5252";
 const MSG_CHANNEL_BUF: usize = 8;
 const SCORE_CHANNEL_BUF: usize = 8;
 
@@ -150,6 +150,7 @@ impl ProjectorTransportInner {
     }
 
     async fn bind(&mut self) -> Result<(), BindError> {
+        debug!("binding port");
         let listener = TcpListener::bind(PROJECTOR_PORT).await?;
         self.listener
             .set(listener)
