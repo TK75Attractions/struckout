@@ -74,9 +74,7 @@ fun ConfigScreenRoute(
         onSetDetectionOutput = { kind ->
             editingState = editingState.copy(detectionOutputKind = kind)
         },
-        onSetDetectionOutputImmediately = { kind ->
-
-        },
+        onSetDetectionOutputImmediately = viewModel::setDetectionOutputKind,
         showDiscardDialog = showDiscardDialog,
         radioOptions = radioOptions,
         selectedOption = selectedOption,
