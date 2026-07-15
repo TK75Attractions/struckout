@@ -19,16 +19,16 @@ namespace Struckout.Unity
         private RectTransform _targetParent;
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
+            builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
             builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
-            builder.Register<IMessageParser<MasterPacket>, MasterPacketParser>(Lifetime.Singleton);
-            builder.Register<IClientService<MasterPacket>, FakeMasterService>(Lifetime.Singleton);
+            builder.Register<IMessageParser<MasterProjectorPacket>, MasterProjectorPacketParser>(Lifetime.Singleton);
+            builder.Register<IClientService<MasterProjectorPacket>, TCPClientBase<MasterProjectorPacket>>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();
             builder.Register<GameRuntime>(Lifetime.Singleton);
 
-            builder.Register<ICollisionSolver,CollisionSolver>(Lifetime.Singleton);
+            builder.Register<ICollisionSolver, CollisionSolver>(Lifetime.Singleton);
             builder.Register<IPointCalculator, FakePointCalculator>(Lifetime.Singleton);
             builder.Register<ISensorProvider, FakeSensorProvider>(Lifetime.Singleton);
             builder.Register<ITargetGenerator, TargetGenerator>(Lifetime.Singleton);
@@ -42,7 +42,7 @@ namespace Struckout.Unity
             );
 
             builder.RegisterEntryPoint<RootBootstrap>();
-        
+
         }
 
         protected override void OnDestroy()

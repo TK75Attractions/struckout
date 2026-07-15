@@ -4,8 +4,8 @@ using System;
 
 namespace Struckout.Infrastructure
 {
-    public class MasterPacketParser : IMessageParser<MasterPacket>
+    public class MasterProjectorPacketParser : IMessageParser<MasterProjectorPacket>
     {
-        public MasterPacket MessageParse(byte[] bytes) => MasterPacket.Parser.ParseFrom(bytes);
+        public MasterProjectorPacket MessageParse(byte[] bytes) => MasterProjectorPacket.Parser.ParseFrom(bytes);
     }
 }
