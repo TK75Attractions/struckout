@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     Application,
     data::projector::{ConnectError, ProjectorConnection},
-    nav::{NavController, NavDestination, NavRoute},
+    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     ui,
 };
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
@@ -85,7 +85,7 @@ where
         bind_callback!(adopter, viewmodel, retry_connection);
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::ConnectionFailed(_))
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::ConnectionFailed
     }
 }

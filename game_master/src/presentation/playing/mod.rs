@@ -1,6 +1,6 @@
 use crate::{
     Application,
-    nav::{NavController, NavDestination, NavRoute},
+    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     session::{RemainingTime, SessionManager, SessionSubscriber},
     ui,
 };
@@ -76,7 +76,7 @@ impl NavDestination for PlayingDestination {
         });
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::Playing(_))
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::Playing
     }
 }

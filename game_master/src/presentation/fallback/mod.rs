@@ -4,7 +4,7 @@ use slint::{ComponentHandle, SharedString, ToSharedString};
 
 use crate::{
     Application,
-    nav::{NavDestination, NavRoute},
+    nav::{NavDestination, NavRoute, NavRouteKind},
     ui,
 };
 
@@ -46,7 +46,7 @@ impl NavDestination for FallbackDestination {
         viewmodel.state.msg.set(msg.to_shared_string());
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::Fallback(_))
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::Fallback
     }
 }

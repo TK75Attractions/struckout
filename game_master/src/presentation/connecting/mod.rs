@@ -1,6 +1,6 @@
 use crate::{
     Application,
-    nav::{NavDestination, NavRoute},
+    nav::{NavDestination, NavRoute, NavRouteKind},
 };
 use tracing::debug;
 
@@ -21,7 +21,7 @@ impl NavDestination for ConnectingDestination {
         };
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::Connecting)
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::Connecting
     }
 }
