@@ -7,8 +7,8 @@ use tracing::info;
 
 use crate::{
     data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
-    nav::{NavController, NavHost},
-    presentation::{init_connection, register_destinations},
+    nav::NavController,
+    presentation::{attach_navhost, init_connection},
     session::SessionManager,
     worker::WorkerThread,
 };
@@ -24,7 +24,8 @@ mod session;
 mod state_ext;
 mod worker;
 
-const SQLITE_DEFAULT_URL: &str="sqlite:///C:/Users/happy/Documents/GitHub/struckout/game_master/Database/database.db";
+const SQLITE_DEFAULT_URL: &str =
+    "sqlite:///C:/Users/happy/Documents/GitHub/struckout/game_master/Database/database.db";
 
 struct Application<PT> {
     nav_controller: NavController,
@@ -89,13 +90,7 @@ pub fn run_main() {
         repositories,
     };
 
-    let mut nav_host = NavHost::new();
-    register_destinations(&mut nav_host, &application);
-    application
-        .nav_controller
-        .subscribe_on_navigate(move |route| {
-            nav_host.on_navigate(route);
-        });
+    attach_navhost(&application);
 
     // NavHostを初期化したあとで
     init_connection(&application);

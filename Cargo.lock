@@ -1945,6 +1945,7 @@ dependencies = [
  "slint-build",
  "sqlx",
  "struckout-proto",
+ "strum",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",

@@ -5,7 +5,7 @@ use tracing::{debug, trace};
 
 use crate::{
     Application,
-    nav::{NavController, NavDestination, NavRoute},
+    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     ui,
 };
 
@@ -58,7 +58,7 @@ impl NavDestination for StartScreenDestination {
         });
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::Start)
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::Start
     }
 }

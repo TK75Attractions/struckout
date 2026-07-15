@@ -6,7 +6,7 @@ use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use crate::{
     Application,
     data::projector::{ProjectorConnection, StartGameError},
-    nav::{NavController, NavDestination, NavRoute},
+    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     ui,
 };
 use tracing::{debug, error, trace};
@@ -117,7 +117,7 @@ where
         });
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::DifficulitySelect)
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::DifficulitySelect
     }
 }

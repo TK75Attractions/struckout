@@ -5,23 +5,49 @@
 //! - [`NavController`]
 //! - [`NavDestination`]
 
-use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    rc::Rc,
+};
+use strum::{EnumDiscriminants, EnumIter, IntoEnumIterator};
+use thiserror::Error;
 use tracing::debug;
 
 use crate::ui;
 
 /// Watches [`NavController`] and prepares `ViewModel`s before navigating to the route.
+///
+/// Typically you would attach [`NavHost`] to [`NavController`] using [`NavHost::builder()`].
 pub struct NavHost {
-    destinations: Vec<Box<dyn NavDestination>>,
+    destinations: HashMap<NavRouteKind, Box<dyn NavDestination>>,
 }
 
 impl NavHost {
-    pub fn new() -> Self {
-        Self {
+    fn on_navigate(&mut self, route: &NavRoute) {
+        debug!(?route, "NavHost: searching registered destination");
+        let dest = self.destinations.get(&route.into()).unwrap(); // checked in Builder
+        dest.load(route);
+    }
+
+    pub fn builder(nav_controller: NavController) -> NavHostBuilder {
+        NavHostBuilder {
+            nav_controller,
             destinations: Vec::new(),
         }
     }
+}
 
+/// Builder for [`NavHost`]. You can cerate new builder from [`NavHost::builder()`].
+///
+/// Created [`NavHost`] will be moved to [`NavController`] by calling [`NavController::subscribe_on_navigate()`].
+pub struct NavHostBuilder {
+    nav_controller: NavController,
+    destinations: Vec<Box<dyn NavDestination>>,
+}
+
+impl NavHostBuilder {
     /// Registers [`NavDestination`] to the host.
     ///
     /// Corresponds to `NavHost`'s block in Jetpack Navigation 3, for instance:
@@ -31,21 +57,49 @@ impl NavHost {
     ///     composable<FriendsList> { FriendsListScreen( /* ... */ ) }
     /// }
     /// ```
-    pub fn register(&mut self, dest: impl NavDestination + 'static) {
+    pub fn register(mut self, dest: impl NavDestination + 'static) -> Self {
         self.destinations.push(Box::new(dest));
+        self
     }
 
-    pub fn on_navigate(&mut self, route: &NavRoute) {
-        debug!(?route, "NavHost: searching registered destination");
-        let dest: Vec<_> = self
-            .destinations
-            .iter()
-            .filter(|d| d.matches(route))
-            .collect();
-        assert_eq!(dest.len(), 1);
-        let dest = dest[0];
-        dest.load(route);
+    pub fn finish(self) -> Result<(), NavHostBuilderError> {
+        // TODO: 重複とかの確認
+        let mut map = HashMap::new();
+        let mut duplicates = HashSet::new();
+        for dest in self.destinations {
+            if let Some(old) = map.insert(dest.route(), dest) {
+                duplicates.insert(old.route());
+            }
+        }
+        if !duplicates.is_empty() {
+            return Err(NavHostBuilderError::DuplicatedRegisteration(duplicates));
+        }
+
+        let mut missings = HashSet::new();
+        NavRouteKind::iter().for_each(|route| {
+            if !map.contains_key(&route) {
+                missings.insert(route);
+            }
+        });
+        if !missings.is_empty() {
+            return Err(NavHostBuilderError::NotAllRoutesRegistered(missings));
+        }
+
+        let mut host = NavHost { destinations: map };
+        self.nav_controller.subscribe_on_navigate(move |route| {
+            host.on_navigate(route);
+        });
+        Ok(())
     }
+}
+
+/// Error returned from [`NavHostBuilder::finish()`].
+#[derive(Debug, Error)]
+pub enum NavHostBuilderError {
+    #[error("destinations for some routes are not registered: {0:?}")]
+    NotAllRoutesRegistered(HashSet<NavRouteKind>),
+    #[error("destination for {0:?} are registered multiple times")]
+    DuplicatedRegisteration(HashSet<NavRouteKind>),
 }
 
 pub trait NavDestination {
@@ -54,7 +108,7 @@ pub trait NavDestination {
     /// Invariant: given `route`'s variant is the variant which returned `true` in [NavDestination::matches()].
     fn load(&self, route: &NavRoute);
 
-    fn matches(&self, route: &NavRoute) -> bool;
+    fn route(&self) -> NavRouteKind;
 }
 
 /// Clonable handle for navigating routes.
@@ -76,7 +130,7 @@ impl NavController {
         self.0.borrow_mut().navigate(route);
     }
 
-    pub fn subscribe_on_navigate<F>(&self, f: F)
+    fn subscribe_on_navigate<F>(&self, f: F)
     where
         F: FnMut(&NavRoute) + 'static,
     {
@@ -94,7 +148,8 @@ impl Clone for NavController {
 /// Navigation routes. Unlike [`ui::NavRoute`], each route can have arguments
 /// like [Jetpack's Navigation3](https://developer.android.com/guide/navigation?hl=ja).
 #[allow(dead_code)] // いずれ全部カバーする
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, EnumDiscriminants)]
+#[strum_discriminants(name(NavRouteKind), derive(EnumIter, Hash))]
 pub enum NavRoute {
     Start,
     NameInput,
@@ -170,5 +225,27 @@ impl NavControllerInner {
         F: FnMut(&NavRoute) + 'static,
     {
         self.on_navigate = Some(Box::new(f))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::presentation::start::StartScreenDestination;
+
+    use super::*;
+
+    #[test]
+    fn navhost_builder_returns_err_when_not_all_routes_registered() {
+        todo!()
+        /*let nav_controller = NavController::new(ui::NavRoute::Start, |route| {
+            println!("dummy");
+        });
+        let application =
+        NavHost::builder(nav_controller).register(StartScreenDestination::new(application));*/
+    }
+
+    #[test]
+    fn navhost_builder_returns_err_when_registerations_are_duplicated() {
+        todo!()
     }
 }

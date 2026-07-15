@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     Application,
-    nav::{NavController, NavDestination, NavRoute},
+    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     session::SessionManager,
     ui,
 };
@@ -77,7 +77,7 @@ impl NavDestination for ScoreDestination {
         bind_callback!(adopter, viewmodel, next_clicked);
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, NavRoute::Score)
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::Score
     }
 }

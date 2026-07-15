@@ -222,18 +222,21 @@ where
 }
 
 /// Registers each [`NavDestination`][crate::nav::NavDestination]s at [`NavHost`].
-pub fn register_destinations<PT>(nav_host: &mut NavHost, application: &Application<PT>)
+pub fn attach_navhost<PT>(application: &Application<PT>)
 where
     PT: ProjectorConnection + 'static,
 {
-    nav_host.register(StartScreenDestination::new(&application));
-    nav_host.register(NameInputDestination::new(&application));
-    nav_host.register(DifficultySelectDestination::new(&application));
-    nav_host.register(FallbackDestination::new(&application));
-    nav_host.register(ConnectionFailedDestination::new(&application));
-    nav_host.register(PlayingDestination::new(&application));
-    nav_host.register(ScoreDestination::new(&application));
-    nav_host.register(ConnectingDestination::new(&application));
+    NavHost::builder(application.nav_controller.clone())
+        .register(StartScreenDestination::new(&application))
+        .register(NameInputDestination::new(&application))
+        .register(DifficultySelectDestination::new(&application))
+        .register(FallbackDestination::new(&application))
+        .register(ConnectionFailedDestination::new(&application))
+        .register(PlayingDestination::new(&application))
+        .register(ScoreDestination::new(&application))
+        .register(ConnectingDestination::new(&application))
+        .finish()
+        .expect("failed to build NavHost");
 }
 
 #[cfg(test)]

@@ -6,7 +6,7 @@ use tracing::{debug, error, trace};
 use crate::{
     Application,
     data::player::{InsertPlayerError, PlayerRepository},
-    nav::{NavController, NavDestination, NavRoute},
+    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     ui::{self, KeyBoardMode},
 };
 
@@ -143,8 +143,8 @@ impl NavDestination for NameInputDestination {
         cb!(submit_name);
     }
 
-    fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::NameInput)
+    fn route(&self) -> NavRouteKind {
+        NavRouteKind::NameInput
     }
 }
 
