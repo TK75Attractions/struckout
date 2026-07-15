@@ -1,9 +1,10 @@
+use derive_getters::Getters;
 use parking_lot::RwLock;
 use slint::{Timer, TimerMode};
 use std::{cell::RefCell, fmt::Display, rc::Rc, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 
-use crate::data::projector::ProjectorConnection;
+use crate::{data::projector::ProjectorConnection, ui};
 
 const TIMELIMIT: RemainingTime = RemainingTime { mins: 1, secs: 30 };
 
@@ -45,10 +46,10 @@ impl SessionManager {
     }
 
     /// `cb` is called when session ends.
-    pub fn start_session(&mut self, cb: impl FnOnce() + 'static) {
+    pub fn start_session(&mut self, difficulty: ui::Difficulity, cb: impl FnOnce() + 'static) {
         {
             let mut guard = self.0.write();
-            guard.session = Some(Session::new());
+            guard.session = Some(Session::new(difficulty));
         }
         let timer = Timer::default();
         let (tx, mut rx) = mpsc::channel(1);
@@ -79,6 +80,14 @@ impl SessionManager {
         .unwrap();
     }
 
+    /// Returns clone of current [`Session`].
+    ///
+    /// Clone occures due to internal [`RwLock`] borrowing.
+    pub fn session(&self) -> Option<Session> {
+        let guard = self.0.read();
+        guard.session.as_ref().cloned()
+    }
+
     pub fn subscribe<T>(&mut self, sub: Rc<T>)
     where
         T: SessionSubscriber + 'static,
@@ -95,8 +104,8 @@ pub trait SessionSubscriber {
 
 #[derive(Debug, Clone)]
 pub struct RemainingTime {
-    mins: usize,
-    secs: usize,
+    pub mins: usize,
+    pub secs: usize,
 }
 
 impl Display for RemainingTime {
@@ -152,16 +161,18 @@ impl std::fmt::Debug for SessionManagerInner {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Getters)]
 pub struct Session {
     cur_score: u32,
+    difficulty: ui::Difficulity,
     remaining_time: RemainingTime,
 }
 
 impl Session {
-    fn new() -> Self {
+    fn new(difficulty: ui::Difficulity) -> Self {
         Self {
             cur_score: 0,
+            difficulty,
             remaining_time: TIMELIMIT,
         }
     }

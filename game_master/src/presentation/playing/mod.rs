@@ -56,7 +56,7 @@ impl NavDestination for PlayingDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading PlayingViewModel");
 
-        let NavRoute::Playing = route else {
+        let NavRoute::Playing(difficulty) = route else {
             panic!("matched variant should be given");
         };
 
@@ -68,7 +68,7 @@ impl NavDestination for PlayingDestination {
 
         let mut session_manager = self.session_manager.borrow_mut();
         session_manager.subscribe(Rc::clone(&viewmodel));
-        session_manager.start_session({
+        session_manager.start_session(*difficulty, {
             let viewmodel = viewmodel.clone();
             move || {
                 viewmodel.on_session_ends();
@@ -77,6 +77,6 @@ impl NavDestination for PlayingDestination {
     }
 
     fn matches(&self, route: &NavRoute) -> bool {
-        matches!(route, &NavRoute::Playing)
+        matches!(route, &NavRoute::Playing(_))
     }
 }

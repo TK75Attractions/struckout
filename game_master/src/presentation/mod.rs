@@ -211,4 +211,29 @@ where
     nav_host.register(FallbackDestination::new(&application));
     nav_host.register(ConnectionFailedDestination::new(&application));
     nav_host.register(PlayingDestination::new(&application));
+    nav_host.register(ScoreDestination::new(&application));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::oneshot;
+
+    #[test]
+    fn slint_spawn_local_is_reentrant() {
+        slint::spawn_local(async move {
+            let (tx, rx) = oneshot::channel();
+
+            slint::spawn_local(async move {
+                tx.send("Hello!").unwrap();
+            })
+            .unwrap();
+            let msg = rx.await.unwrap();
+            assert_eq!("Hello!", msg);
+            slint::quit_event_loop();
+        })
+        .unwrap();
+
+        slint::run_event_loop().unwrap();
+    }
 }
