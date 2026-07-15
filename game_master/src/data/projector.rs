@@ -159,7 +159,7 @@ impl ProjectorTransportInner {
 
     async fn connect(&mut self) -> Result<(), ConnectError> {
         let listener = self.listener.get().ok_or(ConnectError::PortNotBound)?;
-        let (stream, addr) = timeout(Duration::from_secs(30), listener.accept()).await??;
+        let (stream, addr) = timeout(Duration::from_mins(10), listener.accept()).await??;
         info!(?addr, "accepted TCP connection with projector");
         let (mut reader, writer) = stream.into_split();
         self.conn_state = ConnectionState::Connected { writer };
