@@ -14,8 +14,7 @@ use tracing::{debug, info};
 
 use crate::{ui, worker::WorkerThread};
 
-// TODO: set actual value
-const PROJECTOR_PORT: &str = "0.0.0.0:5252";
+const PROJECTOR_PORT: &str = "0.0.0.0:5001";
 const MSG_CHANNEL_BUF: usize = 8;
 const SCORE_CHANNEL_BUF: usize = 8;
 
