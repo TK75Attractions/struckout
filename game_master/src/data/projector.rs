@@ -14,8 +14,7 @@ use tracing::{debug, info};
 
 use crate::{ui, worker::WorkerThread};
 
-// TODO: set actual value
-const PROJECTOR_PORT: &str = "0.0.0.0:5252";
+const PROJECTOR_PORT: &str = "0.0.0.0:5001";
 const MSG_CHANNEL_BUF: usize = 8;
 const SCORE_CHANNEL_BUF: usize = 8;
 
@@ -160,7 +159,7 @@ impl ProjectorTransportInner {
 
     async fn connect(&mut self) -> Result<(), ConnectError> {
         let listener = self.listener.get().ok_or(ConnectError::PortNotBound)?;
-        let (stream, addr) = timeout(Duration::from_secs(30), listener.accept()).await??;
+        let (stream, addr) = timeout(Duration::from_mins(10), listener.accept()).await??;
         info!(?addr, "accepted TCP connection with projector");
         let (mut reader, writer) = stream.into_split();
         self.conn_state = ConnectionState::Connected { writer };

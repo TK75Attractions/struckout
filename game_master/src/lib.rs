@@ -24,7 +24,7 @@ mod session;
 mod state_ext;
 mod worker;
 
-const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/game_master_dev.db";
+const SQLITE_DEFAULT_URL: &str="sqlite:///C:/Users/happy/Documents/GitHub/struckout/game_master/Database/database.db";
 
 struct Application<PT> {
     nav_controller: NavController,
