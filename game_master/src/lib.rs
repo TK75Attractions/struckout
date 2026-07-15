@@ -69,7 +69,7 @@ impl RepositoryOwner<ProjectorConnectionImpl> {
 pub fn run_main() {
     let ui = ui::AppWindow::new().unwrap();
 
-    let nav_controller = NavController::new(ui::NavRoute::Start, {
+    let nav_controller = NavController::new(ui::NavRoute::Connecting, {
         let ui = ui.as_weak();
 
         move |route| {

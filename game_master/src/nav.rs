@@ -36,6 +36,7 @@ impl NavHost {
     }
 
     pub fn on_navigate(&mut self, route: &NavRoute) {
+        debug!(?route, "NavHost: searching registered destination");
         let dest: Vec<_> = self
             .destinations
             .iter()
@@ -103,6 +104,7 @@ pub enum NavRoute {
     Ranking,
     Fallback(String),
     ConnectionFailed(String),
+    Connecting,
 }
 
 impl Into<ui::NavRoute> for NavRoute {
@@ -116,6 +118,7 @@ impl Into<ui::NavRoute> for NavRoute {
             Self::Ranking => ui::NavRoute::DifficulitySelect,
             Self::Fallback(_) => ui::NavRoute::Fallback,
             Self::ConnectionFailed(_) => ui::NavRoute::ConnectionFailed,
+            Self::Connecting => ui::NavRoute::Connecting,
         }
     }
 }
