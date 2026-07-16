@@ -70,6 +70,7 @@ impl DetectionInput for NetworkDetectionInput {
                 }
             }
         });
+        info!("starting TCP listener");
         tokio::spawn(async move { self.tcp_transport.listen().await });
         Ok(())
     }
