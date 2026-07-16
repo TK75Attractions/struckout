@@ -7,8 +7,8 @@ use crate::{
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
-        name_input::NameInputDestination, playing::PlayingDestination, score::ScoreDestination,
-        start::StartScreenDestination,
+        name_input::NameInputDestination, playing::PlayingDestination, ranking::RankingDestination,
+        score::ScoreDestination, start::StartScreenDestination,
     },
 };
 use tokio::sync::oneshot;
@@ -235,6 +235,7 @@ where
         .register(PlayingDestination::new(&application))
         .register(ScoreDestination::new(&application))
         .register(ConnectingDestination::new(&application))
+        .register(RankingDestination::new(&application))
         .finish()
         .expect("failed to build NavHost");
 }

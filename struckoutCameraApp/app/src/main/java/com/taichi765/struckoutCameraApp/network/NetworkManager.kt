@@ -155,6 +155,7 @@ class NetworkManager @Inject constructor(
      * You can see the results via [state].
      */
     fun retryConnection(scope: CoroutineScope) {
+        Timber.tag(TAG).d("retrying connection...")
         scope.launch {
             retryTcpConnection()
         }

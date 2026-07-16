@@ -37,7 +37,7 @@ namespace Struckout.Bootstrap
             _master.OnReceived += _packetRouter.RoutePacket;
 
             _client.RegisterPort("127.0.0.1", 5000);
-            _master.RegisterPort("172.18.208.1", 5001);
+            _master.RegisterPort("127.0.0.1", 5001);
 
             bool isSuccessfullyClientConnect = await _client.ConnectAsync();
             if (!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
