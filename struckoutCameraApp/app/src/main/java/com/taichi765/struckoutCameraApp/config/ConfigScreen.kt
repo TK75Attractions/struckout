@@ -405,7 +405,8 @@ private fun DummyConfigScreen(
         onSetDetectionOutput = {},
         onOptionSelected = {},
         onApplyChanges = {},
-        onDiscardChanges = {}
+        onDiscardChanges = {},
+        onSetDetectionOutputImmediately = {}
     )
 }
 

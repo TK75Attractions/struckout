@@ -36,7 +36,7 @@
         <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="main">
-        <option name="selectionMode" value="DROPDOWN" />
+        <option name="selectionMode" value="DIALOG" />
         <DropdownSelection timestamp="2026-07-14T04:45:48.283558889Z">
           <Target type="DEFAULT_BOOT">
             <handle>
@@ -48,12 +48,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=MZH649AUOREYBUN7" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=R58T107Z11D" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=49190DLAQ00201" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=MZH649AUOREYBUN7" />
               </handle>
             </Target>
           </targets>
