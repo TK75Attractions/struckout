@@ -1,3 +1,4 @@
+use enum_dispatch::enum_dispatch;
 use prost::DecodeError;
 use std::{cell::OnceCell, time::Duration};
 use struckout_proto::{
@@ -17,8 +18,10 @@ use crate::{ui, worker::WorkerThread};
 const PROJECTOR_PORT: &str = "0.0.0.0:5001";
 const MSG_CHANNEL_BUF: usize = 8;
 const SCORE_CHANNEL_BUF: usize = 8;
+const FAKE_SCORE_CHANNEL_BUF: usize = 8;
 
-pub trait ProjectorConnection {
+#[enum_dispatch(ProjectorTransport)]
+pub trait ProjectorTransportTrait {
     fn bind<F>(&self, cb: F)
     where
         F: FnOnce(Result<(), BindError>) + 'static;
@@ -34,12 +37,20 @@ pub trait ProjectorConnection {
     fn take_rx(&mut self) -> Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>;
 }
 
-pub struct ProjectorConnectionImpl {
+#[enum_dispatch]
+#[derive(Debug)]
+pub enum ProjectorTransport {
+    ProjectorTransportImpl,
+    FakeProjectorTransport,
+}
+
+#[derive(Debug)]
+pub struct ProjectorTransportImpl {
     msg_tx: mpsc::Sender<(Command, oneshot::Sender<Response>)>,
     score_rx: Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>,
 }
 
-impl ProjectorConnectionImpl {
+impl ProjectorTransportImpl {
     pub fn new(worker: &WorkerThread) -> Self {
         let (msg_tx, mut msg_rx) = mpsc::channel(MSG_CHANNEL_BUF);
         let (score_tx, score_rx) = mpsc::channel(SCORE_CHANNEL_BUF);
@@ -72,7 +83,7 @@ impl ProjectorConnectionImpl {
     }
 }
 
-impl ProjectorConnection for ProjectorConnectionImpl {
+impl ProjectorTransportTrait for ProjectorTransportImpl {
     async_wrapper!(bind());
 
     async_wrapper!(
@@ -255,5 +266,49 @@ impl From<ui::Difficulity> for struckout_proto::Difficulty {
             ui::Difficulity::Hard => struckout_proto::Difficulty::Hard,
             ui::Difficulity::VeryHard => struckout_proto::Difficulty::Veryhard,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct FakeProjectorTransport {
+    score_rx: Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>,
+}
+
+impl FakeProjectorTransport {
+    fn new() -> Self {
+        let (_score_tx, score_rx) = mpsc::channel(FAKE_SCORE_CHANNEL_BUF);
+        Self {
+            score_rx: Some(score_rx),
+        }
+    }
+}
+
+impl ProjectorTransportTrait for FakeProjectorTransport {
+    fn bind<F>(&self, cb: F)
+    where
+        F: FnOnce(Result<(), BindError>) + 'static,
+    {
+        debug!("FakeProjectorTransport: bind()");
+        cb(Ok(()))
+    }
+
+    fn connect<F>(&self, cb: F)
+    where
+        F: FnOnce(Result<(), ConnectError>) + 'static,
+    {
+        debug!("FakeProjectorTransport: connect()");
+        cb(Ok(()))
+    }
+
+    fn start_game<F>(&mut self, _difficulty: impl Into<struckout_proto::Difficulty>, cb: F)
+    where
+        F: FnOnce(Result<(), StartGameError>) + 'static,
+    {
+        debug!("FakeProjectorTransport: start_game()");
+        cb(Ok(()))
+    }
+
+    fn take_rx(&mut self) -> Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>> {
+        self.score_rx.take()
     }
 }

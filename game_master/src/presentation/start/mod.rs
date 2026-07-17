@@ -31,7 +31,7 @@ pub struct StartScreenDestination {
 }
 
 impl StartScreenDestination {
-    pub fn new<PT>(application: &Application<PT>) -> Self {
+    pub fn new(application: &Application) -> Self {
         Self {
             adopter: application.ui.global::<ui::StartScreenAdopter>().as_weak(),
             nav_controller: application.nav_controller.clone(),

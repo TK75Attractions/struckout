@@ -28,7 +28,7 @@ pub struct FallbackDestination {
 }
 
 impl FallbackDestination {
-    pub fn new<PT>(application: &Application<PT>) -> Self {
+    pub fn new(application: &Application) -> Self {
         Self {
             adopter: application.ui.global::<ui::FallbackAdopter>().as_weak(),
         }

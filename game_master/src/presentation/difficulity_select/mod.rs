@@ -5,7 +5,7 @@ use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 
 use crate::{
     Application,
-    data::projector::{ProjectorConnection, StartGameError},
+    data::projector::{ProjectorTransport, ProjectorTransportTrait as _, StartGameError},
     nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     ui,
 };
@@ -18,20 +18,17 @@ state_struct!(
 );
 
 #[derive(Debug)]
-pub struct DifficulitySelectViewModel<PT> {
+pub struct DifficulitySelectViewModel {
     nav_controller: NavController,
     state: DifficulitySelectState,
-    projector_transport: Rc<RefCell<PT>>,
+    projector_transport: Rc<RefCell<ProjectorTransport>>,
 }
 
-impl<PT> DifficulitySelectViewModel<PT>
-where
-    PT: ProjectorConnection,
-{
+impl DifficulitySelectViewModel {
     fn new(
         nav_controller: NavController,
         state: DifficulitySelectState,
-        projector_transport: Rc<RefCell<PT>>,
+        projector_transport: Rc<RefCell<ProjectorTransport>>,
     ) -> Self {
         Self {
             nav_controller,
@@ -65,14 +62,14 @@ where
     }
 }
 
-pub struct DifficultySelectDestination<PT> {
+pub struct DifficultySelectDestination {
     adopter: slint::Weak<ui::DifficulitySelectAdopter<'static>>,
     nav_controller: NavController,
-    projector_transport: Rc<RefCell<PT>>,
+    projector_transport: Rc<RefCell<ProjectorTransport>>,
 }
 
-impl<PT> DifficultySelectDestination<PT> {
-    pub fn new(application: &Application<PT>) -> Self {
+impl DifficultySelectDestination {
+    pub fn new(application: &Application) -> Self {
         Self {
             adopter: application
                 .ui
@@ -84,10 +81,7 @@ impl<PT> DifficultySelectDestination<PT> {
     }
 }
 
-impl<PT> NavDestination for DifficultySelectDestination<PT>
-where
-    PT: ProjectorConnection + 'static,
-{
+impl NavDestination for DifficultySelectDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading DifficultySelectViewModel");
         let NavRoute::DifficulitySelect = route else {

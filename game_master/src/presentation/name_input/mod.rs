@@ -102,7 +102,7 @@ pub struct NameInputDestination {
 }
 
 impl NameInputDestination {
-    pub fn new<PT>(application: &Application<PT>) -> Self {
+    pub fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
             adopter: application.ui.global::<ui::NameInputAdopter>().as_weak(),

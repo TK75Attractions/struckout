@@ -32,6 +32,7 @@ tempfile = { workspace = true }
 chrono = { workspace = true }
 prost = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
+enum_dispatch = { workspace = true }
 
 sqlx = { workspace = true, features = [
     "sqlite",
