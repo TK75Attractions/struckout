@@ -15,7 +15,7 @@ tokio = { workspace = true, features = [
 ] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-futures = { workspace = true }
+futures-util = { workspace = true }
 backon = { workspace = true }
 tokio-stream = { workspace = true }
 parking_lot = { workspace = true }
