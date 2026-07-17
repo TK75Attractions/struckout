@@ -2,7 +2,7 @@ use std::{fmt::Debug, rc::Rc};
 
 use crate::{
     Application,
-    data::projector::{BindError, ConnectError, ProjectorConnection},
+    data::projector::{BindError, ConnectError, ProjectorTransportTrait as _},
     nav::{NavHost, NavRoute},
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
@@ -158,10 +158,7 @@ impl<T> Clone for PropertyWrapper<T> {
     }
 }
 
-pub fn init_connection<PT>(application: &Application<PT>)
-where
-    PT: ProjectorConnection + 'static,
-{
+pub fn init_connection(application: &Application) {
     debug!("initializing connection");
 
     let transport = application.repositories.projector.clone();
@@ -222,10 +219,7 @@ where
 }
 
 /// Registers each [`NavDestination`][crate::nav::NavDestination]s at [`NavHost`].
-pub fn attach_navhost<PT>(application: &Application<PT>)
-where
-    PT: ProjectorConnection + 'static,
-{
+pub fn attach_navhost(application: &Application) {
     NavHost::builder(application.nav_controller.clone())
         .register(StartScreenDestination::new(&application))
         .register(NameInputDestination::new(&application))

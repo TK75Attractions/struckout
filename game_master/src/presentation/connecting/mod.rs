@@ -7,7 +7,7 @@ use tracing::debug;
 pub struct ConnectingDestination(());
 
 impl ConnectingDestination {
-    pub fn new<PT>(_application: &Application<PT>) -> Self {
+    pub fn new(_application: &Application) -> Self {
         Self(())
     }
 }

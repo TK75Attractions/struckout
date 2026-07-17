@@ -43,7 +43,7 @@ pub struct PlayingDestination {
 }
 
 impl PlayingDestination {
-    pub fn new<PT>(application: &Application<PT>) -> Self {
+    pub fn new(application: &Application) -> Self {
         Self {
             adopter: application.ui.global::<ui::PlayingAdopter>().as_weak(),
             nav_controller: application.nav_controller.clone(),

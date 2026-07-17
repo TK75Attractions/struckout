@@ -4,7 +4,10 @@ use slint::{Timer, TimerMode};
 use std::{cell::RefCell, fmt::Display, rc::Rc, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 
-use crate::{data::projector::ProjectorConnection, ui};
+use crate::{
+    data::projector::{ProjectorTransport, ProjectorTransportTrait as _},
+    ui,
+};
 
 const TIMELIMIT: RemainingTime = RemainingTime { mins: 1, secs: 30 };
 
@@ -12,10 +15,7 @@ const TIMELIMIT: RemainingTime = RemainingTime { mins: 1, secs: 30 };
 pub struct SessionManager(Arc<RwLock<SessionManagerInner>>);
 
 impl SessionManager {
-    pub fn new<PT>(projector_transport: Rc<RefCell<PT>>) -> Self
-    where
-        PT: ProjectorConnection,
-    {
+    pub fn new(projector_transport: Rc<RefCell<ProjectorTransport>>) -> Self {
         let inner = Arc::new(RwLock::new(SessionManagerInner::new()));
 
         slint::spawn_local({

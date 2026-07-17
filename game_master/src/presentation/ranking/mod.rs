@@ -8,13 +8,13 @@ use crate::{
 pub struct RankingDestination {}
 
 impl RankingDestination {
-    pub fn new<PT>(_application: &Application<PT>) -> Self {
+    pub fn new(_application: &Application) -> Self {
         Self {}
     }
 }
 
 impl NavDestination for RankingDestination {
-    fn load(&self, route: &crate::nav::NavRoute) {
+    fn load(&self, _route: &crate::nav::NavRoute) {
         debug!("loading RankingScreen")
     }
 

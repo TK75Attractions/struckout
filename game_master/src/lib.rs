@@ -6,7 +6,10 @@ use tokio::sync::oneshot;
 use tracing::info;
 
 use crate::{
-    data::{player::PlayerRepository, projector::ProjectorConnectionImpl},
+    data::{
+        player::PlayerRepository,
+        projector::{ProjectorTransport, ProjectorTransportImpl},
+    },
     nav::NavController,
     presentation::{attach_navhost, init_connection},
     session::SessionManager,
@@ -26,22 +29,22 @@ mod worker;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
 
-struct Application<PT> {
+struct Application {
     nav_controller: NavController,
     ui: ui::AppWindow,
-    repositories: RepositoryOwner<PT>,
+    repositories: RepositoryOwner,
     session_manager: Rc<RefCell<SessionManager>>,
 }
 
 /// Container for repositories.
-struct RepositoryOwner<PT> {
+struct RepositoryOwner {
     pub player: Rc<PlayerRepository>,
-    pub projector: Rc<RefCell<PT>>,
+    pub projector: Rc<RefCell<ProjectorTransport>>,
     #[allow(dead_code)] // チャンネルを生存させるために必要
     pub worker: WorkerThread,
 }
 
-impl RepositoryOwner<ProjectorConnectionImpl> {
+impl RepositoryOwner {
     fn new() -> Self {
         let worker = WorkerThread::new();
         let (tx, rx) = oneshot::channel();
@@ -60,7 +63,9 @@ impl RepositoryOwner<ProjectorConnectionImpl> {
             .expect("failed to connec to database");
         Self {
             player: Rc::new(PlayerRepository::new(pool, &worker)),
-            projector: Rc::new(RefCell::new(ProjectorConnectionImpl::new(&worker))),
+            projector: Rc::new(RefCell::new(ProjectorTransport::ProjectorTransportImpl(
+                ProjectorTransportImpl::new(&worker),
+            ))),
             worker,
         }
     }

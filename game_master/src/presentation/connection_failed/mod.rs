@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     Application,
-    data::projector::{ConnectError, ProjectorConnection},
+    data::projector::{ConnectError, ProjectorTransport, ProjectorTransportTrait as _},
     nav::{NavController, NavDestination, NavRoute, NavRouteKind},
     ui,
 };
@@ -11,16 +11,13 @@ use tracing::debug;
 
 state_struct!(ConnectionFailed, error_msg => SharedString);
 
-struct ConnectionFailedViewModel<PT> {
+struct ConnectionFailedViewModel {
     nav_controller: NavController,
-    projector_transport: Rc<RefCell<PT>>,
+    projector_transport: Rc<RefCell<ProjectorTransport>>,
     state: ConnectionFailedState,
 }
 
-impl<PT> ConnectionFailedViewModel<PT>
-where
-    PT: ProjectorConnection,
-{
+impl ConnectionFailedViewModel {
     fn on_retry_connection(&self) {
         self.projector_transport.borrow_mut().connect({
             let nav_controller = self.nav_controller.clone();
@@ -43,14 +40,14 @@ where
     }
 }
 
-pub struct ConnectionFailedDestination<PT> {
+pub struct ConnectionFailedDestination {
     adopter: slint::Weak<ui::ConnectionFailedAdopter<'static>>,
     nav_controller: NavController,
-    projector_transport: Rc<RefCell<PT>>,
+    projector_transport: Rc<RefCell<ProjectorTransport>>,
 }
 
-impl<PT> ConnectionFailedDestination<PT> {
-    pub fn new(application: &Application<PT>) -> Self {
+impl ConnectionFailedDestination {
+    pub fn new(application: &Application) -> Self {
         Self {
             adopter: application
                 .ui
@@ -62,10 +59,7 @@ impl<PT> ConnectionFailedDestination<PT> {
     }
 }
 
-impl<PT> NavDestination for ConnectionFailedDestination<PT>
-where
-    PT: ProjectorConnection + 'static,
-{
+impl NavDestination for ConnectionFailedDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading ConnectionFailedViewModel");
 
