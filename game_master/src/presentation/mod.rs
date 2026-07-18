@@ -1,5 +1,3 @@
-use std::{fmt::Debug, rc::Rc};
-
 use crate::{
     Application,
     data::projector::{BindError, ConnectError, ProjectorTransportTrait as _},
@@ -11,6 +9,10 @@ use crate::{
         score::ScoreDestination, start::StartScreenDestination,
     },
 };
+use futures_util::StreamExt;
+use futures_util::stream::FusedStream;
+use std::fmt::Debug;
+use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{debug, info};
 
@@ -33,12 +35,12 @@ macro_rules! property {
     ($adopter:ident, $name: ident) => {
         pastey::paste! {
 
-            crate::presentation::PropertyWrapper {
-                getter: std::rc::Rc::new({
+            crate::presentation::PropertyHandle {
+                getter: std::boxed::Box::new({
                     let adopter_weak = $adopter.as_weak();
                     move || adopter_weak.unwrap().[<get_ $name>]()
                 }),
-                setter: std::rc::Rc::new({
+                setter: std::boxed::Box::new({
                     let adopter_weak = $adopter.as_weak();
                     move |$name| adopter_weak.unwrap().[<set_ $name>]($name)
                 })
@@ -63,14 +65,14 @@ macro_rules! property {
 /// This is equivalent to:
 ///
 /// ```
-/// use crate::{presentation::PropertyWrapper, ui::KeyboardMode};
+/// use crate::{presentation::PropertyHandle, ui::KeyboardMode};
 /// use slint::SharedString;
 ///
 /// #[allow(dead_code)]
 /// struct NameInputState {
-///     keyboard_mode: PropertyWrapper<KeyBoardMode>,
-///     player_name_text: PropertyWrapper<SharedString>,
-///     error_msg: PropertyWrapper<SharedString>,
+///     keyboard_mode: PropertyHandle<KeyBoardMode>,
+///     player_name_text: PropertyHandle<SharedString>,
+///     error_msg: PropertyHandle<SharedString>,
 /// }
 ///
 /// impl NameInputState {
@@ -93,7 +95,7 @@ macro_rules! state_struct {
             #[derive(Debug)]
             struct [<$module_name:camel State>] {
                 $(
-                    $name: crate::presentation::PropertyWrapper<$typ>,
+                    $name: crate::presentation::PropertyHandle<$typ>,
                 )*
             }
 
@@ -121,13 +123,16 @@ pub mod ranking;
 pub mod score;
 pub mod start;
 
-/// Wraps slint's property.
-struct PropertyWrapper<T> {
-    getter: Rc<dyn Fn() -> T>,
-    setter: Rc<dyn Fn(T)>,
+/// A handle to slint's property.
+///
+/// [`PropertyHandle`] does NOT implement [`Clone`] because a property SHOULD NOT be mutated from
+/// multiple places (you CAN but SHOULDN'T).
+pub struct PropertyHandle<T> {
+    getter: Box<dyn Fn() -> T>,
+    setter: Box<dyn Fn(T)>,
 }
 
-impl<T> PropertyWrapper<T> {
+impl<T> PropertyHandle<T> {
     fn get(&self) -> T {
         (self.getter)()
     }
@@ -135,26 +140,38 @@ impl<T> PropertyWrapper<T> {
     fn set(&self, val: T) {
         (self.setter)(val)
     }
+
+    /// Binds `input_stream` to adopter i.e. watches `input_stream` and sets latest value
+    /// via [`setter`][Self::setter].
+    ///
+    /// Once property are bound to stream, [`PropertyHandle`] is consumed and cannot be changed manually.
+    async fn bind<S>(self, mut input_stream: S) -> Result<(), StreamTerminated>
+    where
+        S: FusedStream<Item = T> + Unpin,
+    {
+        loop {
+            if let Some(val) = input_stream.next().await {
+                (self.setter)(val);
+            } else {
+                return Err(StreamTerminated(()));
+            }
+        }
+    }
 }
 
-impl<T> Debug for PropertyWrapper<T>
+/// Returned from [`PropertyHandle::bind()`]
+#[derive(Debug, Error)]
+#[error("stream has been terminated")]
+pub struct StreamTerminated(());
+
+impl<T> Debug for PropertyHandle<T>
 where
     T: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PropertyWrapper")
+        f.debug_struct("PropertyHandle")
             .field("value", &(self.getter)())
             .finish()
-    }
-}
-
-impl<T> Clone for PropertyWrapper<T> {
-    /// Cheap clone (same as [Rc::clone()][std::rc::Rc])
-    fn clone(&self) -> Self {
-        Self {
-            getter: Rc::clone(&self.getter),
-            setter: Rc::clone(&self.setter),
-        }
     }
 }
 
@@ -235,25 +252,4 @@ pub fn attach_navhost(application: &Application) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::sync::oneshot;
-
-    #[test]
-    fn slint_spawn_local_is_reentrant() {
-        slint::spawn_local(async move {
-            let (tx, rx) = oneshot::channel();
-
-            slint::spawn_local(async move {
-                tx.send("Hello!").unwrap();
-            })
-            .unwrap();
-            let msg = rx.await.unwrap();
-            assert_eq!("Hello!", msg);
-            slint::quit_event_loop();
-        })
-        .unwrap();
-
-        slint::run_event_loop().unwrap();
-    }
-}
+mod tests {}

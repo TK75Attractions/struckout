@@ -1,0 +1,3 @@
+[submodule "slint-fw"]
+	path = slint-fw
+	url = https://github.com/taichi765/slint-fw
