@@ -33,7 +33,7 @@ macro_rules! property {
     ($adopter:ident, $name: ident) => {
         pastey::paste! {
 
-            crate::presentation::PropertyWrapper {
+            crate::presentation::PropertyHandle {
                 getter: std::rc::Rc::new({
                     let adopter_weak = $adopter.as_weak();
                     move || adopter_weak.unwrap().[<get_ $name>]()
@@ -63,14 +63,14 @@ macro_rules! property {
 /// This is equivalent to:
 ///
 /// ```
-/// use crate::{presentation::PropertyWrapper, ui::KeyboardMode};
+/// use crate::{presentation::PropertyHandle, ui::KeyboardMode};
 /// use slint::SharedString;
 ///
 /// #[allow(dead_code)]
 /// struct NameInputState {
-///     keyboard_mode: PropertyWrapper<KeyBoardMode>,
-///     player_name_text: PropertyWrapper<SharedString>,
-///     error_msg: PropertyWrapper<SharedString>,
+///     keyboard_mode: PropertyHandle<KeyBoardMode>,
+///     player_name_text: PropertyHandle<SharedString>,
+///     error_msg: PropertyHandle<SharedString>,
 /// }
 ///
 /// impl NameInputState {
@@ -93,7 +93,7 @@ macro_rules! state_struct {
             #[derive(Debug)]
             struct [<$module_name:camel State>] {
                 $(
-                    $name: crate::presentation::PropertyWrapper<$typ>,
+                    $name: crate::presentation::PropertyHandle<$typ>,
                 )*
             }
 
@@ -138,11 +138,12 @@ impl<T> PropertyWrapper<T> {
 }
 
 impl<T> Debug for PropertyWrapper<T>
+impl<T> Debug for PropertyHandle<T>
 where
     T: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PropertyWrapper")
+        f.debug_struct("PropertyHandle")
             .field("value", &(self.getter)())
             .finish()
     }
