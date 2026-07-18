@@ -18,6 +18,7 @@ tracing-subscriber = { workspace = true }
 futures-util = { workspace = true }
 backon = { workspace = true }
 tokio-stream = { workspace = true }
+tokio-util = { workspace = true }
 parking_lot = { workspace = true }
 
 thiserror = { workspace = true }

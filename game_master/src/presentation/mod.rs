@@ -1,5 +1,3 @@
-use std::{fmt::Debug, rc::Rc};
-
 use crate::{
     Application,
     data::projector::{BindError, ConnectError, ProjectorTransportTrait as _},
@@ -11,6 +9,10 @@ use crate::{
         score::ScoreDestination, start::StartScreenDestination,
     },
 };
+use futures_util::StreamExt;
+use futures_util::stream::FusedStream;
+use std::{fmt::Debug, rc::Rc};
+use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{debug, info};
 
@@ -121,13 +123,16 @@ pub mod ranking;
 pub mod score;
 pub mod start;
 
-/// Wraps slint's property.
-struct PropertyWrapper<T> {
-    getter: Rc<dyn Fn() -> T>,
-    setter: Rc<dyn Fn(T)>,
+/// A handle to slint's property.
+///
+/// [`PropertyHandle`] does NOT implement [`Clone`] because a property SHOULD NOT be mutated from
+/// multiple places (you CAN but SHOULDN'T).
+pub struct PropertyHandle<T> {
+    getter: Box<dyn Fn() -> T>,
+    setter: Box<dyn Fn(T)>,
 }
 
-impl<T> PropertyWrapper<T> {
+impl<T> PropertyHandle<T> {
     fn get(&self) -> T {
         (self.getter)()
     }
@@ -135,9 +140,30 @@ impl<T> PropertyWrapper<T> {
     fn set(&self, val: T) {
         (self.setter)(val)
     }
+
+    /// Binds `input_stream` to adopter i.e. watches `input_stream` and sets latest value
+    /// via [`setter`][Self::setter].
+    ///
+    /// Once property are bound to stream, [`PropertyHandle`] is consumed and cannot be changed manually.
+    async fn bind<S>(self, mut input_stream: S) -> Result<(), StreamTerminated>
+    where
+        S: FusedStream<Item = T> + Unpin,
+    {
+        loop {
+            if let Some(val) = input_stream.next().await {
+                (self.setter)(val);
+            } else {
+                return Err(StreamTerminated(()));
+            }
+        }
+    }
 }
 
-impl<T> Debug for PropertyWrapper<T>
+/// Returned from [`PropertyHandle::bind()`]
+#[derive(Debug, Error)]
+#[error("stream has been terminated")]
+pub struct StreamTerminated(());
+
 impl<T> Debug for PropertyHandle<T>
 where
     T: Debug,
@@ -146,16 +172,6 @@ where
         f.debug_struct("PropertyHandle")
             .field("value", &(self.getter)())
             .finish()
-    }
-}
-
-impl<T> Clone for PropertyWrapper<T> {
-    /// Cheap clone (same as [Rc::clone()][std::rc::Rc])
-    fn clone(&self) -> Self {
-        Self {
-            getter: Rc::clone(&self.getter),
-            setter: Rc::clone(&self.setter),
-        }
     }
 }
 
