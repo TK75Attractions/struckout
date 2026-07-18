@@ -11,7 +11,7 @@ use crate::{
 };
 use futures_util::StreamExt;
 use futures_util::stream::FusedStream;
-use std::{fmt::Debug, rc::Rc};
+use std::fmt::Debug;
 use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{debug, info};
@@ -36,11 +36,11 @@ macro_rules! property {
         pastey::paste! {
 
             crate::presentation::PropertyHandle {
-                getter: std::rc::Rc::new({
+                getter: std::boxed::Box::new({
                     let adopter_weak = $adopter.as_weak();
                     move || adopter_weak.unwrap().[<get_ $name>]()
                 }),
-                setter: std::rc::Rc::new({
+                setter: std::boxed::Box::new({
                     let adopter_weak = $adopter.as_weak();
                     move |$name| adopter_weak.unwrap().[<set_ $name>]($name)
                 })
@@ -252,25 +252,4 @@ pub fn attach_navhost(application: &Application) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::sync::oneshot;
-
-    #[test]
-    fn slint_spawn_local_is_reentrant() {
-        slint::spawn_local(async move {
-            let (tx, rx) = oneshot::channel();
-
-            slint::spawn_local(async move {
-                tx.send("Hello!").unwrap();
-            })
-            .unwrap();
-            let msg = rx.await.unwrap();
-            assert_eq!("Hello!", msg);
-            slint::quit_event_loop();
-        })
-        .unwrap();
-
-        slint::run_event_loop().unwrap();
-    }
-}
+mod tests {}

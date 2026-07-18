@@ -131,7 +131,6 @@ impl NavDestination for NameInputDestination {
                 bind_callback!(adopter, viewmodel, $name);
             };
         }
-
         adopter.on_push_character({
             let viewmodel = Rc::clone(&viewmodel);
             move |char| {
