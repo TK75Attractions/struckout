@@ -1,4 +1,5 @@
 use slint::ComponentHandle;
+use slint_fw::WorkerThread;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -13,7 +14,6 @@ use crate::{
     presentation::{attach_navhost, init_connection},
     session::SessionManager,
     ui::NavRoute,
-    worker::WorkerThread,
 };
 
 mod ui {
@@ -38,7 +38,6 @@ mod data;
 mod presentation;
 mod session;
 mod state_ext;
-mod worker;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
 

@@ -1,5 +1,6 @@
 use enum_dispatch::enum_dispatch;
 use prost::DecodeError;
+use slint_fw::WorkerThread;
 use std::{cell::OnceCell, time::Duration};
 use struckout_proto::{
     MasterProjectorPacket, ProjectorMasterPacket, ReadPacketError, WritePacketError,
@@ -13,7 +14,7 @@ use tokio::{
 };
 use tracing::{debug, info};
 
-use crate::{ui, worker::WorkerThread};
+use crate::ui;
 
 const PROJECTOR_PORT: &str = "0.0.0.0:5001";
 const MSG_CHANNEL_BUF: usize = 8;

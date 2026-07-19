@@ -1,8 +1,7 @@
+use slint_fw::WorkerThread;
 use sqlx::{Pool, Sqlite};
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
-
-use crate::worker::WorkerThread;
 
 const MESSAGE_CHANNEL_BUF: usize = 4;
 
