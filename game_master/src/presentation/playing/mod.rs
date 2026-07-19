@@ -1,10 +1,10 @@
 use crate::{
-    Application,
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
+    Application, NavController,
     session::{RemainingTime, SessionManager, SessionSubscriber},
-    ui,
+    ui::{self, NavRoute, NavRouteKind},
 };
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint_fw::nav::NavDestination;
 use std::{cell::RefCell, rc::Rc};
 use tracing::debug;
 
@@ -52,7 +52,7 @@ impl PlayingDestination {
     }
 }
 
-impl NavDestination for PlayingDestination {
+impl NavDestination<NavRoute> for PlayingDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading PlayingViewModel");
 

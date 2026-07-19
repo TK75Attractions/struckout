@@ -1,12 +1,12 @@
 use std::rc::Rc;
 
 use slint::{ComponentHandle, Global};
+use slint_fw::nav::NavDestination;
 use tracing::{debug, trace};
 
 use crate::{
-    Application,
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
-    ui,
+    Application, NavController,
+    ui::{self, NavRoute, NavRouteKind},
 };
 
 #[derive(Debug)]
@@ -26,20 +26,20 @@ impl StartScreenViewModel {
 }
 
 pub struct StartScreenDestination {
-    adopter: slint::Weak<ui::StartScreenAdopter<'static>>,
+    adopter: slint::Weak<ui::StartAdopter<'static>>,
     nav_controller: NavController,
 }
 
 impl StartScreenDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            adopter: application.ui.global::<ui::StartScreenAdopter>().as_weak(),
+            adopter: application.ui.global::<ui::StartAdopter>().as_weak(),
             nav_controller: application.nav_controller.clone(),
         }
     }
 }
 
-impl NavDestination for StartScreenDestination {
+impl NavDestination<NavRoute> for StartScreenDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading StartScreenViewModel");
 

@@ -1,16 +1,17 @@
 use crate::{
     Application,
     data::projector::{BindError, ConnectError, ProjectorTransportTrait as _},
-    nav::{NavHost, NavRoute},
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
         name_input::NameInputDestination, playing::PlayingDestination, ranking::RankingDestination,
         score::ScoreDestination, start::StartScreenDestination,
     },
+    ui::NavRoute,
 };
 use futures_util::StreamExt;
 use futures_util::stream::FusedStream;
+use slint_fw::nav::NavHost;
 use std::fmt::Debug;
 use thiserror::Error;
 use tokio::sync::oneshot;

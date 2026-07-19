@@ -1,7 +1,8 @@
 use crate::{
     Application,
-    nav::{NavDestination, NavRoute, NavRouteKind},
+    ui::{NavRoute, NavRouteKind},
 };
+use slint_fw::nav::NavDestination;
 use tracing::debug;
 
 pub struct ConnectingDestination(());
@@ -12,7 +13,7 @@ impl ConnectingDestination {
     }
 }
 
-impl NavDestination for ConnectingDestination {
+impl NavDestination<NavRoute> for ConnectingDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading ConnectingScreen");
 

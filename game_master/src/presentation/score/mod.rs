@@ -1,12 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    Application,
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
+    Application, NavController,
     session::SessionManager,
-    ui,
+    ui::{self, NavRoute, NavRouteKind},
 };
 use slint::{ComponentHandle, Global};
+use slint_fw::nav::NavDestination;
 use tracing::debug;
 
 state_struct!(
@@ -50,7 +50,7 @@ impl ScoreDestination {
     }
 }
 
-impl NavDestination for ScoreDestination {
+impl NavDestination<NavRoute> for ScoreDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading ScoreViewModel");
         let NavRoute::Score = route else {

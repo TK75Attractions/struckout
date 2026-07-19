@@ -2,8 +2,9 @@ use tracing::debug;
 
 use crate::{
     Application,
-    nav::{NavDestination, NavRouteKind},
+    ui::{NavRoute, NavRouteKind},
 };
+use slint_fw::nav::NavDestination;
 
 pub struct RankingDestination {}
 
@@ -13,8 +14,8 @@ impl RankingDestination {
     }
 }
 
-impl NavDestination for RankingDestination {
-    fn load(&self, _route: &crate::nav::NavRoute) {
+impl NavDestination<NavRoute> for RankingDestination {
+    fn load(&self, _route: &crate::ui::NavRoute) {
         debug!("loading RankingScreen")
     }
 

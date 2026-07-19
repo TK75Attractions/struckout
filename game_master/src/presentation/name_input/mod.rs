@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint_fw::nav::NavDestination;
 use tracing::{debug, error, trace};
 
 use crate::{
-    Application,
+    Application, NavController,
     data::player::{InsertPlayerError, PlayerRepository},
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
-    ui::{self, KeyBoardMode},
+    ui::{self, KeyBoardMode, NavRoute, NavRouteKind},
 };
 
 #[derive(Debug)]
@@ -73,17 +73,17 @@ impl NameInputViewModel {
         trace!("NameInputViewModel::on_submit_name");
 
         let name = self.state.player_name_text.get();
-        let msg = self.state.error_msg.clone();
+        // let msg = self.state.error_msg.clone();
         let nav_controller = self.nav_controller.clone();
         self.player_repo.insert_player(name, move |res| match res {
             Ok(()) => {
                 nav_controller.navigate(NavRoute::DifficulitySelect);
             }
             Err(InsertPlayerError::NameAlredyInUse(name)) => {
-                msg.set(format!("'{}'はすでに使われています", name).to_shared_string());
+                // msg.set(format!("'{}'はすでに使われています", name).to_shared_string());
             }
             Err(InsertPlayerError::Sqlx(e)) => {
-                msg.set("プログラム内部でエラーが発生しました".to_shared_string());
+                // msg.set("プログラム内部でエラーが発生しました".to_shared_string());
                 error!(?e, "error occured while inserting player");
             }
         });
@@ -111,7 +111,7 @@ impl NameInputDestination {
     }
 }
 
-impl NavDestination for NameInputDestination {
+impl NavDestination<NavRoute> for NameInputDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading NameInputViewModel");
         let NavRoute::NameInput = route else {

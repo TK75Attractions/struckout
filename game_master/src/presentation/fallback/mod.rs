@@ -4,9 +4,9 @@ use slint::{ComponentHandle, SharedString, ToSharedString};
 
 use crate::{
     Application,
-    nav::{NavDestination, NavRoute, NavRouteKind},
-    ui,
+    ui::{self, NavRoute, NavRouteKind},
 };
+use slint_fw::nav::NavDestination;
 
 state_struct!(Fallback, msg => SharedString);
 
@@ -35,7 +35,7 @@ impl FallbackDestination {
     }
 }
 
-impl NavDestination for FallbackDestination {
+impl NavDestination<NavRoute> for FallbackDestination {
     fn load(&self, route: &NavRoute) {
         let NavRoute::Fallback(msg) = route else {
             panic!("matched variant should be given");

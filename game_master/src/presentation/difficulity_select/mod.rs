@@ -4,11 +4,11 @@ use std::rc::Rc;
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 
 use crate::{
-    Application,
+    Application, NavController,
     data::projector::{ProjectorTransport, ProjectorTransportTrait as _, StartGameError},
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
-    ui,
+    ui::{self, NavRoute, NavRouteKind},
 };
+use slint_fw::nav::NavDestination;
 use tracing::{debug, error, trace};
 
 state_struct!(
@@ -45,7 +45,7 @@ impl DifficulitySelectViewModel {
     fn on_start_game(&self) {
         trace!("DifficulitySelectViewModel::on_start_game");
         let difficulty = self.state.selected_difficulity.get();
-        let error_msg = self.state.error_msg.clone();
+        // let error_msg = self.state.error_msg.clone();
         let nav_controller = self.nav_controller.clone();
         self.projector_transport // TODO: SessionManagerに移すかも
             .borrow_mut()
@@ -56,7 +56,7 @@ impl DifficulitySelectViewModel {
                 Err(StartGameError::NotConnected) => panic!("should be already connected"),
                 Err(StartGameError::Tcp(e)) => {
                     error!(?e, "failed to send StartGame message to projector");
-                    error_msg.set("ネットワーク接続に失敗しました".to_shared_string());
+                    // error_msg.set("ネットワーク接続に失敗しました".to_shared_string());
                 }
             });
     }
@@ -81,7 +81,7 @@ impl DifficultySelectDestination {
     }
 }
 
-impl NavDestination for DifficultySelectDestination {
+impl NavDestination<NavRoute> for DifficultySelectDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading DifficultySelectViewModel");
         let NavRoute::DifficulitySelect = route else {
