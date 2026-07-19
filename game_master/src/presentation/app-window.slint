@@ -33,7 +33,7 @@ export { PlayingAdopter }from "./playing/playing-screen.slint";
 export { ScoreAdopter }from "./score/score-screen.slint";
 
 
-enum NavRoute {
+enum UiNavRoute {
     Start,
     NameInput,
     DifficulitySelect,
@@ -42,24 +42,25 @@ enum NavRoute {
     Ranking,
     Fallback,
     ConnectionFailed,
-    Connecting }
+    Connecting,
+}
 
 export component AppWindow inherits Window {
-        full-screen: false;
+    full-screen: false;
 
-        in property <NavRoute> nav-route;
+    in property <UiNavRoute> nav-route;
 
-        VerticalLayout {
-            top-bar := TopBar { }
+    VerticalLayout {
+        top-bar := TopBar { }
 
-            if nav-route == NavRoute.Start: StartScreen { }
-            if nav-route == NavRoute.NameInput: NameInputScreen { }
-            if nav-route == NavRoute.DifficulitySelect:DifficulitySelectScreen { }
-            if nav-route == NavRoute.Playing: PlayingScreen { }
-            if nav-route == NavRoute.Score: ScoreScreen { }
-            if nav-route == NavRoute.Ranking: RankingScreen { }
-            if nav-route == NavRoute.Fallback: FallbackScreen { }
-            if nav-route == NavRoute.ConnectionFailed: ConnectionFailedScreen { }
-            if nav-route == NavRoute.Connecting: ConnectingScreen { }
-        }
+        if nav-route == UiNavRoute.Start: StartScreen { }
+        if nav-route == UiNavRoute.NameInput: NameInputScreen { }
+        if nav-route == UiNavRoute.DifficulitySelect:DifficulitySelectScreen { }
+        if nav-route == UiNavRoute.Playing: PlayingScreen { }
+        if nav-route == UiNavRoute.Score: ScoreScreen { }
+        if nav-route == UiNavRoute.Ranking: RankingScreen { }
+        if nav-route == UiNavRoute.Fallback: FallbackScreen { }
+        if nav-route == UiNavRoute.ConnectionFailed: ConnectionFailedScreen { }
+        if nav-route == UiNavRoute.Connecting: ConnectingScreen { }
     }
+}
