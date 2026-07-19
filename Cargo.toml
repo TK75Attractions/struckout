@@ -1,5 +1,6 @@
 [workspace]
 members = ["xtask", "game_master", "ball_watcher", "api/rust"]
+exclude = ["slint-fw"]
 resolver = "3"
 
 [workspace.package]
