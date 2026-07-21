@@ -1,33 +1,47 @@
 use slint::ComponentHandle;
+use slint_fw::WorkerThread;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tokio::sync::oneshot;
+use tokio::{net::TcpListener, sync::oneshot};
 use tracing::info;
 
 use crate::{
-    data::{
-        player::PlayerRepository,
-        projector::{ProjectorTransport, ProjectorTransportImpl},
-    },
-    nav::NavController,
+    data::{player::PlayerRepository, projector::ProjectorTransport},
     presentation::{attach_navhost, init_connection},
     session::SessionManager,
-    worker::WorkerThread,
+    ui::NavRoute,
 };
 
 mod ui {
     slint::include_modules!();
+
+    #[slint_fw::route]
+    #[derive(Debug, Clone)]
+    pub enum NavRoute {
+        Start,
+        NameInput,
+        DifficulitySelect,
+        Playing(self::Difficulity),
+        Score,
+        Ranking,
+        Fallback(String),
+        ConnectionFailed(String),
+        Connecting,
+    }
 }
 
 mod data;
-mod nav;
 mod presentation;
 mod session;
 mod state_ext;
-mod worker;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
+
+type NavController = slint_fw::nav::NavController<NavRoute>;
+type NavHost = slint_fw::nav::NavHost<NavRoute>;
+type NavHostBuilder = slint_fw::nav::NavHostBuilder<NavRoute>;
+type NavHostBuilderError = slint_fw::nav::NavHostBuilderError<NavRoute>;
 
 struct Application {
     nav_controller: NavController,
@@ -63,8 +77,8 @@ impl RepositoryOwner {
             .expect("failed to connec to database");
         Self {
             player: Rc::new(PlayerRepository::new(pool, &worker)),
-            projector: Rc::new(RefCell::new(ProjectorTransport::ProjectorTransportImpl(
-                ProjectorTransportImpl::new(&worker),
+            projector: Rc::new(RefCell::new(ProjectorTransport::new::<TcpListener>(
+                &worker,
             ))),
             worker,
         }

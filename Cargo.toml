@@ -1,5 +1,6 @@
 [workspace]
 members = ["xtask", "game_master", "ball_watcher", "api/rust"]
+exclude = ["slint-fw"]
 resolver = "3"
 
 [workspace.package]
@@ -48,3 +49,6 @@ opt-level = 3
 
 [profile.dev.package.slint]
 opt-level = 3
+
+[patch."https://github.com/taichi765/slint"]
+slint-build = { path = "../slint/api/rs/build/" }

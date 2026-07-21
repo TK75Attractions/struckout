@@ -1,43 +1,35 @@
 use std::rc::Rc;
 
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint_fw::nav::NavDestination;
 use tracing::{debug, error, trace};
 
 use crate::{
-    Application,
+    Application, NavController,
     data::player::{InsertPlayerError, PlayerRepository},
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
-    ui::{self, KeyBoardMode},
+    ui::{self, KeyBoardMode, NameInputStates, NameInputViewModelTrait, NavRoute, NavRouteKind},
 };
 
+viewmodel_rc!(NameInputViewModel, NameInputAdopter);
+
 #[derive(Debug)]
-pub struct NameInputViewModel {
+struct NameInputViewModel {
     player_repo: Rc<PlayerRepository>,
     nav_controller: NavController,
-    state: NameInputState,
+    state: NameInputStates,
 }
 
-state_struct!(
-    NameInput,
-    keyboard_mode => KeyBoardMode,
-    player_name_text => SharedString,
-    error_msg => SharedString
-);
-
 impl NameInputViewModel {
-    fn new(
-        player_repo: Rc<PlayerRepository>,
-        nav_controller: NavController,
-        state: NameInputState,
-    ) -> Self {
+    fn new(application: &Application) -> Self {
         Self {
-            player_repo,
-            nav_controller,
-            state,
+            player_repo: application.repositories.player.clone(),
+            nav_controller: application.nav_controller.clone(),
+            state: NameInputStates::new(application.ui.global::<ui::NameInputAdopter>().as_weak()),
         }
     }
-
-    fn on_switch_keyboard_mode(&self) {
+}
+impl NameInputViewModelTrait for NameInputViewModel {
+    fn on_switch_keyboard_mode(&mut self) {
         trace!("NameInputViewModel::on_switch_keyboard_mode");
 
         let old_mode = self.state.keyboard_mode.get();
@@ -48,7 +40,7 @@ impl NameInputViewModel {
         self.state.keyboard_mode.set(new_mode);
     }
 
-    fn on_push_character(&self, char: SharedString) {
+    fn on_push_character(&mut self, char: SharedString) {
         trace!("NameInputViewModel::on_push_character");
 
         assert_eq!(char.chars().count(), 1, "character length must 1");
@@ -57,7 +49,7 @@ impl NameInputViewModel {
         self.state.player_name_text.set(new_text);
     }
 
-    fn on_remove_character(&self) {
+    fn on_remove_character(&mut self) {
         trace!("NameInputViewModel::on_remove_character");
 
         let old_text = self.state.player_name_text.get();
@@ -69,22 +61,24 @@ impl NameInputViewModel {
         self.state.player_name_text.set(new_text)
     }
 
-    fn on_submit_name(&self) {
+    fn on_submit_name(&mut self) {
         trace!("NameInputViewModel::on_submit_name");
 
         let name = self.state.player_name_text.get();
-        let msg = self.state.error_msg.clone();
+        // let msg = self.state.error_msg.clone();
         let nav_controller = self.nav_controller.clone();
         self.player_repo.insert_player(name, move |res| match res {
             Ok(()) => {
                 nav_controller.navigate(NavRoute::DifficulitySelect);
             }
             Err(InsertPlayerError::NameAlredyInUse(name)) => {
-                msg.set(format!("'{}'はすでに使われています", name).to_shared_string());
+                todo!();
+                // msg.set(format!("'{}'はすでに使われています", name).to_shared_string());
             }
             Err(InsertPlayerError::Sqlx(e)) => {
-                msg.set("プログラム内部でエラーが発生しました".to_shared_string());
+                // msg.set("プログラム内部でエラーが発生しました".to_shared_string());
                 error!(?e, "error occured while inserting player");
+                todo!();
             }
         });
     }
@@ -95,51 +89,22 @@ fn pop_player_name(old_text: SharedString) -> SharedString {
     old_text[0..old_text.len() - 1].to_shared_string()
 }
 
-pub struct NameInputDestination {
-    nav_controller: NavController,
-    adopter: slint::Weak<ui::NameInputAdopter<'static>>,
-    player_repo: Rc<PlayerRepository>,
-}
+pub struct NameInputDestination(NameInputViewModelRc);
 
 impl NameInputDestination {
     pub fn new(application: &Application) -> Self {
-        Self {
-            nav_controller: application.nav_controller.clone(),
-            adopter: application.ui.global::<ui::NameInputAdopter>().as_weak(),
-            player_repo: application.repositories.player.clone(),
-        }
+        Self(NameInputViewModelRc::new(application))
     }
 }
 
-impl NavDestination for NameInputDestination {
+impl NavDestination<NavRoute> for NameInputDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading NameInputViewModel");
         let NavRoute::NameInput = route else {
             panic!("matched variant should be given");
         };
 
-        let adopter = self.adopter.unwrap();
-
-        let viewmodel = Rc::new(NameInputViewModel::new(
-            Rc::clone(&self.player_repo),
-            self.nav_controller.clone(),
-            NameInputState::new(&adopter),
-        ));
-
-        macro_rules! cb {
-            ($name: ident) => {
-                bind_callback!(adopter, viewmodel, $name);
-            };
-        }
-        adopter.on_push_character({
-            let viewmodel = Rc::clone(&viewmodel);
-            move |char| {
-                viewmodel.on_push_character(char);
-            }
-        });
-        cb!(switch_keyboard_mode);
-        cb!(remove_character);
-        cb!(submit_name);
+        // do nothing because the route doesn't have any arguments
     }
 
     fn route(&self) -> NavRouteKind {

@@ -1,28 +1,34 @@
 use crate::{
-    Application,
-    nav::{NavController, NavDestination, NavRoute, NavRouteKind},
+    Application, NavController,
     session::{RemainingTime, SessionManager, SessionSubscriber},
-    ui,
+    ui::{self, NavRoute, NavRouteKind, PlayingStates, PlayingViewModelTrait},
 };
-use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
+use slint_fw::nav::NavDestination;
 use std::{cell::RefCell, rc::Rc};
 use tracing::debug;
 
-state_struct!(Playing,
-    score => i32,
-    remaining_time => SharedString
-);
+viewmodel_rc!(PlayingViewModel, PlayingAdopter);
 
 struct PlayingViewModel {
     nav_controller: NavController,
-    state: PlayingState,
+    state: PlayingStates,
 }
 
 impl PlayingViewModel {
+    fn new(application: &Application) -> Self {
+        Self {
+            nav_controller: application.nav_controller.clone(),
+            state: PlayingStates::new(application.ui.global::<ui::PlayingAdopter>().as_weak()),
+        }
+    }
+
     fn on_session_ends(&self) {
         self.nav_controller.navigate(NavRoute::Score);
     }
 }
+
+impl PlayingViewModelTrait for PlayingViewModel {}
 
 impl SessionSubscriber for PlayingViewModel {
     fn on_score_changed(&self, score: u32) {
@@ -37,22 +43,20 @@ impl SessionSubscriber for PlayingViewModel {
 }
 
 pub struct PlayingDestination {
-    adopter: slint::Weak<ui::PlayingAdopter<'static>>,
-    nav_controller: NavController,
     session_manager: Rc<RefCell<SessionManager>>,
+    viewmodel: PlayingViewModelRc,
 }
 
 impl PlayingDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            adopter: application.ui.global::<ui::PlayingAdopter>().as_weak(),
-            nav_controller: application.nav_controller.clone(),
             session_manager: application.session_manager.clone(),
+            viewmodel: PlayingViewModelRc::new(application),
         }
     }
 }
 
-impl NavDestination for PlayingDestination {
+impl NavDestination<NavRoute> for PlayingDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading PlayingViewModel");
 
@@ -60,20 +64,15 @@ impl NavDestination for PlayingDestination {
             panic!("matched variant should be given");
         };
 
-        let adopter = self.adopter.unwrap();
-        let viewmodel = Rc::new(PlayingViewModel {
-            nav_controller: self.nav_controller.clone(),
-            state: PlayingState::new(&adopter),
-        });
-
-        let mut session_manager = self.session_manager.borrow_mut();
+        /*let mut session_manager = self.session_manager.borrow_mut();
         session_manager.subscribe(Rc::clone(&viewmodel));
         session_manager.start_session(*difficulty, {
             let viewmodel = viewmodel.clone();
             move || {
                 viewmodel.on_session_ends();
             }
-        });
+        });*/
+        todo!()
     }
 
     fn route(&self) -> NavRouteKind {

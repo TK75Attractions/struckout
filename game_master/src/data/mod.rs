@@ -20,7 +20,7 @@ macro_rules! async_wrapper {
     ) => {
         pastey::paste! {
             $(#[$meta])*
-            fn [<$name:snake>]<F>(&self, cb: F)
+            pub fn [<$name:snake>]<F>(&self, cb: F)
             where
                 F: FnOnce(Result<(), $error>) + 'static,
             {
