@@ -4,7 +4,7 @@ use super::{
     TcpStreamTrait as _,
 };
 use slint_fw::WorkerThread;
-use std::time::Duration;
+use std::{cell::RefCell, time::Duration};
 use struckout_proto::{
     MasterProjectorPacket, ProjectorMasterPacket, ReadPacketError, WritePacketError,
     master_projector_packet, projector_master_packet, read_packet, write_packet,
@@ -18,7 +18,7 @@ use tracing::{debug, info};
 #[derive(Debug)]
 pub struct ProjectorTransport {
     msg_tx: mpsc::Sender<(Command, oneshot::Sender<Response>)>,
-    score_rx: Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>,
+    score_rx: RefCell<Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>>>,
     status_rx: watch::Receiver<ProjectorTransportStatus>,
 }
 
@@ -34,7 +34,7 @@ impl ProjectorTransport {
 
         Self {
             msg_tx: cmd_tx,
-            score_rx: Some(score_rx),
+            score_rx: RefCell::new(Some(score_rx)),
             status_rx,
         }
     }
@@ -124,7 +124,7 @@ impl ProjectorTransport {
     }
 
     pub async fn start_game(
-        &mut self,
+        &self,
         difficulty: impl Into<struckout_proto::Difficulty>,
     ) -> Result<(), StartGameError> {
         let (res_tx, res_rx) = oneshot::channel();
@@ -137,8 +137,8 @@ impl ProjectorTransport {
         res
     }
 
-    pub fn take_rx(&mut self) -> Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>> {
-        self.score_rx.take()
+    pub fn take_rx(&self) -> Option<mpsc::Receiver<Result<u32, ScoreReceivedError>>> {
+        self.score_rx.borrow_mut().take()
     }
 
     pub fn status(&self) -> watch::Receiver<ProjectorTransportStatus> {
