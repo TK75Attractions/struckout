@@ -5,44 +5,44 @@ use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 
 use crate::{
     Application, NavController,
-    data::projector::{ProjectorTransport, ProjectorTransportTrait as _, StartGameError},
-    ui::{self, NavRoute, NavRouteKind},
+    data::projector::{ProjectorTransport, StartGameError},
+    ui::{self, DifficulitySelectStates, DifficulitySelectViewModelTrait, NavRoute, NavRouteKind},
 };
-use slint_fw::nav::NavDestination;
+use slint_fw::{GlobalExt as _, nav::NavDestination};
 use tracing::{debug, error, trace};
 
-state_struct!(
-    DifficulitySelect,
-    selected_difficulity => ui::Difficulity,
-    error_msg => SharedString
-);
+struct DifficulitySelectViewModelRc(Rc<RefCell<DifficulitySelectViewModel>>);
+
+impl DifficulitySelectViewModelRc {
+    fn new(application: &Application) -> Self {
+        let this = Rc::new(RefCell::new(DifficulitySelectViewModel {
+            nav_controller: application.nav_controller.clone(),
+            state: DifficulitySelectStates::new(
+                application
+                    .ui
+                    .global::<ui::DifficulitySelectAdopter>()
+                    .as_weak(),
+            ),
+            projector_transport: application.repositories.projector.clone(),
+        }));
+        application
+            .ui
+            .global::<ui::DifficulitySelectAdopter>()
+            .register_viewmodel(Rc::clone(&this));
+
+        Self(this)
+    }
+}
 
 #[derive(Debug)]
-pub struct DifficulitySelectViewModel {
+struct DifficulitySelectViewModel {
     nav_controller: NavController,
-    state: DifficulitySelectState,
+    state: DifficulitySelectStates,
     projector_transport: Rc<RefCell<ProjectorTransport>>,
 }
 
-impl DifficulitySelectViewModel {
-    fn new(
-        nav_controller: NavController,
-        state: DifficulitySelectState,
-        projector_transport: Rc<RefCell<ProjectorTransport>>,
-    ) -> Self {
-        Self {
-            nav_controller,
-            state,
-            projector_transport,
-        }
-    }
-
-    fn on_select_difficulity(&self, val: ui::Difficulity) {
-        trace!(?val, "DifficulitySelectViewModel::on_select_difficulity");
-        self.state.selected_difficulity.set(val);
-    }
-
-    fn on_start_game(&self) {
+impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
+    fn on_start_game(&mut self) {
         trace!("DifficulitySelectViewModel::on_start_game");
         let difficulty = self.state.selected_difficulity.get();
         // let error_msg = self.state.error_msg.clone();
@@ -60,12 +60,18 @@ impl DifficulitySelectViewModel {
                 }
             });
     }
+
+    fn on_select_difficulity(&mut self, val: ui::Difficulity) {
+        trace!(?val, "DifficulitySelectViewModel::on_select_difficulity");
+        self.state.selected_difficulity.set(val);
+    }
 }
 
 pub struct DifficultySelectDestination {
     adopter: slint::Weak<ui::DifficulitySelectAdopter<'static>>,
     nav_controller: NavController,
     projector_transport: Rc<RefCell<ProjectorTransport>>,
+    viewmodel: DifficulitySelectViewModelRc,
 }
 
 impl DifficultySelectDestination {
@@ -77,6 +83,7 @@ impl DifficultySelectDestination {
                 .as_weak(),
             nav_controller: application.nav_controller.clone(),
             projector_transport: application.repositories.projector.clone(),
+            viewmodel: DifficulitySelectViewModelRc::new(application),
         }
     }
 }
@@ -88,27 +95,7 @@ impl NavDestination<NavRoute> for DifficultySelectDestination {
             panic!("matched variant should be given");
         };
 
-        let adopter = self.adopter.unwrap();
-
-        let viewmodel = Rc::new(DifficulitySelectViewModel::new(
-            self.nav_controller.clone(),
-            DifficulitySelectState::new(&adopter),
-            self.projector_transport.clone(),
-        ));
-
-        macro_rules! cb {
-            ($name: ident) => {
-                bind_callback!(adopter, viewmodel, $name);
-            };
-        }
-
-        cb!(start_game);
-        adopter.on_select_difficulity({
-            let viewmodel = Rc::clone(&viewmodel);
-            move |d| {
-                viewmodel.on_select_difficulity(d);
-            }
-        });
+        todo!();
     }
 
     fn route(&self) -> NavRouteKind {

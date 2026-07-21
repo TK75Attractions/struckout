@@ -2,41 +2,43 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     Application, NavController,
-    data::projector::{ConnectError, ProjectorTransport, ProjectorTransportTrait as _},
-    ui::{self, NavRoute, NavRouteKind},
+    data::projector::{ConnectError, ProjectorTransport},
+    ui::{self, ConnectionFailedStates, NavRoute, NavRouteKind},
 };
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use slint_fw::nav::NavDestination;
 use tracing::debug;
 
-state_struct!(ConnectionFailed, error_msg => SharedString);
-
 struct ConnectionFailedViewModel {
     nav_controller: NavController,
     projector_transport: Rc<RefCell<ProjectorTransport>>,
-    state: ConnectionFailedState,
+    state: ConnectionFailedStates,
 }
 
 impl ConnectionFailedViewModel {
     fn on_retry_connection(&self) {
-        self.projector_transport.borrow_mut().connect({
-            let nav_controller = self.nav_controller.clone();
-            // let error_msg = self.state.error_msg.clone();
-            move |res| match res {
+        let nc = self.nav_controller.clone();
+        let trans = self.projector_transport.clone();
+        let error_msg = self.state.error_msg.clone();
+        slint::spawn_local(async move {
+            let res = trans.borrow_mut().connect().await;
+            match res {
                 Ok(()) => {
-                    nav_controller.navigate(NavRoute::Start); // TODO: プレイ中に接続が切れた時どうするか
+                    nc.navigate(NavRoute::Start); // TODO: プレイ中に接続が切れた時どうするか
                 }
                 Err(ConnectError::PortNotBound) => {
                     panic!("port should be always bound when ConnectionFailedScreen is shown")
                 }
                 Err(ConnectError::Timeout(_)) => {
-                    // error_msg.set("タイムアウトしました".to_shared_string());
+                    error_msg.set("タイムアウトしました".to_shared_string());
                 }
                 Err(ConnectError::Tcp(e)) => {
-                    // error_msg.set(format!("接続に失敗しました: {}", e).to_shared_string());
+                    error_msg.set(format!("接続に失敗しました: {}", e).to_shared_string());
                 }
+                _ => todo!(),
             }
-        });
+        })
+        .unwrap();
     }
 }
 
@@ -71,7 +73,7 @@ impl NavDestination<NavRoute> for ConnectionFailedDestination {
         let viewmodel = Rc::new(ConnectionFailedViewModel {
             nav_controller: self.nav_controller.clone(),
             projector_transport: self.projector_transport.clone(),
-            state: ConnectionFailedState::new(&adopter),
+            state: ConnectionFailedStates::new(adopter.as_weak()),
         });
 
         viewmodel.state.error_msg.set(msg.to_shared_string());

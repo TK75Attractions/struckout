@@ -4,10 +4,7 @@ use slint::{Timer, TimerMode};
 use std::{cell::RefCell, fmt::Display, rc::Rc, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 
-use crate::{
-    data::projector::{ProjectorTransport, ProjectorTransportTrait as _},
-    ui,
-};
+use crate::{data::projector::ProjectorTransport, ui};
 
 const TIMELIMIT: RemainingTime = RemainingTime { mins: 1, secs: 30 };
 

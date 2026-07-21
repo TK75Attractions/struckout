@@ -1,6 +1,6 @@
 use crate::{
     Application,
-    data::projector::{BindError, ConnectError, ProjectorTransportTrait as _},
+    data::projector::{BindError, ConnectError},
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
@@ -230,6 +230,7 @@ pub fn init_connection(application: &Application) {
                         "タイムアウトしました".to_string(),
                     ));
                 }
+                _ => todo!(),
             }
         });
     })

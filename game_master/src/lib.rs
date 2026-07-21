@@ -3,14 +3,11 @@ use slint_fw::WorkerThread;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tokio::sync::oneshot;
+use tokio::{net::TcpListener, sync::oneshot};
 use tracing::info;
 
 use crate::{
-    data::{
-        player::PlayerRepository,
-        projector::{ProjectorTransport, ProjectorTransportImpl},
-    },
+    data::{player::PlayerRepository, projector::ProjectorTransport},
     presentation::{attach_navhost, init_connection},
     session::SessionManager,
     ui::NavRoute,
@@ -80,8 +77,8 @@ impl RepositoryOwner {
             .expect("failed to connec to database");
         Self {
             player: Rc::new(PlayerRepository::new(pool, &worker)),
-            projector: Rc::new(RefCell::new(ProjectorTransport::ProjectorTransportImpl(
-                ProjectorTransportImpl::new(&worker),
+            projector: Rc::new(RefCell::new(ProjectorTransport::new::<TcpListener>(
+                &worker,
             ))),
             worker,
         }
