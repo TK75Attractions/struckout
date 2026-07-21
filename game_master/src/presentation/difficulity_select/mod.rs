@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
 
 use crate::{
     Application, NavController,
@@ -44,21 +44,25 @@ struct DifficulitySelectViewModel {
 impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
     fn on_start_game(&mut self) {
         trace!("DifficulitySelectViewModel::on_start_game");
+
         let difficulty = self.state.selected_difficulity.get();
-        // let error_msg = self.state.error_msg.clone();
-        let nav_controller = self.nav_controller.clone();
-        self.projector_transport // TODO: SessionManagerに移すかも
-            .borrow_mut()
-            .start_game(difficulty.clone(), move |res| match res {
+        let error_msg = self.state.error_msg.clone();
+        let nc = self.nav_controller.clone();
+        let trans = self.projector_transport.clone();
+        slint::spawn_local(async move {
+            let res = trans.borrow().start_game(difficulty).await;
+            match res {
                 Ok(()) => {
-                    nav_controller.navigate(NavRoute::Playing(difficulty));
+                    nc.navigate(NavRoute::Playing(difficulty));
                 }
                 Err(StartGameError::NotConnected) => panic!("should be already connected"),
                 Err(StartGameError::Tcp(e)) => {
                     error!(?e, "failed to send StartGame message to projector");
-                    // error_msg.set("ネットワーク接続に失敗しました".to_shared_string());
+                    error_msg.set("ネットワーク接続に失敗しました".to_shared_string());
                 }
-            });
+            }
+        })
+        .unwrap();
     }
 
     fn on_select_difficulity(&mut self, val: ui::Difficulity) {
@@ -68,21 +72,12 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
 }
 
 pub struct DifficultySelectDestination {
-    adopter: slint::Weak<ui::DifficulitySelectAdopter<'static>>,
-    nav_controller: NavController,
-    projector_transport: Rc<RefCell<ProjectorTransport>>,
     viewmodel: DifficulitySelectViewModelRc,
 }
 
 impl DifficultySelectDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            adopter: application
-                .ui
-                .global::<ui::DifficulitySelectAdopter>()
-                .as_weak(),
-            nav_controller: application.nav_controller.clone(),
-            projector_transport: application.repositories.projector.clone(),
             viewmodel: DifficulitySelectViewModelRc::new(application),
         }
     }
@@ -94,8 +89,7 @@ impl NavDestination<NavRoute> for DifficultySelectDestination {
         let NavRoute::DifficulitySelect = route else {
             panic!("matched variant should be given");
         };
-
-        todo!();
+        // do nothing because `NavRoute::DifficulitySelect` has no extra arguments
     }
 
     fn route(&self) -> NavRouteKind {
