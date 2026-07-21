@@ -3,49 +3,45 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     Application, NavController,
     session::SessionManager,
-    ui::{self, NavRoute, NavRouteKind},
+    ui::{self, NavRoute, NavRouteKind, ScoreStates, ScoreViewModelTrait},
 };
 use slint::{ComponentHandle, Global};
 use slint_fw::nav::NavDestination;
 use tracing::debug;
 
-state_struct!(
-    Score,
-    rank => ui::Rank,
-    score => i32
-);
+viewmodel_rc!(ScoreViewModel, ScoreAdopter);
 
 #[derive(Debug)]
 struct ScoreViewModel {
     nav_controller: NavController,
-    state: ScoreState,
+    state: ScoreStates,
 }
 
 impl ScoreViewModel {
-    fn new(nav_controller: NavController, state: ScoreState) -> Self {
+    fn new(application: &Application) -> Self {
         Self {
-            nav_controller,
-            state,
+            nav_controller: application.nav_controller.clone(),
+            state: ScoreStates::new(application.ui.global::<ui::ScoreAdopter>().as_weak()),
         }
     }
+}
 
-    fn on_next_clicked(&self) {
+impl ScoreViewModelTrait for ScoreViewModel {
+    fn on_next_clicked(&mut self) {
         self.nav_controller.navigate(NavRoute::Ranking);
     }
 }
 
 pub struct ScoreDestination {
-    adopter: slint::Weak<ui::ScoreAdopter<'static>>,
-    nav_controller: NavController,
     session_manager: Rc<RefCell<SessionManager>>,
+    viewmodel: ScoreViewModelRc,
 }
 
 impl ScoreDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            adopter: application.ui.global::<ui::ScoreAdopter>().as_weak(),
-            nav_controller: application.nav_controller.clone(),
             session_manager: application.session_manager.clone(),
+            viewmodel: ScoreViewModelRc::new(application),
         }
     }
 }
@@ -57,13 +53,7 @@ impl NavDestination<NavRoute> for ScoreDestination {
             panic!("matched variant should be given");
         };
 
-        let adopter = self.adopter.unwrap();
-        let viewmodel = Rc::new(ScoreViewModel::new(
-            self.nav_controller.clone(),
-            ScoreState::new(&adopter),
-        ));
-
-        let session = self
+        /*let session = self
             .session_manager
             .borrow()
             .session()
@@ -72,9 +62,9 @@ impl NavDestination<NavRoute> for ScoreDestination {
         viewmodel
             .state
             .score
-            .set(session.cur_score().try_into().unwrap());
+            .set(session.cur_score().try_into().unwrap());*/
 
-        bind_callback!(adopter, viewmodel, next_clicked);
+        todo!()
     }
 
     fn route(&self) -> NavRouteKind {

@@ -1,37 +1,35 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
-use slint::{ComponentHandle, SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
 
 use crate::{
     Application,
-    ui::{self, NavRoute, NavRouteKind},
+    ui::{self, FallbackStates, FallbackViewModelTrait, NavRoute, NavRouteKind},
 };
-use slint_fw::nav::NavDestination;
+use slint_fw::{GlobalExt, nav::NavDestination};
 
-state_struct!(Fallback, msg => SharedString);
+viewmodel_rc!(FallbackViewModel, FallbackAdopter);
 
 #[derive(Debug)]
-pub struct FallbackViewModel {
-    state: FallbackState,
+struct FallbackViewModel {
+    state: FallbackStates,
 }
 
 impl FallbackViewModel {
-    fn new(adopter: &ui::FallbackAdopter) -> Self {
+    fn new(application: &Application) -> Self {
         Self {
-            state: FallbackState::new(&adopter),
+            state: FallbackStates::new(application.ui.global::<ui::FallbackAdopter>().as_weak()),
         }
     }
 }
 
-pub struct FallbackDestination {
-    adopter: slint::Weak<ui::FallbackAdopter<'static>>,
-}
+impl FallbackViewModelTrait for FallbackViewModel {}
+
+pub struct FallbackDestination(FallbackViewModelRc);
 
 impl FallbackDestination {
     pub fn new(application: &Application) -> Self {
-        Self {
-            adopter: application.ui.global::<ui::FallbackAdopter>().as_weak(),
-        }
+        Self(FallbackViewModelRc::new(application))
     }
 }
 
@@ -41,9 +39,7 @@ impl NavDestination<NavRoute> for FallbackDestination {
             panic!("matched variant should be given");
         };
 
-        let adopter = self.adopter.unwrap();
-        let viewmodel = Rc::new(FallbackViewModel::new(&adopter));
-        viewmodel.state.msg.set(msg.to_shared_string());
+        self.0.borrow().state.msg.set(msg.to_shared_string());
     }
 
     fn route(&self) -> NavRouteKind {
