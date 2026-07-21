@@ -5,7 +5,7 @@ use crate::{
     ui::{self, NavRoute, NavRouteKind, RankingStates, RankingViewModelTrait},
 };
 use slint::{ComponentHandle as _, Global as _};
-use slint_fw::nav::NavDestination;
+use stern::nav::NavDestination;
 
 viewmodel_rc!(RankingViewModel, RankingAdopter);
 

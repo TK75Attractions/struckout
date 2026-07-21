@@ -6,7 +6,7 @@ use crate::{
     ui::{self, ConnectionFailedStates, ConnectionFailedViewModelTrait, NavRoute, NavRouteKind},
 };
 use slint::{ComponentHandle, Global, ToSharedString};
-use slint_fw::{GlobalExt, nav::NavDestination};
+use stern::{GlobalExt, nav::NavDestination};
 use tracing::debug;
 
 viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);

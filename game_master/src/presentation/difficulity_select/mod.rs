@@ -8,7 +8,7 @@ use crate::{
     data::projector::{ProjectorTransport, StartGameError},
     ui::{self, DifficulitySelectStates, DifficulitySelectViewModelTrait, NavRoute, NavRouteKind},
 };
-use slint_fw::{GlobalExt as _, nav::NavDestination};
+use stern::{GlobalExt as _, nav::NavDestination};
 use tracing::{debug, error, trace};
 
 viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);

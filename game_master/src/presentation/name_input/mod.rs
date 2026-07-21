@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
-use slint_fw::nav::NavDestination;
+use stern::nav::NavDestination;
 use tracing::{debug, error, trace};
 
 use crate::{

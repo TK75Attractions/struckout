@@ -3,8 +3,8 @@ use super::{
     Response, SCORE_CHANNEL_BUF, ScoreReceivedError, StartGameError, TcpListenerTrait,
     TcpStreamTrait as _,
 };
-use slint_fw::WorkerThread;
 use std::{cell::RefCell, time::Duration};
+use stern::WorkerThread;
 use struckout_proto::{
     MasterProjectorPacket, ProjectorMasterPacket, ReadPacketError, WritePacketError,
     master_projector_packet, projector_master_packet, read_packet, write_packet,

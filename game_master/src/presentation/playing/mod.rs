@@ -4,7 +4,7 @@ use crate::{
     ui::{self, NavRoute, NavRouteKind, PlayingStates, PlayingViewModelTrait},
 };
 use slint::{ComponentHandle, Global, ToSharedString};
-use slint_fw::nav::NavDestination;
+use stern::nav::NavDestination;
 use std::{cell::RefCell, rc::Rc};
 use tracing::debug;
 
