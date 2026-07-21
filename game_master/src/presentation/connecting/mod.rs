@@ -3,7 +3,7 @@ use crate::{
     ui::{self, ConnectingStates, ConnectingViewModelTrait, NavRoute, NavRouteKind},
 };
 use slint::{ComponentHandle as _, Global as _};
-use slint_fw::nav::NavDestination;
+use stern::nav::NavDestination;
 use tracing::debug;
 
 viewmodel_rc!(ConnectingViewModel, ConnectingAdopter);

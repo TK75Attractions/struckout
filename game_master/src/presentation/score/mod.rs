@@ -6,7 +6,7 @@ use crate::{
     ui::{self, NavRoute, NavRouteKind, ScoreStates, ScoreViewModelTrait},
 };
 use slint::{ComponentHandle, Global};
-use slint_fw::nav::NavDestination;
+use stern::nav::NavDestination;
 use tracing::debug;
 
 viewmodel_rc!(ScoreViewModel, ScoreAdopter);

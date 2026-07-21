@@ -1,5 +1,5 @@
-use slint_fw::WorkerThread;
 use sqlx::{Pool, Sqlite};
+use stern::WorkerThread;
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 

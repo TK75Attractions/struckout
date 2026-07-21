@@ -5,7 +5,7 @@ edition = { workspace = true }
 
 [dependencies]
 struckout-proto = { workspace = true }
-slint-fw = { path = "../slint-fw/slint_fw/" }
+stern = { path = "../stern/stern/" }
 
 tokio = { workspace = true, features = [
     "rt-multi-thread",

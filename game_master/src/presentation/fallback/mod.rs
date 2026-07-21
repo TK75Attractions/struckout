@@ -4,7 +4,7 @@ use crate::{
     Application,
     ui::{self, FallbackStates, FallbackViewModelTrait, NavRoute, NavRouteKind},
 };
-use slint_fw::{GlobalExt, nav::NavDestination};
+use stern::{GlobalExt, nav::NavDestination};
 
 viewmodel_rc!(FallbackViewModel, FallbackAdopter);
 

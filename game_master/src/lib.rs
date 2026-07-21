@@ -1,8 +1,8 @@
 use slint::ComponentHandle;
-use slint_fw::WorkerThread;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::cell::RefCell;
 use std::rc::Rc;
+use stern::WorkerThread;
 use tokio::{net::TcpListener, sync::oneshot};
 use tracing::info;
 
@@ -16,7 +16,7 @@ use crate::{
 mod ui {
     slint::include_modules!();
 
-    #[slint_fw::route]
+    #[stern::route]
     #[derive(Debug, Clone)]
     pub enum NavRoute {
         Start,
@@ -38,10 +38,10 @@ mod state_ext;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
 
-type NavController = slint_fw::nav::NavController<NavRoute>;
-type NavHost = slint_fw::nav::NavHost<NavRoute>;
-type NavHostBuilder = slint_fw::nav::NavHostBuilder<NavRoute>;
-type NavHostBuilderError = slint_fw::nav::NavHostBuilderError<NavRoute>;
+type NavController = stern::nav::NavController<NavRoute>;
+type NavHost = stern::nav::NavHost<NavRoute>;
+type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;
+type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 
 struct Application {
     nav_controller: NavController,

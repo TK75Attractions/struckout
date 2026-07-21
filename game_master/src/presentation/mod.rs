@@ -9,13 +9,13 @@ use crate::{
     },
     ui::NavRoute,
 };
-use slint_fw::nav::NavHost;
+use stern::nav::NavHost;
 use tracing::{debug, info};
 
 /// Defines `XxxViewModelRc` which wraps `XxxViewModel`.
 ///
 /// `XxxViewModelRc::new()` registers viewmodel to the adopter
-/// by calling [`slint_fw::GlobalExt::register_viewmodel()`]).
+/// by calling [`stern::GlobalExt::register_viewmodel()`]).
 ///
 /// `vm` is the name of viewmodel type (e.g. XxxViewModel)/
 macro_rules! viewmodel_rc {
@@ -24,7 +24,7 @@ macro_rules! viewmodel_rc {
             #[allow(unused_imports)]
             use slint::ComponentHandle as _;
             #[allow(unused_imports)]
-            use slint_fw::GlobalExt as _;
+            use stern::GlobalExt as _;
 
             #[derive(derive_more::Deref)]
             struct [<$vm Rc>](std::rc::Rc<std::cell::RefCell<$vm>>);
