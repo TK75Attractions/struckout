@@ -11,11 +11,18 @@ use crate::{
 use slint_fw::{GlobalExt as _, nav::NavDestination};
 use tracing::{debug, error, trace};
 
-struct DifficulitySelectViewModelRc(Rc<RefCell<DifficulitySelectViewModel>>);
+viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 
-impl DifficulitySelectViewModelRc {
+#[derive(Debug)]
+struct DifficulitySelectViewModel {
+    nav_controller: NavController,
+    state: DifficulitySelectStates,
+    projector_transport: Rc<RefCell<ProjectorTransport>>,
+}
+
+impl DifficulitySelectViewModel {
     fn new(application: &Application) -> Self {
-        let this = Rc::new(RefCell::new(DifficulitySelectViewModel {
+        Self {
             nav_controller: application.nav_controller.clone(),
             state: DifficulitySelectStates::new(
                 application
@@ -24,21 +31,8 @@ impl DifficulitySelectViewModelRc {
                     .as_weak(),
             ),
             projector_transport: application.repositories.projector.clone(),
-        }));
-        application
-            .ui
-            .global::<ui::DifficulitySelectAdopter>()
-            .register_viewmodel(Rc::clone(&this));
-
-        Self(this)
+        }
     }
-}
-
-#[derive(Debug)]
-struct DifficulitySelectViewModel {
-    nav_controller: NavController,
-    state: DifficulitySelectStates,
-    projector_transport: Rc<RefCell<ProjectorTransport>>,
 }
 
 impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
@@ -72,6 +66,7 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
 }
 
 pub struct DifficultySelectDestination {
+    #[allow(unused)] // just for initialize viewmodel
     viewmodel: DifficulitySelectViewModelRc,
 }
 

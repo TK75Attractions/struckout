@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use slint::{ComponentHandle, Global, ToSharedString};
 
 use crate::{

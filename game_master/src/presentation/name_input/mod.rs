@@ -89,19 +89,11 @@ fn pop_player_name(old_text: SharedString) -> SharedString {
     old_text[0..old_text.len() - 1].to_shared_string()
 }
 
-pub struct NameInputDestination {
-    nav_controller: NavController,
-    adopter: slint::Weak<ui::NameInputAdopter<'static>>,
-    player_repo: Rc<PlayerRepository>,
-}
+pub struct NameInputDestination(NameInputViewModelRc);
 
 impl NameInputDestination {
     pub fn new(application: &Application) -> Self {
-        Self {
-            nav_controller: application.nav_controller.clone(),
-            adopter: application.ui.global::<ui::NameInputAdopter>().as_weak(),
-            player_repo: application.repositories.player.clone(),
-        }
+        Self(NameInputViewModelRc::new(application))
     }
 }
 

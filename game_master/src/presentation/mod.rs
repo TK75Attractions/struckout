@@ -56,10 +56,7 @@ pub fn init_connection(application: &Application) {
     debug!("initializing connection");
 
     let transport = application.repositories.projector.clone();
-    let transport_clone = application.repositories.projector.clone();
-
     let nc = application.nav_controller.clone();
-
     slint::spawn_local(async move {
         let guard = transport.borrow_mut();
         let res = guard.bind().await;

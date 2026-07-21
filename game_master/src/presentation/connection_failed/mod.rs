@@ -9,11 +9,17 @@ use slint::{ComponentHandle, Global, ToSharedString};
 use slint_fw::{GlobalExt, nav::NavDestination};
 use tracing::debug;
 
-struct ConnectionFailedViewModelRc(Rc<RefCell<ConnectionFailedViewModel>>);
+viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
 
-impl ConnectionFailedViewModelRc {
+struct ConnectionFailedViewModel {
+    nav_controller: NavController,
+    projector_transport: Rc<RefCell<ProjectorTransport>>,
+    state: ConnectionFailedStates,
+}
+
+impl ConnectionFailedViewModel {
     fn new(application: &Application) -> Self {
-        let this = Rc::new(RefCell::new(ConnectionFailedViewModel {
+        Self {
             nav_controller: application.nav_controller.clone(),
             projector_transport: application.repositories.projector.clone(),
             state: ConnectionFailedStates::new(
@@ -22,20 +28,8 @@ impl ConnectionFailedViewModelRc {
                     .global::<ui::ConnectionFailedAdopter>()
                     .as_weak(),
             ),
-        }));
-        application
-            .ui
-            .global::<ui::ConnectionFailedAdopter>()
-            .register_viewmodel(Rc::clone(&this));
-
-        Self(this)
+        }
     }
-}
-
-struct ConnectionFailedViewModel {
-    nav_controller: NavController,
-    projector_transport: Rc<RefCell<ProjectorTransport>>,
-    state: ConnectionFailedStates,
 }
 
 impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
@@ -69,21 +63,12 @@ impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
 }
 
 pub struct ConnectionFailedDestination {
-    adopter: slint::Weak<ui::ConnectionFailedAdopter<'static>>,
-    nav_controller: NavController,
-    projector_transport: Rc<RefCell<ProjectorTransport>>,
     viewmodel: ConnectionFailedViewModelRc,
 }
 
 impl ConnectionFailedDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            adopter: application
-                .ui
-                .global::<ui::ConnectionFailedAdopter>()
-                .as_weak(),
-            nav_controller: application.nav_controller.clone(),
-            projector_transport: application.repositories.projector.clone(),
             viewmodel: ConnectionFailedViewModelRc::new(application),
         }
     }
