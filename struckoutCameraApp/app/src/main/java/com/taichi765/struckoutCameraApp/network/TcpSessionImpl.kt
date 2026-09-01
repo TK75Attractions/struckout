@@ -69,7 +69,7 @@ class TcpSessionImpl(
 
     override suspend fun connect(): ConnectionError? {
         return withContext(Dispatchers.IO) {
-            Timber.tag(TAG).i("connecting to ball_watcher")
+            Timber.tag(TAG).i("connecting to ball_tracker")
             val socket = try {
                 val ret = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
                 Timber.tag(TAG).i("TCP connection has been established successfully")
