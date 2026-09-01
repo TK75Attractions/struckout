@@ -1,10 +1,22 @@
+# 投擲ゲーム
+
 ## ディレクトリ構造
-- `ball_watcher`(Rust): カメラからの情報を集めて処理するサーバ(PCで動く)
-- `struckoutCameraApp` (Kotlin): カメラ用のAndroidアプリ。
-- `game_master` (Rust): 合計得点やランキングなどを管理する。たぶんESP32で動くがPCにするかも。
-- `projector` (Rust/Slint -> C#/Unity): ball_watcherからあたった場所を受け取って点数が増えたらgame_masterに通知する。現在はRust/Slintだがアニメーションが厳しいのでC#/Unityに移行する。
-- `protocol`: protobufの定義をおいておく場所。
+### 各種モジュール
+- `ball_tracker`(Rust): カメラからボールの二次元座標を継続的に受け取り、それらを組み合わせて三次元座標を特定し、三次元座標の推移から的のどの部分にボールがあたったか判定し、それを`projector`に送る。
+- `game_master` (Rust): 合計得点やランキングなどを管理する。データは現時点ではSQLiteに保存しているが将来的にはMySQLにするかも。今の所タッチパネルのUIとランキング管理が同じプログラムだが、筐体を複数にすることを考えると単一のgame_masterをSSoT(Single Source Of True)にして、touchpanelがそれに接続するという形のほうがいいかも。ゲームのセッション管理もgame_master側にしたい。
+- `projector` (C#/Unity): ball_trackerから的にあたった場所を受け取り、`projector`が持っている的の座標と照合し何点入るか計算する。入る点数をgame_masterに通知する。
+- `struckoutCameraApp(camera)` (Kotlin): 二次元座標をカメラから取得して`ball_tracker`に送信する。
+
+### その他
+- `.cargo`: cargo(Rustでnpmにあたるもの)の設定。
+- `.github`: GitHubの設定。
+- `api`: protobufの定義やモジュール間で共有するやつを置いておく場所。
+- `docs`: メモとかを置いておく場所。
+- `migrations`: sqlxで使うデータベースのマイグレーションスクリプトを置いておく場所。
 - `mcu`: 後で消す
+- `sandbox`: 雑多なプログラムを置いておく場所。
+- `stern`: 私が作っているSlintを拡張するGUIフレームワーク。
+- `xtask`: package.jsonのscriptsの豪華版みたいなもん。
 
 ## 参考リンク
 - [ByteTrack](https://github.com/FoundationVision/ByteTrack) ... 2021年に出たMOTアルゴリズム
