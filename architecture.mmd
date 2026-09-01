@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph machine1
+        subgraph pc1_1
+            ball_tracker1("Ball Tracker")
+            projector1("fab:fa-unity Projector")
+        end
+        touchpanel1("Touchpanel")
+
+        camera1_1("fa:fa-camera Camera")
+        camera1_2("fa:fa-camera Camera")
+    end
+
+    subgraph machine2
+        subgraph pc2
+            ball_tracker2("Ball Tracker")
+            projector2("fab:fa-unity Projector")
+        end
+        touchpanel2("Touchpanel")
+
+        camera2_1("fa:fa-camera Camera")
+        camera2_2("fa:fa-camera Camera")
+    end
+
+    subgraph dashboard
+        worker("fab:fa-cloudflare Worker")
+        do("fab:fa-cloudflare Durable Objects")
+    end
+
+    camera1_1 & camera1_2 --USB--> ball_tracker1 --> projector1 <--> touchpanel1
+
+    camera2_1 & camera2_2 --USB--> ball_tracker2 --> projector2 <--> touchpanel2
+    
