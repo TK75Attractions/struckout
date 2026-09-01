@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use ball_watcher::{
+use ball_tracker::{
     Application, CameraLocationStore,
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
@@ -54,7 +54,7 @@ enum DetectionInputImpl {
 impl DetectionInput for DetectionInputImpl {
     async fn start(
         self,
-        tx: mpsc::Sender<ball_watcher::detection_input::PairedFrames>,
+        tx: mpsc::Sender<ball_tracker::detection_input::PairedFrames>,
     ) -> std::io::Result<()> {
         match self {
             DetectionInputImpl::Network(input) => input.start(tx).await,
