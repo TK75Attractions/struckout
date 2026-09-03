@@ -606,7 +606,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ball_watcher"
+name = "ball_tracker"
 version = "0.1.0"
 dependencies = [
  "anyhow",
