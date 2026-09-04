@@ -24,6 +24,7 @@ namespace Struckout.Infrastructure
         private readonly IMessageParser<T> _parser;
         private bool isRegister = false;
         private readonly SemaphoreSlim _slim = new(1, 1);
+        private readonly SemaphoreSlim _sendSlim = new(1, 1);
 
         private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
 
@@ -63,6 +64,9 @@ namespace Struckout.Infrastructure
                 catch (Exception ex)
                 {
                     Debug.Log($"Error connecting to TCP server: {ex.Message}");
+                    // 再試行で毎回 TcpClient を捨てないように、失敗した分はここで解放する。
+                    _tcpClient.Dispose();
+                    _tcpClient = null;
                     Transit(ConnectionState.Failed);
                     return false;
                 }
@@ -120,9 +124,9 @@ namespace Struckout.Infrastructure
             }
         }
 
-        public async Task<bool> ConnectRetryAsync(int maxattempts)
+        public async Task<bool> ConnectRetryAsync(int maxAttempts)
         {
-            for(int attempt = 0; attempt < maxattempts; attempt++)
+            for(int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 try
                 {
@@ -139,6 +143,41 @@ namespace Struckout.Infrastructure
                 await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
             }
             return false;
+        }
+
+        public async Task<bool> SendAsync(IMessage packet)
+        {
+            if (packet == null) throw new ArgumentNullException(nameof(packet));
+
+            var stream = _networkStream;
+            if (_state != ConnectionState.Connected || stream == null)
+            {
+                Debug.LogWarning("Tried to send a packet while not connected.");
+                return false;
+            }
+
+            byte[] payload = packet.ToByteArray();
+            byte[] frame = new byte[4 + payload.Length];
+            BinaryPrimitives.WriteUInt32LittleEndian(frame.AsSpan(0, 4), (uint)payload.Length);
+            payload.CopyTo(frame, 4);
+
+            // 送信の途中に別の送信が割り込むとフレームが壊れるので直列化する。
+            await _sendSlim.WaitAsync();
+            try
+            {
+                await stream.WriteAsync(frame, 0, frame.Length);
+                await stream.FlushAsync();
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is SocketException)
+            {
+                Debug.LogWarning($"Failed to send a packet: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                _sendSlim.Release();
+            }
         }
 
         private async Task ReceiveDataAsync(CancellationToken token)

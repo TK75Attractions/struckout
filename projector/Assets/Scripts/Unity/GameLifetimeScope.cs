@@ -1,4 +1,5 @@
 using Struckout.Application;
+using Struckout.Domain;
 using Struckout.Infrastructure;
 using Struckout.Bootstrap;
 using UnityEngine;
@@ -17,12 +18,44 @@ namespace Struckout.Unity
 
         [SerializeField]
         private RectTransform _targetParent;
+
+        [SerializeField]
+        [Tooltip("Fake にすると ball_watcher / game_master なしで起動できる。コマンドライン引数と環境変数で上書きできる。")]
+        private NetworkSettings _networkSettings = new();
+
+        [SerializeField]
+        [Tooltip("ball_watcher から届く物理座標 (m) を的の描画座標に直す係数。実測して合わせること。")]
+        private CollisionCoordinateTransform _collisionTransform = new();
+
+        [SerializeField]
+        [Tooltip("的の数とクールダウン時間。")]
+        private GameSettings _gameSettings = new();
+
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
+            var networkSettings = NetworkSettingsResolver.Resolve(_networkSettings);
+            builder.RegisterInstance(networkSettings);
+
+            // 物理座標 -> 描画座標 の係数。SensorProvider が使う。
+            Debug.Log($"[Collision] transform {_collisionTransform}");
+            builder.RegisterInstance(_collisionTransform);
+
+            Debug.Log($"[Game] {_gameSettings}");
+            builder.RegisterInstance(_gameSettings);
+
+            if (networkSettings.Mode == NetworkMode.Fake)
+            {
+                builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
+                builder.Register<IClientService<MasterProjectorPacket>, FakeMasterService>(Lifetime.Singleton);
+            }
+            else
+            {
+                builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
+                builder.Register<IClientService<MasterProjectorPacket>, TCPClientBase<MasterProjectorPacket>>(Lifetime.Singleton);
+            }
+
             builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
             builder.Register<IMessageParser<MasterProjectorPacket>, MasterProjectorPacketParser>(Lifetime.Singleton);
-            builder.Register<IClientService<MasterProjectorPacket>, TCPClientBase<MasterProjectorPacket>>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();
@@ -30,7 +63,7 @@ namespace Struckout.Unity
 
             builder.Register<ICollisionSolver, CollisionSolver>(Lifetime.Singleton);
             builder.Register<IPointCalculator, FakePointCalculator>(Lifetime.Singleton);
-            builder.Register<ISensorProvider, FakeSensorProvider>(Lifetime.Singleton);
+            builder.Register<ISensorProvider, SensorProvider>(Lifetime.Singleton);
             builder.Register<ITargetGenerator, TargetGenerator>(Lifetime.Singleton);
 
             builder.Register<NetworkBootstrap>(Lifetime.Singleton);

@@ -1,6 +1,7 @@
 using Struckout.Domain;
 using System.Collections.Generic;
 using System;
+using System.Diagnostics;
 using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Application
@@ -9,6 +10,21 @@ namespace Struckout.Application
     {
         private List<Target> _targets = new();
         public IReadOnlyList<Target> Targets => _targets;
+
+        // 的は撃たれても消えず、一定時間だけ当たらなくなる。その解除時刻を的ごとに持つ。
+        // Unity 非依存にしたいので Stopwatch を使う
+        // (Environment.TickCount64 は Unity の .NET Standard 2.1 プロファイルには無い)。
+        private readonly Stopwatch _clock = Stopwatch.StartNew();
+        private readonly Dictionary<Target, long> _cooldownUntilMs = new();
+
+        public bool IsCoolingDown(Target target) =>
+            _cooldownUntilMs.TryGetValue(target, out long until) && _clock.ElapsedMilliseconds < until;
+
+        public void StartCooldown(Target target, float seconds)
+        {
+            if (seconds <= 0f) return;
+            _cooldownUntilMs[target] = _clock.ElapsedMilliseconds + (long)(seconds * 1000f);
+        }
         public int Score { get; private set; } = 0;
         public Difficulty Difficulty { get; private set;}
 
