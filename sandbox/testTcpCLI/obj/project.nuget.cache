@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "6UCIRD58N2U=",
+  "dgSpecHash": "oO8++AxJnU8=",
   "success": true,
-  "projectFilePath": "C:\\Users\\tsuka\\src\\struckout\\testTcpCLI\\testTcpCLI.csproj",
+  "projectFilePath": "C:\\Users\\tsuka\\ドキュメント\\GitHub\\struckout\\sandbox\\testTcpCLI\\testTcpCLI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tsuka\\.nuget\\packages\\google.protobuf\\3.35.1\\google.protobuf.3.35.1.nupkg.sha512"
   ],

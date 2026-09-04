@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("testTcpCLI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dd7f5930525dcfc528bc4eaa4d9c8a70e3937898")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+061b2c3a8ae13c478754c2bf2653652162eebc69")]
 [assembly: System.Reflection.AssemblyProductAttribute("testTcpCLI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("testTcpCLI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
