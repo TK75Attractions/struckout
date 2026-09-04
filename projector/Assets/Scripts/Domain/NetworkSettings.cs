@@ -16,7 +16,7 @@ namespace Struckout.Domain
     {
         public NetworkMode Mode = NetworkMode.Real;
 
-        /// <summary>ball_watcher (collision の送り元)。</summary>
+        /// <summary>ball_tracker (collision の送り元)。</summary>
         public string TrackerHost = "127.0.0.1";
         public int TrackerPort = 5000;
 

@@ -3,9 +3,9 @@ using System;
 namespace Struckout.Domain
 {
     /// <summary>
-    /// ball_watcher から届く物理座標 (m) を、的の描画座標に変換する。
+    /// ball_tracker から届く物理座標 (m) を、的の描画座標に変換する。
     ///
-    /// 変換係数はまだ決まっていない (盤面の実寸と、ball_watcher が縦に使う軸が未確定)。
+    /// 変換係数はまだ決まっていない (盤面の実寸と、ball_tracker が縦に使う軸が未確定)。
     /// そのため係数はここに切り出して Inspector から調整できるようにしてある。
     /// 実測して値が固まったら、そのまま Inspector の値を確定させればよい。
     ///
@@ -32,7 +32,7 @@ namespace Struckout.Domain
 
         /// <summary>
         /// 縦横が入れ替わっていたとき用。
-        /// ball_watcher は CollisionPoint に (x, z) を詰めているが、
+        /// ball_tracker は CollisionPoint に (x, z) を詰めているが、
         /// そこに「これあってる?」の FIXME が残っているため逃げ道を用意してある。
         /// </summary>
         public bool SwapAxes = false;

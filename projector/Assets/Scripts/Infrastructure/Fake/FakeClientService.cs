@@ -9,13 +9,13 @@ using UnityEngine;
 namespace Struckout.Infrastructure
 {
     /// <summary>
-    /// ball_watcher のかわりに、ランダムな衝突点を流し続けるダミー。
+    /// ball_tracker のかわりに、ランダムな衝突点を流し続けるダミー。
     /// TCP の対向を用意せずに描画だけを確認したいときに使う。
     /// </summary>
     public class FakeClientService : IClientService<ProjectorPacket>
     {
-        // CollisionPoint は物理座標 (m)。ball_watcher は三角測量の結果をそのまま送る
-        // (ball_watcher/src/collision_output/network.rs: x = coll.x, y = coll.z)。
+        // CollisionPoint は物理座標 (m)。ball_tracker は三角測量の結果をそのまま送る
+        // (ball_tracker/src/collision_output/network.rs: x = coll.x, y = coll.z)。
         // 盤面の実寸が決まったら直すこと。
         private const float FieldMinX = -1f;
         private const float FieldMaxX = 1f;

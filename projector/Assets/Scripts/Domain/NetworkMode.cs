@@ -2,7 +2,7 @@ namespace Struckout.Domain
 {
     public enum NetworkMode
     {
-        /// <summary>実際に ball_watcher / game_master に TCP で接続する。</summary>
+        /// <summary>実際に ball_tracker / game_master に TCP で接続する。</summary>
         Real = 0,
 
         /// <summary>

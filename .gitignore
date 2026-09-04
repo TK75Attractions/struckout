@@ -16,12 +16,12 @@ struckoutCameraApp/.gradle/
 struckoutCameraApp/**/build/
 
 # .NET generated state
-testTcpCLI/bin/
-testTcpCLI/obj/
+sandbox/testTcpCLI/bin/
+sandbox/testTcpCLI/obj/
 
 # Local-only debug tooling.
 # tools/ は各自のローカルでだけ使うデバッグ用 GUI を置く場所。
-# 通信層と protobuf は testTcpCLI 配下のコミット済みファイルをリンク参照するので、
+# 通信層と protobuf は sandbox/testTcpCLI 配下のコミット済みファイルをリンク参照するので、
 # ここを消してもリポジトリのビルドは壊れない。
 tools/
 

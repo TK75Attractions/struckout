@@ -5,7 +5,7 @@ using Tk75Attractions.Struckout.V1;
 
 // projector を単体でデバッグするためのダミー対向サーバ。
 //
-//   sensor : ball_watcher のかわり (既定 5000)  -> ProjectorPacket を送る
+//   sensor : ball_tracker のかわり (既定 5000)  -> ProjectorPacket を送る
 //   master : game_master のかわり (既定 5001)  -> MasterProjectorPacket を送り、score を受ける
 //
 // ポートの既定値は api/spec/tracker_projector.yaml と api/spec/master_projector.yaml に合わせている。
@@ -13,8 +13,8 @@ using Tk75Attractions.Struckout.V1;
 const int DefaultSensorPort = 5000;
 const int DefaultMasterPort = 5001;
 
-// CollisionPoint は物理座標 (m)。ball_watcher は三角測量の結果をそのまま送る
-// (ball_watcher/src/collision_output/network.rs: x = coll.x, y = coll.z)。
+// CollisionPoint は物理座標 (m)。ball_tracker は三角測量の結果をそのまま送る
+// (ball_tracker/src/collision_output/network.rs: x = coll.x, y = coll.z)。
 // ランダム送信で使う範囲の想定値で、盤面の実寸が決まったら直すこと。
 const double FieldMinX = -1.0;
 const double FieldMaxX = 1.0;
@@ -318,7 +318,7 @@ void PrintStatus()
 static void PrintHelp()
 {
     ConsoleLog.Plain("""
-        struckout dummy peer -- pretends to be ball_watcher and game_master so the
+        struckout dummy peer -- pretends to be ball_tracker and game_master so the
         Unity projector can be debugged without the rest of the system running.
 
           listen sensor|master [port]   start listening (default: sensor 5000, master 5001)

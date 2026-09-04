@@ -20,11 +20,11 @@ namespace Struckout.Unity
         private RectTransform _targetParent;
 
         [SerializeField]
-        [Tooltip("Fake にすると ball_watcher / game_master なしで起動できる。コマンドライン引数と環境変数で上書きできる。")]
+        [Tooltip("Fake にすると ball_tracker / game_master なしで起動できる。コマンドライン引数と環境変数で上書きできる。")]
         private NetworkSettings _networkSettings = new();
 
         [SerializeField]
-        [Tooltip("ball_watcher から届く物理座標 (m) を的の描画座標に直す係数。実測して合わせること。")]
+        [Tooltip("ball_tracker から届く物理座標 (m) を的の描画座標に直す係数。実測して合わせること。")]
         private CollisionCoordinateTransform _collisionTransform = new();
 
         [SerializeField]

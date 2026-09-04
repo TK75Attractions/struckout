@@ -6,7 +6,7 @@ using Google.Protobuf;
 namespace Struckout.TestCli;
 
 /// <summary>
-/// projector から見た対向サーバ (ball_watcher / game_master) のダミー。
+/// projector から見た対向サーバ (ball_tracker / game_master) のダミー。
 ///
 /// 本物と同じく listen 側になり、projector が client として接続してくる。
 /// フレーミングは LE u32 の長さ + protobuf 本体で、
@@ -65,7 +65,7 @@ public sealed class DummyPeer : IAsyncDisposable
             return;
         }
 
-        // 本物の ball_watcher / game_master と同じく 0.0.0.0 で待つ。
+        // 本物の ball_tracker / game_master と同じく 0.0.0.0 で待つ。
         // docs/machine_separation.md のとおり projector が別マシンにいても届くように。
         var listener = new TcpListener(IPAddress.Any, port);
         listener.Start();

@@ -13,7 +13,7 @@ namespace Struckout.Infrastructure
     ///
     /// 優先順位は コマンドライン &gt; 環境変数 &gt; Inspector。
     ///
-    /// docs/machine_separation.md のとおり projector と ball_watcher が別マシンに
+    /// docs/machine_separation.md のとおり projector と ball_tracker が別マシンに
     /// なることがあるので、ビルド済みのプレイヤーでも接続先を変えられるようにしている。
     ///
     /// コマンドライン:

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Struckout.Infrastructure
 {
     /// <summary>
-    /// ball_watcher から届く物理座標 (m) の衝突点を、描画座標に直してから先へ流す。
+    /// ball_tracker から届く物理座標 (m) の衝突点を、描画座標に直してから先へ流す。
     ///
     /// PacketRouter と GameRuntime の間にあるこの層が、
     /// 座標系が変わる唯一の場所になるようにしている。

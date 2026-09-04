@@ -30,7 +30,7 @@ if (-not $SkipRust) {
 }
 
 if (-not $SkipDotNet) {
-    & dotnet build (Join-Path $repoRoot "testTcpCLI\testTcpCLI.csproj")
+    & dotnet build (Join-Path $repoRoot "sandbox\testTcpCLI\testTcpCLI.csproj")
     if ($LASTEXITCODE -ne 0) { throw ".NET build failed with exit code $LASTEXITCODE" }
 }
 

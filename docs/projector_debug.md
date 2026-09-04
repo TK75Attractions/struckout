@@ -1,21 +1,21 @@
 # projector のデバッグ環境
 
-projector (Unity) は ball_watcher と game_master の 2 つに TCP でつながっている。
+projector (Unity) は ball_tracker と game_master の 2 つに TCP でつながっている。
 どちらも projector が **client** で、対向が listen する側。
 
 | 相手 | 既定ポート | 向き | 中身 |
 |---|---|---|---|
-| ball_watcher | 5000 | 受信 | `ProjectorPacket` (`CollisionPoint` / `TestMessage`) |
-| game_master (タッチパネル) | 5001 | 受信 | `MasterProjectorPacket` (`StartGame`) |
-| game_master (タッチパネル) | 5001 | 送信 | `ProjectorMasterPacket` (`score`) |
+| ball_tracker | 5000 | 受信 | `ProjectorPacket` (`CollisionPoint` / `TestMessage`) |
+| game_master | 5001 | 受信 | `MasterProjectorPacket` (`StartGame`) |
+| game_master | 5001 | 送信 | `ProjectorMasterPacket` (`score`) |
 
 ポートの定義は `api/spec/*.yaml`、フレーミングは LE u32 の長さ + protobuf で、
 実装は `api/rust/src/lib.rs` の `write_packet` / `read_packet`。
 
 ## 座標系と得点の約束事
 
-- `CollisionPoint` は**物理座標 (m)**。ball_watcher は三角測量の結果をそのまま送る
-  (`ball_watcher/src/collision_output/network.rs`: `x = coll.x, y = coll.z`)。
+- `CollisionPoint` は**物理座標 (m)**。ball_tracker は三角測量の結果をそのまま送る
+  (`ball_tracker/src/collision_output/network.rs`: `x = coll.x, y = coll.z`)。
 - **得点は差分**。game_master (`game_master/src/session.rs`) が `cur_score += score` としているので、
   projector は累計ではなく的に当たったぶんだけを送る。
 
@@ -37,9 +37,9 @@ projector (Unity) は ball_watcher と game_master の 2 つに TCP でつなが
 収まる、というだけの仮置きなので、盤面の実寸を測って必ず入れ直すこと。
 合わせ込むときは `Log Conversions` を on にすると、送った物理座標と変換結果が並んで出る。
 
-> **未解決**: ball_watcher は `CollisionPoint` に `(x, z)` を詰めているが、そこに
+> **未解決**: ball_tracker は `CollisionPoint` に `(x, z)` を詰めているが、そこに
 > `// FIXME: これあってる?` が残っている。縦に使う軸が違っていた場合は
-> `Swap Axes` で暫定的に逃げられるが、本来は ball_watcher 側で決着させるべき。
+> `Swap Axes` で暫定的に逃げられるが、本来は ball_tracker 側で決着させるべき。
 
 ## 1. 対向なしで起動する (Fake モード)
 
@@ -51,15 +51,15 @@ TCP を一切使わずに起動できる。描画やアニメーションだけ�
 
 ## 2. ダミーの対向サーバにつなぐ (testTcpCLI)
 
-本物の通信経路を通したいが ball_watcher / game_master を動かしたくない場合は、
+本物の通信経路を通したいが ball_tracker / game_master を動かしたくない場合は、
 `testTcpCLI` が両方のふりをする。
 
 ```bash
-dotnet run --project testTcpCLI
+dotnet run --project sandbox/testTcpCLI
 ```
 
 ```
-> listen sensor          # ball_watcher のかわりに 5000 で待つ
+> listen sensor          # ball_tracker のかわりに 5000 で待つ
 > listen master          # game_master のかわりに 5001 で待つ
                          # ここで Unity を Play する
 > hit 960 540            # 画面中央に当てる
@@ -76,7 +76,7 @@ projector が送ってきた `ProjectorMasterPacket` (得点) は受信次第そ
 
 ポートを変えたいときは `listen sensor 6000` のように第 2 引数で指定する。
 
-## 3. 別マシンの ball_watcher につなぐ
+## 3. 別マシンの ball_tracker につなぐ
 
 `docs/machine_separation.md` のとおり Unity と Android Studio は別マシンで動かすので、
 接続先は Inspector 以外からも変えられるようにしてある。優先順位は
@@ -116,5 +116,5 @@ pwsh scripts/Generate-Proto.ps1 -Check   # ズレていないかだけ確認 (ex
 ```
 
 生成先は `projector/Assets/Scripts/ProtoBuf/Generated` と
-`testTcpCLI/Network/Protocol/Generated` の 2 か所。
+`sandbox/testTcpCLI/Network/Protocol/Generated` の 2 か所。
 `scripts/Test-Dynamic.ps1` は最初にこの `-Check` を走らせる。
