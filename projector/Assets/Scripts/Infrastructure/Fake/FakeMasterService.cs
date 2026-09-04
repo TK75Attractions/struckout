@@ -18,6 +18,9 @@ namespace Struckout.Infrastructure
 
         public event Action<MasterProjectorPacket> OnReceived;
 
+        // ダミーは自分から切る以外に切れないので、この経路は発火しない。
+        public event Action ConnectionLost;
+
         private bool _isConnected;
         private CancellationTokenSource _receiveCancellationToken;
         private Task _task;

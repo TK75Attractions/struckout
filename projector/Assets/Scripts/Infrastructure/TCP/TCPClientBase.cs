@@ -20,6 +20,7 @@ namespace Struckout.Infrastructure
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
         public event Action<T> OnReceived;
+        public event Action ConnectionLost;
         private Task _receiveTask;
         private readonly IMessageParser<T> _parser;
         private bool isRegister = false;
@@ -92,7 +93,10 @@ namespace Struckout.Infrastructure
             
             try
             {
-                if (_state != ConnectionState.Connected && _state != ConnectionState.Connecting) return;
+                // Failed (通信中に切れた) からも後片付けできるようにする。
+                if (_state != ConnectionState.Connected
+                    && _state != ConnectionState.Connecting
+                    && _state != ConnectionState.Failed) return;
                 if(_tcpClient == null) Debug.Log("Failed To Disconnect");
                 
                 Transit(ConnectionState.Disconnecting);
@@ -182,10 +186,18 @@ namespace Struckout.Infrastructure
 
         private async Task ReceiveDataAsync(CancellationToken token)
         {
+            // 自分から切ったのか、相手都合で切れたのかを区別する。
+            // 後者だけを ConnectionLost として通知したい。
+            bool lostUnexpectedly = false;
+
             while (_state == ConnectionState.Connected && !token.IsCancellationRequested)
             {
                 byte[] data;
-                if (_tcpClient == null || _networkStream == null) break;
+                if (_tcpClient == null || _networkStream == null)
+                {
+                    lostUnexpectedly = true;
+                    break;
+                }
 
                 try
                 {
@@ -197,22 +209,26 @@ namespace Struckout.Infrastructure
                 }
                 catch (EndOfStreamException ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    lostUnexpectedly = true;
                     break;
                 }
                 catch (IOException ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    lostUnexpectedly = true;
                     break;
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    lostUnexpectedly = true;
                     break;
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogException(ex);
+                    lostUnexpectedly = true;
                     break;
                 }
 
@@ -246,6 +262,34 @@ namespace Struckout.Infrastructure
                         Debug.LogException(ex);
                     }
                 }
+            }
+
+            if (lostUnexpectedly) HandleConnectionLost();
+        }
+
+        /// <summary>
+        /// 相手都合で切れたときの後始末。
+        /// これをやらないと状態が Connected のまま残り、切れているのに接続中に見えてしまう。
+        /// SendAsync も死んだストリームに書きに行くことになる。
+        /// </summary>
+        private void HandleConnectionLost()
+        {
+            if (_state != ConnectionState.Connected) return;
+
+            Transit(ConnectionState.Failed);
+
+            _networkStream?.Dispose();
+            _networkStream = null;
+            _tcpClient?.Dispose();
+            _tcpClient = null;
+
+            try
+            {
+                ConnectionLost?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
             }
         }
 

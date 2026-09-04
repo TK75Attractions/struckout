@@ -41,6 +41,10 @@ namespace Struckout.Bootstrap
             _client.OnReceived += _packetRouter.RoutePacket;
             _master.OnReceived += _packetRouter.RoutePacket;
 
+            // 自動再接続はまだ入れていないので、せめて切れたことは分かるようにする。
+            _client.ConnectionLost += OnTrackerConnectionLost;
+            _master.ConnectionLost += OnMasterConnectionLost;
+
             _client.RegisterPort(_settings.TrackerHost, _settings.TrackerPort);
             _master.RegisterPort(_settings.MasterHost, _settings.MasterPort);
 
@@ -53,6 +57,12 @@ namespace Struckout.Bootstrap
             return NetworkConnectionResult.Success;
         }
 
+        private void OnTrackerConnectionLost() =>
+            Debug.LogWarning("[Network] lost the connection to the tracker. Restart the projector to reconnect.");
+
+        private void OnMasterConnectionLost() =>
+            Debug.LogWarning("[Network] lost the connection to game_master. Restart the projector to reconnect.");
+
         private void OnReceiveMessage(TestMessage message)
         {
             Debug.Log($"Received message: {message.Message}");
@@ -63,6 +73,9 @@ namespace Struckout.Bootstrap
         {
             if (_client == null) return;
             _client.OnReceived -= _packetRouter.RoutePacket;
+            _master.OnReceived -= _packetRouter.RoutePacket;
+            _client.ConnectionLost -= OnTrackerConnectionLost;
+            _master.ConnectionLost -= OnMasterConnectionLost;
             _packetRouter.OnStringMessageReceived -= OnReceiveMessage;
 
             await _client.DisconnectAsync();
