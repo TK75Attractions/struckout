@@ -27,7 +27,21 @@ namespace Struckout.Infrastructure
     public static class NetworkSettingsResolver
     {
         public static NetworkSettings Resolve(NetworkSettings inspectorSettings)
+            => Resolve(inspectorSettings, ParseCommandLine(), ReadEnvironmentVariable);
+
+        /// <summary>
+        /// 入力源を明示して解決する。テストから優先順位を確かめるために公開している。
+        /// </summary>
+        /// <param name="commandLine">"-key value" を辞書にしたもの。</param>
+        /// <param name="environment">環境変数を引く関数。無ければ null を返す。</param>
+        public static NetworkSettings Resolve(
+            NetworkSettings inspectorSettings,
+            IReadOnlyDictionary<string, string> commandLine,
+            Func<string, string> environment)
         {
+            commandLine ??= new Dictionary<string, string>();
+            environment ??= _ => null;
+
             var settings = (inspectorSettings ?? new NetworkSettings()).Clone();
 
             // Inspector で空にされていたり、シーンに値が入っていなかったりしたときの保険。
@@ -37,21 +51,32 @@ namespace Struckout.Infrastructure
             if (settings.TrackerPort <= 0) settings.TrackerPort = defaults.TrackerPort;
             if (settings.MasterPort <= 0) settings.MasterPort = defaults.MasterPort;
 
-            var commandLine = ParseCommandLine();
+            settings.Mode = ResolveMode(commandLine, environment, settings.Mode);
 
-            settings.Mode = ResolveMode(commandLine, settings.Mode);
+            settings.TrackerHost = ResolveString(commandLine, environment, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.TrackerHost);
+            settings.TrackerPort = ResolveInt(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.TrackerPort);
 
-            settings.TrackerHost = ResolveString(commandLine, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.TrackerHost);
-            settings.TrackerPort = ResolveInt(commandLine, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.TrackerPort);
-
-            settings.MasterHost = ResolveString(commandLine, "masterHost", "STRUCKOUT_MASTER_HOST", settings.MasterHost);
-            settings.MasterPort = ResolveInt(commandLine, "masterPort", "STRUCKOUT_MASTER_PORT", settings.MasterPort);
+            settings.MasterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.MasterHost);
+            settings.MasterPort = ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.MasterPort);
 
             settings.ConnectAttempts = Math.Max(
                 1,
-                ResolveInt(commandLine, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.ConnectAttempts));
+                ResolveInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.ConnectAttempts));
 
             return settings;
+        }
+
+        private static string ReadEnvironmentVariable(string name)
+        {
+            try
+            {
+                return Environment.GetEnvironmentVariable(name);
+            }
+            catch (SecurityException)
+            {
+                // 環境変数が読めない環境では上書きなしとして扱う。
+                return null;
+            }
         }
 
         /// <summary>"-key value" の並びを辞書にする。値のないフラグは無視する。</summary>
@@ -83,9 +108,10 @@ namespace Struckout.Infrastructure
             return result;
         }
 
-        private static NetworkMode ResolveMode(Dictionary<string, string> commandLine, NetworkMode fallback)
+        private static NetworkMode ResolveMode(
+            IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment, NetworkMode fallback)
         {
-            var raw = Lookup(commandLine, "networkMode", "STRUCKOUT_NETWORK_MODE");
+            var raw = Lookup(commandLine, environment, "networkMode", "STRUCKOUT_NETWORK_MODE");
             if (raw == null) return fallback;
 
             if (Enum.TryParse<NetworkMode>(raw, ignoreCase: true, out var mode)) return mode;
@@ -95,13 +121,15 @@ namespace Struckout.Infrastructure
         }
 
         private static string ResolveString(
-            Dictionary<string, string> commandLine, string argName, string envName, string fallback)
-            => Lookup(commandLine, argName, envName) ?? fallback;
+            IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment,
+            string argName, string envName, string fallback)
+            => Lookup(commandLine, environment, argName, envName) ?? fallback;
 
         private static int ResolveInt(
-            Dictionary<string, string> commandLine, string argName, string envName, int fallback)
+            IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment,
+            string argName, string envName, int fallback)
         {
-            var raw = Lookup(commandLine, argName, envName);
+            var raw = Lookup(commandLine, environment, argName, envName);
             if (raw == null) return fallback;
 
             if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)) return value;
@@ -111,22 +139,17 @@ namespace Struckout.Infrastructure
         }
 
         /// <summary>コマンドライン、環境変数の順に探す。どちらにもなければ null。</summary>
-        private static string Lookup(Dictionary<string, string> commandLine, string argName, string envName)
+        private static string Lookup(
+            IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment,
+            string argName, string envName)
         {
             if (commandLine.TryGetValue(argName, out var fromArgs) && !string.IsNullOrWhiteSpace(fromArgs))
             {
                 return fromArgs;
             }
 
-            try
-            {
-                var fromEnv = Environment.GetEnvironmentVariable(envName);
-                if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
-            }
-            catch (SecurityException)
-            {
-                // 環境変数が読めない環境では上書きなしとして扱う。
-            }
+            var fromEnv = environment(envName);
+            if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
 
             return null;
         }
