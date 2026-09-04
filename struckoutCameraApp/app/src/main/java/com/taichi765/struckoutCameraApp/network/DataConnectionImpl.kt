@@ -45,7 +45,7 @@ class DataConnectionImpl : DataConnection {
      */
     override suspend fun connect(): DataConnectionError? {
         return withContext(Dispatchers.IO) {
-            Timber.tag(TAG).i("connecting to ball_watcher")
+            Timber.tag(TAG).i("connecting to ball_tracker")
             try {
                 val socket = Socket(REMOTE_ADDRESS, REMOTE_PORT)
                 Timber.tag(TAG).i("TCP connection has been established successfully")
