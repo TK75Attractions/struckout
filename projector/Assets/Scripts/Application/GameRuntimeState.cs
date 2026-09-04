@@ -14,17 +14,44 @@ namespace Struckout.Application
         // 的は撃たれても消えず、一定時間だけ当たらなくなる。その解除時刻を的ごとに持つ。
         // Unity 非依存にしたいので Stopwatch を使う
         // (Environment.TickCount64 は Unity の .NET Standard 2.1 プロファイルには無い)。
-        private readonly Stopwatch _clock = Stopwatch.StartNew();
+        private readonly Func<long> _nowMs;
         private readonly Dictionary<Target, long> _cooldownUntilMs = new();
 
+        public GameRuntimeState() : this(null) { }
+
+        /// <param name="nowMs">
+        /// 現在時刻をミリ秒で返す関数。null なら単調増加する内部時計を使う。
+        /// テストから時間を進めたいときに差し替える。
+        /// </param>
+        public GameRuntimeState(Func<long> nowMs)
+        {
+            if (nowMs != null)
+            {
+                _nowMs = nowMs;
+                return;
+            }
+
+            var clock = Stopwatch.StartNew();
+            _nowMs = () => clock.ElapsedMilliseconds;
+        }
+
         public bool IsCoolingDown(Target target) =>
-            _cooldownUntilMs.TryGetValue(target, out long until) && _clock.ElapsedMilliseconds < until;
+            _cooldownUntilMs.TryGetValue(target, out long until) && _nowMs() < until;
 
         public void StartCooldown(Target target, float seconds)
         {
             if (seconds <= 0f) return;
-            _cooldownUntilMs[target] = _clock.ElapsedMilliseconds + (long)(seconds * 1000f);
+            _cooldownUntilMs[target] = _nowMs() + (long)(seconds * 1000f);
         }
+        /// <summary>StartGame を受け取るまでは Idle。</summary>
+        public GamePhase Phase { get; private set; } = GamePhase.Idle;
+
+        public void StartGame(Difficulty difficulty)
+        {
+            SetDifficulty(difficulty);
+            Phase = GamePhase.Playing;
+        }
+
         public int Score { get; private set; } = 0;
         public Difficulty Difficulty { get; private set;}
 

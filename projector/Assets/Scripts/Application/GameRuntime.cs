@@ -65,8 +65,27 @@ namespace Struckout.Application
             _uiService.InstantiateTargets(_state.Targets);
         }
 
+        /// <summary>
+        /// game_master から StartGame が届いたときに呼ぶ。これを受けるまでは得点を送らない。
+        /// </summary>
+        public void StartGame(Difficulty difficulty)
+        {
+            _state.StartGame(difficulty);
+            Debug.Log($"[Game] started ({difficulty})");
+        }
+
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
+            // StartGame より前に当たっても得点にしない。
+            // game_master はセッション外の得点を受け取ると panic するため。
+            if (_state.Phase != GamePhase.Playing)
+            {
+                _uiService.ShowCollisionMarker(
+                    (float)collisionPoint.X, (float)collisionPoint.Y, CollisionResult.Missed);
+                Debug.Log($"[Hit] ignored: the game has not started (phase={_state.Phase})");
+                return;
+            }
+
             bool hit = _collisionSolver.TryCollision(collisionPoint, _state.Targets, out Target hitTarget);
 
             // 着弾位置は当たり外れに関わらず出す。外れが見えないと、

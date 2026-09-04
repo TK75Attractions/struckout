@@ -39,9 +39,12 @@ namespace Struckout.Bootstrap
             // 的の見た目の更新は GameRuntime が IUIService を直接叩く。
             // ここでは得点の送信だけを繋ぐ。
             _runtime.ScoreAdded += OnScoreAdded;
+            context.PacketRouter.OnGameStartReceived += OnGameStart;
 
             _runtime.GameSetup();
         }
+
+        private void OnGameStart(StartGame startGame) => _runtime.StartGame(startGame.Difficulty);
 
         private void OnScoreAdded(int points)
         {
