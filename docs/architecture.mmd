@@ -1,27 +1,38 @@
 flowchart TD
+    classDef studio_class stroke-dasharray:5
     subgraph machine1
         subgraph pc1_1
             ball_tracker1("Ball Tracker")
-            projector1("fab:fa-unity Projector")
+            android_studio1("fab:fa-android Android Studio")
+            class android_studio1 studio_class
         end
-        touchpanel1("Touchpanel")
+
+        subgraph pc1_2
+            projector1("fab:fa-unity Projector")
+            touchpanel1("Touchpanel")
+        end
 
         camera1_1("fa:fa-camera Camera")
         camera1_2("fa:fa-camera Camera")
     end
 
     subgraph machine2
-        subgraph pc2
+        subgraph pc2_1
             ball_tracker2("Ball Tracker")
-            projector2("fab:fa-unity Projector")
+            android_studio2("fab:fa-android Android Studio")
+            class android_studio2 studio_class
         end
-        touchpanel2("Touchpanel")
+
+        subgraph pc2_2
+            projector2("fab:fa-unity Projector")
+            touchpanel2("Touchpanel")
+        end
 
         camera2_1("fa:fa-camera Camera")
         camera2_2("fa:fa-camera Camera")
     end
 
-    subgraph dashboard
+    subgraph dashboard_暇だったら作る
         worker("fab:fa-cloudflare Worker")
         do("fab:fa-cloudflare Durable Objects")
     end
@@ -30,8 +41,8 @@ flowchart TD
 
     game_master("Game Master")
 
-    camera1_1 & camera1_2 --USB--> ball_tracker1 --> projector1 <--> touchpanel1
+    camera1_1 & camera1_2 --USB--> ball_tracker1 --Ethernet--> projector1 <--> touchpanel1
 
-    camera2_1 & camera2_2 --USB--> ball_tracker2 --> projector2 <--> touchpanel2
+    camera2_1 & camera2_2 --USB--> ball_tracker2 --Ethernet--> projector2 <--> touchpanel2
 
     touchpanel1 & touchpanel2 --> game_master <--> database
