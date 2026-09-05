@@ -41,6 +41,7 @@ enum_dispatch = "0.3.13"
 prost = "0.14.3"
 prost-build = "0.14.3"
 tonic = "0.14.6"
+tonic-prost = "0.14.6"
 tonic-prost-build = "0.14.6"
 
 [profile.dev.package.sqlx-macros]

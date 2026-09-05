@@ -12,7 +12,7 @@ pub mod proto {
     tonic::include_proto!("tk75attractions.struckout.v1");
 }
 
-#[derive(Debug, Cloe, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct GameId(i32);
 
 #[derive(Debug, Clone, Copy)]
