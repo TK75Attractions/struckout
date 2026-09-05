@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipSlint,
     [switch]$SkipAndroid,
     [switch]$SkipUnity
 )
@@ -11,7 +10,6 @@ $ProgressPreference = "SilentlyContinue"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $asciiWorkspaceRoot = Join-Path $env:USERPROFILE "src"
 $asciiRepoRoot = Join-Path $asciiWorkspaceRoot "struckout"
-$asciiSlintRoot = Join-Path $asciiWorkspaceRoot "slint"
 $toolsRoot = Join-Path $repoRoot ".tools"
 $cacheRoot = Join-Path $toolsRoot "cache"
 $dotnetRoot = Join-Path $toolsRoot "dotnet"
@@ -111,16 +109,6 @@ if (-not $SkipUnity) {
     }
 }
 
-if (-not $SkipSlint) {
-    $slintRoot = Join-Path (Split-Path -Parent $repoRoot) "slint"
-    if (-not (Test-Path -LiteralPath (Join-Path $slintRoot "api\rs\build\Cargo.toml"))) {
-        Write-Host "Cloning the custom Slint dependency to $slintRoot"
-        & git clone --branch feat/add-compiler-config-for-attribute --single-branch https://github.com/taichi765/slint $slintRoot
-    }
-    if (-not (Test-Path -LiteralPath $asciiSlintRoot)) {
-        New-Item -ItemType Junction -Path $asciiSlintRoot -Target $slintRoot | Out-Null
-    }
-}
 
 . (Join-Path $PSScriptRoot "Enter-DevShell.ps1")
 
