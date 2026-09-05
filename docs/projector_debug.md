@@ -111,10 +111,16 @@ Unity を先に Play してから対向を立ち上げても間に合う。
 自動生成するが、**C# だけは生成結果をコミットしている**。手で protoc を叩かないこと。
 
 ```bash
-pwsh scripts/Generate-Proto.ps1          # 生成してコミット対象を更新
-pwsh scripts/Generate-Proto.ps1 -Check   # ズレていないかだけ確認 (exit 1 で失敗)
+scripts/generate-proto.sh            # 生成してコミット対象を更新
+scripts/generate-proto.sh --check    # ズレていないかだけ確認 (exit 1 で失敗)
 ```
+
+mise を入れているなら `mise run proto` / `mise run proto:check` でもよい。
+
+Windows からは Git Bash (Git for Windows 同梱) で実行する。
+PowerShell から叩くなら `& "C:\Program Files\Git\bin\bash.exe" scripts/generate-proto.sh`。
 
 生成先は `projector/Assets/Scripts/ProtoBuf/Generated` と
 `sandbox/testTcpCLI/Network/Protocol/Generated` の 2 か所。
-`scripts/Test-Dynamic.ps1` は最初にこの `-Check` を走らせる。
+`scripts/Test-Dynamic.ps1` は最初にこの `--check` を走らせる。
+CI でも `.github/workflows/proto_ci.yml` が同じスクリプトを回している。

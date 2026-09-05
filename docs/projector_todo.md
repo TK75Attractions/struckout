@@ -225,20 +225,23 @@ Inspector から切れるようにする。デバッグ中は切れていたほ�
 しかも `rust_ci.yml` は `paths: mcu/**` に限定されているため、
 `ball_tracker` や `game_master` すら回っていない。
 
-**projector の変更は CI で一切検証されない。**
-`scripts/Test-Dynamic.ps1` はローカル専用。
+**projector の C# はほとんど CI で検証されない。**
+proto の生成ズレだけは `proto_ci.yml` で検出できるようになったが、
+ビルドとテストは `scripts/Test-Dynamic.ps1` 頼みでローカル専用のまま。
 
 ### 推奨方針
 
-**段階1: ライセンス不要な部分から。** これは今すぐ入れられる。
+**段階1: ライセンス不要な部分から。** 半分は導入済み。
 
-`windows-latest` で以下を回すワークフローを追加する。
+- 済 `scripts/generate-proto.sh --check` — proto の生成ズレを検出。
+  `.github/workflows/proto_ci.yml` が `ubuntu-latest` で実行する。
+  protoc は生成コードと対になる 35.1 に固定してある
+- 未 `dotnet build sandbox/testTcpCLI` — ダミー対向のビルド。
+  `net10.0` のコンソールアプリで Windows 依存はないので `ubuntu-latest` でよい。
+  `proto_ci.yml` にジョブを足すのが手軽
 
-- `scripts/Generate-Proto.ps1 -Check` — proto の生成ズレを検出
-- `dotnet build sandbox/testTcpCLI` — ダミー対向のビルド
-
-proto のズレは実際に起きた事故なので、これだけでも入れる価値がある。
-Unity ライセンスが不要なので導入の障壁も無い。
+proto のズレは実際に起きた事故なので、入れた価値はあった。
+Unity ライセンスが不要なので残りも障壁は無い。
 
 **段階2: Unity の EditMode テスト。**
 `game-ci/unity-test-runner` を使う。ただし **Unity のライセンス認証が必要**で、
