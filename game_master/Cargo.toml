@@ -1,57 +1,19 @@
 [package]
 name = "game_master"
 version = "0.1.0"
-edition = { workspace = true }
+edition.workspace = true
 
 [dependencies]
-struckout-proto = { workspace = true }
-stern = { path = "../stern/stern/" }
-
-tokio = { workspace = true, features = [
-    "rt-multi-thread",
-    "sync",
-    "net",
-    "io-util",
-    "macros",
-    "test-util",
-] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-futures-util = { workspace = true }
-backon = { workspace = true }
-tokio-stream = { workspace = true, features = ["sync"] }
-tokio-util = { workspace = true }
-parking_lot = { workspace = true }
+prost = { workspace = true }
+tonic = { workspace = true }
+tokio = { workspace = true, features = ["rt","macros"] }
+tokio-stream = { workspace = true }
 
 thiserror = { workspace = true }
-anyhow = { workspace = true }
-itertools = { workspace = true }
-derive_more = { workspace = true, features = ["debug"] }
-derive-getters = { workspace = true, features = ["auto_copy_getters"] }
-pastey = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-tempfile = { workspace = true }
-chrono = { workspace = true }
-prost = { workspace = true }
-strum = { workspace = true, features = ["derive"] }
-enum_dispatch = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
-sqlx = { workspace = true, features = [
-    "sqlite",
-    "runtime-tokio",
-    "migrate",
-    "sqlx-toml",
-] }
-
-i-slint-core = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
-
-slint = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute", features = [
-    #"backend-winit",
-    #"renderer-femtovg-wgpu",
-] }
-[dev-dependencies]
-i-slint-backend-testing = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
+sqlx = { workspace = true, features = ["mysql","runtime-tokio","migrate","sqlx-toml"] }
 
 [build-dependencies]
-slint-build = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
+tonic-prost-build = { workspace = true }
