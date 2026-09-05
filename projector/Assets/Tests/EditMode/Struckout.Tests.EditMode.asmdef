@@ -1,0 +1,28 @@
+{
+    "name": "Struckout.Tests.EditMode",
+    "rootNamespace": "Struckout.Tests",
+    "references": [
+        "Struckout.Domain",
+        "Struckout.Application",
+        "Struckout.Infrastructure",
+        "Struckout.Generated",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "Google.Protobuf.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
