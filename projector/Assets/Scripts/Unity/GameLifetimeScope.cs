@@ -46,16 +46,15 @@ namespace Struckout.Unity
             if (networkSettings.Mode == NetworkMode.Fake)
             {
                 builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
-                builder.Register<IClientService<MasterProjectorPacket>, FakeMasterService>(Lifetime.Singleton);
+                builder.Register<IGameMasterClient, FakeGameMasterClient>(Lifetime.Singleton);
             }
             else
             {
                 builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
-                builder.Register<IClientService<MasterProjectorPacket>, TCPClientBase<MasterProjectorPacket>>(Lifetime.Singleton);
+                builder.Register<IGameMasterClient, GrpcGameMasterClient>(Lifetime.Singleton);
             }
 
             builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
-            builder.Register<IMessageParser<MasterProjectorPacket>, MasterProjectorPacketParser>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();

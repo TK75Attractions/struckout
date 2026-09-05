@@ -20,9 +20,16 @@ namespace Struckout.Domain
         public string TrackerHost = "127.0.0.1";
         public int TrackerPort = 5000;
 
-        /// <summary>game_master (タッチパネル側)。</summary>
+        /// <summary>game_master。gRPC (h2c) でつなぐ。</summary>
         public string MasterHost = "127.0.0.1";
         public int MasterPort = 5001;
+
+        /// <summary>
+        /// この筐体の号機番号。AddScore に必要で、
+        /// ListenEvents は全台のイベントを流すのでその絞り込みにも使う。
+        /// game_master 側に問い合わせる手段が無いので、ここで設定する。
+        /// </summary>
+        public int MachineId = 1;
 
         /// <summary>接続を試す回数。1 なら再試行しない。失敗するたびに指数バックオフで待つ。</summary>
         public int ConnectAttempts = 5;
@@ -34,10 +41,11 @@ namespace Struckout.Domain
             TrackerPort = TrackerPort,
             MasterHost = MasterHost,
             MasterPort = MasterPort,
+            MachineId = MachineId,
             ConnectAttempts = ConnectAttempts,
         };
 
         public override string ToString() =>
-            $"mode={Mode} tracker={TrackerHost}:{TrackerPort} master={MasterHost}:{MasterPort} attempts={ConnectAttempts}";
+            $"mode={Mode} tracker={TrackerHost}:{TrackerPort} master={MasterHost}:{MasterPort} machine={MachineId} attempts={ConnectAttempts}";
     }
 }
