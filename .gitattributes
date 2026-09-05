@@ -1,3 +1,12 @@
-projector_Unity/Assets/Scripts/Protobuf/Generated/** linguist-generated
-testTcpCLI/Network/Protocol/Generated/** linguist-generated
+# 生成された protobuf の C# コードは protoc の出力そのままなので、
+# core.autocrlf の設定に関係なく LF で取り出す。
+# こうしないと scripts/generate-proto.sh --check が環境ごとに違う結果を出す。
+projector/Assets/Scripts/ProtoBuf/Generated/*.cs text eol=lf
+sandbox/testTcpCLI/Network/Protocol/Generated/*.cs text eol=lf
+
+# シェルスクリプトは LF でないと Git Bash / CI で動かない。
+*.sh text eol=lf
+
+projector/Assets/Scripts/ProtoBuf/Generated/** linguist-generated
+sandbox/testTcpCLI/Network/Protocol/Generated/** linguist-generated
 struckoutCameraApp/opencv/** linguist-vendored

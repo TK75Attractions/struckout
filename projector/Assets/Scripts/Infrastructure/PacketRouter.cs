@@ -25,20 +25,24 @@ namespace Struckout.Infrastructure
 
         public void RoutePacket(ProjectorPacket packet)
         {
+            if (packet == null) return;
+
             switch (packet.PayloadCase)
             {
                 case ProjectorPacket.PayloadOneofCase.Message:
                     {
-                        if (packet == null || packet.Message == null) break;
-                        Action action = () => OnStringMessageReceived(packet.Message);
-                        _mainThreadDispatcher.Enqueue(action);
+                        if (packet.Message == null) break;
+                        var message = packet.Message;
+                        _mainThreadDispatcher.Enqueue(() => OnStringMessageReceived?.Invoke(message));
                         break;
                     }
                 case ProjectorPacket.PayloadOneofCase.Point:
                     {
-                        if (packet == null || packet.Point == null) break;
-                        Action action = () => OnCollisionReceived(packet.Point);
-                        _mainThreadDispatcher.Enqueue(action);
+                        if (packet.Point == null) break;
+                        var point = packet.Point;
+                        // 購読は GameBootstrap が接続完了後に行うので、それより前に届くことがある。
+                        // 購読者がいない間は捨てる (無条件に呼ぶと NullReferenceException になる)。
+                        _mainThreadDispatcher.Enqueue(() => OnCollisionReceived?.Invoke(point));
                         break;
                     }
                 default:
@@ -49,11 +53,30 @@ namespace Struckout.Infrastructure
 
         public void RoutePacket(MasterProjectorPacket packet)
         {
+            if (packet == null) return;
+
             switch (packet.PayloadCase)
             {
                 case MasterProjectorPacket.PayloadOneofCase.StartGame:
-                    Action action = () => OnGameStartReceived(packet.StartGame);
-                    _mainThreadDispatcher.Enqueue(action);
+                    {
+                        if (packet.StartGame == null) break;
+                        var startGame = packet.StartGame;
+                        _mainThreadDispatcher.Enqueue(() =>
+                        {
+                            if (OnGameStartReceived == null)
+                            {
+                                // まだ誰も StartGame を処理していない。
+                                // 届いていること自体は確認できるようにログには残す。
+                                Debug.Log($"[Master] StartGame({startGame.Difficulty}) received, but nothing handles it yet.");
+                                return;
+                            }
+
+                            OnGameStartReceived(startGame);
+                        });
+                        break;
+                    }
+                default:
+                    Debug.Log($"Unhandled master packet: {packet.PayloadCase}");
                     break;
             }
         }

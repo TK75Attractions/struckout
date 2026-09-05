@@ -1,0 +1,64 @@
+# 開発ツールのバージョンと、OS に依存しない環境変数の定義。
+#
+# `mise install` で全員の環境に同じバージョンが入り、
+# このディレクトリに入ると PATH が自動で通る。
+# Windows / macOS / Linux で同じファイルが効く。
+#
+# 初回だけ `mise trust` が必要 (mise が任意のリポジトリの設定を勝手に読まないため)。
+#
+# ここで面倒を見ないもの:
+#   - Unity 本体、Android SDK のパッケージとライセンス同意、
+#     msys2 の mingw-w64 gcc / sqlite3、日本語パス回避の ASCII ジャンクション
+#     -> scripts/Bootstrap-Windows.ps1 (Windows 固有なので mise には出せない)
+#   - Rust、および Windows 固有の環境変数
+#     -> scripts/Enter-DevShell.ps1 (理由は下のコメントと同スクリプトを参照)
+
+[tools]
+# 生成済みの C# は Google.Protobuf ランタイムと対なので厳密に固定する。
+# ここを上げるときは sandbox/testTcpCLI/testTcpCLI.csproj の Google.Protobuf と
+# projector/Assets/Plugins/Google.Protobuf.dll も一緒に上げ、
+# scripts/generate-proto.sh で再生成すること。
+# .github/workflows/proto_ci.yml は mise 経由で protoc を入れるので、
+# バージョンの定義はここだけ。
+protoc = "35.1"
+
+# struckoutCameraApp (Gradle) 用。JAVA_HOME は mise が設定する。
+java = "temurin-21"
+
+# .NET SDK はあえて mise に入れていない。
+# mise の dotnet バックエンドは Windows で
+# installs/dotnet/<version> -> dotnet-root のシンボリックリンクを作るが、
+# Windows 側からこれが解決できず「missing」と判定される。
+# その結果 mise env / mise exec のたびに再インストールが走り、
+# PATH にも載らない (システムの dotnet にフォールバックする) 。
+# SDK 自体は正しく入るのでリンクだけの問題だが、実用にならないため見送る。
+# Windows は scripts/Bootstrap-Windows.ps1 の dotnet-install.ps1 が入れる (.tools/dotnet)。
+# 非 Windows で問題なく動くようなら、下を有効にしてよい。
+#   dotnet = "10"
+
+# Rust は mise では管理しない。
+# このリポジトリは x86_64-pc-windows-gnu (msys2 の mingw とリンクする GNU ABI) と、
+# mcu/ 用の xtensa ツールチェインの 2 つを必要とする。どちらも rustup 固有の機能で
+# mise の rust プラグインでは表現できないため、引き続き rustup が入れる。
+
+[env]
+# sqlx がコンパイル時のクエリ検証で読む。実体は scripts/Bootstrap-Windows.ps1 が
+# migrations/ から作る。{{config_root}} なのでどの OS でも正しい場所を指す。
+# Windows では scripts/Enter-DevShell.ps1 が ASCII ジャンクション側のパスで上書きする
+# (GNU ツールチェインが "ドキュメント" のような非 ASCII パスで壊れるため)。
+DATABASE_URL = "sqlite://{{config_root}}/.tools/dev.db"
+
+# タスクは bash で実行する。
+# mise は Windows では既定で cmd.exe を使うため、明示しないと .sh を起動できない。
+# Windows の bash は Git for Windows 同梱のものを使う (PATH に無ければ
+# scripts/Enter-DevShell.ps1 を読み込んだシェルから実行すること)。
+
+[tasks.proto]
+description = "api/proto から C# を生成してコミット対象を更新する"
+shell = "bash -c"
+run = "scripts/generate-proto.sh"
+
+[tasks."proto:check"]
+description = "コミット済みの C# が api/proto と一致しているか確認する"
+shell = "bash -c"
+run = "scripts/generate-proto.sh --check"

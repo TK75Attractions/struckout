@@ -8,7 +8,9 @@ namespace Struckout.Domain
         private static readonly Dictionary<ConnectionState, HashSet<ConnectionState>> _transitions =
         new()
         {
-            { ConnectionState.Connected, new(){ ConnectionState.Disconnecting } },
+            // Connected -> Failed は「通信中に切れた」。
+            // これが無いと受信ループがエラーで抜けたことを状態に反映できない。
+            { ConnectionState.Connected, new(){ ConnectionState.Disconnecting, ConnectionState.Failed } },
             { ConnectionState.Connecting, new(){ ConnectionState.Connected, ConnectionState.Failed } },
             { ConnectionState.Disconnected, new(){ ConnectionState.Connecting } },
             { ConnectionState.Disconnecting, new(){ ConnectionState.Disconnected, ConnectionState.Failed } },
