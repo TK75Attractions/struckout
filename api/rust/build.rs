@@ -2,10 +2,10 @@ use std::{path::PathBuf, str::FromStr};
 
 fn main() -> std::io::Result<()> {
     let proto_files = [
-        "../proto/struckout.proto",
-        "../proto/collision.proto",
+        "../proto/ball-tracker__projector.proto",
+        "../proto/camera__ball-tracker.proto",
+        "../proto/game-master.proto",
         "../proto/xtask_sync.proto",
-        "../proto/master_and_projector.proto",
     ];
     let includes = ["../proto/"];
     proto_files
