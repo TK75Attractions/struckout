@@ -52,13 +52,3 @@ DATABASE_URL = "sqlite://{{config_root}}/.tools/dev.db"
 # mise は Windows では既定で cmd.exe を使うため、明示しないと .sh を起動できない。
 # Windows の bash は Git for Windows 同梱のものを使う (PATH に無ければ
 # scripts/Enter-DevShell.ps1 を読み込んだシェルから実行すること)。
-
-[tasks.proto]
-description = "api/proto から C# を生成してコミット対象を更新する"
-shell = "bash -c"
-run = "scripts/generate-proto.sh"
-
-[tasks."proto:check"]
-description = "コミット済みの C# が api/proto と一致しているか確認する"
-shell = "bash -c"
-run = "scripts/generate-proto.sh --check"
