@@ -1,0 +1,28 @@
+services:
+  app:
+    depends_on:
+      - db
+    build:
+      context: ../
+      dockerfile: ./game_master/Dockerfile
+    ports:
+      - 8080:8080
+    env_file:
+      - .env
+    environment:
+      - MYSQL_USER=game-master
+      - MYSQL_PASWORD=${MYSQL_PASSWORD}
+    
+  db:
+    image: mysql:latest
+    env_file:
+      - .env
+    environment:
+      - MYSQL_DATABASE=struckout
+      - MYSQL_USER=game-master
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    
+volumes:
+  mysql_data:

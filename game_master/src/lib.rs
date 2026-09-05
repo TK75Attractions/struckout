@@ -1,118 +1,57 @@
-use slint::ComponentHandle;
-use sqlx::sqlite::SqlitePoolOptions;
-use std::cell::RefCell;
-use std::rc::Rc;
-use stern::WorkerThread;
-use tokio::{net::TcpListener, sync::oneshot};
-use tracing::info;
+use std::pin::Pin;
 
-use crate::{
-    data::{player::PlayerRepository, projector::ProjectorTransport},
-    presentation::{attach_navhost, init_connection},
-    session::SessionManager,
-    ui::NavRoute,
+use tokio_stream::Stream;
+use tonic::{Request, Response};
+
+use crate::proto::{
+    AddScoreRequest, AddScoreResponse, Event, ListenEventsRequest, StartGameRequest,
+    game_master_service_server::GameMasterService,
 };
 
-mod ui {
-    slint::include_modules!();
+pub mod proto {
+    tonic::include_proto!("tk75attractions.struckout.v1");
+}
 
-    #[stern::route]
-    #[derive(Debug, Clone)]
-    pub enum NavRoute {
-        Start,
-        NameInput,
-        DifficulitySelect,
-        Playing(self::Difficulity),
-        Score,
-        Ranking,
-        Fallback(String),
-        ConnectionFailed(String),
-        Connecting,
+#[derive(Debug, Cloe, Copy)]
+pub struct GameId(i32);
+
+#[derive(Debug, Clone, Copy)]
+pub struct MachineId(i32);
+
+pub struct Game {
+    machine_id: MachineId,
+    game_id: GameId,
+    score: i32,
+}
+
+pub struct GameMasterServiceImpl {
+    running_games: Vec<Game>,
+}
+
+#[tonic::async_trait]
+impl GameMasterService for GameMasterServiceImpl {
+    type StartGameStream = Pin<Box<dyn Stream<Item = Result<Event, tonic::Status>> + Send>>;
+
+    type ListenEventsStream = Pin<Box<dyn Stream<Item = Result<Event, tonic::Status>> + Send>>;
+
+    async fn start_game(
+        &self,
+        req: Request<StartGameRequest>,
+    ) -> Result<Response<Self::StartGameStream>, tonic::Status> {
+        todo!()
     }
-}
 
-mod data;
-mod presentation;
-mod session;
-mod state_ext;
-
-const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
-
-type NavController = stern::nav::NavController<NavRoute>;
-type NavHost = stern::nav::NavHost<NavRoute>;
-type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;
-type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
-
-struct Application {
-    nav_controller: NavController,
-    ui: ui::AppWindow,
-    repositories: RepositoryOwner,
-    session_manager: Rc<RefCell<SessionManager>>,
-}
-
-/// Container for repositories.
-struct RepositoryOwner {
-    pub player: Rc<PlayerRepository>,
-    pub projector: Rc<RefCell<ProjectorTransport>>,
-    #[allow(dead_code)] // チャンネルを生存させるために必要
-    pub worker: WorkerThread,
-}
-
-impl RepositoryOwner {
-    fn new() -> Self {
-        let worker = WorkerThread::new();
-        let (tx, rx) = oneshot::channel();
-        worker.spawn(async move {
-            let res = SqlitePoolOptions::new()
-                .max_connections(5)
-                .connect(SQLITE_DEFAULT_URL)
-                .await;
-            tx.send(res).unwrap();
-        });
-
-        // FIXME: 普通にブロックする. slint::spawn_local()など
-        let pool = rx
-            .blocking_recv()
-            .unwrap()
-            .expect("failed to connec to database");
-        Self {
-            player: Rc::new(PlayerRepository::new(pool, &worker)),
-            projector: Rc::new(RefCell::new(ProjectorTransport::new::<TcpListener>(
-                &worker,
-            ))),
-            worker,
-        }
+    async fn listen_events(
+        &self,
+        req: Request<ListenEventsRequest>,
+    ) -> Result<Response<Self::ListenEventsStream>, tonic::Status> {
+        todo!()
     }
-}
 
-pub fn run_main() {
-    let ui = ui::AppWindow::new().unwrap();
-
-    let nav_controller = NavController::new(ui::NavRoute::Connecting, {
-        let ui = ui.as_weak();
-
-        move |route| {
-            let ui = ui.unwrap();
-            ui.set_nav_route(route.into());
-        }
-    });
-    let repositories = RepositoryOwner::new();
-    let session_manager = Rc::new(RefCell::new(SessionManager::new(
-        repositories.projector.clone(),
-    )));
-
-    let application = Application {
-        nav_controller,
-        ui,
-        session_manager,
-        repositories,
-    };
-
-    attach_navhost(&application);
-
-    // NavHostを初期化したあとで
-    init_connection(&application);
-
-    info!("starting event loop");
-    application.ui.run().unwrap();
+    async fn add_score(
+        &self,
+        req: Request<AddScoreRequest>,
+    ) -> Result<Response<AddScoreResponse>, tonic::Status> {
+        todo!()
+    }
 }

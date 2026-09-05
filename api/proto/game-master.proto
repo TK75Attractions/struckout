@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.v1;
+
+enum Difficulty {
+  DIFFICULTY_UNSPECIFIED = 0;
+  DIFFICULTY_NORMAL = 1;
+  DIFFICULTY_HARD = 2;
+  DIFFICULTY_VERYHARD = 3;
+}
+
+message StartGameRequest {
+  int32 machine_id = 1;
+  Difficulty difficulty = 2;
+}
+
+message ListenEventsRequest {}
+
+message AddScoreRequest {
+  int32 machine_id = 1;
+  int32 game_id = 2;
+  int32 score_to_add = 3;
+}
+
+message AddScoreResponse {}
+
+message Event {
+  message GameStarted {
+    int32 machine_id = 1;
+    Difficulty difficulty = 2;
+    int32 game_id = 3;
+  }
+
+  oneof data {
+    GameStarted game_started = 1;
+  }
+}
+
+// Service provided by `game_master`.
+service GameMasterService {
+  // Used by `touchpanel`.
+  rpc StartGame(StartGameRequest) returns (stream Event);
+
+  // Notify events occured in game_master.
+  rpc ListenEvents(ListenEventsRequest) returns (stream Event);
+
+  // Adds score for the game. Used by `projector`.
+  rpc AddScore(AddScoreRequest) returns (AddScoreResponse);
+}
