@@ -1,0 +1,36 @@
+name: Proto CI
+
+on:
+  push:
+    branches: main
+    paths:
+      - api/proto/**
+      - projector/Assets/Scripts/ProtoBuf/Generated/**
+      - sandbox/testTcpCLI/Network/Protocol/Generated/**
+      - scripts/generate-proto.sh
+      - mise.toml
+      - .github/workflows/proto_ci.yml
+  pull_request:
+    paths:
+      - api/proto/**
+      - projector/Assets/Scripts/ProtoBuf/Generated/**
+      - sandbox/testTcpCLI/Network/Protocol/Generated/**
+      - scripts/generate-proto.sh
+      - mise.toml
+      - .github/workflows/proto_ci.yml
+  workflow_dispatch:
+
+jobs:
+  generated-csharp-is-up-to-date:
+    name: Generated C# is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # protoc のバージョンは mise.toml が唯一の定義。
+      # 生成される C# は Google.Protobuf ランタイムと対なので、
+      # ここで別途ピン留めすると二重管理になる。
+      - uses: jdx/mise-action@v4
+
+      - name: Check generated code against api/proto
+        run: mise run proto:check
