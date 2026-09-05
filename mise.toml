@@ -24,6 +24,10 @@ protoc = "35.1"
 
 # struckoutCameraApp (Gradle) 用。JAVA_HOME は mise が設定する。
 java = "temurin-21"
+buf = "latest"
+"rust" = "latest"
+"cargo:slint-viewer" = "latest"
+"cargo:sqlx-cli" = "latest"
 
 # .NET SDK はあえて mise に入れていない。
 # mise の dotnet バックエンドは Windows で
@@ -35,11 +39,6 @@ java = "temurin-21"
 # Windows は scripts/Bootstrap-Windows.ps1 の dotnet-install.ps1 が入れる (.tools/dotnet)。
 # 非 Windows で問題なく動くようなら、下を有効にしてよい。
 #   dotnet = "10"
-
-# Rust は mise では管理しない。
-# このリポジトリは x86_64-pc-windows-gnu (msys2 の mingw とリンクする GNU ABI) と、
-# mcu/ 用の xtensa ツールチェインの 2 つを必要とする。どちらも rustup 固有の機能で
-# mise の rust プラグインでは表現できないため、引き続き rustup が入れる。
 
 [env]
 # sqlx がコンパイル時のクエリ検証で読む。実体は scripts/Bootstrap-Windows.ps1 が

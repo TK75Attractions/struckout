@@ -14,18 +14,13 @@ $asciiRepoRoot = Join-Path $asciiWorkspaceRoot "struckout"
 $asciiSlintRoot = Join-Path $asciiWorkspaceRoot "slint"
 $toolsRoot = Join-Path $repoRoot ".tools"
 $cacheRoot = Join-Path $toolsRoot "cache"
-$rustToolsRoot = Join-Path $asciiWorkspaceRoot ".struckout-tools"
-$cargoHome = Join-Path $rustToolsRoot "cargo"
-$rustupHome = Join-Path $rustToolsRoot "rustup"
 $dotnetRoot = Join-Path $toolsRoot "dotnet"
 $miseRoot = Join-Path $toolsRoot "mise"
 $miseVersion = "2026.9.1"
 $androidSdkRoot = Join-Path $toolsRoot "android-sdk"
 $unityRoot = Join-Path $asciiWorkspaceRoot "Unity\6000.5.2f1"
-$rustToolchain = "stable-x86_64-pc-windows-gnu"
 
 New-Item -ItemType Directory -Force -Path $cacheRoot | Out-Null
-New-Item -ItemType Directory -Force -Path $rustToolsRoot | Out-Null
 
 # GNU binutils cannot reliably handle the Japanese workspace path on Windows.
 # Keep the real files in place and expose ASCII-only junctions for compilation.
@@ -50,18 +45,6 @@ Get-ToolFile -Uri "https://dot.net/v1/dotnet-install.ps1" -Destination $dotnetIn
 if (-not (Test-Path -LiteralPath (Join-Path $dotnetRoot "dotnet.exe"))) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $dotnetInstall -Channel "10.0" -InstallDir $dotnetRoot -NoPath
 }
-
-$env:CARGO_HOME = $cargoHome
-$env:RUSTUP_HOME = $rustupHome
-$rustupInit = Join-Path $cacheRoot "rustup-init.exe"
-Get-ToolFile -Uri "https://win.rustup.rs/x86_64" -Destination $rustupInit
-if (-not (Test-Path -LiteralPath (Join-Path $cargoHome "bin\cargo.exe"))) {
-    & $rustupInit -y --no-modify-path --profile minimal --default-toolchain $rustToolchain
-}
-$rustup = Join-Path $cargoHome "bin\rustup.exe"
-& $rustup toolchain install $rustToolchain --profile minimal
-& $rustup default $rustToolchain
-& $rustup component add rustfmt clippy --toolchain $rustToolchain
 
 # protoc and the JDK are pinned in mise.toml so that macOS and Linux get the same
 # versions from the same file. Install mise itself first, then let it install those.
@@ -143,8 +126,6 @@ if (-not $SkipSlint) {
 
 Write-Host ""
 Write-Host "Installed versions:"
-& cargo --version
-& rustc --version
 & dotnet --version
 & protoc --version
 if ($env:JAVA_HOME) { & (Join-Path $env:JAVA_HOME "bin\java.exe") -version }
