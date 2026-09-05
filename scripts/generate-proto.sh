@@ -33,16 +33,39 @@ done
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
 
 # C# 側が必要とする .proto だけを生成する。
-# struckout.proto (camera <-> tracker) と xtask_sync.proto は C# からは使わない。
+# camera__ball-tracker.proto と xtask_sync.proto は C# からは使わない。
 proto_files=(
-    "collision.proto"
-    "master_and_projector.proto"
+    "ball-tracker__projector.proto"
+    "game-master.proto"
 )
 
+# game-master.proto は gRPC のサービス定義なので、メッセージだけでなく
+# クライアントのスタブも要る。protoc 単体では作れず grpc_csharp_plugin が要る。
+grpc_proto_files=(
+    "game-master.proto"
+)
+
+# 出力先ごとに要るものが違う。
+#   projector      : 全部。game_master とは gRPC で話すのでスタブも要る。
+#   testTcpCLI     : 偽 ball_tracker としてしか使わないのでメッセージだけ。
+#                    gRPC スタブを置くと Grpc.Core.Api を参照していないぶんビルドが壊れる。
 output_dirs=(
     "$repo_root/projector/Assets/Scripts/ProtoBuf/Generated"
     "$repo_root/sandbox/testTcpCLI/Network/Protocol/Generated"
 )
+
+wants_file() {
+    local output_dir="$1" filename="$2"
+    case "$output_dir" in
+        */sandbox/testTcpCLI/*)
+            case "$filename" in
+                BallTrackerProjector.cs) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
+        *) return 0 ;;
+    esac
+}
 
 # protoc がネイティブの Windows 実行ファイルのとき、bash 側のパスをそのまま渡せない。
 to_native_path() {
@@ -91,6 +114,68 @@ resolve_protoc() {
     exit 1
 }
 
+# grpc_csharp_plugin は Grpc.Tools NuGet に同梱されていて、単体配布も mise の
+# バックエンドも無い。そのため必要なときだけ nupkg を取ってきて .tools/ に展開する。
+# バージョンは projector/Assets/packages.config の Grpc.* と揃えること。
+grpc_tools_version="2.61.0"
+
+resolve_grpc_csharp_plugin() {
+    if [ -n "${GRPC_CSHARP_PLUGIN:-}" ]; then
+        local from_env
+        from_env=$(to_bash_path "$GRPC_CSHARP_PLUGIN")
+        if [ -x "$from_env" ]; then
+            printf '%s' "$from_env"
+            return
+        fi
+    fi
+
+    if command -v grpc_csharp_plugin >/dev/null 2>&1; then
+        command -v grpc_csharp_plugin
+        return
+    fi
+
+    local platform exe
+    exe=""
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) platform="windows_x64"; exe=".exe" ;;
+        Darwin)
+            case "$(uname -m)" in
+                arm64) platform="macosx_arm64" ;;
+                *)     platform="macosx_x64" ;;
+            esac
+            ;;
+        *)
+            case "$(uname -m)" in
+                aarch64|arm64) platform="linux_arm64" ;;
+                *)             platform="linux_x64" ;;
+            esac
+            ;;
+    esac
+
+    local cache_dir plugin
+    cache_dir="$repo_root/.tools/grpc-tools-$grpc_tools_version"
+    plugin="$cache_dir/tools/$platform/grpc_csharp_plugin$exe"
+
+    if [ ! -x "$plugin" ]; then
+        echo "downloading Grpc.Tools $grpc_tools_version for $platform ..." >&2
+        local archive
+        archive="$cache_dir.nupkg"
+        mkdir -p "$cache_dir"
+        curl -fsSL -o "$archive" \
+            "https://www.nuget.org/api/v2/package/Grpc.Tools/$grpc_tools_version"
+        unzip -qo "$archive" "tools/$platform/*" -d "$cache_dir"
+        rm -f "$archive"
+        chmod +x "$plugin" 2>/dev/null || true
+    fi
+
+    if [ ! -x "$plugin" ]; then
+        echo "grpc_csharp_plugin not found at $plugin" >&2
+        exit 1
+    fi
+
+    printf '%s' "$plugin"
+}
+
 protoc=$(resolve_protoc)
 
 # protoc はネイティブ実行ファイルなので、非 ASCII を含むパスを引数で受け取れない
@@ -104,9 +189,24 @@ if printf '%s' "$staging" | LC_ALL=C grep -q '[^ -~]'; then
     exit 1
 fi
 
+grpc_plugin=$(resolve_grpc_csharp_plugin)
+
+# protoc はプラグインのパスも非 ASCII だと解決できない。
+# staging は ASCII であることを上で確認済みなので、そこに複製して渡す。
+cp "$grpc_plugin" "$staging/$(basename "$grpc_plugin")"
+grpc_plugin="$staging/$(basename "$grpc_plugin")"
+
 (
     cd "$repo_root/api/proto"
     "$protoc" --proto_path=. --csharp_out="$(to_native_path "$staging")" "${proto_files[@]}"
+
+    # サービス定義のあるものだけ、クライアントとサーバのスタブも出す。
+    # --csharp_out と分けているのは、サービスの無い .proto に --grpc_out を渡すと
+    # 中身のない *Grpc.cs が並んでしまうため。
+    "$protoc" --proto_path=. \
+        --grpc_out="$(to_native_path "$staging")" \
+        --plugin="protoc-gen-grpc=$(to_native_path "$grpc_plugin")" \
+        "${grpc_proto_files[@]}"
 )
 
 shopt -s nullglob
@@ -133,6 +233,10 @@ for output_dir in "${output_dirs[@]}"; do
     fi
 
     for source in "${generated[@]}"; do
+        if ! wants_file "$output_dir" "$(basename "$source")"; then
+            continue
+        fi
+
         destination="$output_dir/$(basename "$source")"
 
         if $check; then
