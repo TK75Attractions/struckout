@@ -4,4 +4,5 @@ lint:
     - STANDARD
   except: 
     - PACKAGE_DIRECTORY_MATCH
+    - FILE_LOWER_SNAKE_CASE
     

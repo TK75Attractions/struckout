@@ -1,0 +1,3 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.v1;
