@@ -18,8 +18,8 @@ $rustToolsRoot = Join-Path $asciiWorkspaceRoot ".struckout-tools"
 $cargoHome = Join-Path $rustToolsRoot "cargo"
 $rustupHome = Join-Path $rustToolsRoot "rustup"
 $dotnetRoot = Join-Path $toolsRoot "dotnet"
-$protocRoot = Join-Path $toolsRoot "protoc-35.1"
-$jdk21Root = Join-Path $toolsRoot "jdk-21"
+$miseRoot = Join-Path $toolsRoot "mise"
+$miseVersion = "2026.9.1"
 $androidSdkRoot = Join-Path $toolsRoot "android-sdk"
 $unityRoot = Join-Path $asciiWorkspaceRoot "Unity\6000.5.2f1"
 $rustToolchain = "stable-x86_64-pc-windows-gnu"
@@ -63,20 +63,19 @@ $rustup = Join-Path $cargoHome "bin\rustup.exe"
 & $rustup default $rustToolchain
 & $rustup component add rustfmt clippy --toolchain $rustToolchain
 
-$protocZip = Join-Path $cacheRoot "protoc-35.1-win64.zip"
-Get-ToolFile -Uri "https://github.com/protocolbuffers/protobuf/releases/download/v35.1/protoc-35.1-win64.zip" -Destination $protocZip
-if (-not (Test-Path -LiteralPath (Join-Path $protocRoot "bin\protoc.exe"))) {
-    Expand-Archive -LiteralPath $protocZip -DestinationPath $protocRoot -Force
+# protoc and the JDK are pinned in mise.toml so that macOS and Linux get the same
+# versions from the same file. Install mise itself first, then let it install those.
+$mise = (Get-Command mise -ErrorAction SilentlyContinue).Source
+if (-not $mise) {
+    $mise = Join-Path $miseRoot "bin\mise.exe"
+    if (-not (Test-Path -LiteralPath $mise)) {
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $mise) | Out-Null
+        Get-ToolFile -Uri "https://github.com/jdx/mise/releases/download/v$miseVersion/mise-v$miseVersion-windows-x64.exe" -Destination $mise
+    }
 }
-
-$jdk21Zip = Join-Path $cacheRoot "OpenJDK21.zip"
-Get-ToolFile -Uri "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse" -Destination $jdk21Zip
-$jdk21 = Get-ChildItem -LiteralPath $jdk21Root -Directory -ErrorAction SilentlyContinue |
-    Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "bin\java.exe") } |
-    Select-Object -First 1 -ExpandProperty FullName
-if (-not $jdk21) {
-    Expand-Archive -LiteralPath $jdk21Zip -DestinationPath $jdk21Root -Force
-}
+& $mise trust $repoRoot
+& $mise install
+if ($LASTEXITCODE -ne 0) { throw "mise install failed with exit code $LASTEXITCODE" }
 
 if (-not (Test-Path -LiteralPath "C:\msys64\mingw64\bin\gcc.exe")) {
     if (-not (Test-Path -LiteralPath "C:\msys64\usr\bin\bash.exe")) {
@@ -104,10 +103,8 @@ if (-not $SkipAndroid) {
         Copy-Item -Path (Join-Path $commandLineToolsExtract "cmdline-tools\*") -Destination (Split-Path -Parent (Split-Path -Parent $sdkManager)) -Recurse -Force
     }
 
-    $jdk21 = Get-ChildItem -LiteralPath $jdk21Root -Directory |
-        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "bin\java.exe") } |
-        Select-Object -First 1 -ExpandProperty FullName
-    $env:JAVA_HOME = $jdk21
+    # sdkmanager needs a JDK. Use the one mise.toml pins for the Gradle build.
+    $env:JAVA_HOME = (& $mise where java)
     $env:ANDROID_SDK_ROOT = $androidSdkRoot
     $env:ANDROID_HOME = $androidSdkRoot
     $answers = 1..100 | ForEach-Object { "y" }
@@ -149,5 +146,5 @@ Write-Host "Installed versions:"
 & cargo --version
 & rustc --version
 & dotnet --version
-& $env:PROTOC --version
+& protoc --version
 if ($env:JAVA_HOME) { & (Join-Path $env:JAVA_HOME "bin\java.exe") -version }

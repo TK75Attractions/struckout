@@ -4,6 +4,9 @@ target/
 # Repository-local development toolchains
 .tools/
 
+# Personal mise overrides. mise.toml itself is committed.
+mise.local.toml
+
 # Unity generated state
 projector/[Ll]ibrary/
 projector/[Tt]emp/
