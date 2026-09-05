@@ -1077,7 +1077,7 @@ dependencies = [
 [[package]]
 name = "const-field-offset"
 version = "0.2.1"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "const-field-offset-macro 0.2.1 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "field-offset",
@@ -1095,7 +1095,7 @@ dependencies = [
 [[package]]
 name = "const-field-offset-macro"
 version = "0.2.1"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2005,6 +2005,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tonic",
+ "tonic-prost",
  "tonic-prost-build",
  "tracing",
  "tracing-subscriber",
@@ -2573,7 +2574,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-linuxkms"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "bytemuck",
  "calloop 0.14.4",
@@ -2617,7 +2618,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-selector"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "cfg-if",
  "cfg_aliases",
@@ -2649,7 +2650,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-testing"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "cfg_aliases",
  "i-slint-common 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
@@ -2673,7 +2674,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-winit"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -2765,22 +2766,7 @@ dependencies = [
 [[package]]
 name = "i-slint-common"
 version = "1.18.0"
-dependencies = [
- "derive_more",
- "fontique",
- "htmlparser",
- "icu_decimal",
- "icu_locale_core",
- "icu_provider",
- "pulldown-cmark",
- "resvg",
- "skrifa 0.43.2",
-]
-
-[[package]]
-name = "i-slint-common"
-version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "derive_more",
  "fontique",
@@ -2812,12 +2798,13 @@ dependencies = [
 [[package]]
 name = "i-slint-compiler"
 version = "1.18.0"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "annotate-snippets",
  "by_address",
  "data-url",
  "derive_more",
- "i-slint-common 1.18.0",
+ "i-slint-common 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "icu_normalizer",
  "image",
  "itertools 0.14.0",
@@ -2835,32 +2822,6 @@ dependencies = [
  "smol_str 0.3.6",
  "strum",
  "swash",
- "typed-index-collections",
- "unicode-segmentation",
- "url",
-]
-
-[[package]]
-name = "i-slint-compiler"
-version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
-dependencies = [
- "annotate-snippets",
- "by_address",
- "data-url",
- "derive_more",
- "i-slint-common 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
- "icu_normalizer",
- "itertools 0.14.0",
- "linked_hash_set",
- "lyon_extra",
- "lyon_path",
- "num_enum",
- "proc-macro2",
- "quote",
- "rowan",
- "smol_str 0.3.6",
- "strum",
  "typed-index-collections",
  "unicode-segmentation",
  "url",
@@ -2895,7 +2856,7 @@ dependencies = [
 [[package]]
 name = "i-slint-core"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "async-channel",
  "auto_enums",
@@ -3001,7 +2962,7 @@ dependencies = [
 [[package]]
 name = "i-slint-core-macros"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "quote",
  "serde_json",
@@ -3021,7 +2982,7 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-femtovg"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "cfg-if",
  "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
@@ -3063,7 +3024,7 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-skia"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "bytemuck",
  "cfg-if",
@@ -3135,7 +3096,7 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-software"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "bytemuck",
  "clru",
@@ -5321,6 +5282,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring"
+version = "0.17.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7"
+dependencies = [
+ "cc",
+ "cfg-if",
+ "getrandom 0.2.17",
+ "libc",
+ "untrusted",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "rowan"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5399,6 +5374,40 @@ dependencies = [
  "libc",
  "linux-raw-sys 0.12.1",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "rustls"
+version = "0.23.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+dependencies = [
+ "once_cell",
+ "ring",
+ "rustls-pki-types",
+ "rustls-webpki",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "rustls-pki-types"
+version = "1.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f4925028c7eb5d1fcdaf196971378ed9d2c1c4efc7dc5d011256f76c99c0a96"
+dependencies = [
+ "zeroize",
+]
+
+[[package]]
+name = "rustls-webpki"
+version = "0.103.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+dependencies = [
+ "ring",
+ "rustls-pki-types",
+ "untrusted",
 ]
 
 [[package]]
@@ -5732,7 +5741,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 [[package]]
 name = "slint"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "i-slint-backend-selector 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
@@ -5772,10 +5781,11 @@ dependencies = [
 [[package]]
 name = "slint-build"
 version = "1.18.0"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "derive_more",
  "fontique",
- "i-slint-compiler 1.18.0",
+ "i-slint-compiler 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "spin_on",
  "toml_edit 0.25.12+spec-1.1.0",
 ]
@@ -5783,7 +5793,7 @@ dependencies = [
 [[package]]
 name = "slint-macros"
 version = "1.18.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "i-slint-compiler 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "proc-macro2",
@@ -5980,6 +5990,7 @@ dependencies = [
  "log",
  "memchr",
  "percent-encoding",
+ "rustls",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -5990,6 +6001,7 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "url",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -6209,6 +6221,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "subtle"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "svgtypes"
@@ -6667,6 +6685,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tonic-prost"
+version = "0.14.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50849f68853be452acf590cde0b146665b8d507b3b8af17261df47e02c209ea0"
+dependencies = [
+ "bytes",
+ "prost",
+ "tonic",
+]
+
+[[package]]
 name = "tonic-prost-build"
 version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6977,6 +7006,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
+name = "untrusted"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
 name = "unty"
 version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7078,7 +7113,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vtable"
 version = "0.5.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "portable-atomic",
@@ -7100,7 +7135,7 @@ dependencies = [
 [[package]]
 name = "vtable-macro"
 version = "0.5.0"
-source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#bd366fdd327adf281b0fea43061a1fc42b9214ee"
+source = "git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute#5dd2241277b987cc8ddac110d1db5cee3982aa30"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7349,6 +7384,15 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "url",
  "web-sys",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]
@@ -8059,6 +8103,12 @@ dependencies = [
  "syn",
  "synstructure",
 ]
+
+[[package]]
+name = "zeroize"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
 
 [[package]]
 name = "zerotrie"

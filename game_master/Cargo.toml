@@ -6,14 +6,15 @@ edition.workspace = true
 [dependencies]
 prost = { workspace = true }
 tonic = { workspace = true }
-tokio = { workspace = true, features = ["rt","macros"] }
+tonic-prost = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread","macros"] }
 tokio-stream = { workspace = true }
 
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
-sqlx = { workspace = true, features = ["mysql","runtime-tokio","migrate","sqlx-toml"] }
+sqlx = { workspace = true, features = ["mysql","runtime-tokio","tls-rustls","migrate","sqlx-toml"] }
 
 [build-dependencies]
 tonic-prost-build = { workspace = true }
