@@ -32,17 +32,24 @@ flowchart TD
         camera2_2("fa:fa-camera Camera")
     end
 
-    subgraph dashboard_暇だったら作る
-        worker("fab:fa-cloudflare Worker")
-        do("fab:fa-cloudflare Durable Objects")
-    end
+    %%subgraph dashboard_暇だったら作る
+    %%    worker("fab:fa-cloudflare Worker")
+    %%    do("fab:fa-cloudflare Durable Objects")
+    %%end
 
     database("fa:fa-database MySQL")
 
     game_master("Game Master")
 
-    camera1_1 & camera1_2 --USB--> ball_tracker1 --Ethernet--> projector1 <--> touchpanel1
+    camera1_1 & camera1_2 --USB--> ball_tracker1
+    camera2_1 & camera2_2 --USB--> ball_tracker2 
 
-    camera2_1 & camera2_2 --USB--> ball_tracker2 --Ethernet--> projector2 <--> touchpanel2
+    projector1 --Ethernet--> ball_tracker1
+    projector2 --Ethernet--> ball_tracker2
 
     touchpanel1 & touchpanel2 --> game_master <--> database
+
+    projector1 & projector2 --> game_master
+
+    ball_tracker1 ~~~ projector1 ~~~ game_master
+    ball_tracker2 ~~~ projector2 ~~~ game_master
