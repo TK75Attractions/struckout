@@ -7,9 +7,9 @@ namespace Struckout.Unity
         void Initialize(Target target);
 
         /// <summary>
-        /// 当たったときの見た目。的は消えず、
-        /// <paramref name="cooldownSeconds"/> の間だけ当たらない状態を示す。
+        /// 的が動いたときに呼ぶ。<paramref name="target"/> は既に新しい座標を持っている。
+        /// 的は消えないので、同じ GameObject がそのまま移る。
         /// </summary>
-        void OnCollision(float cooldownSeconds);
+        void MoveTo(Target target);
     }
 }

@@ -31,8 +31,8 @@ namespace Struckout.Unity
         private Color _hitColor = new(0.35f, 1f, 0.45f, 0.9f);
 
         [SerializeField]
-        [Tooltip("的には当たったが、クールダウン中で得点にならなかったとき。")]
-        private Color _coolingDownColor = new(1f, 0.9f, 0.25f, 0.9f);
+        [Tooltip("ゲームが始まっていないので判定しなかったとき。")]
+        private Color _ignoredColor = new(1f, 0.9f, 0.25f, 0.9f);
 
         [SerializeField]
         [Tooltip("どの的にも当たらなかったとき。")]
@@ -115,7 +115,7 @@ namespace Struckout.Unity
             var colour = result switch
             {
                 CollisionResult.Scored => _hitColor,
-                CollisionResult.CoolingDown => _coolingDownColor,
+                CollisionResult.Ignored => _ignoredColor,
                 _ => _missColor,
             };
 
@@ -159,19 +159,18 @@ namespace Struckout.Unity
             return rect;
         }
 
-        public void OnTargetHit(Target target, float cooldownSeconds)
+        public void MoveTarget(Target target)
         {
             if (!_targetToTransform.TryGetValue(target, out var transform))
             {
                 Debug.LogWarning(
-                    $"No UI for the target at ({target.Coordinate.X:F1}, {target.Coordinate.Y:F1}). " +
-                    $"UI count={_targetToTransform.Count}");
+                    $"No UI for {target}. UI count={_targetToTransform.Count}");
                 return;
             }
 
             if (transform == null)
             {
-                Debug.LogWarning("The target UI has been destroyed unexpectedly.");
+                Debug.LogWarning($"The UI for {target} has been destroyed unexpectedly.");
                 _targetToTransform.Remove(target);
                 return;
             }
@@ -185,8 +184,9 @@ namespace Struckout.Unity
                     return;
                 }
 
-                // 的は消さない。クールダウンの見た目にするだけ。
-                targetui.OnCollision(cooldownSeconds);
+                // 的は消さない。同じ GameObject を新しい座標へ移すだけ。
+                // Target は同一性で扱うので、辞書の対応づけはそのままでよい。
+                targetui.MoveTo(target);
             }
             catch (Exception ex)
             {

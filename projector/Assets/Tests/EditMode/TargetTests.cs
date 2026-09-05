@@ -42,14 +42,39 @@ namespace Struckout.Tests
         }
 
         [Test]
-        public void 同じ値の的は等しいものとして扱われる()
+        public void 座標が同じでも別の的として扱われる()
         {
-            // UIService は Target を辞書の鍵にしているので、値等価が要る。
+            // 的は当たると動く。座標で等価にすると、動かすたびに
+            // UIService の辞書との対応づけが壊れてしまう。
             var a = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
             var b = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
 
-            Assert.That(a, Is.EqualTo(b));
-            Assert.That(a.GetHashCode(), Is.EqualTo(b.GetHashCode()));
+            Assert.That(a, Is.Not.EqualTo(b));
+            Assert.That(a.Id, Is.Not.EqualTo(b.Id));
+        }
+
+        [Test]
+        public void 動かしても同じ的のまま()
+        {
+            var target = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
+            int id = target.Id;
+
+            target.MoveTo(new TargetCoordinate(900f, 500f));
+
+            Assert.That(target.Id, Is.EqualTo(id));
+            Assert.That(target.Coordinate.X, Is.EqualTo(900f));
+            Assert.That(target.Coordinate.Y, Is.EqualTo(500f));
+        }
+
+        [Test]
+        public void 動かしても大きさは変わらない()
+        {
+            var target = new Target(new TargetCoordinate(0f, 0f), TargetType.Circle, 400f);
+
+            target.MoveTo(new TargetCoordinate(100f, 100f));
+
+            Assert.That(target.Diameter, Is.EqualTo(400f));
+            Assert.That(target.Radius, Is.EqualTo(200f));
         }
     }
 }

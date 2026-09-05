@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
@@ -40,8 +41,7 @@ namespace Struckout.Application
 
         public void GameSetup()
         {
-            // 的は最初に置いたきり、位置も個数も変えない。
-            // 撃たれたときは消さずにクールダウンに入る。
+            // 個数は変えない。撃たれた的は消えず、別の場所へ移動する。
             _state.AddTargets(_targetGenerator, _settings.InitialTargetCount, TargetType.Circle);
             UpdateUI();
         }
@@ -76,12 +76,14 @@ namespace Struckout.Application
 
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
-            // StartGame より前に当たっても得点にしない。
+            float x = (float)collisionPoint.X;
+            float y = (float)collisionPoint.Y;
+
+            // StartGame より前に当たっても判定しない。
             // game_master はセッション外の得点を受け取ると panic するため。
             if (_state.Phase != GamePhase.Playing)
             {
-                _uiService.ShowCollisionMarker(
-                    (float)collisionPoint.X, (float)collisionPoint.Y, CollisionResult.Missed);
+                _uiService.ShowCollisionMarker(x, y, CollisionResult.Ignored);
                 Debug.Log($"[Hit] ignored: the game has not started (phase={_state.Phase})");
                 return;
             }
@@ -90,20 +92,12 @@ namespace Struckout.Application
 
             // 着弾位置は当たり外れに関わらず出す。外れが見えないと、
             // 座標変換がずれているのか単に的を外したのかが区別できない。
-            // また「外した」と「クールダウン中の的に当たった」は見た目で区別できないと紛らわしいので、
-            // 結果を 3 状態に分けてマーカーの色を変える。
-            CollisionResult result;
-            if (!hit) result = CollisionResult.Missed;
-            else if (_state.IsCoolingDown(hitTarget)) result = CollisionResult.CoolingDown;
-            else result = CollisionResult.Scored;
+            var result = hit ? CollisionResult.Scored : CollisionResult.Missed;
+            _uiService.ShowCollisionMarker(x, y, result);
 
-            _uiService.ShowCollisionMarker((float)collisionPoint.X, (float)collisionPoint.Y, result);
-
-            if (result != CollisionResult.Scored)
+            if (!hit)
             {
-                Debug.Log(result == CollisionResult.CoolingDown
-                    ? $"[Hit] cooling down: target at ({hitTarget.Coordinate.X:F0}, {hitTarget.Coordinate.Y:F0})"
-                    : $"[Hit] missed: point=({collisionPoint.X:F0}, {collisionPoint.Y:F0}) targets={_state.Targets.Count}");
+                Debug.Log($"[Hit] missed: point=({collisionPoint.X:F0}, {collisionPoint.Y:F0}) targets={_state.Targets.Count}");
                 return;
             }
 
@@ -113,8 +107,26 @@ namespace Struckout.Application
             _state.AddScore(points);
             ScoreAdded?.Invoke(points);
 
-            _state.StartCooldown(hitTarget, _settings.TargetCooldownSeconds);
-            _uiService.OnTargetHit(hitTarget, _settings.TargetCooldownSeconds);
+            MoveAfterHit(hitTarget);
+        }
+
+        /// <summary>
+        /// 当たった的を別の場所へ移す。難易度を問わず共通の挙動
+        /// (docs/projector_behavior.md)。的は消さず、同じものが動く。
+        /// </summary>
+        private void MoveAfterHit(Target hitTarget)
+        {
+            var others = new List<Target>(_state.Targets.Count);
+            foreach (var target in _state.Targets)
+            {
+                if (!ReferenceEquals(target, hitTarget)) others.Add(target);
+            }
+
+            hitTarget.MoveTo(_targetGenerator.PickRelocation(hitTarget, others));
+
+            // 当たり判定は移動先で即座に有効になる。見た目が追いつくまでの短い間だけ
+            // 表示位置と判定位置がずれるが、演出のための猶予なので許容する。
+            _uiService.MoveTarget(hitTarget);
         }
     }
 }
