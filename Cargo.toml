@@ -41,6 +41,7 @@ enum_dispatch = "0.3.13"
 toml= "1.1.5"
 
 prost = "0.14.3"
+prost-types = "0.14.4"
 prost-build = "0.14.3"
 tonic = "0.14.6"
 tonic-prost = "0.14.6"
