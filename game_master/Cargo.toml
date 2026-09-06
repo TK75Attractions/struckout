@@ -12,12 +12,23 @@ tokio-stream = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+derive_more = { workspace = true, features = ["from","into"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 serde = { workspace = true }
 
-sqlx = { workspace = true, features = ["mysql","runtime-tokio","tls-rustls","migrate","sqlx-toml"] }
+sqlx = { workspace = true, features = [
+    "mysql",
+    "runtime-tokio",
+    "tls-rustls",
+    "migrate",
+    "sqlx-toml",
+    "time"]
+}
 toml = { workspace = true }
+
+[dev-dependencies]
+testcontainers-modules = { workspace = true, features = ["mysql"] }
 
 [build-dependencies]
 tonic-prost-build = { workspace = true }

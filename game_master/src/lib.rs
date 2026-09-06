@@ -1,6 +1,7 @@
 use std::{fs::File, io::Read, path::Path};
 
 use anyhow::Context;
+use derive_more::{From, Into};
 use serde::Deserialize;
 
 pub mod proto {
@@ -10,22 +11,19 @@ pub mod proto {
     ));
 }
 
+mod data;
 pub mod service;
 
 /// Corresponds to `game_id` column in `games` table.
-#[derive(Debug, Clone, Copy)]
-pub struct GameId(i32);
+#[derive(Debug, Clone, Copy, Into, From, PartialEq, Eq, Hash)]
+pub struct GameId(u32);
 
 /// Corresponds to `machine_id` column in `games` table.
-#[derive(Debug, Clone, Copy)]
-pub struct MachineId(i32);
+#[derive(Debug, Clone, Copy, Into, From, PartialEq, Eq, Hash)]
+pub struct MachineId(u32);
 
-#[derive(Debug, Clone)]
-pub struct Game {
-    machine_id: MachineId,
-    game_id: GameId,
-    score: i32,
-}
+#[derive(Debug, Clone, Copy, Into, From, PartialEq, Eq, Hash)]
+pub struct PlayerId(u32);
 
 #[derive(Deserialize)]
 pub struct Config {
