@@ -1,8 +1,8 @@
 use std::ffi::OsStr;
 
 use game_master::{
-    Config, proto::game_master_service_server::GameMasterServiceServer,
-    service::GameMasterServiceImpl,
+    Config, DataSourceImpl, GameMasterServiceImpl,
+    proto::game_master_service_server::GameMasterServiceServer,
 };
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
@@ -38,7 +38,8 @@ async fn main() {
     };
     info!("succeed to create MySQL pool");
 
-    let game_master = GameMasterServiceImpl::new(pool);
+    let data_source = DataSourceImpl::new(pool);
+    let game_master = GameMasterServiceImpl::new(data_source);
     let addr = format!("0.0.0.0:{}", config.port)
         .parse()
         .expect("address format should be correct");

@@ -1,75 +1,80 @@
 use std::fmt::Display;
 
-use sqlx::MySql;
+use sqlx::{MySql, Pool};
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{GameId, MachineId, PlayerId, proto::Difficulty};
+use crate::{DataSource, GameId, MachineId, PlayerId, proto::Difficulty};
 
-pub async fn insert_player(
-    pool: &sqlx::Pool<MySql>,
-    name: impl Into<String>,
-) -> Result<PlayerId, sqlx::Error> {
-    let res = sqlx::query!("INSERT INTO players (name) VALUES (?)", name.into())
-        .execute(pool)
-        .await?;
-    let last_inserted: u32 = res
-        .last_insert_id()
-        .try_into()
-        .expect("player_id overflowed");
-    Ok(last_inserted.into())
+pub struct DataSourceImpl {
+    pool: Pool<MySql>,
 }
 
-/// Inserts new game into database.
-///
-/// `started_at` takes [`UtcDateTime`] because it is clearly defined as UTC time and not local time,
-/// but in the function it will be converted to [`PlainDateTime`] since `sqlx`'s MySQL type mapping does not
-/// support [`UtcDateTime`].
-///
-/// See also: [https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html#time]
-pub async fn insert_game(
-    pool: &sqlx::Pool<MySql>,
-    machine_id: MachineId,
-    player_id: PlayerId,
-    started_at: UtcDateTime,
-    difficulty: Difficulty,
-) -> Result<GameId, sqlx::Error> {
-    let machine_id: u32 = machine_id.into();
-    let player_id: u32 = player_id.into();
-    let started_at = PlainDateTime::new(started_at.date(), started_at.time());
-    let res = sqlx::query!(
-        "INSERT INTO games (
+impl DataSourceImpl {
+    pub fn new(pool: Pool<MySql>) -> Self {
+        Self { pool }
+    }
+}
+
+impl DataSource for DataSourceImpl {
+    async fn add_player(&self, name: impl Into<String> + Send) -> Result<PlayerId, sqlx::Error> {
+        let res = sqlx::query!("INSERT INTO players (name) VALUES (?)", name.into())
+            .execute(&self.pool)
+            .await?;
+        let last_inserted: u32 = res
+            .last_insert_id()
+            .try_into()
+            .expect("player_id overflowed");
+        Ok(last_inserted.into())
+    }
+
+    /// Inserts new game into database.
+    ///
+    /// `started_at` takes [`UtcDateTime`] because it is clearly defined as UTC time and not local time,
+    /// but in the function it will be converted to [`PlainDateTime`] since `sqlx`'s MySQL type mapping does not
+    /// support [`UtcDateTime`].
+    ///
+    /// See also: [https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html#time]
+    async fn insert_game(
+        &self,
+        machine_id: MachineId,
+        player_id: PlayerId,
+        started_at: UtcDateTime,
+        difficulty: Difficulty,
+    ) -> Result<GameId, sqlx::Error> {
+        let machine_id: u32 = machine_id.into();
+        let player_id: u32 = player_id.into();
+        let started_at = PlainDateTime::new(started_at.date(), started_at.time());
+        let res = sqlx::query!(
+            "INSERT INTO games (
+                machine_id,
+                player_id,
+                started_at ,
+                difficulty,
+                status
+            ) VALUES (?, ?, ?, ?, 'running')",
             machine_id,
             player_id,
-            started_at ,
-            difficulty,
-            status
-        ) VALUES (?, ?, ?, ?, 'running')",
-        machine_id,
-        player_id,
-        started_at,
-        difficulty.to_string()
-    )
-    .execute(pool)
-    .await?;
-    let last_insert_id: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
-    Ok(last_insert_id.into())
-}
+            started_at,
+            difficulty.to_string()
+        )
+        .execute(&self.pool)
+        .await?;
+        let last_insert_id: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
+        Ok(last_insert_id.into())
+    }
 
-/// Completes the game with final score.
-pub async fn complete_game(
-    pool: &sqlx::Pool<MySql>,
-    game_id: GameId,
-    score: u32,
-) -> Result<(), sqlx::Error> {
-    let game_id: u32 = game_id.into();
-    sqlx::query!(
-        "UPDATE games SET status = 'finished', score = ? WHERE game_id = ?",
-        score,
-        game_id
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
+    /// Completes the game with final score.
+    async fn complete_game(&self, game_id: GameId, score: u32) -> Result<(), sqlx::Error> {
+        let game_id: u32 = game_id.into();
+        sqlx::query!(
+            "UPDATE games SET status = 'finished', score = ? WHERE game_id = ?",
+            score,
+            game_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
 }
 
 impl Display for Difficulty {
@@ -86,15 +91,10 @@ impl Display for Difficulty {
 
 #[cfg(test)]
 mod tests {
-    use sqlx::{MySql, mysql::MySqlPoolOptions};
+    use super::*;
+    use sqlx::mysql::MySqlPoolOptions;
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
     use time::{Date, Month, Time};
-
-    use crate::{
-        GameId, MachineId, PlayerId,
-        data::{complete_game, insert_game, insert_player},
-        proto::Difficulty,
-    };
 
     async fn init_mysql() -> (
         ContainerAsync<testcontainers_modules::mysql::Mysql>,
@@ -118,10 +118,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn insert_player_succeeds() {
+    async fn add_player_succeeds() {
         let (_container, pool) = init_mysql().await;
 
-        let player_id = insert_player(&pool, "Bob").await.expect("should succeed");
+        let ds = DataSourceImpl::new(pool);
+
+        let player_id = ds.add_player("Bob").await.expect("should succeed");
 
         assert_eq!(player_id, PlayerId(1));
     }
@@ -129,23 +131,22 @@ mod tests {
     #[tokio::test]
     async fn insert_game_succeeds() {
         let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool);
 
-        let player_id = insert_player(&pool, "Bob")
+        let player_id = ds.add_player("Bob").await.expect("failed to insert player");
+
+        let game_id = ds
+            .insert_game(
+                MachineId(0),
+                player_id,
+                time::UtcDateTime::new(
+                    Date::from_calendar_date(2026, Month::September, 6).unwrap(),
+                    Time::from_hms(12, 41, 23).unwrap(),
+                ),
+                Difficulty::Normal,
+            )
             .await
-            .expect("failed to insert player");
-
-        let game_id = insert_game(
-            &pool,
-            MachineId(0),
-            player_id,
-            time::UtcDateTime::new(
-                Date::from_calendar_date(2026, Month::September, 6).unwrap(),
-                Time::from_hms(12, 41, 23).unwrap(),
-            ),
-            Difficulty::Normal,
-        )
-        .await
-        .expect("should succeed");
+            .expect("should succeed");
 
         assert_eq!(game_id, GameId(1));
     }
@@ -153,25 +154,26 @@ mod tests {
     #[tokio::test]
     async fn complete_game_succeeds() {
         let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
 
-        let player_id = insert_player(&pool, "Bob").await.unwrap();
+        let player_id = ds.add_player("Bob").await.unwrap();
 
-        let game_id = insert_game(
-            &pool,
-            MachineId(0),
-            player_id,
-            time::UtcDateTime::new(
-                Date::from_calendar_date(2026, Month::September, 6).unwrap(),
-                Time::from_hms(12, 41, 23).unwrap(),
-            ),
-            Difficulty::Normal,
-        )
-        .await
-        .unwrap();
+        let game_id = ds
+            .insert_game(
+                MachineId(0),
+                player_id,
+                time::UtcDateTime::new(
+                    Date::from_calendar_date(2026, Month::September, 6).unwrap(),
+                    Time::from_hms(12, 41, 23).unwrap(),
+                ),
+                Difficulty::Normal,
+            )
+            .await
+            .unwrap();
 
         const SCORE: u32 = 500;
 
-        complete_game(&pool, game_id, SCORE)
+        ds.complete_game(game_id, SCORE)
             .await
             .expect("should succeed");
 
