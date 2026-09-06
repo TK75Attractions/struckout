@@ -10,11 +10,14 @@ tonic-prost = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread","macros"] }
 tokio-stream = { workspace = true }
 
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+serde = { workspace = true }
 
 sqlx = { workspace = true, features = ["mysql","runtime-tokio","tls-rustls","migrate","sqlx-toml"] }
+toml = { workspace = true }
 
 [build-dependencies]
 tonic-prost-build = { workspace = true }

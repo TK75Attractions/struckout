@@ -1,57 +1,48 @@
-use std::pin::Pin;
+use std::{fs::File, io::Read, path::Path};
 
-use tokio_stream::Stream;
-use tonic::{Request, Response};
-
-use crate::proto::{
-    AddScoreRequest, AddScoreResponse, Event, ListenEventsRequest, StartGameRequest,
-    game_master_service_server::GameMasterService,
-};
+use anyhow::Context;
+use serde::Deserialize;
 
 pub mod proto {
-    tonic::include_proto!("tk75attractions.struckout.v1");
+    include!(concat!(
+        env!("OUT_DIR"),
+        concat!("/tk75attractions.struckout.v1.rs")
+    ));
 }
 
+pub mod service;
+
+/// Corresponds to `game_id` column in `games` table.
 #[derive(Debug, Clone, Copy)]
 pub struct GameId(i32);
 
+/// Corresponds to `machine_id` column in `games` table.
 #[derive(Debug, Clone, Copy)]
 pub struct MachineId(i32);
 
+#[derive(Debug, Clone)]
 pub struct Game {
     machine_id: MachineId,
     game_id: GameId,
     score: i32,
 }
 
-pub struct GameMasterServiceImpl {
-    running_games: Vec<Game>,
+#[derive(Deserialize)]
+pub struct Config {
+    pub port: u16,
 }
 
-#[tonic::async_trait]
-impl GameMasterService for GameMasterServiceImpl {
-    type StartGameStream = Pin<Box<dyn Stream<Item = Result<Event, tonic::Status>> + Send>>;
+impl Config {
+    /// Reads configs from specified file.
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+        let mut file = File::open(path).with_context(|| "failed to open config file")?;
 
-    type ListenEventsStream = Pin<Box<dyn Stream<Item = Result<Event, tonic::Status>> + Send>>;
+        let mut content = String::new();
+        file.read_to_string(&mut content)
+            .with_context(|| "failed to read config file")?;
 
-    async fn start_game(
-        &self,
-        req: Request<StartGameRequest>,
-    ) -> Result<Response<Self::StartGameStream>, tonic::Status> {
-        todo!()
-    }
-
-    async fn listen_events(
-        &self,
-        req: Request<ListenEventsRequest>,
-    ) -> Result<Response<Self::ListenEventsStream>, tonic::Status> {
-        todo!()
-    }
-
-    async fn add_score(
-        &self,
-        req: Request<AddScoreRequest>,
-    ) -> Result<Response<AddScoreResponse>, tonic::Status> {
-        todo!()
+        let config: Config =
+            toml::from_str(&content).with_context(|| "failed to parse config file")?;
+        Ok(config)
     }
 }

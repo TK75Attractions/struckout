@@ -29,6 +29,7 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
 
 FROM debian:latest
 
+COPY --from=builder /build/game_master/assets/config.toml /app/config.toml
 COPY --from=builder /build/bin/game_master /app/game_master
 
 ENTRYPOINT [ "/app/game_master" ]
