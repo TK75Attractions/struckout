@@ -14,7 +14,7 @@ use crate::{
     AddPlayerError, DataSource, GameId, MachineId,
     proto::{
         self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
-        ListenEventsRequest, StartGameRequest, StartGameResponse,
+        ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
         game_master_service_server::GameMasterService,
     },
 };
@@ -142,7 +142,8 @@ where
 {
     type StartGameStream = Pin<Box<dyn Stream<Item = Result<StartGameResponse, Status>> + Send>>;
 
-    type ListenEventsStream = Pin<Box<dyn Stream<Item = Result<proto::Event, Status>> + Send>>;
+    type ListenEventsStream =
+        Pin<Box<dyn Stream<Item = Result<ListenEventsResponse, Status>> + Send>>;
 
     async fn start_game(
         &self,
@@ -205,9 +206,20 @@ where
 
     async fn listen_events(
         &self,
-        _req: Request<ListenEventsRequest>,
+        req: Request<ListenEventsRequest>,
     ) -> Result<Response<Self::ListenEventsStream>, Status> {
-        todo!()
+        let req = req.into_inner();
+        let machine_id: MachineId = req.machine_id.into();
+        let (stream_tx, stream_rx) = mpsc::channel(32);
+        let event_rx = self.event_tx.subscribe();
+        tokio::spawn(pass_events_through_by_machine_id(
+            machine_id, event_rx, stream_tx,
+        ));
+
+        let out_stream = ReceiverStream::new(stream_rx);
+        Ok(Response::new(
+            Box::pin(out_stream) as Self::ListenEventsStream
+        ))
     }
 
     async fn add_score(
@@ -267,6 +279,29 @@ async fn pass_events_through_by_game_id(
     }
 }
 
+/// Filters events from `event_rx` by `machine_id` and pass it through the response stream.
+#[instrument(skip(event_rx, stream_tx))]
+async fn pass_events_through_by_machine_id(
+    machine_id: MachineId,
+    event_rx: broadcast::Receiver<Event>,
+    stream_tx: mpsc::Sender<Result<ListenEventsResponse, Status>>,
+) {
+    let events = BroadcastStream::new(event_rx);
+    let mut events = events
+        .map(|v| v.expect("broadcast channel lagged"))
+        .filter(|ev| ev.machine_id == machine_id);
+    while let Some(ev) = events.next().await {
+        let data = ev.data.map(|v| ListenEventsResponse {
+            event: Some(proto::Event {
+                machine_id: ev.machine_id.into_inner(),
+                game_id: ev.game_id.into_inner(),
+                event_data: Some(v.into()),
+            }),
+        });
+        stream_tx.send(data).await.expect("receiver dropped");
+    }
+}
+
 /// Sends event to broadcast channel every secounds until the game finishes, then sends the [`Event::GameFinished`].
 #[instrument(skip(tx, complete_tx))]
 async fn game_timer(
@@ -296,6 +331,8 @@ async fn game_timer(
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches;
+
     use tracing::Level;
 
     use crate::{AddPlayerError, PlayerId, proto::event::EventData};
@@ -421,13 +458,58 @@ mod tests {
         };
 
         // Assert: Finished
-        let EventData::GameFinished(finished) = finished else {
-            panic!("unexpected event: {:?}", finished);
-        };
+        assert_matches!(finished, EventData::GameFinished(_));
     }
 
     #[tokio::test]
     async fn start_game_adds_to_and_removes_from_running_games() {
         todo!()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn listen_events_filters_events_by_machine_id() {
+        let ds = StubDataSource {
+            game_id: GameId(14),
+            player_id: PlayerId(334),
+        };
+        let machine_id_to_listen = MachineId(1);
+        let machine_id_to_ignore = MachineId(2);
+        let difficulty = Difficulty::Normal;
+        let service = GameMasterServiceImpl::new(ds.clone());
+
+        let stream = service
+            .listen_events(Request::new(ListenEventsRequest {
+                machine_id: machine_id_to_listen.into_inner(),
+            }))
+            .await
+            .expect("should succeed");
+        let mut stream = stream.into_inner();
+
+        service
+            .start_game(Request::new(StartGameRequest {
+                machine_id: machine_id_to_listen.into_inner(),
+                difficulty: difficulty.into(),
+                player_id: ds.player_id.into_inner(),
+            }))
+            .await
+            .unwrap();
+        service
+            .start_game(Request::new(StartGameRequest {
+                machine_id: machine_id_to_ignore.into_inner(),
+                difficulty: difficulty.into(),
+                player_id: ds.player_id.into_inner(),
+            }))
+            .await
+            .unwrap();
+
+        loop {
+            let resp = stream.next().await.unwrap();
+            let resp = resp.expect("should not have error");
+            let ev = resp.event.unwrap();
+            assert_eq!(ev.machine_id, machine_id_to_listen.into_inner());
+            if let EventData::GameFinished(_) = ev.event_data.unwrap() {
+                break;
+            }
+        }
     }
 }

@@ -21,7 +21,13 @@ message StartGameResponse {
   Event event = 1;
 }
 
-message ListenEventsRequest {}
+message ListenEventsRequest {
+  uint32 machine_id = 1;
+}
+
+message ListenEventsResponse {
+  Event event = 1;
+}
 
 message AddScoreRequest {
   uint32 machine_id = 1;
@@ -69,7 +75,7 @@ service GameMasterService {
   rpc StartGame(StartGameRequest) returns (stream StartGameResponse);
 
   // Notify events occured in game_master.
-  rpc ListenEvents(ListenEventsRequest) returns (stream Event);
+  rpc ListenEvents(ListenEventsRequest) returns (stream ListenEventsResponse);
 
   // Adds score for the game. Used by `projector`.
   rpc AddScore(AddScoreRequest) returns (AddScoreResponse);
