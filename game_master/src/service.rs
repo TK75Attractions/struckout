@@ -11,7 +11,7 @@ use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
 use crate::{
-    DataSource, GameId, MachineId,
+    AddPlayerError, DataSource, GameId, MachineId,
     proto::{
         self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
         ListenEventsRequest, StartGameRequest, StartGameResponse,
@@ -212,16 +212,35 @@ where
 
     async fn add_score(
         &self,
-        _req: Request<AddScoreRequest>,
+        req: Request<AddScoreRequest>,
     ) -> Result<Response<AddScoreResponse>, Status> {
-        todo!()
+        let req = req.into_inner();
+        let game_id = req.game_id.into();
+        {
+            let mut guard = self.running_games.write();
+            let Some(game) = guard.get_mut(&game_id) else {
+                return Err(Status::not_found(format!(
+                    "game with id {} does not exist or is not running",
+                    game_id.into_inner()
+                )));
+            };
+            game.score += req.score_to_add;
+        }
+        Ok(Response::new(AddScoreResponse {}))
     }
 
     async fn add_player(
         &self,
-        _req: Request<AddPlayerRequest>,
+        req: Request<AddPlayerRequest>,
     ) -> Result<Response<AddPlayerResponse>, Status> {
-        todo!()
+        let req = req.into_inner();
+        match self.data_source.add_player(req.name).await {
+            Ok(player_id) => Ok(Response::new(AddPlayerResponse {
+                player_id: player_id.into_inner(),
+            })),
+            Err(e @ AddPlayerError::NameAlreadyUsed) => Err(Status::already_exists(e.to_string())),
+            Err(AddPlayerError::Sqlx(e)) => Err(Status::unavailable(e.to_string())),
+        }
     }
 }
 
@@ -405,5 +424,10 @@ mod tests {
         let EventData::GameFinished(finished) = finished else {
             panic!("unexpected event: {:?}", finished);
         };
+    }
+
+    #[tokio::test]
+    async fn start_game_adds_to_and_removes_from_running_games() {
+        todo!()
     }
 }
