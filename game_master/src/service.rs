@@ -279,7 +279,7 @@ async fn game_timer(
 mod tests {
     use tracing::Level;
 
-    use crate::{PlayerId, proto::event::EventData};
+    use crate::{AddPlayerError, PlayerId, proto::event::EventData};
 
     use super::*;
 
@@ -304,7 +304,7 @@ mod tests {
             Ok(())
         }
 
-        async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, sqlx::Error> {
+        async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
             Ok(self.player_id)
         }
     }

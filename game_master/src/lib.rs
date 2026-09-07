@@ -1,10 +1,9 @@
 use std::{fs::File, future::Future, io::Read, path::Path};
 
 use anyhow::Context;
-use derive_more::{From, Into};
 use serde::Deserialize;
+use thiserror::Error;
 use time::UtcDateTime;
-use tokio::sync::mpsc;
 
 use crate::proto::Difficulty;
 
@@ -59,7 +58,16 @@ pub trait DataSource: Clone + Send + Sync + 'static {
     fn add_player(
         &self,
         name: impl Into<String> + Send,
-    ) -> impl Future<Output = Result<PlayerId, sqlx::Error>> + Send;
+    ) -> impl Future<Output = Result<PlayerId, AddPlayerError>> + Send;
+}
+
+/// Error returned from [`DataSource::add_player()`].
+#[derive(Debug, Error)]
+pub enum AddPlayerError {
+    #[error("player name is already used")]
+    NameAlreadyUsed,
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
 }
 
 #[derive(Deserialize)]

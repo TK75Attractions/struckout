@@ -3,7 +3,7 @@ use std::fmt::Display;
 use sqlx::{MySql, Pool};
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{DataSource, GameId, MachineId, PlayerId, proto::Difficulty};
+use crate::{AddPlayerError, DataSource, GameId, MachineId, PlayerId, proto::Difficulty};
 
 #[derive(Clone)]
 pub struct DataSourceImpl {
@@ -17,10 +17,23 @@ impl DataSourceImpl {
 }
 
 impl DataSource for DataSourceImpl {
-    async fn add_player(&self, name: impl Into<String> + Send) -> Result<PlayerId, sqlx::Error> {
+    async fn add_player(&self, name: impl Into<String> + Send) -> Result<PlayerId, AddPlayerError> {
         let res = sqlx::query!("INSERT INTO players (name) VALUES (?)", name.into())
             .execute(&self.pool)
-            .await?;
+            .await
+            .map_err(|err| {
+                let Some(errdb) = err.as_database_error() else {
+                    return err.into();
+                };
+                // HACK: unique constraint which can be violated by the query above is only 'player.name' for now,
+                // but it can be changed in future.
+                if errdb.is_unique_violation() {
+                    AddPlayerError::NameAlreadyUsed
+                } else {
+                    err.into()
+                }
+            })?;
+
         let last_inserted: u32 = res
             .last_insert_id()
             .try_into()
@@ -93,10 +106,16 @@ impl Display for Difficulty {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::mysql::MySqlPoolOptions;
+
+    use std::assert_matches;
+
+    use sqlx::mysql::{MySqlDatabaseError, MySqlPoolOptions};
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
     use time::{Date, Month, Time};
 
+    /// Creates MySQL container, connects to it, and run migration scripts.
+    ///
+    /// Returned [`ContainerAsync`] must not be dropped while you use it, or you will encounter a [`sqlx::Error::PoolTimedOut`] error.
     async fn init_mysql() -> (
         ContainerAsync<testcontainers_modules::mysql::Mysql>,
         sqlx::Pool<MySql>,
@@ -127,6 +146,21 @@ mod tests {
         let player_id = ds.add_player("Bob").await.expect("should succeed");
 
         assert_eq!(player_id, PlayerId(1));
+    }
+
+    #[tokio::test]
+    async fn add_player_returns_error_when_player_name_already_used() {
+        let player_name = "Bob";
+        let (_container, pool) = init_mysql().await;
+
+        let ds = DataSourceImpl::new(pool);
+
+        ds.add_player(player_name).await.unwrap();
+        let err = ds
+            .add_player(player_name)
+            .await
+            .expect_err("should return error");
+        assert_matches!(err, AddPlayerError::NameAlreadyUsed);
     }
 
     #[tokio::test]
