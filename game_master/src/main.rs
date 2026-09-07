@@ -1,7 +1,12 @@
 use std::ffi::OsStr;
 
+use game_master::{
+    Config, DataSourceImpl, GameMasterServiceImpl,
+    proto::game_master_service_server::GameMasterServiceServer,
+};
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
+use tonic::transport::Server;
 use tracing::{Level, error, info};
 use tracing_subscriber::FmtSubscriber;
 
@@ -13,8 +18,15 @@ async fn main() {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::TRACE)
         .finish();
-
     tracing::subscriber::set_global_default(subscriber).expect("failed to set default suvscriber");
+
+    let config = match Config::from_file("./config.toml") {
+        Ok(v) => v,
+        Err(err) => {
+            error!(?err, "failed to load config from file");
+            std::process::exit(1);
+        }
+    };
 
     info!("creating MySQL pool");
     let pool = match new_pool().await {
@@ -25,6 +37,23 @@ async fn main() {
         }
     };
     info!("succeed to create MySQL pool");
+
+    let data_source = DataSourceImpl::new(pool);
+    let game_master = GameMasterServiceImpl::new(data_source);
+    let addr = format!("0.0.0.0:{}", config.port)
+        .parse()
+        .expect("address format should be correct");
+    match Server::builder()
+        .add_service(GameMasterServiceServer::new(game_master))
+        .serve(addr)
+        .await
+    {
+        Ok(_) => (),
+        Err(err) => {
+            error!(?err, "an error occured");
+            std::process::exit(1);
+        }
+    };
 }
 
 #[derive(Debug, Error)]
@@ -49,6 +78,8 @@ async fn new_pool() -> Result<Pool<MySql>, PoolCreationError> {
     Ok(pool)
 }
 
+/// Reads a environment variable specified by `key`.
+///
 /// Returns [`PoolCreationError::NoEnvVar`] when variable did not exist.
 fn env_var<K>(key: K) -> Result<String, PoolCreationError>
 where

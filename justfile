@@ -9,5 +9,6 @@ game-master-dev *args:
 game-master-prod *args:
     docker compose --env-file .env.prod -f compose.yaml -f compose.prod.yaml up {{args}}
 
+[working-directory("./game_master")]
 game-master-db *args:
     docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up db {{args}}

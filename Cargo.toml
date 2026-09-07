@@ -21,6 +21,7 @@ anyhow = "1.0"
 thiserror = "2.0.18"
 approx = "0.5.1"
 bytes = "1.11.1"
+time = "0.3.55"
 chrono = "0.4.44"
 rand = "0.10.1"
 uuid = "1.23.4"
@@ -37,12 +38,16 @@ derive-getters = "0.5.0"
 pastey = "0.2.3"
 strum = "0.28.0"
 enum_dispatch = "0.3.13"
+toml= "1.1.5"
 
 prost = "0.14.3"
+prost-types = "0.14.4"
 prost-build = "0.14.3"
 tonic = "0.14.6"
 tonic-prost = "0.14.6"
 tonic-prost-build = "0.14.6"
+
+testcontainers-modules = "0.15.0"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

@@ -1,57 +1,91 @@
-use std::pin::Pin;
+use std::{fs::File, future::Future, io::Read, path::Path};
 
-use tokio_stream::Stream;
-use tonic::{Request, Response};
+use anyhow::Context;
+use serde::Deserialize;
+use thiserror::Error;
+use time::UtcDateTime;
 
-use crate::proto::{
-    AddScoreRequest, AddScoreResponse, Event, ListenEventsRequest, StartGameRequest,
-    game_master_service_server::GameMasterService,
-};
+use crate::proto::Difficulty;
 
 pub mod proto {
-    tonic::include_proto!("tk75attractions.struckout.v1");
+    include!(concat!(
+        env!("OUT_DIR"),
+        concat!("/tk75attractions.struckout.v1.rs")
+    ));
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct GameId(i32);
+mod data;
+pub use data::DataSourceImpl;
+mod service;
+pub use service::GameMasterServiceImpl;
 
-#[derive(Debug, Clone, Copy)]
-pub struct MachineId(i32);
+/// Defines a new-type for id.
+macro_rules! id_new_type {
+    ($new_type:ident($inner_type:ty)) => {
+        #[derive(Debug, Clone, Copy, derive_more::Into, derive_more::From, PartialEq, Eq, Hash)]
+        pub struct $new_type($inner_type);
 
-pub struct Game {
-    machine_id: MachineId,
-    game_id: GameId,
-    score: i32,
+        impl $new_type {
+            /// Returns inner value of self.
+            pub fn into_inner(self) -> $inner_type {
+                <$new_type as Into<$inner_type>>::into(self)
+            }
+        }
+    };
 }
 
-pub struct GameMasterServiceImpl {
-    running_games: Vec<Game>,
+id_new_type!(GameId(u32));
+
+id_new_type!(MachineId(u32));
+
+id_new_type!(PlayerId(u32));
+
+pub trait DataSource: Clone + Send + Sync + 'static {
+    fn insert_game(
+        &self,
+        machine_id: MachineId,
+        player_id: PlayerId,
+        started_at: UtcDateTime,
+        difficulty: Difficulty,
+    ) -> impl Future<Output = Result<GameId, sqlx::Error>> + Send;
+
+    fn complete_game(
+        &self,
+        game_id: GameId,
+        score: u32,
+    ) -> impl Future<Output = Result<(), sqlx::Error>> + Send;
+
+    fn add_player(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> impl Future<Output = Result<PlayerId, AddPlayerError>> + Send;
 }
 
-#[tonic::async_trait]
-impl GameMasterService for GameMasterServiceImpl {
-    type StartGameStream = Pin<Box<dyn Stream<Item = Result<Event, tonic::Status>> + Send>>;
+/// Error returned from [`DataSource::add_player()`].
+#[derive(Debug, Error)]
+pub enum AddPlayerError {
+    #[error("player name is already used")]
+    NameAlreadyUsed,
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
 
-    type ListenEventsStream = Pin<Box<dyn Stream<Item = Result<Event, tonic::Status>> + Send>>;
+#[derive(Deserialize)]
+pub struct Config {
+    pub port: u16,
+}
 
-    async fn start_game(
-        &self,
-        req: Request<StartGameRequest>,
-    ) -> Result<Response<Self::StartGameStream>, tonic::Status> {
-        todo!()
-    }
+impl Config {
+    /// Reads configs from specified file.
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+        let mut file = File::open(path).with_context(|| "failed to open config file")?;
 
-    async fn listen_events(
-        &self,
-        req: Request<ListenEventsRequest>,
-    ) -> Result<Response<Self::ListenEventsStream>, tonic::Status> {
-        todo!()
-    }
+        let mut content = String::new();
+        file.read_to_string(&mut content)
+            .with_context(|| "failed to read config file")?;
 
-    async fn add_score(
-        &self,
-        req: Request<AddScoreRequest>,
-    ) -> Result<Response<AddScoreResponse>, tonic::Status> {
-        todo!()
+        let config: Config =
+            toml::from_str(&content).with_context(|| "failed to parse config file")?;
+        Ok(config)
     }
 }

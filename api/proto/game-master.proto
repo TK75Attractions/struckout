@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package tk75attractions.struckout.v1;
 
+import "google/protobuf/duration.proto";
+
 enum Difficulty {
   DIFFICULTY_UNSPECIFIED = 0;
   DIFFICULTY_NORMAL = 1;
@@ -10,39 +12,70 @@ enum Difficulty {
 }
 
 message StartGameRequest {
-  int32 machine_id = 1;
+  uint32 machine_id = 1;
   Difficulty difficulty = 2;
+  uint32 player_id = 3;
 }
 
-message ListenEventsRequest {}
+message StartGameResponse {
+  Event event = 1;
+}
+
+message ListenEventsRequest {
+  uint32 machine_id = 1;
+}
+
+message ListenEventsResponse {
+  Event event = 1;
+}
 
 message AddScoreRequest {
-  int32 machine_id = 1;
-  int32 game_id = 2;
-  int32 score_to_add = 3;
+  uint32 machine_id = 1;
+  uint32 game_id = 2;
+  uint32 score_to_add = 3;
 }
 
 message AddScoreResponse {}
 
+message AddPlayerRequest {
+  string name = 1;
+}
+
+message AddPlayerResponse {
+  uint32 player_id = 1;
+}
+
 message Event {
   message GameStarted {
-    int32 machine_id = 1;
-    Difficulty difficulty = 2;
-    int32 game_id = 3;
+    Difficulty difficulty = 1;
   }
 
-  oneof data {
-    GameStarted game_started = 1;
+  message GameTimeLimitNotify {
+    google.protobuf.Duration remaining = 1;
+  }
+
+  message GameFinished {}
+
+  uint32 machine_id = 1;
+  uint32 game_id = 2;
+
+  oneof event_data {
+    GameStarted game_started = 3;
+    GameTimeLimitNotify game_time_limit_notify = 4;
+    GameFinished game_finished = 5;
   }
 }
 
 // Service provided by `game_master`.
 service GameMasterService {
+  rpc AddPlayer(AddPlayerRequest) returns (AddPlayerResponse);
+
   // Used by `touchpanel`.
-  rpc StartGame(StartGameRequest) returns (stream Event);
+  // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+  rpc StartGame(StartGameRequest) returns (stream StartGameResponse);
 
   // Notify events occured in game_master.
-  rpc ListenEvents(ListenEventsRequest) returns (stream Event);
+  rpc ListenEvents(ListenEventsRequest) returns (stream ListenEventsResponse);
 
   // Adds score for the game. Used by `projector`.
   rpc AddScore(AddScoreRequest) returns (AddScoreResponse);
