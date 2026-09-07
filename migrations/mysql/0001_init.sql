@@ -1,7 +1,8 @@
 -- Add migration script here
+-- Add migration script here
 CREATE TABLE players (
     id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-    name TEXT NOT NULL
+    name VARCHAR(32) UNIQUE NOT NULL
 );
 
 CREATE TABLE games (

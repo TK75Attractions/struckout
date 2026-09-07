@@ -1,2 +1,5 @@
 [migrate]
 migrations-dir = "../migrations/mysql/"
+
+[migrate.defaults]
+migration-versioning = "sequential"
