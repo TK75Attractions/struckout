@@ -5,6 +5,7 @@ use time::{PlainDateTime, UtcDateTime};
 
 use crate::{DataSource, GameId, MachineId, PlayerId, proto::Difficulty};
 
+#[derive(Clone)]
 pub struct DataSourceImpl {
     pool: Pool<MySql>,
 }

@@ -20,18 +20,28 @@ pub use data::DataSourceImpl;
 mod service;
 pub use service::GameMasterServiceImpl;
 
-/// Corresponds to `game_id` column in `games` table.
-#[derive(Debug, Clone, Copy, Into, From, PartialEq, Eq, Hash)]
-pub struct GameId(u32);
+/// Defines a new-type for id.
+macro_rules! id_new_type {
+    ($new_type:ident($inner_type:ty)) => {
+        #[derive(Debug, Clone, Copy, derive_more::Into, derive_more::From, PartialEq, Eq, Hash)]
+        pub struct $new_type($inner_type);
 
-/// Corresponds to `machine_id` column in `games` table.
-#[derive(Debug, Clone, Copy, Into, From, PartialEq, Eq, Hash)]
-pub struct MachineId(u32);
+        impl $new_type {
+            /// Returns inner value of self.
+            pub fn into_inner(self) -> $inner_type {
+                <$new_type as Into<$inner_type>>::into(self)
+            }
+        }
+    };
+}
 
-#[derive(Debug, Clone, Copy, Into, From, PartialEq, Eq, Hash)]
-pub struct PlayerId(u32);
+id_new_type!(GameId(u32));
 
-pub trait DataSource: Send + Sync + 'static {
+id_new_type!(MachineId(u32));
+
+id_new_type!(PlayerId(u32));
+
+pub trait DataSource: Clone + Send + Sync + 'static {
     fn insert_game(
         &self,
         machine_id: MachineId,

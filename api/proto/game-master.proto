@@ -41,26 +41,22 @@ message AddPlayerResponse {
 
 message Event {
   message GameStarted {
-    uint32 machine_id = 1;
-    Difficulty difficulty = 2;
-    uint32 game_id = 3;
+    Difficulty difficulty = 1;
   }
 
   message GameTimeLimitNotify {
-    uint32 game_id = 1;
-    google.protobuf.Duration remaining = 2;
-    uint32 machine_id = 3;
+    google.protobuf.Duration remaining = 1;
   }
 
-  message GameFinished {
-    uint32 game_id = 1;
-    uint32 machine_id = 3;
-  }
+  message GameFinished {}
+
+  uint32 machine_id = 1;
+  uint32 game_id = 2;
 
   oneof event_data {
-    GameStarted game_started = 1;
-    GameTimeLimitNotify game_time_limit_notify = 2;
-    GameFinished game_finished = 3;
+    GameStarted game_started = 3;
+    GameTimeLimitNotify game_time_limit_notify = 4;
+    GameFinished game_finished = 5;
   }
 }
 
@@ -69,6 +65,7 @@ service GameMasterService {
   rpc AddPlayer(AddPlayerRequest) returns (AddPlayerResponse);
 
   // Used by `touchpanel`.
+  // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
   rpc StartGame(StartGameRequest) returns (stream StartGameResponse);
 
   // Notify events occured in game_master.
