@@ -109,7 +109,7 @@ mod tests {
 
     use std::assert_matches;
 
-    use sqlx::mysql::{MySqlDatabaseError, MySqlPoolOptions};
+    use sqlx::mysql::MySqlPoolOptions;
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
     use time::{Date, Month, Time};
 

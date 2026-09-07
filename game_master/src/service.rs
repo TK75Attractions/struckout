@@ -174,11 +174,15 @@ where
 
         // subscribe on events before sending `GameStarted`.
         let event_rx = self.event_tx.subscribe();
-        if let Err(_) = self.event_tx.send(Event {
-            game_id,
-            machine_id,
-            data: Ok(SuccessfulEvent::GameStarted { difficulty }),
-        }) {
+        if self
+            .event_tx
+            .send(Event {
+                game_id,
+                machine_id,
+                data: Ok(SuccessfulEvent::GameStarted { difficulty }),
+            })
+            .is_err()
+        {
             warn!("all receiver has been dropped");
         };
 
@@ -392,7 +396,7 @@ mod tests {
         };
         assert_eq!(ds.game_id, ev.game_id,);
         assert_eq!(machine_id, ev.machine_id);
-        assert_eq!(difficulty, (*ev_difficulty).into());
+        assert_eq!(difficulty, *ev_difficulty);
     }
 
     #[tokio::test(start_paused = true)]
