@@ -22,6 +22,10 @@ backon = { workspace = true }
 tokio-stream = { workspace = true, features = ["sync"] }
 tokio-util = { workspace = true }
 parking_lot = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+tonic = { workspace = true }
+tonic-prost = { workspace = true }
 
 thiserror = { workspace = true }
 anyhow = { workspace = true }
@@ -33,7 +37,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tempfile = { workspace = true }
 chrono = { workspace = true }
-prost = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
 enum_dispatch = { workspace = true }
 
@@ -55,3 +58,5 @@ i-slint-backend-testing = { git = "https://github.com/taichi765/slint", branch =
 
 [build-dependencies]
 slint-build = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
+tonic-prost-build = { workspace = true }
+struckout-yaml = { workspace = true }

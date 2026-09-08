@@ -38,6 +38,8 @@ mod state_ext;
 
 const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
 
+const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
+
 type NavController = stern::nav::NavController<NavRoute>;
 type NavHost = stern::nav::NavHost<NavRoute>;
 type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;

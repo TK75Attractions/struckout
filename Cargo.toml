@@ -1,5 +1,5 @@
 [workspace]
-members = ["xtask", "game_master", "touchpanel", "ball_tracker", "api/rust"]
+members = ["xtask", "game_master", "touchpanel", "ball_tracker", "api/rust/proto", "api/rust/yaml"]
 exclude = ["slint-fw"]
 resolver = "3"
 
@@ -7,7 +7,8 @@ resolver = "3"
 edition = "2024"
 
 [workspace.dependencies]
-struckout-proto = { path = "./api/rust/" }
+struckout-proto = { path = "./api/rust/proto" }
+struckout-yaml = { path = "./api/rust/yaml" }
 
 tokio = "1.52.3"
 tracing = "0.1.44"
@@ -33,6 +34,7 @@ dirs = "6.0.0"
 tempfile = "3"
 serde = "1.0"
 serde_json = "1.0"
+serde-saphyr = "1.2.0"
 derive_more = "2.1.1"
 derive-getters = "0.5.0"
 pastey = "0.2.3"
