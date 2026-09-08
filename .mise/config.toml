@@ -7,6 +7,7 @@ buf = "latest"
 "rust" = "latest"
 "cargo:slint-viewer" = "latest"
 "cargo:sqlx-cli" = "latest"
+tokei = "latest"
 
 dotnet = "10"
 
@@ -26,3 +27,8 @@ description = "Start a production server of game-master using docker-compose"
 run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up db"
 dir = "game_master/"
 description = "Start a MySQL service for game-master."
+
+[tasks."tokei"]
+run = "tokei"
+dir = "./"
+description = "Count our code quickly, using tokei"
