@@ -27,7 +27,7 @@
 1. miseをインストールする
 https://mise.jdx.dev/getting-started.html
 
-2. 必要なツールなどをインストールする
+1. 必要なツールなどをmiseでインストールする
 ```shell
 mise install
 
@@ -36,6 +36,14 @@ eval "$(mise activate)"
 # PowerShellの場合
 (&mise activate pwsh) | Out-String | Invoke-Expression
 ```
+
+1. 手動でインストールするもの
+- Docker
+`game-master`の起動、開発に使う。
+- [Android Studio](https://developer.android.com/studio?hl=ja)
+`camera`の開発・運用に使う。Visual StudioのAndroid版のようなものと思って良い。
+- [Unity]
+`projector`の開発に使う。
 
 ## 参考リンク
 - [ByteTrack](https://github.com/FoundationVision/ByteTrack) ... 2021年に出たMOTアルゴリズム
