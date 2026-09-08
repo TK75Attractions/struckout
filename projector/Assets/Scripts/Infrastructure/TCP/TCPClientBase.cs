@@ -20,10 +20,12 @@ namespace Struckout.Infrastructure
         private NetworkStream  _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
         public event Action<T> OnReceived;
+        public event Action ConnectionLost;
         private Task _receiveTask;
         private readonly IMessageParser<T> _parser;
         private bool isRegister = false;
         private readonly SemaphoreSlim _slim = new(1, 1);
+        private readonly SemaphoreSlim _sendSlim = new(1, 1);
 
         private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
 
@@ -63,6 +65,9 @@ namespace Struckout.Infrastructure
                 catch (Exception ex)
                 {
                     Debug.Log($"Error connecting to TCP server: {ex.Message}");
+                    // 再試行で毎回 TcpClient を捨てないように、失敗した分はここで解放する。
+                    _tcpClient.Dispose();
+                    _tcpClient = null;
                     Transit(ConnectionState.Failed);
                     return false;
                 }
@@ -88,7 +93,10 @@ namespace Struckout.Infrastructure
             
             try
             {
-                if (_state != ConnectionState.Connected && _state != ConnectionState.Connecting) return;
+                // Failed (通信中に切れた) からも後片付けできるようにする。
+                if (_state != ConnectionState.Connected
+                    && _state != ConnectionState.Connecting
+                    && _state != ConnectionState.Failed) return;
                 if(_tcpClient == null) Debug.Log("Failed To Disconnect");
                 
                 Transit(ConnectionState.Disconnecting);
@@ -120,9 +128,9 @@ namespace Struckout.Infrastructure
             }
         }
 
-        public async Task<bool> ConnectRetryAsync(int maxattempts)
+        public async Task<bool> ConnectRetryAsync(int maxAttempts)
         {
-            for(int attempt = 0; attempt < maxattempts; attempt++)
+            for(int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 try
                 {
@@ -141,12 +149,55 @@ namespace Struckout.Infrastructure
             return false;
         }
 
+        public async Task<bool> SendAsync(IMessage packet)
+        {
+            if (packet == null) throw new ArgumentNullException(nameof(packet));
+
+            var stream = _networkStream;
+            if (_state != ConnectionState.Connected || stream == null)
+            {
+                Debug.LogWarning("Tried to send a packet while not connected.");
+                return false;
+            }
+
+            byte[] payload = packet.ToByteArray();
+            byte[] frame = new byte[4 + payload.Length];
+            BinaryPrimitives.WriteUInt32LittleEndian(frame.AsSpan(0, 4), (uint)payload.Length);
+            payload.CopyTo(frame, 4);
+
+            // 送信の途中に別の送信が割り込むとフレームが壊れるので直列化する。
+            await _sendSlim.WaitAsync();
+            try
+            {
+                await stream.WriteAsync(frame, 0, frame.Length);
+                await stream.FlushAsync();
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is SocketException)
+            {
+                Debug.LogWarning($"Failed to send a packet: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                _sendSlim.Release();
+            }
+        }
+
         private async Task ReceiveDataAsync(CancellationToken token)
         {
+            // 自分から切ったのか、相手都合で切れたのかを区別する。
+            // 後者だけを ConnectionLost として通知したい。
+            bool lostUnexpectedly = false;
+
             while (_state == ConnectionState.Connected && !token.IsCancellationRequested)
             {
                 byte[] data;
-                if (_tcpClient == null || _networkStream == null) break;
+                if (_tcpClient == null || _networkStream == null)
+                {
+                    lostUnexpectedly = true;
+                    break;
+                }
 
                 try
                 {
@@ -158,22 +209,26 @@ namespace Struckout.Infrastructure
                 }
                 catch (EndOfStreamException ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    lostUnexpectedly = true;
                     break;
                 }
                 catch (IOException ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    lostUnexpectedly = true;
                     break;
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    lostUnexpectedly = true;
                     break;
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log(ex);
+                    Debug.LogException(ex);
+                    lostUnexpectedly = true;
                     break;
                 }
 
@@ -207,6 +262,34 @@ namespace Struckout.Infrastructure
                         Debug.LogException(ex);
                     }
                 }
+            }
+
+            if (lostUnexpectedly) HandleConnectionLost();
+        }
+
+        /// <summary>
+        /// 相手都合で切れたときの後始末。
+        /// これをやらないと状態が Connected のまま残り、切れているのに接続中に見えてしまう。
+        /// SendAsync も死んだストリームに書きに行くことになる。
+        /// </summary>
+        private void HandleConnectionLost()
+        {
+            if (_state != ConnectionState.Connected) return;
+
+            Transit(ConnectionState.Failed);
+
+            _networkStream?.Dispose();
+            _networkStream = null;
+            _tcpClient?.Dispose();
+            _tcpClient = null;
+
+            try
+            {
+                ConnectionLost?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
             }
         }
 

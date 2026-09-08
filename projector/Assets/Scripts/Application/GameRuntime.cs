@@ -1,6 +1,7 @@
 using System;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
+using UnityEngine;
 
 
 namespace Struckout.Application
@@ -11,7 +12,14 @@ namespace Struckout.Application
         private readonly IPointCalculator _pointCalculator;
         private readonly ITargetGenerator _targetGenerator;
         private readonly IUIService _uiService;
+        private readonly GameSettings _settings;
         private Action<Target> _collisionTargetAction;
+
+        /// <summary>
+        /// 的に当たって得点が入ったときの「増分」。
+        /// game_master (session.rs) は cur_score += score としているので、累計ではなく差分を流す。
+        /// </summary>
+        public event Action<int> ScoreAdded;
         
         private readonly GameRuntimeState _state = new();
 
@@ -19,19 +27,22 @@ namespace Struckout.Application
             ICollisionSolver collisionSolver,
             IPointCalculator pointCalculator,
             ITargetGenerator targetGenerator,
-            IUIService uiService
+            IUIService uiService,
+            GameSettings settings
         )
         {
             _collisionSolver = collisionSolver;
             _pointCalculator = pointCalculator;
             _targetGenerator = targetGenerator;
             _uiService = uiService;
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         public void GameSetup()
         {
-            _state.AddTargets(_targetGenerator,4,TargetType.Circle);
-            AddCollisionTargetAction(_state.RemoveTarget);
+            // 的は最初に置いたきり、位置も個数も変えない。
+            // 撃たれたときは消さずにクールダウンに入る。
+            _state.AddTargets(_targetGenerator, _settings.InitialTargetCount, TargetType.Circle);
             UpdateUI();
         }
 
@@ -45,19 +56,65 @@ namespace Struckout.Application
             _collisionTargetAction -= action;
         }
 
+        /// <summary>
+        /// UI がまだ無い的の分だけ生成する。
+        /// 実装側が生成済みの的を読み飛ばすので、何度呼んでも二重には作られない。
+        /// </summary>
         public void UpdateUI()
         {
             _uiService.InstantiateTargets(_state.Targets);
         }
 
+        /// <summary>
+        /// game_master から StartGame が届いたときに呼ぶ。これを受けるまでは得点を送らない。
+        /// </summary>
+        public void StartGame(Difficulty difficulty)
+        {
+            _state.StartGame(difficulty);
+            Debug.Log($"[Game] started ({difficulty})");
+        }
+
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
-            if(_collisionSolver.TryCollision(collisionPoint, _state.Targets, out Target hitTarget))
+            // StartGame より前に当たっても得点にしない。
+            // game_master はセッション外の得点を受け取ると panic するため。
+            if (_state.Phase != GamePhase.Playing)
             {
-                _collisionTargetAction?.Invoke(hitTarget);
-                _state.AddScore(_pointCalculator.CalculatePoint(hitTarget));
-                _state.AddTargets(_targetGenerator,1,TargetType.Circle);
+                _uiService.ShowCollisionMarker(
+                    (float)collisionPoint.X, (float)collisionPoint.Y, CollisionResult.Missed);
+                Debug.Log($"[Hit] ignored: the game has not started (phase={_state.Phase})");
+                return;
             }
+
+            bool hit = _collisionSolver.TryCollision(collisionPoint, _state.Targets, out Target hitTarget);
+
+            // 着弾位置は当たり外れに関わらず出す。外れが見えないと、
+            // 座標変換がずれているのか単に的を外したのかが区別できない。
+            // また「外した」と「クールダウン中の的に当たった」は見た目で区別できないと紛らわしいので、
+            // 結果を 3 状態に分けてマーカーの色を変える。
+            CollisionResult result;
+            if (!hit) result = CollisionResult.Missed;
+            else if (_state.IsCoolingDown(hitTarget)) result = CollisionResult.CoolingDown;
+            else result = CollisionResult.Scored;
+
+            _uiService.ShowCollisionMarker((float)collisionPoint.X, (float)collisionPoint.Y, result);
+
+            if (result != CollisionResult.Scored)
+            {
+                Debug.Log(result == CollisionResult.CoolingDown
+                    ? $"[Hit] cooling down: target at ({hitTarget.Coordinate.X:F0}, {hitTarget.Coordinate.Y:F0})"
+                    : $"[Hit] missed: point=({collisionPoint.X:F0}, {collisionPoint.Y:F0}) targets={_state.Targets.Count}");
+                return;
+            }
+
+            _collisionTargetAction?.Invoke(hitTarget);
+
+            int points = _pointCalculator.CalculatePoint(hitTarget);
+            _state.AddScore(points);
+            ScoreAdded?.Invoke(points);
+
+            _state.StartCooldown(hitTarget, _settings.TargetCooldownSeconds);
+            _uiService.OnTargetHit(hitTarget, _settings.TargetCooldownSeconds);
         }
     }
 }
