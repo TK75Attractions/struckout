@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 
 use game_master::{
-    Config, DataSourceImpl, GameMasterServiceImpl,
+    DataSourceImpl, GameMasterServiceImpl,
     proto::game_master_service_server::GameMasterServiceServer,
 };
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
@@ -13,20 +13,14 @@ use tracing_subscriber::FmtSubscriber;
 const ENV_MYSQL_ROOT_PASSWORD: &str = "MYSQL_ROOT_PASSWORD";
 const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
 
+const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
+
 #[tokio::main]
 async fn main() {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::TRACE)
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("failed to set default suvscriber");
-
-    let config = match Config::from_file("./config.toml") {
-        Ok(v) => v,
-        Err(err) => {
-            error!(?err, "failed to load config from file");
-            std::process::exit(1);
-        }
-    };
 
     info!("creating MySQL pool");
     let pool = match new_pool().await {
@@ -40,7 +34,7 @@ async fn main() {
 
     let data_source = DataSourceImpl::new(pool);
     let game_master = GameMasterServiceImpl::new(data_source);
-    let addr = format!("0.0.0.0:{}", config.port)
+    let addr = format!("0.0.0.0:{}", GRPC_PORT)
         .parse()
         .expect("address format should be correct");
     match Server::builder()

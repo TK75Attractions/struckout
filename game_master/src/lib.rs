@@ -69,23 +69,3 @@ pub enum AddPlayerError {
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }
-
-#[derive(Deserialize)]
-pub struct Config {
-    pub port: u16,
-}
-
-impl Config {
-    /// Reads configs from specified file.
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
-        let mut file = File::open(path).with_context(|| "failed to open config file")?;
-
-        let mut content = String::new();
-        file.read_to_string(&mut content)
-            .with_context(|| "failed to read config file")?;
-
-        let config: Config =
-            toml::from_str(&content).with_context(|| "failed to parse config file")?;
-        Ok(config)
-    }
-}
