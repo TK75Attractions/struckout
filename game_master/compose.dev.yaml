@@ -1,0 +1,10 @@
+services:
+  app:
+    environment:
+      - MYSQL_DATABASE=main_dev
+
+  db:
+    environment:
+      - MYSQL_DATABASE=main_dev
+    ports:
+      - 3306:3306

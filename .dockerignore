@@ -1,0 +1,19 @@
+# This file is for Rust-based images.
+**/.env
+.git
+
+# build results
+target
+stern/target
+
+# Non-Rust directoris
+projector
+struckoutCameraApp
+sandbox
+
+# docs
+docs
+README.md
+
+# stale rust packages
+mcu

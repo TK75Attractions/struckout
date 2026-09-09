@@ -1,0 +1,12 @@
+[package]
+name = "struckout-yaml"
+version = "0.1.0"
+edition.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde-saphyr = { workspace = true }
+thiserror = { workspace = true }

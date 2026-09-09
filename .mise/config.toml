@@ -1,0 +1,34 @@
+[tools]
+# projectorのGoogle.Protobufのバージョンと合わせる
+protoc = "35.1"
+
+java = "temurin-21"
+buf = "latest"
+"rust" = "latest"
+"cargo:slint-viewer" = "latest"
+"cargo:sqlx-cli" = "latest"
+tokei = "latest"
+
+dotnet = "10"
+
+[env]
+
+[tasks."game-master:dev"]
+run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up"
+dir = "game_master/"
+description = "Start a dev server of game-master using docker-compose"
+
+[tasks."game-master:prod"]
+run = "docker compose --env-file .env.prod -f compose.yaml -f compose.prod.yaml up"
+dir = "game_master/"
+description = "Start a production server of game-master using docker-compose"
+
+[tasks."game-master:db"]
+run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up db"
+dir = "game_master/"
+description = "Start a MySQL service for game-master."
+
+[tasks."tokei"]
+run = "tokei"
+dir = "./"
+description = "Count our code quickly, using tokei"

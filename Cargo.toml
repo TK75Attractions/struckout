@@ -1,5 +1,5 @@
 [workspace]
-members = ["xtask", "game_master", "touchpanel", "ball_tracker", "api/rust"]
+members = ["xtask", "game_master", "touchpanel", "ball_tracker", "api/rust/proto", "api/rust/yaml"]
 exclude = ["slint-fw"]
 resolver = "3"
 
@@ -7,7 +7,8 @@ resolver = "3"
 edition = "2024"
 
 [workspace.dependencies]
-struckout-proto = { path = "./api/rust/" }
+struckout-proto = { path = "./api/rust/proto" }
+struckout-yaml = { path = "./api/rust/yaml" }
 
 tokio = "1.52.3"
 tracing = "0.1.44"
@@ -21,6 +22,7 @@ anyhow = "1.0"
 thiserror = "2.0.18"
 approx = "0.5.1"
 bytes = "1.11.1"
+time = "0.3.55"
 chrono = "0.4.44"
 rand = "0.10.1"
 uuid = "1.23.4"
@@ -32,16 +34,22 @@ dirs = "6.0.0"
 tempfile = "3"
 serde = "1.0"
 serde_json = "1.0"
+serde-saphyr = "1.2.0"
 derive_more = "2.1.1"
 derive-getters = "0.5.0"
 pastey = "0.2.3"
 strum = "0.28.0"
 enum_dispatch = "0.3.13"
+toml= "1.1.5"
 
 prost = "0.14.3"
+prost-types = "0.14.4"
 prost-build = "0.14.3"
 tonic = "0.14.6"
+tonic-prost = "0.14.6"
 tonic-prost-build = "0.14.6"
+
+testcontainers-modules = "0.15.0"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
@@ -52,5 +60,5 @@ opt-level = 3
 [profile.dev.package.slint]
 opt-level = 3
 
-[patch."https://github.com/taichi765/slint"]
-slint-build = { path = "../slint/api/rs/build/" }
+#[patch."https://github.com/taichi765/slint"]
+#slint-build = { path = "../slint/api/rs/build/" }

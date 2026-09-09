@@ -1,5 +1,10 @@
 # 投擲ゲーム
 
+## 目次
+- [ディレクトリ構造](#ディレクトリ構造)
+- [環境構築](#環境構築)
+- [参考リンク](#参考リンク)
+
 ## ディレクトリ構造
 ### 各種モジュール
 - `ball_tracker`(Rust): カメラからボールの二次元座標を継続的に受け取り、それらを組み合わせて三次元座標を特定し、三次元座標の推移から的のどの部分にボールがあたったか判定し、それを`projector`に送る。
@@ -17,6 +22,28 @@
 - `sandbox`: 雑多なプログラムを置いておく場所。
 - `stern`: 私が作っているSlintを拡張するGUIフレームワーク。
 - `xtask`: package.jsonのscriptsの豪華版みたいなもん。
+
+## 環境構築
+1. miseをインストールする
+https://mise.jdx.dev/getting-started.html
+
+1. 必要なツールなどをmiseでインストールする
+```shell
+mise install
+
+# bashの場合
+eval "$(mise activate)"
+# PowerShellの場合
+(&mise activate pwsh) | Out-String | Invoke-Expression
+```
+
+1. 手動でインストールするもの
+- Docker
+`game-master`の起動、開発に使う。
+- [Android Studio](https://developer.android.com/studio?hl=ja)
+`camera`の開発・運用に使う。Visual StudioのAndroid版のようなものと思って良い。
+- [Unity]
+`projector`の開発に使う。
 
 ## 参考リンク
 - [ByteTrack](https://github.com/FoundationVision/ByteTrack) ... 2021年に出たMOTアルゴリズム

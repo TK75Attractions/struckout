@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "bufbuild.vscode-buf",
+        "MermaidChart.vscode-mermaid-chart",
+        "visualstudiotoolsforunity.vstuc",
+        "Slint.slint",
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml"
+    ]
+}
