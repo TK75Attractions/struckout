@@ -176,6 +176,34 @@ resolve_grpc_csharp_plugin() {
     printf '%s' "$plugin"
 }
 
+# game-master.proto は google/protobuf/duration.proto を import する。
+# well-known types は protoc に組み込まれておらず、.proto ファイルとして
+# include パスに載っている必要がある。protoc の配布物は bin/ の隣に include/ を
+# 置く決まりなので、まずそこを見る。
+resolve_wkt_include() {
+    local candidate
+
+    if [ -n "${PROTOC_INCLUDE:-}" ]; then
+        candidate=$(to_bash_path "$PROTOC_INCLUDE")
+        if [ -f "$candidate/google/protobuf/duration.proto" ]; then
+            printf '%s' "$candidate"
+            return
+        fi
+    fi
+
+    for candidate in "$(dirname "$protoc")/../include" \
+                     "$repo_root/.tools/protoc-35.1/include"; do
+        if [ -f "$candidate/google/protobuf/duration.proto" ]; then
+            printf '%s' "$candidate"
+            return
+        fi
+    done
+
+    echo "well-known types (google/protobuf/*.proto) not found next to protoc." >&2
+    echo "Run 'mise install', or set PROTOC_INCLUDE to the include/ directory." >&2
+    exit 1
+}
+
 protoc=$(resolve_protoc)
 
 # protoc はネイティブ実行ファイルなので、非 ASCII を含むパスを引数で受け取れない
@@ -196,14 +224,22 @@ grpc_plugin=$(resolve_grpc_csharp_plugin)
 cp "$grpc_plugin" "$staging/$(basename "$grpc_plugin")"
 grpc_plugin="$staging/$(basename "$grpc_plugin")"
 
+# include パスも同じ理由で非 ASCII を通せないので、staging に複製してから渡す。
+wkt_include=$(resolve_wkt_include)
+mkdir -p "$staging/include"
+cp -r "$wkt_include/google" "$staging/include/"
+
 (
     cd "$repo_root/api/proto"
-    "$protoc" --proto_path=. --csharp_out="$(to_native_path "$staging")" "${proto_files[@]}"
+    "$protoc" --proto_path=. \
+        --proto_path="$(to_native_path "$staging/include")" \
+        --csharp_out="$(to_native_path "$staging")" "${proto_files[@]}"
 
     # サービス定義のあるものだけ、クライアントとサーバのスタブも出す。
     # --csharp_out と分けているのは、サービスの無い .proto に --grpc_out を渡すと
     # 中身のない *Grpc.cs が並んでしまうため。
     "$protoc" --proto_path=. \
+        --proto_path="$(to_native_path "$staging/include")" \
         --grpc_out="$(to_native_path "$staging")" \
         --plugin="protoc-gen-grpc=$(to_native_path "$grpc_plugin")" \
         "${grpc_proto_files[@]}"
