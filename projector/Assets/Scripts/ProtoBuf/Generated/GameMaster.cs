@@ -25,34 +25,55 @@ namespace Tk75Attractions.Struckout.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChFnYW1lLW1hc3Rlci5wcm90bxIcdGs3NWF0dHJhY3Rpb25zLnN0cnVja291",
-            "dC52MSJkChBTdGFydEdhbWVSZXF1ZXN0EhIKCm1hY2hpbmVfaWQYASABKAUS",
-            "PAoKZGlmZmljdWx0eRgCIAEoDjIoLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tv",
-            "dXQudjEuRGlmZmljdWx0eSIVChNMaXN0ZW5FdmVudHNSZXF1ZXN0IkwKD0Fk",
-            "ZFNjb3JlUmVxdWVzdBISCgptYWNoaW5lX2lkGAEgASgFEg8KB2dhbWVfaWQY",
-            "AiABKAUSFAoMc2NvcmVfdG9fYWRkGAMgASgFIhIKEEFkZFNjb3JlUmVzcG9u",
-            "c2UiygEKBUV2ZW50EkcKDGdhbWVfc3RhcnRlZBgBIAEoCzIvLnRrNzVhdHRy",
-            "YWN0aW9ucy5zdHJ1Y2tvdXQudjEuRXZlbnQuR2FtZVN0YXJ0ZWRIABpwCgtH",
-            "YW1lU3RhcnRlZBISCgptYWNoaW5lX2lkGAEgASgFEjwKCmRpZmZpY3VsdHkY",
-            "AiABKA4yKC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LnYxLkRpZmZpY3Vs",
-            "dHkSDwoHZ2FtZV9pZBgDIAEoBUIGCgRkYXRhKm0KCkRpZmZpY3VsdHkSGgoW",
-            "RElGRklDVUxUWV9VTlNQRUNJRklFRBAAEhUKEURJRkZJQ1VMVFlfTk9STUFM",
-            "EAESEwoPRElGRklDVUxUWV9IQVJEEAISFwoTRElGRklDVUxUWV9WRVJZSEFS",
-            "RBADMswCChFHYW1lTWFzdGVyU2VydmljZRJiCglTdGFydEdhbWUSLi50azc1",
-            "YXR0cmFjdGlvbnMuc3RydWNrb3V0LnYxLlN0YXJ0R2FtZVJlcXVlc3QaIy50",
-            "azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LnYxLkV2ZW50MAESaAoMTGlzdGVu",
-            "RXZlbnRzEjEudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC52MS5MaXN0ZW5F",
-            "dmVudHNSZXF1ZXN0GiMudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC52MS5F",
-            "dmVudDABEmkKCEFkZFNjb3JlEi0udGs3NWF0dHJhY3Rpb25zLnN0cnVja291",
-            "dC52MS5BZGRTY29yZVJlcXVlc3QaLi50azc1YXR0cmFjdGlvbnMuc3RydWNr",
-            "b3V0LnYxLkFkZFNjb3JlUmVzcG9uc2ViBnByb3RvMw=="));
+            "dC52MRoeZ29vZ2xlL3Byb3RvYnVmL2R1cmF0aW9uLnByb3RvIncKEFN0YXJ0",
+            "R2FtZVJlcXVlc3QSEgoKbWFjaGluZV9pZBgBIAEoDRI8CgpkaWZmaWN1bHR5",
+            "GAIgASgOMigudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC52MS5EaWZmaWN1",
+            "bHR5EhEKCXBsYXllcl9pZBgDIAEoDSJHChFTdGFydEdhbWVSZXNwb25zZRIy",
+            "CgVldmVudBgBIAEoCzIjLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQudjEu",
+            "RXZlbnQiKQoTTGlzdGVuRXZlbnRzUmVxdWVzdBISCgptYWNoaW5lX2lkGAEg",
+            "ASgNIkoKFExpc3RlbkV2ZW50c1Jlc3BvbnNlEjIKBWV2ZW50GAEgASgLMiMu",
+            "dGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC52MS5FdmVudCJMCg9BZGRTY29y",
+            "ZVJlcXVlc3QSEgoKbWFjaGluZV9pZBgBIAEoDRIPCgdnYW1lX2lkGAIgASgN",
+            "EhQKDHNjb3JlX3RvX2FkZBgDIAEoDSISChBBZGRTY29yZVJlc3BvbnNlIiAK",
+            "EEFkZFBsYXllclJlcXVlc3QSDAoEbmFtZRgBIAEoCSImChFBZGRQbGF5ZXJS",
+            "ZXNwb25zZRIRCglwbGF5ZXJfaWQYASABKA0iywMKBUV2ZW50EhIKCm1hY2hp",
+            "bmVfaWQYASABKA0SDwoHZ2FtZV9pZBgCIAEoDRJHCgxnYW1lX3N0YXJ0ZWQY",
+            "AyABKAsyLy50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LnYxLkV2ZW50Lkdh",
+            "bWVTdGFydGVkSAASWQoWZ2FtZV90aW1lX2xpbWl0X25vdGlmeRgEIAEoCzI3",
+            "LnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQudjEuRXZlbnQuR2FtZVRpbWVM",
+            "aW1pdE5vdGlmeUgAEkkKDWdhbWVfZmluaXNoZWQYBSABKAsyMC50azc1YXR0",
+            "cmFjdGlvbnMuc3RydWNrb3V0LnYxLkV2ZW50LkdhbWVGaW5pc2hlZEgAGksK",
+            "C0dhbWVTdGFydGVkEjwKCmRpZmZpY3VsdHkYASABKA4yKC50azc1YXR0cmFj",
+            "dGlvbnMuc3RydWNrb3V0LnYxLkRpZmZpY3VsdHkaQwoTR2FtZVRpbWVMaW1p",
+            "dE5vdGlmeRIsCglyZW1haW5pbmcYASABKAsyGS5nb29nbGUucHJvdG9idWYu",
+            "RHVyYXRpb24aDgoMR2FtZUZpbmlzaGVkQgwKCmV2ZW50X2RhdGEqbQoKRGlm",
+            "ZmljdWx0eRIaChZESUZGSUNVTFRZX1VOU1BFQ0lGSUVEEAASFQoRRElGRklD",
+            "VUxUWV9OT1JNQUwQARITCg9ESUZGSUNVTFRZX0hBUkQQAhIXChNESUZGSUNV",
+            "TFRZX1ZFUllIQVJEEAMy1QMKEUdhbWVNYXN0ZXJTZXJ2aWNlEmwKCUFkZFBs",
+            "YXllchIuLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQudjEuQWRkUGxheWVy",
+            "UmVxdWVzdBovLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQudjEuQWRkUGxh",
+            "eWVyUmVzcG9uc2USbgoJU3RhcnRHYW1lEi4udGs3NWF0dHJhY3Rpb25zLnN0",
+            "cnVja291dC52MS5TdGFydEdhbWVSZXF1ZXN0Gi8udGs3NWF0dHJhY3Rpb25z",
+            "LnN0cnVja291dC52MS5TdGFydEdhbWVSZXNwb25zZTABEncKDExpc3RlbkV2",
+            "ZW50cxIxLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQudjEuTGlzdGVuRXZl",
+            "bnRzUmVxdWVzdBoyLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQudjEuTGlz",
+            "dGVuRXZlbnRzUmVzcG9uc2UwARJpCghBZGRTY29yZRItLnRrNzVhdHRyYWN0",
+            "aW9ucy5zdHJ1Y2tvdXQudjEuQWRkU2NvcmVSZXF1ZXN0Gi4udGs3NWF0dHJh",
+            "Y3Rpb25zLnN0cnVja291dC52MS5BZGRTY29yZVJlc3BvbnNlYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { },
+          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Tk75Attractions.Struckout.V1.Difficulty), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.StartGameRequest), global::Tk75Attractions.Struckout.V1.StartGameRequest.Parser, new[]{ "MachineId", "Difficulty" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.ListenEventsRequest), global::Tk75Attractions.Struckout.V1.ListenEventsRequest.Parser, null, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.StartGameRequest), global::Tk75Attractions.Struckout.V1.StartGameRequest.Parser, new[]{ "MachineId", "Difficulty", "PlayerId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.StartGameResponse), global::Tk75Attractions.Struckout.V1.StartGameResponse.Parser, new[]{ "Event" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.ListenEventsRequest), global::Tk75Attractions.Struckout.V1.ListenEventsRequest.Parser, new[]{ "MachineId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.ListenEventsResponse), global::Tk75Attractions.Struckout.V1.ListenEventsResponse.Parser, new[]{ "Event" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.AddScoreRequest), global::Tk75Attractions.Struckout.V1.AddScoreRequest.Parser, new[]{ "MachineId", "GameId", "ScoreToAdd" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.AddScoreResponse), global::Tk75Attractions.Struckout.V1.AddScoreResponse.Parser, null, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.Event), global::Tk75Attractions.Struckout.V1.Event.Parser, new[]{ "GameStarted" }, new[]{ "Data" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted), global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted.Parser, new[]{ "MachineId", "Difficulty", "GameId" }, null, null, null, null)})
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.AddPlayerRequest), global::Tk75Attractions.Struckout.V1.AddPlayerRequest.Parser, new[]{ "Name" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.AddPlayerResponse), global::Tk75Attractions.Struckout.V1.AddPlayerResponse.Parser, new[]{ "PlayerId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.Event), global::Tk75Attractions.Struckout.V1.Event.Parser, new[]{ "MachineId", "GameId", "GameStarted", "GameTimeLimitNotify", "GameFinished" }, new[]{ "EventData" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted), global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted.Parser, new[]{ "Difficulty" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify), global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify.Parser, new[]{ "Remaining" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished), global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished.Parser, null, null, null, null, null)})
           }));
     }
     #endregion
@@ -106,6 +127,7 @@ namespace Tk75Attractions.Struckout.V1 {
     public StartGameRequest(StartGameRequest other) : this() {
       machineId_ = other.machineId_;
       difficulty_ = other.difficulty_;
+      playerId_ = other.playerId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -117,10 +139,10 @@ namespace Tk75Attractions.Struckout.V1 {
 
     /// <summary>Field number for the "machine_id" field.</summary>
     public const int MachineIdFieldNumber = 1;
-    private int machineId_;
+    private uint machineId_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int MachineId {
+    public uint MachineId {
       get { return machineId_; }
       set {
         machineId_ = value;
@@ -136,6 +158,18 @@ namespace Tk75Attractions.Struckout.V1 {
       get { return difficulty_; }
       set {
         difficulty_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "player_id" field.</summary>
+    public const int PlayerIdFieldNumber = 3;
+    private uint playerId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint PlayerId {
+      get { return playerId_; }
+      set {
+        playerId_ = value;
       }
     }
 
@@ -156,6 +190,7 @@ namespace Tk75Attractions.Struckout.V1 {
       }
       if (MachineId != other.MachineId) return false;
       if (Difficulty != other.Difficulty) return false;
+      if (PlayerId != other.PlayerId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -165,6 +200,7 @@ namespace Tk75Attractions.Struckout.V1 {
       int hash = 1;
       if (MachineId != 0) hash ^= MachineId.GetHashCode();
       if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) hash ^= Difficulty.GetHashCode();
+      if (PlayerId != 0) hash ^= PlayerId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -185,11 +221,15 @@ namespace Tk75Attractions.Struckout.V1 {
     #else
       if (MachineId != 0) {
         output.WriteRawTag(8);
-        output.WriteInt32(MachineId);
+        output.WriteUInt32(MachineId);
       }
       if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
         output.WriteRawTag(16);
         output.WriteEnum((int) Difficulty);
+      }
+      if (PlayerId != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(PlayerId);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -203,11 +243,15 @@ namespace Tk75Attractions.Struckout.V1 {
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
       if (MachineId != 0) {
         output.WriteRawTag(8);
-        output.WriteInt32(MachineId);
+        output.WriteUInt32(MachineId);
       }
       if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
         output.WriteRawTag(16);
         output.WriteEnum((int) Difficulty);
+      }
+      if (PlayerId != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(PlayerId);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -220,10 +264,13 @@ namespace Tk75Attractions.Struckout.V1 {
     public int CalculateSize() {
       int size = 0;
       if (MachineId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(MachineId);
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MachineId);
       }
       if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Difficulty);
+      }
+      if (PlayerId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(PlayerId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -242,6 +289,9 @@ namespace Tk75Attractions.Struckout.V1 {
       }
       if (other.Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
         Difficulty = other.Difficulty;
+      }
+      if (other.PlayerId != 0) {
+        PlayerId = other.PlayerId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -263,11 +313,15 @@ namespace Tk75Attractions.Struckout.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 8: {
-            MachineId = input.ReadInt32();
+            MachineId = input.ReadUInt32();
             break;
           }
           case 16: {
             Difficulty = (global::Tk75Attractions.Struckout.V1.Difficulty) input.ReadEnum();
+            break;
+          }
+          case 24: {
+            PlayerId = input.ReadUInt32();
             break;
           }
         }
@@ -290,11 +344,222 @@ namespace Tk75Attractions.Struckout.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 8: {
-            MachineId = input.ReadInt32();
+            MachineId = input.ReadUInt32();
             break;
           }
           case 16: {
             Difficulty = (global::Tk75Attractions.Struckout.V1.Difficulty) input.ReadEnum();
+            break;
+          }
+          case 24: {
+            PlayerId = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class StartGameResponse : pb::IMessage<StartGameResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<StartGameResponse> _parser = new pb::MessageParser<StartGameResponse>(() => new StartGameResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<StartGameResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartGameResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartGameResponse(StartGameResponse other) : this() {
+      event_ = other.event_ != null ? other.event_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartGameResponse Clone() {
+      return new StartGameResponse(this);
+    }
+
+    /// <summary>Field number for the "event" field.</summary>
+    public const int EventFieldNumber = 1;
+    private global::Tk75Attractions.Struckout.V1.Event event_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.V1.Event Event {
+      get { return event_; }
+      set {
+        event_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as StartGameResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(StartGameResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Event, other.Event)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (event_ != null) hash ^= Event.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (event_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Event);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (event_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Event);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (event_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Event);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(StartGameResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.event_ != null) {
+        if (event_ == null) {
+          Event = new global::Tk75Attractions.Struckout.V1.Event();
+        }
+        Event.MergeFrom(other.Event);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (event_ == null) {
+              Event = new global::Tk75Attractions.Struckout.V1.Event();
+            }
+            input.ReadMessage(Event);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (event_ == null) {
+              Event = new global::Tk75Attractions.Struckout.V1.Event();
+            }
+            input.ReadMessage(Event);
             break;
           }
         }
@@ -319,7 +584,7 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -339,6 +604,7 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public ListenEventsRequest(ListenEventsRequest other) : this() {
+      machineId_ = other.machineId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -346,6 +612,18 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public ListenEventsRequest Clone() {
       return new ListenEventsRequest(this);
+    }
+
+    /// <summary>Field number for the "machine_id" field.</summary>
+    public const int MachineIdFieldNumber = 1;
+    private uint machineId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint MachineId {
+      get { return machineId_; }
+      set {
+        machineId_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -363,6 +641,7 @@ namespace Tk75Attractions.Struckout.V1 {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (MachineId != other.MachineId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -370,6 +649,7 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (MachineId != 0) hash ^= MachineId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -388,6 +668,10 @@ namespace Tk75Attractions.Struckout.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
+      if (MachineId != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(MachineId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -398,6 +682,10 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (MachineId != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(MachineId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -408,6 +696,9 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (MachineId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MachineId);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -419,6 +710,9 @@ namespace Tk75Attractions.Struckout.V1 {
     public void MergeFrom(ListenEventsRequest other) {
       if (other == null) {
         return;
+      }
+      if (other.MachineId != 0) {
+        MachineId = other.MachineId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -439,6 +733,10 @@ namespace Tk75Attractions.Struckout.V1 {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
+          case 8: {
+            MachineId = input.ReadUInt32();
+            break;
+          }
         }
       }
     #endif
@@ -458,6 +756,217 @@ namespace Tk75Attractions.Struckout.V1 {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
+          case 8: {
+            MachineId = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ListenEventsResponse : pb::IMessage<ListenEventsResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ListenEventsResponse> _parser = new pb::MessageParser<ListenEventsResponse>(() => new ListenEventsResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ListenEventsResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ListenEventsResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ListenEventsResponse(ListenEventsResponse other) : this() {
+      event_ = other.event_ != null ? other.event_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ListenEventsResponse Clone() {
+      return new ListenEventsResponse(this);
+    }
+
+    /// <summary>Field number for the "event" field.</summary>
+    public const int EventFieldNumber = 1;
+    private global::Tk75Attractions.Struckout.V1.Event event_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.V1.Event Event {
+      get { return event_; }
+      set {
+        event_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ListenEventsResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ListenEventsResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Event, other.Event)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (event_ != null) hash ^= Event.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (event_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Event);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (event_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Event);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (event_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Event);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ListenEventsResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.event_ != null) {
+        if (event_ == null) {
+          Event = new global::Tk75Attractions.Struckout.V1.Event();
+        }
+        Event.MergeFrom(other.Event);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (event_ == null) {
+              Event = new global::Tk75Attractions.Struckout.V1.Event();
+            }
+            input.ReadMessage(Event);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (event_ == null) {
+              Event = new global::Tk75Attractions.Struckout.V1.Event();
+            }
+            input.ReadMessage(Event);
+            break;
+          }
         }
       }
     }
@@ -480,7 +989,7 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -514,10 +1023,10 @@ namespace Tk75Attractions.Struckout.V1 {
 
     /// <summary>Field number for the "machine_id" field.</summary>
     public const int MachineIdFieldNumber = 1;
-    private int machineId_;
+    private uint machineId_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int MachineId {
+    public uint MachineId {
       get { return machineId_; }
       set {
         machineId_ = value;
@@ -526,10 +1035,10 @@ namespace Tk75Attractions.Struckout.V1 {
 
     /// <summary>Field number for the "game_id" field.</summary>
     public const int GameIdFieldNumber = 2;
-    private int gameId_;
+    private uint gameId_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int GameId {
+    public uint GameId {
       get { return gameId_; }
       set {
         gameId_ = value;
@@ -538,10 +1047,10 @@ namespace Tk75Attractions.Struckout.V1 {
 
     /// <summary>Field number for the "score_to_add" field.</summary>
     public const int ScoreToAddFieldNumber = 3;
-    private int scoreToAdd_;
+    private uint scoreToAdd_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int ScoreToAdd {
+    public uint ScoreToAdd {
       get { return scoreToAdd_; }
       set {
         scoreToAdd_ = value;
@@ -596,15 +1105,15 @@ namespace Tk75Attractions.Struckout.V1 {
     #else
       if (MachineId != 0) {
         output.WriteRawTag(8);
-        output.WriteInt32(MachineId);
+        output.WriteUInt32(MachineId);
       }
       if (GameId != 0) {
         output.WriteRawTag(16);
-        output.WriteInt32(GameId);
+        output.WriteUInt32(GameId);
       }
       if (ScoreToAdd != 0) {
         output.WriteRawTag(24);
-        output.WriteInt32(ScoreToAdd);
+        output.WriteUInt32(ScoreToAdd);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -618,15 +1127,15 @@ namespace Tk75Attractions.Struckout.V1 {
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
       if (MachineId != 0) {
         output.WriteRawTag(8);
-        output.WriteInt32(MachineId);
+        output.WriteUInt32(MachineId);
       }
       if (GameId != 0) {
         output.WriteRawTag(16);
-        output.WriteInt32(GameId);
+        output.WriteUInt32(GameId);
       }
       if (ScoreToAdd != 0) {
         output.WriteRawTag(24);
-        output.WriteInt32(ScoreToAdd);
+        output.WriteUInt32(ScoreToAdd);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -639,13 +1148,13 @@ namespace Tk75Attractions.Struckout.V1 {
     public int CalculateSize() {
       int size = 0;
       if (MachineId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(MachineId);
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MachineId);
       }
       if (GameId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(GameId);
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(GameId);
       }
       if (ScoreToAdd != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ScoreToAdd);
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ScoreToAdd);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -688,15 +1197,15 @@ namespace Tk75Attractions.Struckout.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 8: {
-            MachineId = input.ReadInt32();
+            MachineId = input.ReadUInt32();
             break;
           }
           case 16: {
-            GameId = input.ReadInt32();
+            GameId = input.ReadUInt32();
             break;
           }
           case 24: {
-            ScoreToAdd = input.ReadInt32();
+            ScoreToAdd = input.ReadUInt32();
             break;
           }
         }
@@ -719,15 +1228,15 @@ namespace Tk75Attractions.Struckout.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 8: {
-            MachineId = input.ReadInt32();
+            MachineId = input.ReadUInt32();
             break;
           }
           case 16: {
-            GameId = input.ReadInt32();
+            GameId = input.ReadUInt32();
             break;
           }
           case 24: {
-            ScoreToAdd = input.ReadInt32();
+            ScoreToAdd = input.ReadUInt32();
             break;
           }
         }
@@ -752,7 +1261,7 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -899,21 +1408,21 @@ namespace Tk75Attractions.Struckout.V1 {
   }
 
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class Event : pb::IMessage<Event>
+  public sealed partial class AddPlayerRequest : pb::IMessage<AddPlayerRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<Event> _parser = new pb::MessageParser<Event>(() => new Event());
+    private static readonly pb::MessageParser<AddPlayerRequest> _parser = new pb::MessageParser<AddPlayerRequest>(() => new AddPlayerRequest());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<Event> Parser { get { return _parser; } }
+    public static pb::MessageParser<AddPlayerRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -924,7 +1433,7 @@ namespace Tk75Attractions.Struckout.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Event() {
+    public AddPlayerRequest() {
       OnConstruction();
     }
 
@@ -932,71 +1441,45 @@ namespace Tk75Attractions.Struckout.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Event(Event other) : this() {
-      switch (other.DataCase) {
-        case DataOneofCase.GameStarted:
-          GameStarted = other.GameStarted.Clone();
-          break;
-      }
-
+    public AddPlayerRequest(AddPlayerRequest other) : this() {
+      name_ = other.name_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public Event Clone() {
-      return new Event(this);
+    public AddPlayerRequest Clone() {
+      return new AddPlayerRequest(this);
     }
 
-    /// <summary>Field number for the "game_started" field.</summary>
-    public const int GameStartedFieldNumber = 1;
+    /// <summary>Field number for the "name" field.</summary>
+    public const int NameFieldNumber = 1;
+    private string name_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted GameStarted {
-      get { return dataCase_ == DataOneofCase.GameStarted ? (global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted) data_ : null; }
+    public string Name {
+      get { return name_; }
       set {
-        data_ = value;
-        dataCase_ = value == null ? DataOneofCase.None : DataOneofCase.GameStarted;
+        name_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
-    }
-
-    private object data_;
-    /// <summary>Enum of possible cases for the "data" oneof.</summary>
-    public enum DataOneofCase {
-      None = 0,
-      GameStarted = 1,
-    }
-    private DataOneofCase dataCase_ = DataOneofCase.None;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DataOneofCase DataCase {
-      get { return dataCase_; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearData() {
-      dataCase_ = DataOneofCase.None;
-      data_ = null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as Event);
+      return Equals(other as AddPlayerRequest);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(Event other) {
+    public bool Equals(AddPlayerRequest other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(GameStarted, other.GameStarted)) return false;
-      if (DataCase != other.DataCase) return false;
+      if (Name != other.Name) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1004,8 +1487,7 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (dataCase_ == DataOneofCase.GameStarted) hash ^= GameStarted.GetHashCode();
-      hash ^= (int) dataCase_;
+      if (Name.Length != 0) hash ^= Name.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1024,9 +1506,9 @@ namespace Tk75Attractions.Struckout.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (dataCase_ == DataOneofCase.GameStarted) {
+      if (Name.Length != 0) {
         output.WriteRawTag(10);
-        output.WriteMessage(GameStarted);
+        output.WriteString(Name);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -1038,9 +1520,9 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (dataCase_ == DataOneofCase.GameStarted) {
+      if (Name.Length != 0) {
         output.WriteRawTag(10);
-        output.WriteMessage(GameStarted);
+        output.WriteString(Name);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -1052,8 +1534,8 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (dataCase_ == DataOneofCase.GameStarted) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameStarted);
+      if (Name.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Name);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1063,19 +1545,13 @@ namespace Tk75Attractions.Struckout.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(Event other) {
+    public void MergeFrom(AddPlayerRequest other) {
       if (other == null) {
         return;
       }
-      switch (other.DataCase) {
-        case DataOneofCase.GameStarted:
-          if (GameStarted == null) {
-            GameStarted = new global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted();
-          }
-          GameStarted.MergeFrom(other.GameStarted);
-          break;
+      if (other.Name.Length != 0) {
+        Name = other.Name;
       }
-
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -1096,12 +1572,7 @@ namespace Tk75Attractions.Struckout.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted();
-            if (dataCase_ == DataOneofCase.GameStarted) {
-              subBuilder.MergeFrom(GameStarted);
-            }
-            input.ReadMessage(subBuilder);
-            GameStarted = subBuilder;
+            Name = input.ReadString();
             break;
           }
         }
@@ -1124,12 +1595,626 @@ namespace Tk75Attractions.Struckout.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
+            Name = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AddPlayerResponse : pb::IMessage<AddPlayerResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AddPlayerResponse> _parser = new pb::MessageParser<AddPlayerResponse>(() => new AddPlayerResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AddPlayerResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[7]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AddPlayerResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AddPlayerResponse(AddPlayerResponse other) : this() {
+      playerId_ = other.playerId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AddPlayerResponse Clone() {
+      return new AddPlayerResponse(this);
+    }
+
+    /// <summary>Field number for the "player_id" field.</summary>
+    public const int PlayerIdFieldNumber = 1;
+    private uint playerId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint PlayerId {
+      get { return playerId_; }
+      set {
+        playerId_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AddPlayerResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AddPlayerResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (PlayerId != other.PlayerId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (PlayerId != 0) hash ^= PlayerId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (PlayerId != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(PlayerId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (PlayerId != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(PlayerId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (PlayerId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(PlayerId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AddPlayerResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.PlayerId != 0) {
+        PlayerId = other.PlayerId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            PlayerId = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            PlayerId = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class Event : pb::IMessage<Event>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<Event> _parser = new pb::MessageParser<Event>(() => new Event());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<Event> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Tk75Attractions.Struckout.V1.GameMasterReflection.Descriptor.MessageTypes[8]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Event() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Event(Event other) : this() {
+      machineId_ = other.machineId_;
+      gameId_ = other.gameId_;
+      switch (other.EventDataCase) {
+        case EventDataOneofCase.GameStarted:
+          GameStarted = other.GameStarted.Clone();
+          break;
+        case EventDataOneofCase.GameTimeLimitNotify:
+          GameTimeLimitNotify = other.GameTimeLimitNotify.Clone();
+          break;
+        case EventDataOneofCase.GameFinished:
+          GameFinished = other.GameFinished.Clone();
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Event Clone() {
+      return new Event(this);
+    }
+
+    /// <summary>Field number for the "machine_id" field.</summary>
+    public const int MachineIdFieldNumber = 1;
+    private uint machineId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint MachineId {
+      get { return machineId_; }
+      set {
+        machineId_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "game_id" field.</summary>
+    public const int GameIdFieldNumber = 2;
+    private uint gameId_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint GameId {
+      get { return gameId_; }
+      set {
+        gameId_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "game_started" field.</summary>
+    public const int GameStartedFieldNumber = 3;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted GameStarted {
+      get { return eventDataCase_ == EventDataOneofCase.GameStarted ? (global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted) eventData_ : null; }
+      set {
+        eventData_ = value;
+        eventDataCase_ = value == null ? EventDataOneofCase.None : EventDataOneofCase.GameStarted;
+      }
+    }
+
+    /// <summary>Field number for the "game_time_limit_notify" field.</summary>
+    public const int GameTimeLimitNotifyFieldNumber = 4;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify GameTimeLimitNotify {
+      get { return eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify ? (global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify) eventData_ : null; }
+      set {
+        eventData_ = value;
+        eventDataCase_ = value == null ? EventDataOneofCase.None : EventDataOneofCase.GameTimeLimitNotify;
+      }
+    }
+
+    /// <summary>Field number for the "game_finished" field.</summary>
+    public const int GameFinishedFieldNumber = 5;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished GameFinished {
+      get { return eventDataCase_ == EventDataOneofCase.GameFinished ? (global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished) eventData_ : null; }
+      set {
+        eventData_ = value;
+        eventDataCase_ = value == null ? EventDataOneofCase.None : EventDataOneofCase.GameFinished;
+      }
+    }
+
+    private object eventData_;
+    /// <summary>Enum of possible cases for the "event_data" oneof.</summary>
+    public enum EventDataOneofCase {
+      None = 0,
+      GameStarted = 3,
+      GameTimeLimitNotify = 4,
+      GameFinished = 5,
+    }
+    private EventDataOneofCase eventDataCase_ = EventDataOneofCase.None;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EventDataOneofCase EventDataCase {
+      get { return eventDataCase_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearEventData() {
+      eventDataCase_ = EventDataOneofCase.None;
+      eventData_ = null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as Event);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(Event other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (MachineId != other.MachineId) return false;
+      if (GameId != other.GameId) return false;
+      if (!object.Equals(GameStarted, other.GameStarted)) return false;
+      if (!object.Equals(GameTimeLimitNotify, other.GameTimeLimitNotify)) return false;
+      if (!object.Equals(GameFinished, other.GameFinished)) return false;
+      if (EventDataCase != other.EventDataCase) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (MachineId != 0) hash ^= MachineId.GetHashCode();
+      if (GameId != 0) hash ^= GameId.GetHashCode();
+      if (eventDataCase_ == EventDataOneofCase.GameStarted) hash ^= GameStarted.GetHashCode();
+      if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) hash ^= GameTimeLimitNotify.GetHashCode();
+      if (eventDataCase_ == EventDataOneofCase.GameFinished) hash ^= GameFinished.GetHashCode();
+      hash ^= (int) eventDataCase_;
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (MachineId != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(MachineId);
+      }
+      if (GameId != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(GameId);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameStarted) {
+        output.WriteRawTag(26);
+        output.WriteMessage(GameStarted);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) {
+        output.WriteRawTag(34);
+        output.WriteMessage(GameTimeLimitNotify);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameFinished) {
+        output.WriteRawTag(42);
+        output.WriteMessage(GameFinished);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (MachineId != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(MachineId);
+      }
+      if (GameId != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(GameId);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameStarted) {
+        output.WriteRawTag(26);
+        output.WriteMessage(GameStarted);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) {
+        output.WriteRawTag(34);
+        output.WriteMessage(GameTimeLimitNotify);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameFinished) {
+        output.WriteRawTag(42);
+        output.WriteMessage(GameFinished);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (MachineId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MachineId);
+      }
+      if (GameId != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(GameId);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameStarted) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameStarted);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameTimeLimitNotify);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameFinished) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameFinished);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(Event other) {
+      if (other == null) {
+        return;
+      }
+      if (other.MachineId != 0) {
+        MachineId = other.MachineId;
+      }
+      if (other.GameId != 0) {
+        GameId = other.GameId;
+      }
+      switch (other.EventDataCase) {
+        case EventDataOneofCase.GameStarted:
+          if (GameStarted == null) {
+            GameStarted = new global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted();
+          }
+          GameStarted.MergeFrom(other.GameStarted);
+          break;
+        case EventDataOneofCase.GameTimeLimitNotify:
+          if (GameTimeLimitNotify == null) {
+            GameTimeLimitNotify = new global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify();
+          }
+          GameTimeLimitNotify.MergeFrom(other.GameTimeLimitNotify);
+          break;
+        case EventDataOneofCase.GameFinished:
+          if (GameFinished == null) {
+            GameFinished = new global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished();
+          }
+          GameFinished.MergeFrom(other.GameFinished);
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            MachineId = input.ReadUInt32();
+            break;
+          }
+          case 16: {
+            GameId = input.ReadUInt32();
+            break;
+          }
+          case 26: {
             global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted();
-            if (dataCase_ == DataOneofCase.GameStarted) {
+            if (eventDataCase_ == EventDataOneofCase.GameStarted) {
               subBuilder.MergeFrom(GameStarted);
             }
             input.ReadMessage(subBuilder);
             GameStarted = subBuilder;
+            break;
+          }
+          case 34: {
+            global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify();
+            if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) {
+              subBuilder.MergeFrom(GameTimeLimitNotify);
+            }
+            input.ReadMessage(subBuilder);
+            GameTimeLimitNotify = subBuilder;
+            break;
+          }
+          case 42: {
+            global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished();
+            if (eventDataCase_ == EventDataOneofCase.GameFinished) {
+              subBuilder.MergeFrom(GameFinished);
+            }
+            input.ReadMessage(subBuilder);
+            GameFinished = subBuilder;
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            MachineId = input.ReadUInt32();
+            break;
+          }
+          case 16: {
+            GameId = input.ReadUInt32();
+            break;
+          }
+          case 26: {
+            global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameStarted();
+            if (eventDataCase_ == EventDataOneofCase.GameStarted) {
+              subBuilder.MergeFrom(GameStarted);
+            }
+            input.ReadMessage(subBuilder);
+            GameStarted = subBuilder;
+            break;
+          }
+          case 34: {
+            global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameTimeLimitNotify();
+            if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) {
+              subBuilder.MergeFrom(GameTimeLimitNotify);
+            }
+            input.ReadMessage(subBuilder);
+            GameTimeLimitNotify = subBuilder;
+            break;
+          }
+          case 42: {
+            global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished subBuilder = new global::Tk75Attractions.Struckout.V1.Event.Types.GameFinished();
+            if (eventDataCase_ == EventDataOneofCase.GameFinished) {
+              subBuilder.MergeFrom(GameFinished);
+            }
+            input.ReadMessage(subBuilder);
+            GameFinished = subBuilder;
             break;
           }
         }
@@ -1177,9 +2262,7 @@ namespace Tk75Attractions.Struckout.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public GameStarted(GameStarted other) : this() {
-          machineId_ = other.machineId_;
           difficulty_ = other.difficulty_;
-          gameId_ = other.gameId_;
           _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
         }
 
@@ -1189,20 +2272,8 @@ namespace Tk75Attractions.Struckout.V1 {
           return new GameStarted(this);
         }
 
-        /// <summary>Field number for the "machine_id" field.</summary>
-        public const int MachineIdFieldNumber = 1;
-        private int machineId_;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int MachineId {
-          get { return machineId_; }
-          set {
-            machineId_ = value;
-          }
-        }
-
         /// <summary>Field number for the "difficulty" field.</summary>
-        public const int DifficultyFieldNumber = 2;
+        public const int DifficultyFieldNumber = 1;
         private global::Tk75Attractions.Struckout.V1.Difficulty difficulty_ = global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified;
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -1210,18 +2281,6 @@ namespace Tk75Attractions.Struckout.V1 {
           get { return difficulty_; }
           set {
             difficulty_ = value;
-          }
-        }
-
-        /// <summary>Field number for the "game_id" field.</summary>
-        public const int GameIdFieldNumber = 3;
-        private int gameId_;
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int GameId {
-          get { return gameId_; }
-          set {
-            gameId_ = value;
           }
         }
 
@@ -1240,9 +2299,7 @@ namespace Tk75Attractions.Struckout.V1 {
           if (ReferenceEquals(other, this)) {
             return true;
           }
-          if (MachineId != other.MachineId) return false;
           if (Difficulty != other.Difficulty) return false;
-          if (GameId != other.GameId) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
 
@@ -1250,9 +2307,7 @@ namespace Tk75Attractions.Struckout.V1 {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override int GetHashCode() {
           int hash = 1;
-          if (MachineId != 0) hash ^= MachineId.GetHashCode();
           if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) hash ^= Difficulty.GetHashCode();
-          if (GameId != 0) hash ^= GameId.GetHashCode();
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
           }
@@ -1271,17 +2326,9 @@ namespace Tk75Attractions.Struckout.V1 {
         #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           output.WriteRawMessage(this);
         #else
-          if (MachineId != 0) {
-            output.WriteRawTag(8);
-            output.WriteInt32(MachineId);
-          }
           if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
-            output.WriteRawTag(16);
+            output.WriteRawTag(8);
             output.WriteEnum((int) Difficulty);
-          }
-          if (GameId != 0) {
-            output.WriteRawTag(24);
-            output.WriteInt32(GameId);
           }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(output);
@@ -1293,17 +2340,9 @@ namespace Tk75Attractions.Struckout.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-          if (MachineId != 0) {
-            output.WriteRawTag(8);
-            output.WriteInt32(MachineId);
-          }
           if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
-            output.WriteRawTag(16);
+            output.WriteRawTag(8);
             output.WriteEnum((int) Difficulty);
-          }
-          if (GameId != 0) {
-            output.WriteRawTag(24);
-            output.WriteInt32(GameId);
           }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(ref output);
@@ -1315,14 +2354,8 @@ namespace Tk75Attractions.Struckout.V1 {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public int CalculateSize() {
           int size = 0;
-          if (MachineId != 0) {
-            size += 1 + pb::CodedOutputStream.ComputeInt32Size(MachineId);
-          }
           if (Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
             size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Difficulty);
-          }
-          if (GameId != 0) {
-            size += 1 + pb::CodedOutputStream.ComputeInt32Size(GameId);
           }
           if (_unknownFields != null) {
             size += _unknownFields.CalculateSize();
@@ -1336,14 +2369,8 @@ namespace Tk75Attractions.Struckout.V1 {
           if (other == null) {
             return;
           }
-          if (other.MachineId != 0) {
-            MachineId = other.MachineId;
-          }
           if (other.Difficulty != global::Tk75Attractions.Struckout.V1.Difficulty.Unspecified) {
             Difficulty = other.Difficulty;
-          }
-          if (other.GameId != 0) {
-            GameId = other.GameId;
           }
           _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
         }
@@ -1365,15 +2392,7 @@ namespace Tk75Attractions.Struckout.V1 {
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
               case 8: {
-                MachineId = input.ReadInt32();
-                break;
-              }
-              case 16: {
                 Difficulty = (global::Tk75Attractions.Struckout.V1.Difficulty) input.ReadEnum();
-                break;
-              }
-              case 24: {
-                GameId = input.ReadInt32();
                 break;
               }
             }
@@ -1396,17 +2415,377 @@ namespace Tk75Attractions.Struckout.V1 {
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
               case 8: {
-                MachineId = input.ReadInt32();
-                break;
-              }
-              case 16: {
                 Difficulty = (global::Tk75Attractions.Struckout.V1.Difficulty) input.ReadEnum();
                 break;
               }
-              case 24: {
-                GameId = input.ReadInt32();
+            }
+          }
+        }
+        #endif
+
+      }
+
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class GameTimeLimitNotify : pb::IMessage<GameTimeLimitNotify>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<GameTimeLimitNotify> _parser = new pb::MessageParser<GameTimeLimitNotify>(() => new GameTimeLimitNotify());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<GameTimeLimitNotify> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Tk75Attractions.Struckout.V1.Event.Descriptor.NestedTypes[1]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameTimeLimitNotify() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameTimeLimitNotify(GameTimeLimitNotify other) : this() {
+          remaining_ = other.remaining_ != null ? other.remaining_.Clone() : null;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameTimeLimitNotify Clone() {
+          return new GameTimeLimitNotify(this);
+        }
+
+        /// <summary>Field number for the "remaining" field.</summary>
+        public const int RemainingFieldNumber = 1;
+        private global::Google.Protobuf.WellKnownTypes.Duration remaining_;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration Remaining {
+          get { return remaining_; }
+          set {
+            remaining_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as GameTimeLimitNotify);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(GameTimeLimitNotify other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (!object.Equals(Remaining, other.Remaining)) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (remaining_ != null) hash ^= Remaining.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (remaining_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(Remaining);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (remaining_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(Remaining);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (remaining_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(Remaining);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(GameTimeLimitNotify other) {
+          if (other == null) {
+            return;
+          }
+          if (other.remaining_ != null) {
+            if (remaining_ == null) {
+              Remaining = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            Remaining.MergeFrom(other.Remaining);
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 10: {
+                if (remaining_ == null) {
+                  Remaining = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(Remaining);
                 break;
               }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 10: {
+                if (remaining_ == null) {
+                  Remaining = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(Remaining);
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class GameFinished : pb::IMessage<GameFinished>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<GameFinished> _parser = new pb::MessageParser<GameFinished>(() => new GameFinished());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<GameFinished> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Tk75Attractions.Struckout.V1.Event.Descriptor.NestedTypes[2]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameFinished() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameFinished(GameFinished other) : this() {
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameFinished Clone() {
+          return new GameFinished(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as GameFinished);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(GameFinished other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(GameFinished other) {
+          if (other == null) {
+            return;
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
             }
           }
         }

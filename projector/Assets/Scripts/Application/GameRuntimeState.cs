@@ -19,6 +19,15 @@ namespace Struckout.Application
             Phase = GamePhase.Playing;
         }
 
+        /// <summary>
+        /// 制限時間が尽きた。game_master から GameFinished が届いたときに呼ぶ。
+        /// 以降は当たっても得点にしない。
+        /// </summary>
+        public void FinishGame()
+        {
+            Phase = GamePhase.Finished;
+        }
+
         public int Score { get; private set; } = 0;
         public Difficulty Difficulty { get; private set;}
 

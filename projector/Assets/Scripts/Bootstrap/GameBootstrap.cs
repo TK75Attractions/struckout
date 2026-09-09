@@ -4,9 +4,6 @@ using System;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
 
-// UnityEngine.Event と名前が衝突するので、proto 側を明示する。
-using Event = Tk75Attractions.Struckout.V1.Event;
-
 namespace Struckout.Bootstrap
 {
     public class GameBootstrap
@@ -43,15 +40,20 @@ namespace Struckout.Bootstrap
             // ここでは得点の送信だけを繋ぐ。
             _runtime.ScoreAdded += OnScoreAdded;
 
-            // ゲームの開始は game_master のイベントストリームから来る。
-            // 終了と残り時間は proto にまだ無いので、届くようになったらここに足す。
+            // ゲームの開始と終了は game_master のイベントストリームから来る。
+            // 残り時間 (GameTimeLimitNotify) も流れてくるが、projector と touchpanel の
+            // どちらが出すかが未決なので、まだ拾っていない。
             _master.GameStarted += OnGameStarted;
+            _master.GameFinished += OnGameFinished;
 
             _runtime.GameSetup();
         }
 
-        private void OnGameStarted(Event.Types.GameStarted started) =>
-            _runtime.StartGame(started.Difficulty);
+        private void OnGameStarted(Difficulty difficulty) =>
+            _runtime.StartGame(difficulty);
+
+        private void OnGameFinished() =>
+            _runtime.FinishGame();
 
         private void OnScoreAdded(int points)
         {

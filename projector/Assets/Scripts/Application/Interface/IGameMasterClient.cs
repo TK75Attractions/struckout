@@ -13,10 +13,18 @@ namespace Struckout.Application
     public interface IGameMasterClient
     {
         /// <summary>
-        /// ゲームが始まった。難易度と game_id はこのイベントでしか手に入らない。
+        /// ゲームが始まった。難易度はこのイベントでしか手に入らない。
+        /// game_id は得点の送信にしか使わないので、実装側が内部で持つ。
         /// 受信スレッドから飛ぶので、UI に触る購読側はマーシャリングすること。
         /// </summary>
-        event Action<Event.Types.GameStarted> GameStarted;
+        event Action<Difficulty> GameStarted;
+
+        /// <summary>
+        /// 制限時間が尽きてゲームが終わった。これ以降 game_master は
+        /// この game_id を running_games から外すので、得点を送っても弾かれる。
+        /// GameStarted と同じく受信スレッドから飛ぶ。
+        /// </summary>
+        event Action GameFinished;
 
         /// <summary>イベント購読が切れた。</summary>
         event Action ConnectionLost;

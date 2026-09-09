@@ -49,31 +49,45 @@ namespace Tk75Attractions.Struckout.V1 {
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.AddPlayerRequest> __Marshaller_tk75attractions_struckout_v1_AddPlayerRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.AddPlayerRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.AddPlayerResponse> __Marshaller_tk75attractions_struckout_v1_AddPlayerResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.AddPlayerResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.StartGameRequest> __Marshaller_tk75attractions_struckout_v1_StartGameRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.StartGameRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.Event> __Marshaller_tk75attractions_struckout_v1_Event = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.Event.Parser));
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.StartGameResponse> __Marshaller_tk75attractions_struckout_v1_StartGameResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.StartGameResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.ListenEventsRequest> __Marshaller_tk75attractions_struckout_v1_ListenEventsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.ListenEventsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.ListenEventsResponse> __Marshaller_tk75attractions_struckout_v1_ListenEventsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.ListenEventsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.AddScoreRequest> __Marshaller_tk75attractions_struckout_v1_AddScoreRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.AddScoreRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.AddScoreResponse> __Marshaller_tk75attractions_struckout_v1_AddScoreResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.AddScoreResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.StartGameRequest, global::Tk75Attractions.Struckout.V1.Event> __Method_StartGame = new grpc::Method<global::Tk75Attractions.Struckout.V1.StartGameRequest, global::Tk75Attractions.Struckout.V1.Event>(
+    static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.AddPlayerRequest, global::Tk75Attractions.Struckout.V1.AddPlayerResponse> __Method_AddPlayer = new grpc::Method<global::Tk75Attractions.Struckout.V1.AddPlayerRequest, global::Tk75Attractions.Struckout.V1.AddPlayerResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AddPlayer",
+        __Marshaller_tk75attractions_struckout_v1_AddPlayerRequest,
+        __Marshaller_tk75attractions_struckout_v1_AddPlayerResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.StartGameRequest, global::Tk75Attractions.Struckout.V1.StartGameResponse> __Method_StartGame = new grpc::Method<global::Tk75Attractions.Struckout.V1.StartGameRequest, global::Tk75Attractions.Struckout.V1.StartGameResponse>(
         grpc::MethodType.ServerStreaming,
         __ServiceName,
         "StartGame",
         __Marshaller_tk75attractions_struckout_v1_StartGameRequest,
-        __Marshaller_tk75attractions_struckout_v1_Event);
+        __Marshaller_tk75attractions_struckout_v1_StartGameResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.V1.Event> __Method_ListenEvents = new grpc::Method<global::Tk75Attractions.Struckout.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.V1.Event>(
+    static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.V1.ListenEventsResponse> __Method_ListenEvents = new grpc::Method<global::Tk75Attractions.Struckout.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.V1.ListenEventsResponse>(
         grpc::MethodType.ServerStreaming,
         __ServiceName,
         "ListenEvents",
         __Marshaller_tk75attractions_struckout_v1_ListenEventsRequest,
-        __Marshaller_tk75attractions_struckout_v1_Event);
+        __Marshaller_tk75attractions_struckout_v1_ListenEventsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.AddScoreRequest, global::Tk75Attractions.Struckout.V1.AddScoreResponse> __Method_AddScore = new grpc::Method<global::Tk75Attractions.Struckout.V1.AddScoreRequest, global::Tk75Attractions.Struckout.V1.AddScoreResponse>(
@@ -93,15 +107,22 @@ namespace Tk75Attractions.Struckout.V1 {
     [grpc::BindServiceMethod(typeof(GameMasterService), "BindService")]
     public abstract partial class GameMasterServiceBase
     {
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.V1.AddPlayerResponse> AddPlayer(global::Tk75Attractions.Struckout.V1.AddPlayerRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
       /// <summary>
       /// Used by `touchpanel`.
+      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="responseStream">Used for sending responses back to the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task StartGame(global::Tk75Attractions.Struckout.V1.StartGameRequest request, grpc::IServerStreamWriter<global::Tk75Attractions.Struckout.V1.Event> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task StartGame(global::Tk75Attractions.Struckout.V1.StartGameRequest request, grpc::IServerStreamWriter<global::Tk75Attractions.Struckout.V1.StartGameResponse> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -114,7 +135,7 @@ namespace Tk75Attractions.Struckout.V1 {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task ListenEvents(global::Tk75Attractions.Struckout.V1.ListenEventsRequest request, grpc::IServerStreamWriter<global::Tk75Attractions.Struckout.V1.Event> responseStream, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task ListenEvents(global::Tk75Attractions.Struckout.V1.ListenEventsRequest request, grpc::IServerStreamWriter<global::Tk75Attractions.Struckout.V1.ListenEventsResponse> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -160,8 +181,29 @@ namespace Tk75Attractions.Struckout.V1 {
       {
       }
 
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.V1.AddPlayerResponse AddPlayer(global::Tk75Attractions.Struckout.V1.AddPlayerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AddPlayer(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.V1.AddPlayerResponse AddPlayer(global::Tk75Attractions.Struckout.V1.AddPlayerRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AddPlayer, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.V1.AddPlayerResponse> AddPlayerAsync(global::Tk75Attractions.Struckout.V1.AddPlayerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AddPlayerAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.V1.AddPlayerResponse> AddPlayerAsync(global::Tk75Attractions.Struckout.V1.AddPlayerRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AddPlayer, null, options, request);
+      }
       /// <summary>
       /// Used by `touchpanel`.
+      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -169,18 +211,19 @@ namespace Tk75Attractions.Struckout.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.Event> StartGame(global::Tk75Attractions.Struckout.V1.StartGameRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.StartGameResponse> StartGame(global::Tk75Attractions.Struckout.V1.StartGameRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return StartGame(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
       /// Used by `touchpanel`.
+      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.Event> StartGame(global::Tk75Attractions.Struckout.V1.StartGameRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.StartGameResponse> StartGame(global::Tk75Attractions.Struckout.V1.StartGameRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncServerStreamingCall(__Method_StartGame, null, options, request);
       }
@@ -193,7 +236,7 @@ namespace Tk75Attractions.Struckout.V1 {
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.Event> ListenEvents(global::Tk75Attractions.Struckout.V1.ListenEventsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.ListenEventsResponse> ListenEvents(global::Tk75Attractions.Struckout.V1.ListenEventsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ListenEvents(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
@@ -204,7 +247,7 @@ namespace Tk75Attractions.Struckout.V1 {
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.Event> ListenEvents(global::Tk75Attractions.Struckout.V1.ListenEventsRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncServerStreamingCall<global::Tk75Attractions.Struckout.V1.ListenEventsResponse> ListenEvents(global::Tk75Attractions.Struckout.V1.ListenEventsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncServerStreamingCall(__Method_ListenEvents, null, options, request);
       }
@@ -270,6 +313,7 @@ namespace Tk75Attractions.Struckout.V1 {
     public static grpc::ServerServiceDefinition BindService(GameMasterServiceBase serviceImpl)
     {
       return grpc::ServerServiceDefinition.CreateBuilder()
+          .AddMethod(__Method_AddPlayer, serviceImpl.AddPlayer)
           .AddMethod(__Method_StartGame, serviceImpl.StartGame)
           .AddMethod(__Method_ListenEvents, serviceImpl.ListenEvents)
           .AddMethod(__Method_AddScore, serviceImpl.AddScore).Build();
@@ -282,8 +326,9 @@ namespace Tk75Attractions.Struckout.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public static void BindService(grpc::ServiceBinderBase serviceBinder, GameMasterServiceBase serviceImpl)
     {
-      serviceBinder.AddMethod(__Method_StartGame, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Tk75Attractions.Struckout.V1.StartGameRequest, global::Tk75Attractions.Struckout.V1.Event>(serviceImpl.StartGame));
-      serviceBinder.AddMethod(__Method_ListenEvents, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Tk75Attractions.Struckout.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.V1.Event>(serviceImpl.ListenEvents));
+      serviceBinder.AddMethod(__Method_AddPlayer, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.V1.AddPlayerRequest, global::Tk75Attractions.Struckout.V1.AddPlayerResponse>(serviceImpl.AddPlayer));
+      serviceBinder.AddMethod(__Method_StartGame, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Tk75Attractions.Struckout.V1.StartGameRequest, global::Tk75Attractions.Struckout.V1.StartGameResponse>(serviceImpl.StartGame));
+      serviceBinder.AddMethod(__Method_ListenEvents, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Tk75Attractions.Struckout.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.V1.ListenEventsResponse>(serviceImpl.ListenEvents));
       serviceBinder.AddMethod(__Method_AddScore, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.V1.AddScoreRequest, global::Tk75Attractions.Struckout.V1.AddScoreResponse>(serviceImpl.AddScore));
     }
 

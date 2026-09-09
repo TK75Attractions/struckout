@@ -32,10 +32,11 @@ namespace Struckout.Infrastructure
         private CancellationTokenSource _listenCancellation;
         private Task _listenTask;
 
-        /// <summary>進行中のゲーム。StartGame を受け取るまでは無い。</summary>
-        private int? _gameId;
+        /// <summary>進行中のゲーム。GameStarted を受け取るまでは無い。</summary>
+        private uint? _gameId;
 
-        public event Action<Event.Types.GameStarted> GameStarted;
+        public event Action<Difficulty> GameStarted;
+        public event Action GameFinished;
         public event Action ConnectionLost;
 
         public GrpcGameMasterClient(NetworkSettings settings)
@@ -69,7 +70,7 @@ namespace Struckout.Infrastructure
             _listenCancellation = new CancellationTokenSource();
             _listenTask = ListenEventsAsync(_listenCancellation.Token);
 
-            Debug.Log($"[GameMaster] listening for events on {address}");
+            Debug.Log($"[GameMaster] listening for events on {address} as machine {_settings.MachineId}");
             return Task.FromResult(true);
         }
 
@@ -78,16 +79,28 @@ namespace Struckout.Infrastructure
         ///
         /// 接続できるかどうかはこのストリームを読み始めて初めて分かる。
         /// gRPC のチャネルは遅延接続なので、ConnectAsync の時点では失敗しない。
+        ///
+        /// machine_id での絞り込みは game_master 側が行う
+        /// (service.rs の pass_events_through_by_machine_id)。
+        /// 号機番号を間違えると、繋がってはいるのにイベントが一件も来ない。
         /// </summary>
         private async Task ListenEventsAsync(CancellationToken token)
         {
             try
             {
-                using var call = _client.ListenEvents(new ListenEventsRequest(), cancellationToken: token);
+                var request = new ListenEventsRequest { MachineId = (uint)_settings.MachineId };
+                using var call = _client.ListenEvents(request, cancellationToken: token);
 
                 while (await call.ResponseStream.MoveNext(token))
                 {
-                    HandleEvent(call.ResponseStream.Current);
+                    var received = call.ResponseStream.Current?.Event;
+                    if (received == null)
+                    {
+                        Debug.LogWarning("[GameMaster] received a response without an event; ignored.");
+                        continue;
+                    }
+
+                    HandleEvent(received);
                 }
 
                 Debug.LogWarning("[GameMaster] the event stream ended.");
@@ -118,26 +131,29 @@ namespace Struckout.Infrastructure
 
         private void HandleEvent(Event received)
         {
-            switch (received.DataCase)
+            switch (received.EventDataCase)
             {
-                case Event.DataOneofCase.GameStarted:
-                    var started = received.GameStarted;
+                case Event.EventDataOneofCase.GameStarted:
+                    // game_id は Event 直下にある。得点を送るのに要るのはこれだけ。
+                    _gameId = received.GameId;
+                    GameStarted?.Invoke(received.GameStarted.Difficulty);
+                    break;
 
-                    // ListenEvents に絞り込みが無いので、全台のイベントが流れてくる。
-                    // 自分の号機のものだけを拾う。
-                    if (started.MachineId != _settings.MachineId)
-                    {
-                        Debug.Log($"[GameMaster] ignored an event for machine {started.MachineId}");
-                        return;
-                    }
+                case Event.EventDataOneofCase.GameFinished:
+                    // これ以降 game_master は running_games から外すので、
+                    // 得点を送っても NotFound で弾かれる。手元でも送信を止める。
+                    _gameId = null;
+                    GameFinished?.Invoke();
+                    break;
 
-                    _gameId = started.GameId;
-                    GameStarted?.Invoke(started);
+                case Event.EventDataOneofCase.GameTimeLimitNotify:
+                    // 毎秒届く。残り時間を projector と touchpanel のどちらが出すかが
+                    // 未決なので、今は捨てている。projector で出すと決まったら
+                    // IGameMasterClient にイベントを足してここから流す。
                     break;
 
                 default:
-                    // 終了や残り時間はまだ proto に無い。増えたらここに足す。
-                    Debug.Log($"[GameMaster] unhandled event: {received.DataCase}");
+                    Debug.Log($"[GameMaster] unhandled event: {received.EventDataCase}");
                     break;
             }
         }
@@ -150,9 +166,15 @@ namespace Struckout.Infrastructure
                 return false;
             }
 
-            if (_gameId is not int gameId)
+            if (_gameId is not uint gameId)
             {
                 Debug.LogWarning("[GameMaster] no game is running; the score was not sent.");
+                return false;
+            }
+
+            if (scoreToAdd < 0)
+            {
+                Debug.LogWarning($"[GameMaster] refused to send a negative score delta ({scoreToAdd}).");
                 return false;
             }
 
@@ -160,9 +182,9 @@ namespace Struckout.Infrastructure
             {
                 await _client.AddScoreAsync(new AddScoreRequest
                 {
-                    MachineId = _settings.MachineId,
+                    MachineId = (uint)_settings.MachineId,
                     GameId = gameId,
-                    ScoreToAdd = scoreToAdd,
+                    ScoreToAdd = (uint)scoreToAdd,
                 });
                 return true;
             }

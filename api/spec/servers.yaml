@@ -1,0 +1,23 @@
+servers:
+  game-master:
+    grpc:
+      type: grpc
+      port: 8020
+  
+  tracker:
+    projector:
+      type: tcp
+      port: 5000
+    
+    camera-ctrl:
+      type: tcp
+      port: 6060
+    
+    camera-data:
+      type: tcp
+      port: 5050
+
+  xtask-sync:
+    camera:
+      type: tcp
+      port: 6262

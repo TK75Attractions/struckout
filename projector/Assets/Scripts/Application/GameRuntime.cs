@@ -74,17 +74,27 @@ namespace Struckout.Application
             Debug.Log($"[Game] started ({difficulty})");
         }
 
+        /// <summary>
+        /// game_master から GameFinished が届いたときに呼ぶ。以降は得点を送らない。
+        /// </summary>
+        public void FinishGame()
+        {
+            _state.FinishGame();
+            Debug.Log($"[Game] finished (score={_state.Score})");
+        }
+
         public void CollisionDetected(CollisionPoint collisionPoint)
         {
             float x = (float)collisionPoint.X;
             float y = (float)collisionPoint.Y;
 
-            // StartGame より前に当たっても判定しない。
-            // game_master はセッション外の得点を受け取ると panic するため。
+            // ゲームが動いていない間に当たっても判定しない。
+            // game_master はセッション外の得点を running_games に見つけられず、
+            // NotFound を返す (service.rs の add_score)。
             if (_state.Phase != GamePhase.Playing)
             {
                 _uiService.ShowCollisionMarker(x, y, CollisionResult.Ignored);
-                Debug.Log($"[Hit] ignored: the game has not started (phase={_state.Phase})");
+                Debug.Log($"[Hit] ignored: the game is not running (phase={_state.Phase})");
                 return;
             }
 
