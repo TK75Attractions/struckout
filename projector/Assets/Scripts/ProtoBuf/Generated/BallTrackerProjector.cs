@@ -25,12 +25,13 @@ namespace Tk75Attractions.Struckout.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Ch1iYWxsLXRyYWNrZXJfX3Byb2plY3Rvci5wcm90bxIcdGs3NWF0dHJhY3Rp",
-            "b25zLnN0cnVja291dC52MSImCg5Db2xsaXNpb25Qb2ludBIJCgF4GAEgASgB",
-            "EgkKAXkYAiABKAEiHgoLVGVzdE1lc3NhZ2USDwoHbWVzc2FnZRgBIAEoCSKZ",
-            "AQoPUHJvamVjdG9yUGFja2V0Ej0KBXBvaW50GAEgASgLMiwudGs3NWF0dHJh",
-            "Y3Rpb25zLnN0cnVja291dC52MS5Db2xsaXNpb25Qb2ludEgAEjwKB21lc3Nh",
-            "Z2UYAiABKAsyKS50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LnYxLlRlc3RN",
-            "ZXNzYWdlSABCCQoHcGF5bG9hZGIGcHJvdG8z"));
+            "b25zLnN0cnVja291dC52MSIsCg5Db2xsaXNpb25Qb2ludBIMCgF4GAEgASgB",
+            "UgF4EgwKAXkYAiABKAFSAXkiJwoLVGVzdE1lc3NhZ2USGAoHbWVzc2FnZRgB",
+            "IAEoCVIHbWVzc2FnZSKpAQoPUHJvamVjdG9yUGFja2V0EkQKBXBvaW50GAEg",
+            "ASgLMiwudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC52MS5Db2xsaXNpb25Q",
+            "b2ludEgAUgVwb2ludBJFCgdtZXNzYWdlGAIgASgLMikudGs3NWF0dHJhY3Rp",
+            "b25zLnN0cnVja291dC52MS5UZXN0TWVzc2FnZUgAUgdtZXNzYWdlQgkKB3Bh",
+            "eWxvYWRiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {

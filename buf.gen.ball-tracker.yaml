@@ -1,0 +1,21 @@
+# ball-tracker__projector.proto から C# を生成する。
+#
+# projector と、偽 ball_tracker として使う testTcpCLI の両方が要る。
+# サービス定義が無いので gRPC スタブは作らない。
+#
+# game-master.proto を別ファイルに分けてあるのは、buf の plugins が
+# inputs 全体に一律で適用されるため。両方を一つにまとめると、
+# サービスの無いこの .proto にも gRPC プラグインが走って
+# 中身のない *Grpc.cs が並んでしまう。
+#
+# protoc は PATH から拾う。バージョンは .mise/config.toml が固定している。
+version: v2
+inputs:
+  - directory: api/proto
+    paths:
+      - api/proto/ball-tracker__projector.proto
+plugins:
+  - protoc_builtin: csharp
+    out: projector/Assets/Scripts/ProtoBuf/Generated
+  - protoc_builtin: csharp
+    out: sandbox/testTcpCLI/Network/Protocol/Generated

@@ -7,16 +7,18 @@ on:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
-      - scripts/generate-proto.sh
-      - mise.toml
+      - buf.gen.*.yaml
+      - scripts/fetch-grpc-csharp-plugin.sh
+      - .mise/config.toml
       - .github/workflows/proto_ci.yml
   pull_request:
     paths:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
-      - scripts/generate-proto.sh
-      - mise.toml
+      - buf.gen.*.yaml
+      - scripts/fetch-grpc-csharp-plugin.sh
+      - .mise/config.toml
       - .github/workflows/proto_ci.yml
   workflow_dispatch:
 
@@ -27,10 +29,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # protoc のバージョンは mise.toml が唯一の定義。
+      # buf と protoc のバージョンは .mise/config.toml が唯一の定義。
       # 生成される C# は Google.Protobuf ランタイムと対なので、
       # ここで別途ピン留めすると二重管理になる。
       - uses: jdx/mise-action@v4
 
+      # proto:check は生成しなおしてから git diff を見る。
+      # 生成物がコミット済みのものとずれていれば差分が出て落ちる。
       - name: Check generated code against api/proto
         run: mise run proto:check
