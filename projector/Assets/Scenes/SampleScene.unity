@@ -693,7 +693,7 @@ MonoBehaviour:
     TrackerHost: 127.0.0.1
     TrackerPort: 5000
     MasterHost: 127.0.0.1
-    MasterPort: 5001
+    MasterPort: 8020
     ConnectAttempts: 5
   _collisionTransform:
     PixelsPerMetreX: 960
