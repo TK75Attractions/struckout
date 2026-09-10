@@ -7,27 +7,25 @@ namespace Struckout.Infrastructure
 {
     public class TargetGenerator : ITargetGenerator
     {
-        private readonly int _xSize = 1920;
-        private readonly int _ySize = 1080;
+        private readonly float _xSize;
+        private readonly float _ySize;
 
         /// <summary>移動先を何回まで引き直すか。</summary>
         private const int RelocationAttempts = 64;
 
         // 初期配置は決定的なまま (仕様)。乱数を使うのは移動先を選ぶときだけ。
         private readonly Random _random = new();
-        public IReadOnlyList<Target> GenerateTargets(int num, float size)
+
+        /// <summary>
+        /// 盤面の広さは <see cref="FieldBounds"/> が持つ。既定を省略できるのは
+        /// テストが引数なしで作れるようにするためで、実行時は DI が値を渡す。
+        /// </summary>
+        public TargetGenerator(FieldBounds field = null)
         {
-            List<Target> result = new();
-            for (int i = 0; i < num; i++)
-            {
-                var target = GenerateTarget(TargetType.Circle, i*50, i*50, size);
-            
-                result.Add(target);
-            }
-
-            return result;
+            field ??= new FieldBounds();
+            _xSize = field.Width;
+            _ySize = field.Height;
         }
-
         public IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> existTarget)
         {
             List<Target> targets = new(existTarget);
