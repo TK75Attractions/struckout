@@ -7,10 +7,10 @@ namespace Struckout.Application
     {
         void InstantiateTargets(IReadOnlyList<Target> targets);
         /// <summary>
-        /// 的が移動したことを見た目に反映する。的は消えない。
-        /// 座標は <paramref name="target"/> が既に持っている。
+        /// 的に当たったときの見た目の更新。的は消えず、
+        /// <paramref name="cooldownSeconds"/> の間だけ色を変えて当たらないことを示す。
         /// </summary>
-        void MoveTarget(Target target);
+        void OnTargetHit(Target target, float cooldownSeconds);
 
         /// <summary>
         /// ボールが当たった位置を描画座標で受け取り、その場にマーカーを出す。

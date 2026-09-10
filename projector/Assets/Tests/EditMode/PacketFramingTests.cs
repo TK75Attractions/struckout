@@ -7,9 +7,8 @@ using Tk75Attractions.Struckout.V1;
 namespace Struckout.Tests
 {
     /// <summary>
-    /// ball_tracker から来るパケットのフレーミング。LE u32 の長さ + protobuf 本体。
+    /// TCP に載せるときのフレーミング。LE u32 の長さ + protobuf 本体。
     /// 相手側の実装は api/rust/src/lib.rs の write_packet / read_packet。
-    /// game_master とは gRPC なので、こちらのフレーミングは関係しない。
     ///
     /// 生成コードのズレで実際に壊れた箇所なので、
     /// 期待するバイト列を固定して回帰を検出できるようにしている。
@@ -30,6 +29,27 @@ namespace Struckout.Tests
             // 0A <len> 09 <x:double LE> 11 <y:double LE>
             Assert.That(BitConverter.ToString(bytes), Is.EqualTo(
                 "0A-12-09-00-00-00-00-00-E0-5E-40-11-00-00-00-00-00-84-7C-40"));
+        }
+
+        /// <summary>game_master が送ってくる開始通知。</summary>
+        [Test]
+        public void StartGame_が既知のバイト列になる()
+        {
+            var packet = new MasterProjectorPacket
+            {
+                StartGame = new StartGame { Difficulty = Difficulty.Hard },
+            };
+
+            Assert.That(BitConverter.ToString(packet.ToByteArray()), Is.EqualTo("0A-02-08-02"));
+        }
+
+        /// <summary>projector が game_master に返す得点。</summary>
+        [Test]
+        public void 得点が既知のバイト列になる()
+        {
+            var packet = new ProjectorMasterPacket { Score = 7 };
+
+            Assert.That(BitConverter.ToString(packet.ToByteArray()), Is.EqualTo("08-07"));
         }
 
         [Test]
@@ -68,21 +88,17 @@ namespace Struckout.Tests
         }
 
         /// <summary>
-        /// 生成コードに必要な型が揃っていることの確認。
-        /// 以前 proto の生成漏れで型が丸ごと欠落していたことがある。
+        /// ProjectorMasterPacket が生成コードに存在すること自体の確認。
+        /// 以前 testTcpCLI 側の生成コードからこの型が丸ごと欠落していた。
         /// </summary>
         [Test]
         public void 送受信に使う型がすべて生成されている()
         {
-            // ball_tracker -> projector は今も TCP + protobuf。
             Assert.That(new ProjectorPacket(), Is.Not.Null);
+            Assert.That(new MasterProjectorPacket(), Is.Not.Null);
+            Assert.That(new ProjectorMasterPacket(), Is.Not.Null);
             Assert.That(new CollisionPoint(), Is.Not.Null);
-
-            // game_master とは gRPC。メッセージとサービスのスタブが要る。
-            Assert.That(new AddScoreRequest(), Is.Not.Null);
-            Assert.That(new ListenEventsRequest(), Is.Not.Null);
-            Assert.That(new Tk75Attractions.Struckout.V1.Event(), Is.Not.Null);
-            Assert.That(typeof(GameMasterService.GameMasterServiceClient), Is.Not.Null);
+            Assert.That(new StartGame(), Is.Not.Null);
         }
     }
 }

@@ -11,6 +11,13 @@ namespace Struckout.Domain
         /// <summary>初期配置する的の数。</summary>
         public int InitialTargetCount = 4;
 
-        public override string ToString() => $"targets={InitialTargetCount}";
+        /// <summary>
+        /// 的に当たってから再び当たるようになるまでの秒数。
+        /// この間、的は色が変わり、当たっても得点にならない。
+        /// </summary>
+        public float TargetCooldownSeconds = 1.5f;
+
+        public override string ToString() =>
+            $"targets={InitialTargetCount} cooldown={TargetCooldownSeconds}s";
     }
 }

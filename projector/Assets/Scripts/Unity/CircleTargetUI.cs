@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using Struckout.Domain;
 
 namespace Struckout.Unity
@@ -6,71 +7,77 @@ namespace Struckout.Unity
     public class CircleTargetUI : MonoBehaviour, ITargetUI
     {
         [SerializeField]
-        [Tooltip("移動にかける秒数。0 なら瞬間移動する。")]
-        private float _moveDurationSeconds = 0.15f;
+        [Tooltip("色を変える対象。未設定なら子から Graphic を探す。")]
+        private Graphic _graphic;
 
-        private RectTransform _rect;
-        private Target _target;
+        [SerializeField]
+        [Tooltip("通常時の色。")]
+        private Color _normalColor = Color.white;
 
-        private Vector2 _moveFrom;
-        private Vector2 _moveTo;
-        private float _moveElapsed;
-        private bool _moving;
+        [SerializeField]
+        [Tooltip("クールダウン中の色。当たっても得点にならないことを示す。")]
+        private Color _cooldownColor = new(0.25f, 0.35f, 0.55f, 1f);
+
+        Target _target;
+
+        private float _cooldownTotal;
+        private float _cooldownRemaining;
 
         private void Awake()
         {
-            _rect = GetComponent<RectTransform>();
+            if (_graphic == null) _graphic = GetComponentInChildren<Graphic>();
+            ApplyColor();
         }
 
         public void Initialize(Target target)
         {
             _target = target;
-            if (_rect == null) _rect = GetComponent<RectTransform>();
 
-            _rect.anchoredPosition = ToAnchored(target);
+            RectTransform rect = GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(target.Coordinate.X, target.Coordinate.Y);
 
             // Target.Size は直径。CollisionSolver は Radius (= Size / 2) で判定するので、
             // 直径をそのまま描画すれば見た目と当たり判定が一致する。
             //
             // localScale で大きさを決めると Prefab の sizeDelta が 2 であることに
             // 暗黙に依存してしまうため、sizeDelta を直接指定する。
-            _rect.sizeDelta = new Vector2(target.Diameter, target.Diameter);
-            _rect.localScale = Vector3.one;
-
-            _moving = false;
+            rect.sizeDelta = new Vector2(target.Diameter, target.Diameter);
+            rect.localScale = Vector3.one;
         }
 
-        public void MoveTo(Target target)
+        public void OnCollision(float cooldownSeconds)
         {
-            _target = target;
-
-            if (_moveDurationSeconds <= 0f)
-            {
-                _rect.anchoredPosition = ToAnchored(target);
-                _moving = false;
-                return;
-            }
-
-            _moveFrom = _rect.anchoredPosition;
-            _moveTo = ToAnchored(target);
-            _moveElapsed = 0f;
-            _moving = true;
+            _cooldownTotal = Mathf.Max(0f, cooldownSeconds);
+            _cooldownRemaining = _cooldownTotal;
+            ApplyColor();
         }
 
         private void Update()
         {
-            if (!_moving) return;
+            if (_cooldownRemaining <= 0f) return;
 
-            _moveElapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(_moveElapsed / _moveDurationSeconds);
+            _cooldownRemaining -= Time.deltaTime;
+            if (_cooldownRemaining < 0f) _cooldownRemaining = 0f;
 
-            // 端で滑らかに止まるほうが的として見やすい。
-            _rect.anchoredPosition = Vector2.Lerp(_moveFrom, _moveTo, Mathf.SmoothStep(0f, 1f, t));
-
-            if (t >= 1f) _moving = false;
+            ApplyColor();
         }
 
-        private static Vector2 ToAnchored(Target target) =>
-            new(target.Coordinate.X, target.Coordinate.Y);
+        /// <summary>
+        /// クールダウン中は色を変える。残り時間に応じて通常色に戻していくので、
+        /// あとどれくらいで撃てるようになるかが見て分かる。
+        /// </summary>
+        private void ApplyColor()
+        {
+            if (_graphic == null) return;
+
+            if (_cooldownRemaining <= 0f || _cooldownTotal <= 0f)
+            {
+                _graphic.color = _normalColor;
+                return;
+            }
+
+            float remaining = _cooldownRemaining / _cooldownTotal;
+            _graphic.color = Color.Lerp(_normalColor, _cooldownColor, remaining);
+        }
     }
 }

@@ -7,18 +7,16 @@ on:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
-      - buf.gen.*.yaml
-      - scripts/fetch-grpc-csharp-plugin.sh
-      - .mise/config.toml
+      - scripts/generate-proto.sh
+      - mise.toml
       - .github/workflows/proto_ci.yml
   pull_request:
     paths:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
-      - buf.gen.*.yaml
-      - scripts/fetch-grpc-csharp-plugin.sh
-      - .mise/config.toml
+      - scripts/generate-proto.sh
+      - mise.toml
       - .github/workflows/proto_ci.yml
   workflow_dispatch:
 
@@ -29,23 +27,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # buf と protoc のバージョンは .mise/config.toml が唯一の定義。
+      # protoc のバージョンは mise.toml が唯一の定義。
       # 生成される C# は Google.Protobuf ランタイムと対なので、
       # ここで別途ピン留めすると二重管理になる。
-      #
-      # このジョブが要るのは buf と protoc だけ。install_args で絞らないと
-      # rust や dotnet、cargo からビルドする slint-viewer まで入ってしまい、
-      # 数分かけたうえに落ちる。
       - uses: jdx/mise-action@v4
-        with:
-          install_args: buf protoc
 
-      # proto:check は生成しなおしてから git diff を見る。
-      # 生成物がコミット済みのものとずれていれば差分が出て落ちる。
-      #
-      # mise はタスク実行時にも未導入のツールを入れようとするので、
-      # 上で絞ったぶんがここで元に戻らないように切っておく。
       - name: Check generated code against api/proto
-        env:
-          MISE_TASK_RUN_AUTO_INSTALL: "0"
         run: mise run proto:check
