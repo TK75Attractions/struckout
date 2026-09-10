@@ -83,18 +83,19 @@ GameRuntime ──> IUIService ──> UIService ──> TargetField (ワール�
 ```
 CircleTarget          Transform
                       SpriteRenderer
-                        material: Sprite-Lit-Default (URP 2D)
-                        sprite:   未設定 → 実行時に PlaceholderSprites.Circle が入る
-                        color:    白, alpha 0.392
+                        material: Assets/Materials/NeonTarget.mat (Struckout/NeonRing)
+                        sprite:   未設定 → 実行時に PlaceholderSprites.Quad が入る
+                        color:    白, 不透明
                       CircleTargetUI
 ```
 
-- **絵を差し替える起点はここ。** SpriteRenderer に Sprite を割り当てれば、
-  仮の生成は行われなくなる
-- マテリアルが `Sprite-Lit-Default` なので、**2D ライトがそのまま当たる**。
-  ライトを使いたくないなら `Sprite-Unlit-Default` に変える
-- 大きさは `CircleTargetUI` が**スプライトの実寸 (bounds) を見てから**倍率を出す。
-  どんな pixelsPerUnit の絵を割り当てても、見た目と当たり判定は一致する
+- **形と色はシェーダが描いている。** スプライトは下敷きの四角で、中身は参照されない。
+  調整は `NeonTarget.mat` の Inspector（リング幅・グロー・色）で行う
+- **的は 2D ライトを受けない。** ネオンは自分が光源なので、`Sprite-Lit` にすると
+  Global Light 2D の強度に見た目が振り回される。合成は加算（`Blend SrcAlpha One`）で、
+  プロジェクタが加算光であることに合わせてある
+- 絵に差し替えたいときは、SpriteRenderer に Sprite を割り当て、マテリアルを
+  `Sprite-Lit-Default` か `Sprite-Unlit-Default` に戻す
 
 ### 仮のスプライト（`PlaceholderSprites`）
 

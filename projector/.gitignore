@@ -36,6 +36,14 @@ UserSettings/
 
 
 # =========================
+# Test run artefacts
+# =========================
+
+# Performance Testing パッケージがテスト実行のたびに書き出す。
+/[Aa]ssets/Resources/PerformanceTestRun*.json
+/[Aa]ssets/Resources/PerformanceTestRun*.json.meta
+
+# =========================
 # Unity Cache
 # =========================
 

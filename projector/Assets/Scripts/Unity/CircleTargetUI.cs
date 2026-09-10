@@ -10,6 +10,9 @@ namespace Struckout.Unity
         [Tooltip("移動にかける秒数。0 なら瞬間移動する。")]
         private float _moveDurationSeconds = 0.15f;
 
+        /// <summary>NeonRing シェーダが持つ、的の境界を表す UV 半径。</summary>
+        private static readonly int TargetEdgeUv = Shader.PropertyToID("_TargetEdgeUv");
+
         private SpriteRenderer _renderer;
         private WorldCoordinateTransform _world;
         private Target _target;
@@ -28,11 +31,16 @@ namespace Struckout.Unity
         {
             if (_renderer == null) _renderer = GetComponent<SpriteRenderer>();
 
-            // Prefab に絵が割り当てられていなければ仮のものを使う。
-            // 素材ができたら Prefab 側で差し替えれば、ここは通らなくなる。
-            if (_renderer != null && _renderer.sprite == null)
+            if (_renderer == null) return;
+
+            // 絵が割り当てられていなければ用意する。
+            // 形をシェーダが描くマテリアル (NeonRing) のときは下敷きの四角でよく、
+            // そうでなければ仮の円を置く。素材ができたら Prefab 側で差し替える。
+            if (_renderer.sprite == null)
             {
-                _renderer.sprite = PlaceholderSprites.Circle;
+                _renderer.sprite = DrawsItsOwnShape
+                    ? PlaceholderSprites.Quad
+                    : PlaceholderSprites.Circle;
             }
         }
 
@@ -82,13 +90,26 @@ namespace Struckout.Unity
         }
 
         /// <summary>
+        /// マテリアルが「的の境界が UV 半径のどこか」を宣言しているか。
+        /// 宣言していれば形はシェーダが描いている。
+        /// </summary>
+        private bool DrawsItsOwnShape =>
+            _renderer != null
+            && _renderer.sharedMaterial != null
+            && _renderer.sharedMaterial.HasFloat(TargetEdgeUv);
+
+        /// <summary>
         /// Target.Size は直径。CollisionSolver は Radius (= Size / 2) で判定するので、
-        /// 直径をそのまま描画すれば見た目と当たり判定が一致する。
+        /// 的の境界が直径に一致していれば見た目と当たり判定が一致する。
         ///
         /// スプライトの実寸 (bounds) を見てから倍率を出しているのは、
         /// 割り当てられた絵の pixelsPerUnit や余白がいくつでも合うようにするため。
-        /// 「1 unit 角の絵が来る」と決め打つと、素材を差し替えた瞬間に
-        /// 見た目と当たり判定がずれる。
+        /// 「1 unit 角の絵が来る」と決め打つと、素材を差し替えた瞬間にずれる。
+        ///
+        /// さらに、形をシェーダが描く場合は絵の縁と的の境界が一致しない
+        /// (外側にグローを置く余白があるため)。境界がどこかはマテリアルだけが
+        /// 知っているので、ここで問い合わせる。値を持たないマテリアルなら
+        /// 絵の全幅を的とみなす (従来どおり)。
         /// </summary>
         private void ApplyDiameter(Target target)
         {
@@ -106,7 +127,15 @@ namespace Struckout.Unity
                 return;
             }
 
-            transform.localScale = Vector3.one * (desired / spriteWidth);
+            // 絵の幅のうち、的の直径にあたる割合。
+            float visibleFraction = 1f;
+            if (DrawsItsOwnShape)
+            {
+                float edgeUv = _renderer.sharedMaterial.GetFloat(TargetEdgeUv);
+                if (edgeUv > 0f) visibleFraction = edgeUv * 2f;
+            }
+
+            transform.localScale = Vector3.one * (desired / (spriteWidth * visibleFraction));
         }
 
         private Vector3 ToWorld(Target target) => new(
