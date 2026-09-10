@@ -2271,6 +2271,7 @@ dependencies = [
  "prost-types",
  "serde",
  "sqlx",
+ "struckout-proto",
  "struckout-yaml",
  "testcontainers-modules",
  "thiserror 2.0.18",
@@ -2279,8 +2280,6 @@ dependencies = [
  "tokio-stream",
  "toml 1.1.5+spec-1.1.0",
  "tonic",
- "tonic-prost",
- "tonic-prost-build",
  "tracing",
  "tracing-subscriber",
 ]
@@ -6882,10 +6881,12 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "prost",
- "prost-build",
  "prost-types",
  "thiserror 2.0.18",
  "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
 ]
 
 [[package]]

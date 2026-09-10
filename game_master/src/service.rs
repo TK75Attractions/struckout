@@ -1,6 +1,11 @@
 use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
+use struckout_proto::{
+    self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
+    ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
+    game_master_service_server::GameMasterService,
+};
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::{
@@ -10,14 +15,7 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{
-    AddPlayerError, DataSource, GameId, MachineId,
-    proto::{
-        self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
-        ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
-        game_master_service_server::GameMasterService,
-    },
-};
+use crate::{AddPlayerError, DataSource, GameId, MachineId};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
@@ -41,23 +39,23 @@ pub struct Event {
     data: Result<SuccessfulEvent, Status>,
 }
 
-/// Events which occur in the service. This can be converted to [`crate::proto::Event`].
+/// Events which occur in the service. This can be converted to [`struckout_proto::Event`].
 ///
 /// With this type, you don't need to convert proto types like `u32` or [`prost_types::Duration`]
 /// to domain type like [`GameId`] or [`time::SignedDuration`] each time.
 #[derive(Debug, Clone)]
 pub enum SuccessfulEvent {
-    /// [`crate::proto::event::GameStarted`]
+    /// [`struckout_proto::event::GameStarted`]
     GameStarted { difficulty: Difficulty },
-    /// [`crate::proto::event::GameTimeLimitNotify`]
+    /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
-    /// [`crate::proto::event::GameFinished`]
+    /// [`struckout_proto::event::GameFinished`]
     GameFinished,
 }
 
-impl From<SuccessfulEvent> for proto::event::EventData {
+impl From<SuccessfulEvent> for struckout_proto::event::EventData {
     fn from(ev: SuccessfulEvent) -> Self {
-        use proto::event::{EventData, GameFinished, GameStarted, GameTimeLimitNotify};
+        use struckout_proto::event::{EventData, GameFinished, GameStarted, GameTimeLimitNotify};
 
         match ev {
             SuccessfulEvent::GameStarted { difficulty } => EventData::GameStarted(GameStarted {
@@ -273,7 +271,7 @@ async fn pass_events_through_by_game_id(
         .filter(|ev| ev.game_id == game_id);
     while let Some(ev) = events.next().await {
         let data = ev.data.map(|v| StartGameResponse {
-            event: Some(proto::Event {
+            event: Some(struckout_proto::Event {
                 machine_id: ev.machine_id.into_inner(),
                 game_id: ev.game_id.into_inner(),
                 event_data: Some(v.into()),
@@ -296,7 +294,7 @@ async fn pass_events_through_by_machine_id(
         .filter(|ev| ev.machine_id == machine_id);
     while let Some(ev) = events.next().await {
         let data = ev.data.map(|v| ListenEventsResponse {
-            event: Some(proto::Event {
+            event: Some(struckout_proto::Event {
                 machine_id: ev.machine_id.into_inner(),
                 game_id: ev.game_id.into_inner(),
                 event_data: Some(v.into()),
