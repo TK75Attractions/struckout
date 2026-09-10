@@ -1,83 +1,117 @@
 using UnityEngine;
-using UnityEngine.UI;
 using Struckout.Domain;
 
 namespace Struckout.Unity
 {
+    [RequireComponent(typeof(SpriteRenderer))]
     public class CircleTargetUI : MonoBehaviour, ITargetUI
     {
         [SerializeField]
-        [Tooltip("色を変える対象。未設定なら子から Graphic を探す。")]
-        private Graphic _graphic;
+        [Tooltip("移動にかける秒数。0 なら瞬間移動する。")]
+        private float _moveDurationSeconds = 0.15f;
 
-        [SerializeField]
-        [Tooltip("通常時の色。")]
-        private Color _normalColor = Color.white;
+        private SpriteRenderer _renderer;
+        private WorldCoordinateTransform _world;
+        private Target _target;
 
-        [SerializeField]
-        [Tooltip("クールダウン中の色。当たっても得点にならないことを示す。")]
-        private Color _cooldownColor = new(0.25f, 0.35f, 0.55f, 1f);
-
-        Target _target;
-
-        private float _cooldownTotal;
-        private float _cooldownRemaining;
+        private Vector3 _moveFrom;
+        private Vector3 _moveTo;
+        private float _moveElapsed;
+        private bool _moving;
 
         private void Awake()
         {
-            if (_graphic == null) _graphic = GetComponentInChildren<Graphic>();
-            ApplyColor();
+            CacheRenderer();
         }
 
-        public void Initialize(Target target)
+        private void CacheRenderer()
+        {
+            if (_renderer == null) _renderer = GetComponent<SpriteRenderer>();
+
+            // Prefab に絵が割り当てられていなければ仮のものを使う。
+            // 素材ができたら Prefab 側で差し替えれば、ここは通らなくなる。
+            if (_renderer != null && _renderer.sprite == null)
+            {
+                _renderer.sprite = PlaceholderSprites.Circle;
+            }
+        }
+
+        public void Initialize(Target target, WorldCoordinateTransform world)
+        {
+            _world = world;
+            _target = target;
+            CacheRenderer();
+
+            transform.localPosition = ToWorld(target);
+            ApplyDiameter(target);
+
+            _moving = false;
+        }
+
+        public void MoveTo(Target target)
         {
             _target = target;
 
-            RectTransform rect = GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(target.Coordinate.X, target.Coordinate.Y);
+            // 大きさは変わらない仕様だが、変わっても破綻しないよう毎回合わせておく。
+            ApplyDiameter(target);
 
-            // Target.Size は直径。CollisionSolver は Radius (= Size / 2) で判定するので、
-            // 直径をそのまま描画すれば見た目と当たり判定が一致する。
-            //
-            // localScale で大きさを決めると Prefab の sizeDelta が 2 であることに
-            // 暗黙に依存してしまうため、sizeDelta を直接指定する。
-            rect.sizeDelta = new Vector2(target.Diameter, target.Diameter);
-            rect.localScale = Vector3.one;
-        }
+            if (_moveDurationSeconds <= 0f)
+            {
+                transform.localPosition = ToWorld(target);
+                _moving = false;
+                return;
+            }
 
-        public void OnCollision(float cooldownSeconds)
-        {
-            _cooldownTotal = Mathf.Max(0f, cooldownSeconds);
-            _cooldownRemaining = _cooldownTotal;
-            ApplyColor();
+            _moveFrom = transform.localPosition;
+            _moveTo = ToWorld(target);
+            _moveElapsed = 0f;
+            _moving = true;
         }
 
         private void Update()
         {
-            if (_cooldownRemaining <= 0f) return;
+            if (!_moving) return;
 
-            _cooldownRemaining -= Time.deltaTime;
-            if (_cooldownRemaining < 0f) _cooldownRemaining = 0f;
+            _moveElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(_moveElapsed / _moveDurationSeconds);
 
-            ApplyColor();
+            // 端で滑らかに止まるほうが的として見やすい。
+            transform.localPosition = Vector3.Lerp(_moveFrom, _moveTo, Mathf.SmoothStep(0f, 1f, t));
+
+            if (t >= 1f) _moving = false;
         }
 
         /// <summary>
-        /// クールダウン中は色を変える。残り時間に応じて通常色に戻していくので、
-        /// あとどれくらいで撃てるようになるかが見て分かる。
+        /// Target.Size は直径。CollisionSolver は Radius (= Size / 2) で判定するので、
+        /// 直径をそのまま描画すれば見た目と当たり判定が一致する。
+        ///
+        /// スプライトの実寸 (bounds) を見てから倍率を出しているのは、
+        /// 割り当てられた絵の pixelsPerUnit や余白がいくつでも合うようにするため。
+        /// 「1 unit 角の絵が来る」と決め打つと、素材を差し替えた瞬間に
+        /// 見た目と当たり判定がずれる。
         /// </summary>
-        private void ApplyColor()
+        private void ApplyDiameter(Target target)
         {
-            if (_graphic == null) return;
+            if (_world == null) return;
 
-            if (_cooldownRemaining <= 0f || _cooldownTotal <= 0f)
+            float desired = _world.ToWorldLength(target.Diameter);
+
+            float spriteWidth = _renderer != null && _renderer.sprite != null
+                ? _renderer.sprite.bounds.size.x
+                : 0f;
+
+            if (spriteWidth <= 0f)
             {
-                _graphic.color = _normalColor;
+                Debug.LogWarning($"{name}: sprite has no width; cannot size {target}.");
                 return;
             }
 
-            float remaining = _cooldownRemaining / _cooldownTotal;
-            _graphic.color = Color.Lerp(_normalColor, _cooldownColor, remaining);
+            transform.localScale = Vector3.one * (desired / spriteWidth);
         }
+
+        private Vector3 ToWorld(Target target) => new(
+            _world.ToWorldX(target.Coordinate.X),
+            _world.ToWorldY(target.Coordinate.Y),
+            0f);
     }
 }

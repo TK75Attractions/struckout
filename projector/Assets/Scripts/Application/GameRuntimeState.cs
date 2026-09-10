@@ -1,7 +1,6 @@
 using Struckout.Domain;
 using System.Collections.Generic;
 using System;
-using System.Diagnostics;
 using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Application
@@ -11,38 +10,6 @@ namespace Struckout.Application
         private List<Target> _targets = new();
         public IReadOnlyList<Target> Targets => _targets;
 
-        // 的は撃たれても消えず、一定時間だけ当たらなくなる。その解除時刻を的ごとに持つ。
-        // Unity 非依存にしたいので Stopwatch を使う
-        // (Environment.TickCount64 は Unity の .NET Standard 2.1 プロファイルには無い)。
-        private readonly Func<long> _nowMs;
-        private readonly Dictionary<Target, long> _cooldownUntilMs = new();
-
-        public GameRuntimeState() : this(null) { }
-
-        /// <param name="nowMs">
-        /// 現在時刻をミリ秒で返す関数。null なら単調増加する内部時計を使う。
-        /// テストから時間を進めたいときに差し替える。
-        /// </param>
-        public GameRuntimeState(Func<long> nowMs)
-        {
-            if (nowMs != null)
-            {
-                _nowMs = nowMs;
-                return;
-            }
-
-            var clock = Stopwatch.StartNew();
-            _nowMs = () => clock.ElapsedMilliseconds;
-        }
-
-        public bool IsCoolingDown(Target target) =>
-            _cooldownUntilMs.TryGetValue(target, out long until) && _nowMs() < until;
-
-        public void StartCooldown(Target target, float seconds)
-        {
-            if (seconds <= 0f) return;
-            _cooldownUntilMs[target] = _nowMs() + (long)(seconds * 1000f);
-        }
         /// <summary>StartGame を受け取るまでは Idle。</summary>
         public GamePhase Phase { get; private set; } = GamePhase.Idle;
 
@@ -50,6 +17,15 @@ namespace Struckout.Application
         {
             SetDifficulty(difficulty);
             Phase = GamePhase.Playing;
+        }
+
+        /// <summary>
+        /// 制限時間が尽きた。game_master から GameFinished が届いたときに呼ぶ。
+        /// 以降は当たっても得点にしない。
+        /// </summary>
+        public void FinishGame()
+        {
+            Phase = GamePhase.Finished;
         }
 
         public int Score { get; private set; } = 0;

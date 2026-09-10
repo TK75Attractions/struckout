@@ -2,7 +2,7 @@ namespace Struckout.Domain
 {
     /// <summary>
     /// 1 回の着弾がどう処理されたか。
-    /// マーカーの色を分けて、外したのかクールダウン中だったのかを見て区別できるようにする。
+    /// マーカーの色を分けて、外したのかゲーム中でなかったのかを見て区別できるようにする。
     /// </summary>
     public enum CollisionResult
     {
@@ -12,7 +12,7 @@ namespace Struckout.Domain
         /// <summary>的に当たって得点した。</summary>
         Scored = 1,
 
-        /// <summary>的には当たったが、その的がクールダウン中で得点にならなかった。</summary>
-        CoolingDown = 2,
+        /// <summary>ゲーム中ではないので判定しなかった。StartGame 待ち。</summary>
+        Ignored = 2,
     }
 }

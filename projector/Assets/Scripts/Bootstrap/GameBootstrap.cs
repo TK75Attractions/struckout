@@ -11,14 +11,14 @@ namespace Struckout.Bootstrap
         private readonly GameRuntime _runtime;
         private readonly ISensorProvider _sensorProvider;
         private readonly IUIService _service;
-        private readonly IClientService<MasterProjectorPacket> _master;
+        private readonly IGameMasterClient _master;
 
 
         public GameBootstrap(
             GameRuntime runtime,
             ISensorProvider sensorProvider,
             IUIService uiService,
-            IClientService<MasterProjectorPacket> master
+            IGameMasterClient master
         )
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -39,12 +39,21 @@ namespace Struckout.Bootstrap
             // 的の見た目の更新は GameRuntime が IUIService を直接叩く。
             // ここでは得点の送信だけを繋ぐ。
             _runtime.ScoreAdded += OnScoreAdded;
-            context.PacketRouter.OnGameStartReceived += OnGameStart;
+
+            // ゲームの開始と終了は game_master のイベントストリームから来る。
+            // 残り時間 (GameTimeLimitNotify) も流れてくるが、projector と touchpanel の
+            // どちらが出すかが未決なので、まだ拾っていない。
+            _master.GameStarted += OnGameStarted;
+            _master.GameFinished += OnGameFinished;
 
             _runtime.GameSetup();
         }
 
-        private void OnGameStart(StartGame startGame) => _runtime.StartGame(startGame.Difficulty);
+        private void OnGameStarted(Difficulty difficulty) =>
+            _runtime.StartGame(difficulty);
+
+        private void OnGameFinished() =>
+            _runtime.FinishGame();
 
         private void OnScoreAdded(int points)
         {
@@ -52,7 +61,7 @@ namespace Struckout.Bootstrap
         }
 
         /// <summary>
-        /// game_master には得点の増分を送る (session.rs が cur_score += score としているため)。
+        /// game_master には得点の増分を送る (AddScoreRequest.score_to_add)。
         /// 送信に失敗してもゲームは続けたいので、ここで握って警告に留める。
         /// </summary>
         private async UniTaskVoid SendScoreAsync(int points)
@@ -65,11 +74,7 @@ namespace Struckout.Bootstrap
 
             try
             {
-                bool sent = await _master.SendAsync(new ProjectorMasterPacket
-                {
-                    Score = (uint)points
-                });
-
+                bool sent = await _master.AddScoreAsync(points);
                 if (!sent) Debug.LogWarning($"[Network] failed to send score delta {points}");
             }
             catch (Exception ex)

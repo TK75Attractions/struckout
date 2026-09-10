@@ -24,7 +24,79 @@ namespace Struckout.Tests
             var first = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
             var second = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
 
-            Assert.That(second, Is.EqualTo(first));
+            Assert.That(second.Count, Is.EqualTo(first.Count));
+            for (int i = 0; i < first.Count; i++)
+            {
+                Assert.That(second[i].Coordinate.X, Is.EqualTo(first[i].Coordinate.X).Within(Tolerance));
+                Assert.That(second[i].Coordinate.Y, Is.EqualTo(first[i].Coordinate.Y).Within(Tolerance));
+                Assert.That(second[i].Size, Is.EqualTo(first[i].Size).Within(Tolerance));
+            }
+        }
+
+        // ------------------------------------------------------ 当たったあとの移動
+
+        [Test]
+        public void 移動先は画面内に収まる()
+        {
+            var generator = new TargetGenerator();
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var moved = targets[0];
+            var others = new List<Target> { targets[1], targets[2], targets[3] };
+
+            for (int i = 0; i < 200; i++)
+            {
+                var destination = generator.PickRelocation(moved, others);
+
+                Assert.That(destination.X, Is.InRange(moved.Radius, 1920f - moved.Radius));
+                Assert.That(destination.Y, Is.InRange(moved.Radius, 1080f - moved.Radius));
+            }
+        }
+
+        [Test]
+        public void 移動先は他の的と重ならない()
+        {
+            var generator = new TargetGenerator();
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var moved = targets[0];
+            var others = new List<Target> { targets[1], targets[2], targets[3] };
+
+            for (int i = 0; i < 200; i++)
+            {
+                var destination = generator.PickRelocation(moved, others);
+
+                foreach (var other in others)
+                {
+                    float dx = destination.X - other.Coordinate.X;
+                    float dy = destination.Y - other.Coordinate.Y;
+                    float distance = (float)System.Math.Sqrt(dx * dx + dy * dy);
+
+                    Assert.That(distance, Is.GreaterThan(moved.Radius + other.Radius),
+                        $"移動先が {other} と重なっている");
+                }
+            }
+        }
+
+        [Test]
+        public void 移動先は毎回同じにはならない()
+        {
+            // 決定的に選ぶと、空いた場所が必ず最も条件のよい点になり、
+            // 撃った的が同じところへ戻ってきてしまう。
+            var generator = new TargetGenerator();
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var moved = targets[0];
+            var others = new List<Target> { targets[1], targets[2], targets[3] };
+
+            var first = generator.PickRelocation(moved, others);
+
+            bool differs = false;
+            for (int i = 0; i < 50 && !differs; i++)
+            {
+                var next = generator.PickRelocation(moved, others);
+                differs = System.Math.Abs(next.X - first.X) > Tolerance
+                       || System.Math.Abs(next.Y - first.Y) > Tolerance;
+            }
+
+            Assert.That(differs, Is.True, "50 回引いて一度も違う場所が出ないのは乱数が効いていない");
         }
 
         [Test]
@@ -81,6 +153,41 @@ namespace Struckout.Tests
             Assert.That(target.Coordinate.X, Is.EqualTo(x).Within(Tolerance));
             Assert.That(target.Coordinate.Y, Is.EqualTo(y).Within(Tolerance));
             Assert.That(target.Size, Is.EqualTo(diameter).Within(Tolerance));
+        }
+
+        [Test]
+        public void 盤面の広さを変えると的もその範囲に収まる()
+        {
+            // 描画側と同じ FieldBounds を渡す。ここが効かないと、
+            // 盤面の比率を変えたときに的だけ元の範囲に置かれてしまう。
+            var field = new FieldBounds(1280f, 800f);
+            var generator = new TargetGenerator(field);
+
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+
+            foreach (var target in targets)
+            {
+                Assert.That(target.Coordinate.X, Is.InRange(0f, field.Width));
+                Assert.That(target.Coordinate.Y, Is.InRange(0f, field.Height));
+            }
+        }
+
+        [Test]
+        public void 盤面の広さを変えると移動先もその範囲に収まる()
+        {
+            var field = new FieldBounds(1280f, 800f);
+            var generator = new TargetGenerator(field);
+
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var moved = targets[0];
+
+            for (int i = 0; i < 32; i++)
+            {
+                var destination = generator.PickRelocation(moved, targets);
+
+                Assert.That(destination.X, Is.InRange(moved.Radius, field.Width - moved.Radius));
+                Assert.That(destination.Y, Is.InRange(moved.Radius, field.Height - moved.Radius));
+            }
         }
     }
 }
