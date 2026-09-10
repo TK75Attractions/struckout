@@ -1921,6 +1921,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fake_game_master"
+version = "0.1.0"
+dependencies = [
+ "parking_lot",
+ "prost",
+ "prost-types",
+ "struckout-yaml",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

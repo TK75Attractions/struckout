@@ -1,5 +1,5 @@
 [workspace]
-members = ["xtask", "game_master", "touchpanel", "ball_tracker", "api/rust/proto", "api/rust/yaml"]
+members = ["xtask", "game_master", "touchpanel", "ball_tracker", "api/rust/proto", "api/rust/yaml", "sandbox/fake_game_master"]
 exclude = ["slint-fw"]
 resolver = "3"
 
