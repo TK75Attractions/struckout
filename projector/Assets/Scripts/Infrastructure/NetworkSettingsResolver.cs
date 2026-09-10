@@ -18,12 +18,11 @@ namespace Struckout.Infrastructure
     ///
     /// コマンドライン:
     ///   -networkMode fake -trackerHost 192.168.0.10 -trackerPort 5000
-    ///   -masterHost 192.168.0.11 -masterPort 8020 -machineId 2 -connectAttempts 5
+    ///   -masterHost 192.168.0.11 -masterPort 5001 -connectAttempts 5
     ///
     /// 環境変数:
     ///   STRUCKOUT_NETWORK_MODE / STRUCKOUT_TRACKER_HOST / STRUCKOUT_TRACKER_PORT
-    ///   STRUCKOUT_MASTER_HOST / STRUCKOUT_MASTER_PORT / STRUCKOUT_MACHINE_ID
-    ///   STRUCKOUT_CONNECT_ATTEMPTS
+    ///   STRUCKOUT_MASTER_HOST / STRUCKOUT_MASTER_PORT / STRUCKOUT_CONNECT_ATTEMPTS
     /// </summary>
     public static class NetworkSettingsResolver
     {
@@ -59,12 +58,6 @@ namespace Struckout.Infrastructure
 
             settings.MasterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.MasterHost);
             settings.MasterPort = ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.MasterPort);
-
-            // 号機番号は ListenEvents の絞り込みキーになったので、筐体ごとに
-            // 別ビルドを作らずに変えられる必要がある。負の値は uint に載らないので弾く。
-            settings.MachineId = Math.Max(
-                0,
-                ResolveInt(commandLine, environment, "machineId", "STRUCKOUT_MACHINE_ID", settings.MachineId));
 
             settings.ConnectAttempts = Math.Max(
                 1,

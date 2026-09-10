@@ -5,12 +5,13 @@ using Tk75Attractions.Struckout.V1;
 
 // projector を単体でデバッグするためのダミー対向サーバ。
 //
-//   sensor : ball_tracker のかわり (既定 5000) -> ProjectorPacket を送る
+//   sensor : ball_tracker のかわり (既定 5000)  -> ProjectorPacket を送る
+//   master : game_master のかわり (既定 5001)  -> MasterProjectorPacket を送り、score を受ける
 //
-// game_master は gRPC になったので、その対向はここには無い。
-// 偽 game_master は別途 gRPC サーバとして用意する。
+// ポートの既定値は api/spec/tracker_projector.yaml と api/spec/master_projector.yaml に合わせている。
 
 const int DefaultSensorPort = 5000;
+const int DefaultMasterPort = 5001;
 
 // CollisionPoint は物理座標 (m)。ball_tracker は三角測量の結果をそのまま送る
 // (ball_tracker/src/collision_output/network.rs: x = coll.x, y = coll.z)。
@@ -21,9 +22,13 @@ const double FieldMinY = 0.0;
 const double FieldMaxY = 2.0;
 
 await using var sensor = new DummyPeer("sensor");
+await using var master = new DummyPeer("master");
 
 // sensor は projector から何も受け取らない想定なので、来たら異常として報告する。
 Wire(sensor, frame => $"WARNING: received {frame.Length} byte(s), but nothing is expected on this channel");
+
+// projector -> game_master は得点。送信側が実装されればここに出る。
+Wire(master, frame => $"received {ProjectorMasterPacket.Parser.ParseFrom(frame)}");
 
 void Wire(DummyPeer peer, Func<byte[], string> describe)
 {
@@ -78,6 +83,9 @@ while (running)
             case "msg":
                 await HandleMsg(tokens, line);
                 break;
+            case "start":
+                await HandleStart(tokens);
+                break;
             case "auto":
                 await HandleAuto(tokens);
                 break;
@@ -110,7 +118,7 @@ async Task HandleListen(string[] tokens)
 {
     if (tokens.Length < 2)
     {
-        ConsoleLog.Plain("usage: listen sensor [port]");
+        ConsoleLog.Plain("usage: listen sensor|master [port]");
         return;
     }
 
@@ -124,7 +132,7 @@ async Task HandleStop(string[] tokens)
 {
     if (tokens.Length < 2)
     {
-        ConsoleLog.Plain("usage: stop sensor");
+        ConsoleLog.Plain("usage: stop sensor|master");
         return;
     }
 
@@ -168,6 +176,27 @@ async Task HandleMsg(string[] tokens, string line)
     await sensor.SendAsync(new ProjectorPacket
     {
         Message = new TestMessage { Message = text },
+    });
+}
+
+async Task HandleStart(string[] tokens)
+{
+    var difficulty = Difficulty.Normal;
+
+    if (tokens.Length >= 2)
+    {
+        difficulty = tokens[1].ToLowerInvariant() switch
+        {
+            "normal" => Difficulty.Normal,
+            "hard" => Difficulty.Hard,
+            "veryhard" => Difficulty.Veryhard,
+            _ => throw new ArgumentException($"unknown difficulty '{tokens[1]}' (normal|hard|veryhard)"),
+        };
+    }
+
+    await master.SendAsync(new MasterProjectorPacket
+    {
+        StartGame = new StartGame { Difficulty = difficulty },
     });
 }
 
@@ -249,7 +278,8 @@ async Task StopAuto()
 (DummyPeer Peer, int DefaultPort) ResolvePeer(string name) => name.ToLowerInvariant() switch
 {
     "sensor" => (sensor, DefaultSensorPort),
-    _ => throw new ArgumentException($"unknown peer '{name}' (sensor)"),
+    "master" => (master, DefaultMasterPort),
+    _ => throw new ArgumentException($"unknown peer '{name}' (sensor|master)"),
 };
 
 static int ParsePort(string value)
@@ -273,6 +303,7 @@ static double ParseCoordinate(string value)
 void PrintStatus()
 {
     ConsoleLog.Plain($"sensor : {Describe(sensor)}");
+    ConsoleLog.Plain($"master : {Describe(master)}");
     ConsoleLog.Plain($"auto   : {(autoTask is null ? "off" : "on")}");
 
     static string Describe(DummyPeer peer)
@@ -287,20 +318,21 @@ void PrintStatus()
 static void PrintHelp()
 {
     ConsoleLog.Plain("""
-        struckout dummy ball_tracker -- lets the Unity projector be debugged without
-        the real tracker running.
+        struckout dummy peer -- pretends to be ball_tracker and game_master so the
+        Unity projector can be debugged without the rest of the system running.
 
-          listen sensor [port]          start listening (default 5000)
-          stop   sensor                 stop listening and drop the connection
+          listen sensor|master [port]   start listening (default: sensor 5000, master 5001)
+          stop   sensor|master          stop listening and drop the connection
 
           hit [x y]                     send a CollisionPoint in metres (no args = random)
           msg <text>                    send a TestMessage
+          start [normal|hard|veryhard]  send StartGame (default: normal)
           auto <intervalMs> | auto off  send random hits repeatedly
 
           status                        show connection state
           help                          show this text
           exit                          quit
 
-        game_master speaks gRPC now, so its stand-in is a separate program.
+        Scores sent by the projector (ProjectorMasterPacket) are printed as they arrive.
         """);
 }

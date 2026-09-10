@@ -3,9 +3,8 @@ namespace Struckout.Domain
     /// <summary>
     /// projector から見たゲームの進行状態。
     ///
-    /// 得点を送ってよいのは <see cref="Playing"/> の間だけ。
-    /// game_master はセッション外の得点を running_games に見つけられず、
-    /// NotFound を返す (service.rs の add_score)。
+    /// game_master (session.rs) は、セッションが始まっていないのに得点が届くと panic する。
+    /// そのため <see cref="Playing"/> の間だけ得点を送る。
     /// </summary>
     public enum GamePhase
     {
@@ -14,8 +13,5 @@ namespace Struckout.Domain
 
         /// <summary>プレイ中。</summary>
         Playing = 1,
-
-        /// <summary>制限時間が尽きた。次の GameStarted まで得点にしない。</summary>
-        Finished = 2,
     }
 }

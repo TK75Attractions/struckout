@@ -24,10 +24,6 @@ namespace Struckout.Infrastructure
             return GenerateTarget(TargetType.Circle, 50, 50, 50);
         }
 
-        /// <summary>ダミーなので、決まった場所に置き直すだけ。</summary>
-        public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
-            => new(100f, 100f);
-
         public Target GenerateTarget(TargetType type, float X, float Y, float size)
         {
             TargetCoordinate coordinate = new(
