@@ -31,6 +31,10 @@ namespace Struckout.Unity
         [Tooltip("的の数とクールダウン時間。")]
         private GameSettings _gameSettings = new();
 
+        [SerializeField]
+        [Tooltip("的の大きさごとの点数。まだ仮の値なので、決まったらここで差し替える。")]
+        private ScoreSettings _scoreSettings = new();
+
         protected override void Configure(IContainerBuilder builder)
         {
             var networkSettings = NetworkSettingsResolver.Resolve(_networkSettings);
@@ -43,26 +47,28 @@ namespace Struckout.Unity
             Debug.Log($"[Game] {_gameSettings}");
             builder.RegisterInstance(_gameSettings);
 
+            Debug.Log($"[Score] {_scoreSettings}");
+            builder.RegisterInstance(_scoreSettings);
+
             if (networkSettings.Mode == NetworkMode.Fake)
             {
                 builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
-                builder.Register<IClientService<MasterProjectorPacket>, FakeMasterService>(Lifetime.Singleton);
+                builder.Register<IGameMasterClient, FakeGameMasterClient>(Lifetime.Singleton);
             }
             else
             {
                 builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
-                builder.Register<IClientService<MasterProjectorPacket>, TCPClientBase<MasterProjectorPacket>>(Lifetime.Singleton);
+                builder.Register<IGameMasterClient, GrpcGameMasterClient>(Lifetime.Singleton);
             }
 
             builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
-            builder.Register<IMessageParser<MasterProjectorPacket>, MasterProjectorPacketParser>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
             builder.RegisterComponent(_uiService).As<IUIService>();
             builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();
             builder.Register<GameRuntime>(Lifetime.Singleton);
 
             builder.Register<ICollisionSolver, CollisionSolver>(Lifetime.Singleton);
-            builder.Register<IPointCalculator, FakePointCalculator>(Lifetime.Singleton);
+            builder.Register<IPointCalculator, PointCalculator>(Lifetime.Singleton);
             builder.Register<ISensorProvider, SensorProvider>(Lifetime.Singleton);
             builder.Register<ITargetGenerator, TargetGenerator>(Lifetime.Singleton);
 
