@@ -8,6 +8,7 @@ buf = "latest"
 "cargo:slint-viewer" = "latest"
 "cargo:sqlx-cli" = "latest"
 tokei = "latest"
+grpcurl = "latest"
 
 dotnet = "10"
 
