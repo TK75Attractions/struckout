@@ -3,7 +3,9 @@
 protoc = "35.1"
 
 java = "temurin-21"
-buf = "latest"
+# 生成済みの C# をコミットしているので、buf のバージョンがぶれると
+# 環境ごとに差分が出て proto:check が落ちる。latest にはしない。
+buf = "1.72.0"
 "rust" = "latest"
 "cargo:slint-viewer" = "latest"
 "cargo:sqlx-cli" = "latest"
@@ -12,6 +14,29 @@ tokei = "latest"
 dotnet = "10"
 
 [env]
+# grpc_csharp_plugin の置き場。buf が local プラグインを PATH から拾えるように
+# しておくと、実行ファイルの拡張子 (.exe) を buf.gen.*.yaml に書かずに済む。
+_.path = [".tools/bin"]
+
+[tasks."proto:plugin"]
+# Windows でも Git Bash で動かす。mise の既定シェルではシェルスクリプトを
+# 直接は起動できない。
+shell = "bash -c"
+run = "scripts/fetch-grpc-csharp-plugin.sh"
+description = "Fetch grpc_csharp_plugin into .tools/bin"
+
+[tasks.proto]
+depends = ["proto:plugin"]
+run = [
+    "buf generate --template buf.gen.ball-tracker.yaml",
+    "buf generate --template buf.gen.game-master.yaml",
+]
+description = "Generate the committed C# from api/proto"
+
+[tasks."proto:check"]
+depends = ["proto"]
+run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
+description = "Check the committed C# matches api/proto (regenerates in place)"
 
 [tasks."game-master:dev"]
 run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up"
