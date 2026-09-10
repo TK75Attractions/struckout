@@ -32,6 +32,7 @@ async fn main() {
     };
     info!("succeed to create MySQL pool");
 
+    info!("initializing gRPC service");
     let data_source = DataSourceImpl::new(pool);
     let game_master = GameMasterServiceImpl::new(data_source);
     let addr = format!("0.0.0.0:{}", GRPC_PORT)

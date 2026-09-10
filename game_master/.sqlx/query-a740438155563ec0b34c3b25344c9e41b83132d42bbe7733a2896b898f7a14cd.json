@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE games SET status = 'finished', score = ? WHERE game_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "a740438155563ec0b34c3b25344c9e41b83132d42bbe7733a2896b898f7a14cd"
+}
