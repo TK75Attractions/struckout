@@ -7,6 +7,17 @@ target/
 # Personal mise overrides. mise.toml itself is committed.
 mise.local.toml
 
+# Unity generated state
+projector/[Ll]ibrary/
+projector/[Tt]emp/
+projector/[Oo]bj/
+projector/[Ll]ogs/
+projector/[Uu]ser[Ss]ettings/
+
+# Android/Gradle generated state
+struckoutCameraApp/.gradle/
+struckoutCameraApp/**/build/
+
 # .NET generated state
 sandbox/testTcpCLI/bin/
 sandbox/testTcpCLI/obj/
