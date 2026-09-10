@@ -246,6 +246,30 @@ Screen Space - Camera の上位互換にならず、選択肢として意味を�
 | 4 | `_scoreSettings` がシーンに無い | 未対応。コード既定（仮の値）が使われる。編集するには一度 Unity で保存が必要 |
 | 5 | `_networkSettings.MachineId` がシーンに無い | 未対応。既定の 1 が使われる |
 | 6 | `Assets/_Recovery/0.unity` が git 追跡下にある | 未対応。Unity のクラッシュ復旧用の生成物で、追跡から外すべき |
+| 7 | Fake モードでゲームが始まらなかった | **修正済み**（下記） |
+| 8 | 本物の game_master でも開始を取りこぼしうる | **未対応。要判断**（下記） |
+
+### 7. Fake モードでゲームが始まらなかった
+
+`FakeGameMasterClient.ConnectAsync` が `return` の前に `GameStarted` を
+同期的に発火していた。呼ぶ側は `NetworkBootstrap` が `ConnectAsync` を
+await し、**そのあとで** `GameBootstrap` が購読するため、開始が誰も居ない
+ところへ投げられて消えていた。結果、Fake モードでは的が一つも出ず、
+「対向なしで描画調整が完結する」が成立していなかった。
+
+ダミー側で開始したことを覚えておき、後から購読した相手にも渡すようにした。
+`FakeGameMasterClientTests` が固定している。
+
+### 8. 本物でも開始を取りこぼしうる（未対応）
+
+根本は**接続してから購読している**こと。`GrpcGameMasterClient` でも、
+購読が始まる前にサーバが `GameStarted` を流せば同じように落ちる。
+7 の修正はダミー側で辻褄を合わせただけで、この順序そのものは直していない。
+
+正しくは購読してから接続する。`RootBootstrap` が
+`NetworkBootstrap.Initialize()` → `GameBootstrap.Initialize()` の順で
+呼んでいるところを入れ替えるか、購読だけを接続前に分ける必要がある。
+本番の接続経路に手を入れるので、独立した変更として扱うのがよい。
 
 ---
 
@@ -257,7 +281,7 @@ Screen Space - Camera の上位互換にならず、選択肢として意味を�
 | レンダーパイプライン | URP 2D（`Assets/Settings/Renderer2D.asset`） |
 | DI | VContainer |
 | 非同期 | UniTask |
-| テスト | EditMode **100 件**。`Assets/Tests/EditMode/` |
+| テスト | EditMode **105 件**。`Assets/Tests/EditMode/` |
 
 HDR は有効、MSAA は無効。`Assets/DefaultVolumeProfile.asset` は存在するが
 **全項目が中立値**（Bloom intensity 0）。ポストプロセスの土台は揃っていて
@@ -312,6 +336,7 @@ Fake モードでは以下が動く。
 - 得点計算は**本物**が動く（`PointCalculator`）
 
 つまり **描画とアニメーションの調整は対向を立てずに完結する。**
+（以前は開始イベントが落ちて的が出なかった。上記 7 を参照）
 
 起動時のログに以下が出る。合っているか最初に確認するとよい。
 
