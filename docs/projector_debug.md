@@ -21,7 +21,7 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 | 対向 | プログラム | 立て方 |
 |---|---|---|
 | ball_tracker | `sandbox/testTcpCLI` (C#) | `dotnet run --project sandbox/testTcpCLI` |
-| game_master | `sandbox/fake_game_master` (Rust) | `cargo run -p fake_game_master` |
+| game_master | `sandbox/fake_game_master` (Rust) | `cargo run` (**リポジトリには入っていない**。下記) |
 
 2 つとも立てれば、projector は **Fake モードではなく本物の通信経路のまま**動く。
 シリアライズや gRPC のストリームまで含めて確かめたいときはこちら。
@@ -102,8 +102,14 @@ Collision Transform の係数しだいで、既定値なら `hit 0 1` が画面�
 本物は MySQL を要求するので、イベント処理を触るたびに Docker を立てるのは重い。
 こちらは DB を持たず、`GameMasterService` のうち対向が実際に使うところだけを喋る。
 
+> **これはリポジトリに入っていない。** projector (Unity) を触る人だけが使う道具なので、
+> `sandbox/fake_game_master/` は `.gitignore` で追跡から外してある。
+> 手元に無ければ作り直しが要る。ルートの cargo ワークスペースには属さない
+> 独立クレートなので、ルートのビルドはこれが無くても壊れない。
+
 ```bash
-cargo run -p fake_game_master
+cd sandbox/fake_game_master
+cargo run
 ```
 
 ```
