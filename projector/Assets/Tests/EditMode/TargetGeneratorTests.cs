@@ -154,5 +154,40 @@ namespace Struckout.Tests
             Assert.That(target.Coordinate.Y, Is.EqualTo(y).Within(Tolerance));
             Assert.That(target.Size, Is.EqualTo(diameter).Within(Tolerance));
         }
+
+        [Test]
+        public void 盤面の広さを変えると的もその範囲に収まる()
+        {
+            // 描画側と同じ FieldBounds を渡す。ここが効かないと、
+            // 盤面の比率を変えたときに的だけ元の範囲に置かれてしまう。
+            var field = new FieldBounds(1280f, 800f);
+            var generator = new TargetGenerator(field);
+
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+
+            foreach (var target in targets)
+            {
+                Assert.That(target.Coordinate.X, Is.InRange(0f, field.Width));
+                Assert.That(target.Coordinate.Y, Is.InRange(0f, field.Height));
+            }
+        }
+
+        [Test]
+        public void 盤面の広さを変えると移動先もその範囲に収まる()
+        {
+            var field = new FieldBounds(1280f, 800f);
+            var generator = new TargetGenerator(field);
+
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var moved = targets[0];
+
+            for (int i = 0; i < 32; i++)
+            {
+                var destination = generator.PickRelocation(moved, targets);
+
+                Assert.That(destination.X, Is.InRange(moved.Radius, field.Width - moved.Radius));
+                Assert.That(destination.Y, Is.InRange(moved.Radius, field.Height - moved.Radius));
+            }
+        }
     }
 }

@@ -17,7 +17,29 @@ namespace Struckout.Infrastructure
         /// <summary>game_master の GAME_DURATION (service.rs) に合わせてある。</summary>
         private static readonly TimeSpan GameDuration = TimeSpan.FromSeconds(150);
 
-        public event Action<Difficulty> GameStarted;
+        /// <summary>
+        /// 購読が始まる前に開始してしまった場合に備えて、開始したことを覚えておく。
+        ///
+        /// 本物は購読を始めたあとストリームから流れてくるが、ダミーは
+        /// <see cref="ConnectAsync"/> の中で即座に発火する。呼ぶ側は
+        /// ConnectAsync を await したあとで購読するので、素直に発火すると
+        /// 誰も居ないところへ投げることになり、Fake モードでゲームが
+        /// 永遠に始まらない。後から購読した相手にも追いつかせる。
+        /// </summary>
+        public event Action<Difficulty> GameStarted
+        {
+            add
+            {
+                _gameStarted += value;
+                if (_started) value(_startedDifficulty);
+            }
+            remove => _gameStarted -= value;
+        }
+
+        private Action<Difficulty> _gameStarted;
+        private bool _started;
+        private Difficulty _startedDifficulty;
+
         public event Action GameFinished;
 
         // ダミーは自分から切る以外に切れないので、この経路は発火しない。
@@ -33,7 +55,9 @@ namespace Struckout.Infrastructure
 
             Debug.Log("[Fake] game_master connected");
 
-            GameStarted?.Invoke(Difficulty.Normal);
+            _started = true;
+            _startedDifficulty = Difficulty.Normal;
+            _gameStarted?.Invoke(_startedDifficulty);
 
             _gameCancellation = new CancellationTokenSource();
             _ = FinishAfterDurationAsync(_gameCancellation.Token);
@@ -70,6 +94,7 @@ namespace Struckout.Infrastructure
         {
             if (!_connected) return Task.CompletedTask;
             _connected = false;
+            _started = false;
 
             _gameCancellation?.Cancel();
             _gameCancellation?.Dispose();

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using Struckout.Domain;
 using Struckout.Application;
 using System.Collections.Generic;
@@ -8,8 +7,23 @@ using VContainer;
 
 namespace Struckout.Unity
 {
+    /// <summary>
+    /// 盤面の描画。的とマーカーをスプライトとして置く。
+    ///
+    /// 以前は Screen Space - Overlay の Canvas に uGUI の Image を並べていたが、
+    /// Overlay はカメラを介さないため URP 2D (2D ライト、ポストプロセス、
+    /// パーティクル) がまったく効かなかった。スプライトに移して描画経路を
+    /// カメラに通している。得点表示などの HUD は引き続き Canvas 側の担当。
+    ///
+    /// 座標は盤面ピクセル (0〜1920, 0〜1080) のまま受け取り、ここと
+    /// <see cref="CircleTargetUI"/> でワールド座標に直す。GameRuntime から上と
+    /// TargetGenerator は、この移行の影響を受けない。
+    /// </summary>
     public class UIService : MonoBehaviour, IUIService
     {
+        /// <summary>マーカーは的より手前に出す。</summary>
+        private const int MarkerSortingOrder = 10;
+
         private Dictionary<Target, Transform> _targetToTransform;
         [SerializeField]
         private Transform _circleUI;
@@ -17,13 +31,14 @@ namespace Struckout.Unity
         [Header("Collision Marker")]
         [SerializeField]
         [Tooltip("当たった位置に出すマーカー。未設定ならコード側で簡易的なものを作る。演出を作ったらここに差し替える。")]
-        private RectTransform _collisionMarkerUI;
+        private Transform _collisionMarkerUI;
 
         [SerializeField]
         [Tooltip("off にすると着弾位置を表示しない。")]
         private bool _showCollisionMarkers = true;
 
         [SerializeField]
+        [Tooltip("マーカーの大きさ。的と同じ盤面ピクセルで指定する。")]
         private float _collisionMarkerSize = 48f;
 
         [SerializeField]
@@ -39,13 +54,16 @@ namespace Struckout.Unity
         private Color _missColor = new(1f, 0.45f, 0.3f, 0.9f);
 
         private UIRoot _uiRoot;
+        private WorldCoordinateTransform _world;
 
         [Inject]
         public void Construct(
-            UIRoot uiRoot
+            UIRoot uiRoot,
+            WorldCoordinateTransform world
         )
         {
             _uiRoot = uiRoot;
+            _world = world;
             _targetToTransform = new();
         }
         
@@ -86,7 +104,7 @@ namespace Struckout.Unity
                     return;
             }
             var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
-            ui.Initialize(target);
+            ui.Initialize(target, _world);
             _targetToTransform[target] = trans;
         }
 
@@ -119,7 +137,7 @@ namespace Struckout.Unity
                 _ => _missColor,
             };
 
-            RectTransform marker;
+            Transform marker;
             if (_collisionMarkerUI != null)
             {
                 // 差し替えた Prefab は見た目も寿命もその Prefab の責任。
@@ -132,31 +150,32 @@ namespace Struckout.Unity
                 marker.gameObject.AddComponent<CollisionMarker>();
             }
 
-            // 的と同じ座標系で置く (CircleTarget prefab と同じくアンカーは左下)。
-            marker.anchorMin = Vector2.zero;
-            marker.anchorMax = Vector2.zero;
-            marker.pivot = new Vector2(0.5f, 0.5f);
-            marker.anchoredPosition = new Vector2(x, y);
+            // 的と同じ盤面座標で置く。
+            marker.localPosition = new Vector3(_world.ToWorldX(x), _world.ToWorldY(y), 0f);
         }
 
         /// <summary>
         /// Prefab が用意されていないときの最低限のマーカー。
-        /// 的が円なので、区別できるよう 45 度回した四角にしている。
+        /// 的が円なので、区別できるよう菱形にしている。
         /// </summary>
-        private RectTransform CreateDefaultMarker(Color colour)
+        private Transform CreateDefaultMarker(Color colour)
         {
-            var go = new GameObject("CollisionMarker", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            var go = new GameObject("CollisionMarker", typeof(SpriteRenderer));
+            go.transform.SetParent(_uiRoot.TargetRoot, false);
 
-            var rect = go.GetComponent<RectTransform>();
-            rect.SetParent(_uiRoot.TargetRoot, false);
-            rect.sizeDelta = new Vector2(_collisionMarkerSize, _collisionMarkerSize);
-            rect.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            var renderer = go.GetComponent<SpriteRenderer>();
+            renderer.sprite = PlaceholderSprites.Diamond;
+            renderer.color = colour;
+            renderer.sortingOrder = MarkerSortingOrder;
 
-            var image = go.GetComponent<Image>();
-            image.color = colour;
-            image.raycastTarget = false;
+            // 的と同じ理屈で、スプライトの実寸から倍率を出す。
+            float desired = _world.ToWorldLength(_collisionMarkerSize);
+            float spriteWidth = renderer.sprite.bounds.size.x;
+            go.transform.localScale = spriteWidth > 0f
+                ? Vector3.one * (desired / spriteWidth)
+                : Vector3.one;
 
-            return rect;
+            return go.transform;
         }
 
         public void MoveTarget(Target target)
