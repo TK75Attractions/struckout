@@ -1,16 +1,17 @@
 [tools]
+# Languages
+java = "temurin-21"
+"rust" = "latest"
+dotnet = "10"
+
+# Tools
 # projectorのGoogle.Protobufのバージョンと合わせる
 protoc = "35.1"
-
-java = "temurin-21"
 buf = "latest"
-"rust" = "latest"
 "cargo:slint-viewer" = "latest"
 "cargo:sqlx-cli" = "latest"
 tokei = "latest"
 grpcurl = "latest"
-
-dotnet = "10"
 
 [env]
 
