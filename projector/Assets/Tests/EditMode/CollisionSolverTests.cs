@@ -69,5 +69,51 @@ namespace Struckout.Tests
             Assert.That(NewSolver().TryCollision(At(1500, 800), targets, out var hit), Is.True);
             Assert.That(hit.Coordinate.X, Is.EqualTo(far.Coordinate.X));
         }
+        /// <summary>
+        /// 当たった的は座標だけ先に移動先へ移り、画面はそのあと縮んで消え、
+        /// 移動先で膨らんで現れる。その間ずっと判定が移動先で有効だと、
+        /// 何も描かれていない場所で得点が入る。
+        /// </summary>
+        [Test]
+        public void 移動の演出中は当たらない()
+        {
+            var target = Circle(1000f, 500f, 400f);
+            var targets = new List<Target> { target };
+
+            Assert.That(NewSolver().TryCollision(At(1000, 500), targets, out _), Is.True,
+                "前提: 演出前は当たる");
+
+            target.BeginRelocation();
+
+            Assert.That(NewSolver().TryCollision(At(1000, 500), targets, out var hit), Is.False);
+            Assert.That(hit, Is.Null);
+        }
+
+        [Test]
+        public void 演出が終われば再び当たる()
+        {
+            var target = Circle(1000f, 500f, 400f);
+            var targets = new List<Target> { target };
+
+            target.BeginRelocation();
+            target.EndRelocation();
+
+            Assert.That(NewSolver().TryCollision(At(1000, 500), targets, out _), Is.True);
+        }
+
+        [Test]
+        public void 演出中の的は飛ばして他の的を見る()
+        {
+            // 重ならない 2 つ。手前が演出中でも、奥は普通に当たる。
+            var moving = Circle(1000f, 500f, 400f);
+            var still = Circle(300f, 500f, 400f);
+            moving.BeginRelocation();
+
+            var targets = new List<Target> { moving, still };
+
+            Assert.That(NewSolver().TryCollision(At(300, 500), targets, out var hit), Is.True);
+            Assert.That(hit, Is.SameAs(still));
+        }
+
     }
 }

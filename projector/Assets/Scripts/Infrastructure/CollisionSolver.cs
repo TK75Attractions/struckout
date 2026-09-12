@@ -21,6 +21,10 @@ namespace Struckout.Application
             target = null;
             foreach (var tar in targets)
             {
+                // 移動の演出中は当たらない。判定だけ移動先で先に有効になるので、
+                // 除外しないと画面に何も出ていない場所で得点が入る。
+                if (!tar.IsHittable) continue;
+
                 if(IsWithinTarget(collisionPoint, tar))
                 {
                     target = tar;
@@ -72,7 +76,8 @@ namespace Struckout.Application
                 sb.AppendLine(
                     $"    [{i}] centre=({t.Coordinate.X:F1}, {t.Coordinate.Y:F1}) " +
                     $"radius={t.Radius:F1} diameter={t.Diameter:F1} " +
-                    $"distance={distance:F1} {(distance <= t.Radius ? "INSIDE" : "outside")}");
+                    $"distance={distance:F1} {(distance <= t.Radius ? "INSIDE" : "outside")}" +
+                    $"{(t.IsHittable ? "" : " (relocating: not hittable)")}");
             }
 
             Debug.Log(sb.ToString());

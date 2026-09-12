@@ -76,5 +76,37 @@ namespace Struckout.Tests
             Assert.That(target.Diameter, Is.EqualTo(400f));
             Assert.That(target.Radius, Is.EqualTo(200f));
         }
+        [Test]
+        public void 既定では当たり判定の対象()
+        {
+            Assert.That(new Target(new TargetCoordinate(0f, 0f), TargetType.Circle, 100f).IsHittable,
+                Is.True);
+        }
+
+        [Test]
+        public void 移動の演出中だけ当たり判定から外れる()
+        {
+            var target = new Target(new TargetCoordinate(0f, 0f), TargetType.Circle, 100f);
+
+            target.BeginRelocation();
+            Assert.That(target.IsHittable, Is.False);
+
+            target.EndRelocation();
+            Assert.That(target.IsHittable, Is.True);
+        }
+
+        [Test]
+        public void 演出の状態は大きさと座標に影響しない()
+        {
+            var target = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
+
+            target.BeginRelocation();
+
+            Assert.That(target.Size, Is.EqualTo(100f));
+            Assert.That(target.Radius, Is.EqualTo(50f));
+            Assert.That(target.Coordinate.X, Is.EqualTo(10f));
+            Assert.That(target.Coordinate.Y, Is.EqualTo(20f));
+        }
+
     }
 }

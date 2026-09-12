@@ -134,8 +134,12 @@ namespace Struckout.Application
 
             hitTarget.MoveTo(_targetGenerator.PickRelocation(hitTarget, others));
 
-            // 当たり判定は移動先で即座に有効になる。見た目が追いつくまでの短い間だけ
-            // 表示位置と判定位置がずれるが、演出のための猶予なので許容する。
+            // 座標だけ先に移るので、見た目が移動先に現れ切るまでは当たり判定から外す。
+            // そうしないと、縮んで消えている間ずっと「何も描かれていない場所」に
+            // 判定があることになる。戻すのは描画側 (ITargetUI)。演出の長さを
+            // 知っているのはあちらだけなので、秒数をここに持たせて二重管理にしない。
+            hitTarget.BeginRelocation();
+
             _uiService.MoveTarget(hitTarget);
         }
     }
