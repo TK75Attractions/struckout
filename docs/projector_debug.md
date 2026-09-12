@@ -16,16 +16,50 @@ projector (Unity) は ball_tracker と game_master の 2 つにつながって�
 TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 `api/rust/src/lib.rs` の `write_packet` / `read_packet`。
 
-## デバッグ用の対向は 2 つある
+## デバッグ用の対向
 
 | 対向 | プログラム | 立て方 |
 |---|---|---|
-| ball_tracker | `sandbox/testTcpCLI` (C#) | `dotnet run --project sandbox/testTcpCLI` |
-| game_master | `sandbox/fake_game_master` (Rust) | `cargo run` (**リポジトリには入っていない**。下記) |
+| **両方** | `tools/FakePeers` (C#/WinForms) | `tools\FakePeers\run.bat` (**リポジトリには入っていない**。下記) |
+| ball_tracker だけ | `sandbox/testTcpCLI` (C#) | `dotnet run --project sandbox/testTcpCLI` |
+| game_master だけ | `sandbox/fake_game_master` (Rust) | `cargo run` (**リポジトリには入っていない**) |
 
-2 つとも立てれば、projector は **Fake モードではなく本物の通信経路のまま**動く。
+対向を立てれば、projector は **Fake モードではなく本物の通信経路のまま**動く。
 シリアライズや gRPC のストリームまで含めて確かめたいときはこちら。
 描画やアニメーションだけを触るなら Fake モード (後述) のほうが早い。
+
+### 1 枚のウィンドウにまとめたもの (tools/FakePeers)
+
+```bat
+tools\FakePeers\run.bat
+```
+
+偽 ball_tracker と 偽 game_master を 1 つの WinForms アプリにまとめたもの。
+起動した時点で 5000 (TCP) と 8020 (gRPC) の両方を待ち受けるので、
+あとは Unity を Play するだけでよい。ふだんはこれで足りる。
+
+- 左は物理座標 (m) の盤面。**クリックするとその座標に当たったことになる。**
+  枠を 16:9 にしてあるのは、既定の Collision Transform がこの物理範囲を
+  ちょうど 1920x1080 の盤面いっぱいに写すため。係数を変えたら見た目は当てにならないので、
+  目盛りは常にメートルで出している。
+- 右が game_master。号機・難易度・長さを決めて「ゲーム開始」を押すと `GameStarted` が飛び、
+  残り秒数が 1 秒ごとに `GameTimeLimitNotify` として流れる。
+  projector が送ってきた `AddScore` はその場で「得点」に足されて出る。
+- 下のログに送受信がそのまま出る。「購読者」が 0 のままなら projector が繋がっていない。
+  号機がずれた購読が来たときもログで言う。
+
+実装している RPC は `ListenEvents` と `AddScore` の 2 つだけ。touchpanel 用の
+`StartGame` / `AddPlayer` は生成コードの既定どおり Unimplemented を返すので、
+そちらが要るときは Rust の `sandbox/fake_game_master` を使う。
+
+> **これもリポジトリに入っていない。** `tools/` は各自のローカルでだけ使う
+> デバッグ用 GUI の置き場として `.gitignore` で追跡から外してある。
+> 通信層 (`DummyPeer`) と protobuf はコミット済みのものをリンク参照しているだけなので、
+> `tools/` を丸ごと消してもリポジトリのビルドは壊れない。
+
+> PATH の先頭に SDK の入っていない x86 版 dotnet が来る環境があるので、`run.bat` は
+> `%ProgramFiles%\dotnet\dotnet.exe` があればそちらを使う。素の `dotnet` が
+> "No .NET SDKs were found" で落ちるのはこれが理由。
 
 ## 座標系と得点の約束事
 
@@ -73,7 +107,9 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
   150 秒後に `GameFinished` を流す
 - 得点計算は**本物**が動く (`PointCalculator`)。送信先だけがログになる
 
-## 2. 偽 ball_tracker につなぐ (testTcpCLI)
+## 2. 偽 ball_tracker だけをつなぐ (testTcpCLI)
+
+GUI を使うならこの節は要らない。ここは CLI 版。
 
 ```bash
 dotnet run --project sandbox/testTcpCLI
@@ -97,7 +133,9 @@ Collision Transform の係数しだいで、既定値なら `hit 0 1` が画面�
 
 ポートを変えたいときは `listen sensor 6000` のように第 2 引数で指定する。
 
-## 3. 偽 game_master につなぐ (fake_game_master)
+## 3. 偽 game_master だけをつなぐ (fake_game_master)
+
+GUI を使うならこの節は要らない。touchpanel 用の `StartGame` / `AddPlayer` まで要るときはこちら。
 
 本物は MySQL を要求するので、イベント処理を触るたびに Docker を立てるのは重い。
 こちらは DB を持たず、`GameMasterService` のうち対向が実際に使うところだけを喋る。
