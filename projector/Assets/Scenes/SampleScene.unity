@@ -321,18 +321,6 @@ Camera:
   m_OcclusionCulling: 0
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!114 &519420033
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d4f2b8c15e7460fa39c6d0e8b21c7f3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.FieldCamera
 --- !u!4 &519420032
 Transform:
   m_ObjectHideFlags: 0
@@ -348,6 +336,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d4f2b8c15e7460fa39c6d0e8b21c7f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.FieldCamera
 --- !u!1 &582352443
 GameObject:
   m_ObjectHideFlags: 0
@@ -743,6 +743,7 @@ MonoBehaviour:
     TrackerPort: 5000
     MasterHost: 127.0.0.1
     MasterPort: 8020
+    MachineId: 1
     ConnectAttempts: 5
   _collisionTransform:
     PixelsPerMetreX: 960
@@ -755,6 +756,13 @@ MonoBehaviour:
     LogConversions: 0
   _gameSettings:
     InitialTargetCount: 4
+  _scoreSettings:
+    Tiers:
+    - MaxDiameter: 150
+      Points: 5
+    - MaxDiameter: 300
+      Points: 3
+    DefaultPoints: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

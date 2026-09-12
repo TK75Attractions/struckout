@@ -177,8 +177,16 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 - **`Target` は参照で等価**。`UIService` が `Dictionary<Target, Transform>` で
   対応づけているため、座標を等価性に含めると移動のたびに対応が壊れる
 - **的は消えない**。当たったら同じ GameObject が移動する
-  （`docs/projector_behavior.md`）。当たり判定は移動先で即座に有効になり、
-  見た目が追いつくまでの短い間だけ表示位置とずれる
+  （`docs/projector_behavior.md`）。
+- **移動の演出中、その的は当たり判定から外れる**（`Target.IsHittable`）。
+  `GameRuntime` は `Target` の座標を先に動かすので、そのままだと縮んで
+  消えている間ずっと「画面に何も出ていない場所」に判定が残る。
+  `MoveAfterHit` が `BeginRelocation()` で外し、`CircleTargetUI` が膨らみ切った
+  ところで `EndRelocation()` を呼んで戻す。`CollisionSolver` は外れている的を
+  読み飛ばす。
+  **秒数を Application 層に置いていない**のは、演出の長さを知っているのが
+  描画側だけだからで、置くと二重管理になって必ずずれる。
+  他の的は影響を受けず普通に当たる。
 - **着弾マーカーは当たり外れに関わらず出す**。座標変換がずれているのか
   単に外したのかを区別するため
 
@@ -244,8 +252,8 @@ Screen Space - Camera の上位互換にならず、選択肢として意味を�
 | 1 | `MasterPort` がシーン上で `5001` だった | **修正済み**（8020） |
 | 2 | `UIService._coolingDownColor` が残っていた | **修正済み**（`_ignoredColor`） |
 | 3 | `_gameSettings.TargetCooldownSeconds` が残っていた | **削除済み** |
-| 4 | `_scoreSettings` がシーンに無い | 未対応。コード既定（仮の値）が使われる。編集するには一度 Unity で保存が必要 |
-| 5 | `_networkSettings.MachineId` がシーンに無い | 未対応。既定の 1 が使われる |
+| 4 | `_scoreSettings` がシーンに無い | **解消**。Unity で開いて保存したときに書き出された |
+| 5 | `_networkSettings.MachineId` がシーンに無い | **解消**。同上（値は既定の 1） |
 | 6 | `Assets/_Recovery/0.unity` が git 追跡下にある | 未対応。Unity のクラッシュ復旧用の生成物で、追跡から外すべき |
 | 7 | Fake モードでゲームが始まらなかった | **修正済み**（下記） |
 | 8 | 本物の game_master でも開始を取りこぼしうる | **未対応。要判断**（下記） |
