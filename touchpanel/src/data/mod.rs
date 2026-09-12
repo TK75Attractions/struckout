@@ -64,6 +64,7 @@ macro_rules! id_new_type {
 }
 
 mod game_master;
+pub use game_master::{ConnectError, RequestError, Session};
 mod remaining_time;
 pub use remaining_time::*;
 use struckout_proto::game_master_service_client::GameMasterServiceClient;

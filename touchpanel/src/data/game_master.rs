@@ -16,8 +16,12 @@ use crate::data::{MachineId, PlayerId, remaining_time::DisplayableRemainingTime}
 
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
+mod private {
+    pub trait Sealed {}
+}
+
 /// A trait for [`GameMasterServiceClient`].
-trait InternalGrpcClient: Sized + Sync + Send + Clone {
+pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
     fn connect<D>(dst: D) -> impl Future<Output = Result<Self, tonic::transport::Error>>
     where
         D: TryInto<tonic::transport::Endpoint>,
@@ -96,6 +100,8 @@ impl RequestError {
         }
     }
 }
+
+impl private::Sealed for GameMasterServiceClient<tonic::transport::Channel> {}
 
 impl InternalGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
     fn connect<D>(dst: D) -> impl Future<Output = Result<Self, tonic::transport::Error>>
@@ -418,6 +424,8 @@ mod tests {
             Ok(Response::new(s))
         }
     }
+
+    impl private::Sealed for FakeGrpcClient {}
 
     #[tokio::test]
     async fn connect_returns_invalid_server_addr_when_addr_is_invalid() {
