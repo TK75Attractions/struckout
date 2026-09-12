@@ -96,7 +96,10 @@ fn pop_player_name(old_text: SharedString) -> SharedString {
     old_text[0..old_text.len() - 1].to_shared_string()
 }
 
-pub struct NameInputDestination(NameInputViewModelRc);
+pub struct NameInputDestination(
+    #[allow(dead_code)] // may used when some arg is added to the route
+    NameInputViewModelRc,
+);
 
 impl NameInputDestination {
     pub fn new(application: &Application) -> Self {
