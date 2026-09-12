@@ -50,10 +50,10 @@ mod tests {
 
     #[test]
     fn try_from_durarion_calculates_correctly() {
-        let mins = 2;
-        let secs = 20;
+        let mins = 2usize;
+        let secs = 20usize;
         let dur = prost_types::Duration {
-            seconds: 60 * mins + secs,
+            seconds: (60 * mins + secs).try_into().unwrap(),
             nanos: 0,
         };
         let rem = DisplayableRemainingTime::try_from(dur).unwrap();
