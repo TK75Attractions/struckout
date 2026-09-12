@@ -1,15 +1,11 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use slint::{ComponentHandle, Global, ToSharedString};
+use slint::{ComponentHandle, Global};
 
 use crate::{
     Application, NavController,
-    data::projector::{ProjectorTransport, StartGameError},
     ui::{self, DifficulitySelectStates, DifficulitySelectViewModelTrait, NavRoute, NavRouteKind},
 };
 use stern::{GlobalExt as _, nav::NavDestination};
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 
@@ -17,7 +13,6 @@ viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 struct DifficulitySelectViewModel {
     nav_controller: NavController,
     state: DifficulitySelectStates,
-    projector_transport: Rc<RefCell<ProjectorTransport>>,
 }
 
 impl DifficulitySelectViewModel {
@@ -30,7 +25,6 @@ impl DifficulitySelectViewModel {
                     .global::<ui::DifficulitySelectAdopter>()
                     .as_weak(),
             ),
-            projector_transport: application.repositories.projector.clone(),
         }
     }
 }
@@ -42,7 +36,7 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
         let difficulty = self.state.selected_difficulity.get();
         let error_msg = self.state.error_msg.clone();
         let nc = self.nav_controller.clone();
-        let trans = self.projector_transport.clone();
+        /*let trans = self.projector_transport.clone();
         slint::spawn_local(async move {
             let res = trans.borrow().start_game(difficulty).await;
             match res {
@@ -56,7 +50,8 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
                 }
             }
         })
-        .unwrap();
+        .unwrap();*/
+        todo!()
     }
 
     fn on_select_difficulity(&mut self, val: ui::Difficulity) {

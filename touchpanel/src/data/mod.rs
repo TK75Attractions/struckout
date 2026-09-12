@@ -44,5 +44,27 @@ macro_rules! async_wrapper {
     };
 }
 
-pub mod player;
-pub mod projector;
+/// Defines a new-type for id.
+macro_rules! id_new_type {
+    ($new_type:ident($inner_type:ty)) => {
+        #[derive(Debug, Clone, Copy, derive_more::Into, derive_more::From, PartialEq, Eq, Hash)]
+        pub struct $new_type($inner_type);
+
+        impl $new_type {
+            /// Returns inner value of self.
+            pub fn into_inner(self) -> $inner_type {
+                <$new_type as Into<$inner_type>>::into(self)
+            }
+        }
+    };
+}
+
+pub mod game_master;
+//pub mod player;
+//pub mod projector;
+
+id_new_type!(PlayerId(u32));
+
+id_new_type!(GameId(u32));
+
+id_new_type!(MachineId(u32));

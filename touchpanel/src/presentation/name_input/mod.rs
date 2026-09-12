@@ -1,33 +1,34 @@
-use std::rc::Rc;
-
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
-use stern::nav::NavDestination;
-use tracing::{debug, error, trace};
+use stern::{WorkerThread, nav::NavDestination};
+use tokio::sync::oneshot;
+use tracing::{debug, trace};
 
 use crate::{
-    Application, NavController,
-    data::player::{InsertPlayerError, PlayerRepository},
+    Application, Context, NavController,
     ui::{self, KeyBoardMode, NameInputStates, NameInputViewModelTrait, NavRoute, NavRouteKind},
 };
 
 viewmodel_rc!(NameInputViewModel, NameInputAdopter);
 
+// TODO: 一タイプごとにvalidateする
+
 #[derive(Debug)]
 struct NameInputViewModel {
-    player_repo: Rc<PlayerRepository>,
     nav_controller: NavController,
+    worker: WorkerThread<Context>,
     state: NameInputStates,
 }
 
 impl NameInputViewModel {
     fn new(application: &Application) -> Self {
         Self {
-            player_repo: application.repositories.player.clone(),
             nav_controller: application.nav_controller.clone(),
+            worker: application.worker.clone(),
             state: NameInputStates::new(application.ui.global::<ui::NameInputAdopter>().as_weak()),
         }
     }
 }
+
 impl NameInputViewModelTrait for NameInputViewModel {
     fn on_switch_keyboard_mode(&mut self) {
         trace!("NameInputViewModel::on_switch_keyboard_mode");
@@ -65,22 +66,28 @@ impl NameInputViewModelTrait for NameInputViewModel {
         trace!("NameInputViewModel::on_submit_name");
 
         let name = self.state.player_name_text.get();
-        // let msg = self.state.error_msg.clone();
-        let nav_controller = self.nav_controller.clone();
-        self.player_repo.insert_player(name, move |res| match res {
-            Ok(()) => {
-                nav_controller.navigate(NavRoute::DifficulitySelect);
-            }
-            Err(InsertPlayerError::NameAlredyInUse(name)) => {
-                todo!();
-                // msg.set(format!("'{}'はすでに使われています", name).to_shared_string());
-            }
-            Err(InsertPlayerError::Sqlx(e)) => {
-                // msg.set("プログラム内部でエラーが発生しました".to_shared_string());
-                error!(?e, "error occured while inserting player");
-                todo!();
-            }
+        let msg = self.state.error_msg.clone();
+        let nc = self.nav_controller.clone();
+        let (tx, rx) = oneshot::channel();
+        self.worker.spawn_cx(async move |cx| {
+            let mut gm = cx.read().game_master.get().unwrap().clone();
+            let res = gm.add_player(name).await;
+            tx.send(res).unwrap();
         });
+        slint::spawn_local(async move {
+            match rx.await.unwrap() {
+                Ok(_player_id) => {
+                    nc.navigate(NavRoute::DifficulitySelect);
+                }
+                Err(e) => {
+                    msg.set(
+                        format!("プレイヤー名の設定中にエラーが発生しました: {}", e)
+                            .to_shared_string(),
+                    );
+                }
+            }
+        })
+        .unwrap();
     }
 }
 

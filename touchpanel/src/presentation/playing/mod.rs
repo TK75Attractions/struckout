@@ -1,11 +1,9 @@
 use crate::{
     Application, NavController,
-    session::{RemainingTime, SessionManager, SessionSubscriber},
     ui::{self, NavRoute, NavRouteKind, PlayingStates, PlayingViewModelTrait},
 };
-use slint::{ComponentHandle, Global, ToSharedString};
+use slint::{ComponentHandle, Global};
 use stern::nav::NavDestination;
-use std::{cell::RefCell, rc::Rc};
 use tracing::debug;
 
 viewmodel_rc!(PlayingViewModel, PlayingAdopter);
@@ -30,27 +28,25 @@ impl PlayingViewModel {
 
 impl PlayingViewModelTrait for PlayingViewModel {}
 
-impl SessionSubscriber for PlayingViewModel {
+/*impl SessionSubscriber for PlayingViewModel {
     fn on_score_changed(&self, score: u32) {
         self.state.score.set(score.try_into().unwrap());
     }
 
-    fn on_remaining_time_changed(&self, remaining_time: &RemainingTime) {
+    fn on_remaining_time_changed(&self, remaining_time: &DisplayableRemainingTime) {
         self.state
             .remaining_time
             .set(format!("{}", remaining_time).to_shared_string());
     }
-}
+}*/
 
 pub struct PlayingDestination {
-    session_manager: Rc<RefCell<SessionManager>>,
     viewmodel: PlayingViewModelRc,
 }
 
 impl PlayingDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            session_manager: application.session_manager.clone(),
             viewmodel: PlayingViewModelRc::new(application),
         }
     }

@@ -1,6 +1,8 @@
+use std::time::Duration;
+
 use crate::{
-    Application,
-    data::projector::{BindError, ConnectError},
+    Application, Config, NavController,
+    data::game_master::GameMasterClient,
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
@@ -10,7 +12,9 @@ use crate::{
     ui::NavRoute,
 };
 use stern::nav::NavHost;
-use tracing::{debug, info};
+use struckout_proto::game_master_service_client::GameMasterServiceClient;
+use tokio::time::timeout;
+use tracing::{debug, warn};
 
 /// Defines `XxxViewModelRc` which wraps `XxxViewModel`.
 ///
@@ -52,47 +56,67 @@ pub mod ranking;
 pub mod score;
 pub mod start;
 
-pub fn init_connection(application: &Application) {
-    debug!("initializing connection");
+/// Connects to game-master's gRPC server.
+///
+/// When succeeded, it navigates to `StartScreen` and returns connected [`GameMasterClient`].
+/// When failed, it navigates to `ConnectionFailedScreen` with error message.
+async fn connect_to_game_master(
+    nc: NavController,
+    config: &Config,
+) -> Result<GameMasterClient<GameMasterServiceClient<tonic::transport::Channel>>, ()> {
+    match timeout(
+        Duration::from_secs(5),
+        GameMasterClient::connect(&config.server_addr, config.machine_id.into()),
+    )
+    .await
+    {
+        Ok(Ok(v)) => {
+            nc.navigate(NavRoute::Start);
+            Ok(v)
+        }
+        Ok(Err(e)) => {
+            nc.navigate(NavRoute::ConnectionFailed(format!(
+                "game-masterへの接続に失敗しました: {}",
+                e
+            )));
+            Err(())
+        }
+        Err(_) => {
+            nc.navigate(NavRoute::ConnectionFailed(
+                "タイムアウトしました".to_string(),
+            ));
+            Err(())
+        }
+    }
+}
 
-    let transport = application.repositories.projector.clone();
+/// Initializes [`WorkerThread`]'s context. Note that since the function calls [`slint::spawn_local()`] to await async functions,
+/// the process actually starts after slint's event loop has started. (e.g. by [`AppWindow::run()`])
+///
+/// [AppWindow::run]: crate::ui::AppWindow::run
+pub fn init_worker_context(application: &Application) {
     let nc = application.nav_controller.clone();
+    let mut worker = application.worker.clone();
+    let config = application.config.clone();
     slint::spawn_local(async move {
-        let guard = transport.borrow_mut();
-        let res = guard.bind().await;
-
-        match res {
-            Ok(()) => {
-                info!("successfully bound port for TCP");
-            }
-            Err(BindError::AlreadyBound) => panic!("this should be first attempt to bind port"),
-            Err(BindError::Other(e)) => {
-                nc.navigate(NavRoute::Fallback(format!("failed to bind port: {}", e)));
+        debug!("initializing worker context");
+        let game_master = match connect_to_game_master(nc, &config).await {
+            Ok(v) => v,
+            Err(_) => {
+                warn!("failed to connect to game-master. user can retry it.");
                 return;
             }
-        }
+        };
 
-        info!("connecting to projector");
-        let res = guard.connect().await;
-        match res {
-            Ok(()) => {
-                info!("connection succeeds");
-                nc.navigate(NavRoute::Start);
-            }
-            Err(ConnectError::PortNotBound) => panic!("bound just before"),
-            Err(ConnectError::Tcp(e)) => {
-                nc.navigate(NavRoute::ConnectionFailed(format!(
-                    "failed to accept connection: {}",
-                    e
-                )));
-            }
-            Err(ConnectError::Timeout(_)) => {
-                nc.navigate(NavRoute::ConnectionFailed(
-                    "タイムアウトしました".to_string(),
-                ));
-            }
-            _ => todo!(),
+        {
+            let cx = worker.context();
+            let guard = cx.write();
+            guard
+                .game_master
+                .set(game_master)
+                .expect("this should be a first successful attempt to connect to game-master");
         }
+        debug!("worker context initialized successfully");
     })
     .unwrap();
 }

@@ -9,10 +9,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     slint_build::compile_with_config("src/presentation/app-window.slint", config)?;
 
-    println!("cargo::rerun-if-changed=../api/proto/");
-    tonic_prost_build::configure()
-        .compile_protos(&["../api/proto/game-master.proto"], &["../api/proto/"])?;
-
     let port = struckout_yaml::get_port_def("../api/spec/servers.yaml", "game-master", "grpc")?;
     println!("cargo::rustc-env=TOUCHPANEL_GAME_MASTER_GRPC_PORT={}", port);
     Ok(())

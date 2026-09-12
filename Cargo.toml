@@ -17,6 +17,7 @@ futures-util = "0.3"
 tokio-util = "0.7"
 backon = "1.6.0"
 tokio-stream = "0.1"
+async-stream = "0.3.6"
 
 anyhow = "1.0"
 thiserror = "2.0.18"

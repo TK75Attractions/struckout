@@ -11,6 +11,7 @@ tokio = { workspace = true, features = [
     "rt-multi-thread",
     "sync",
     "net",
+    "time",
     "io-util",
     "macros",
     "test-util",
@@ -20,6 +21,7 @@ tracing-subscriber = { workspace = true }
 futures-util = { workspace = true }
 backon = { workspace = true }
 tokio-stream = { workspace = true, features = ["sync"] }
+async-stream = { workspace = true }
 tokio-util = { workspace = true }
 parking_lot = { workspace = true }
 prost = { workspace = true }
@@ -39,13 +41,7 @@ tempfile = { workspace = true }
 chrono = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
 enum_dispatch = { workspace = true }
-
-sqlx = { workspace = true, features = [
-    "sqlite",
-    "runtime-tokio",
-    "migrate",
-    "sqlx-toml",
-] }
+clap = { workspace = true, features = ["derive"] }
 
 i-slint-core = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
 
@@ -58,5 +54,4 @@ i-slint-backend-testing = { git = "https://github.com/taichi765/slint", branch =
 
 [build-dependencies]
 slint-build = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
-tonic-prost-build = { workspace = true }
 struckout-yaml = { workspace = true }

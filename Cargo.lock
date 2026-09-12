@@ -6829,7 +6829,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "stern"
 version = "0.1.0"
 dependencies = [
+ "derive_more",
  "futures-util",
+ "parking_lot",
  "stern-macros",
  "strum",
  "thiserror 2.0.18",
@@ -7534,8 +7536,10 @@ name = "touchpanel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "backon",
  "chrono",
+ "clap",
  "derive-getters",
  "derive_more",
  "enum_dispatch",
@@ -7551,7 +7555,6 @@ dependencies = [
  "serde_json",
  "slint 1.18.0 (git+https://github.com/taichi765/slint?branch=feat%2Fadd-compiler-config-for-attribute)",
  "slint-build",
- "sqlx",
  "stern",
  "struckout-proto",
  "struckout-yaml",
@@ -7563,7 +7566,6 @@ dependencies = [
  "tokio-util",
  "tonic",
  "tonic-prost",
- "tonic-prost-build",
  "tracing",
  "tracing-subscriber",
 ]

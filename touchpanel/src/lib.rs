@@ -1,15 +1,14 @@
+use clap::Parser;
 use slint::ComponentHandle;
-use sqlx::sqlite::SqlitePoolOptions;
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::OnceLock;
 use stern::WorkerThread;
-use tokio::{net::TcpListener, sync::oneshot};
+use struckout_proto::game_master_service_client::GameMasterServiceClient;
 use tracing::info;
 
 use crate::{
-    data::{player::PlayerRepository, projector::ProjectorTransport},
-    presentation::{attach_navhost, init_connection},
-    session::SessionManager,
+    data::game_master::GameMasterClient,
+    presentation::{attach_navhost, init_worker_context},
     ui::NavRoute,
 };
 
@@ -33,10 +32,7 @@ mod ui {
 
 mod data;
 mod presentation;
-mod session;
 mod state_ext;
-
-const SQLITE_DEFAULT_URL: &str = "sqlite:///home/taichi765/.config/struckout/0716.db";
 
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
@@ -48,46 +44,65 @@ type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 struct Application {
     nav_controller: NavController,
     ui: ui::AppWindow,
-    repositories: RepositoryOwner,
-    session_manager: Rc<RefCell<SessionManager>>,
-}
-
-/// Container for repositories.
-struct RepositoryOwner {
-    pub player: Rc<PlayerRepository>,
-    pub projector: Rc<RefCell<ProjectorTransport>>,
     #[allow(dead_code)] // チャンネルを生存させるために必要
-    pub worker: WorkerThread,
+    pub worker: WorkerThread<Context>,
+    config: Rc<Config>,
 }
 
-impl RepositoryOwner {
-    fn new() -> Self {
-        let worker = WorkerThread::new();
-        let (tx, rx) = oneshot::channel();
-        worker.spawn(async move {
-            let res = SqlitePoolOptions::new()
-                .max_connections(5)
-                .connect(SQLITE_DEFAULT_URL)
-                .await;
-            tx.send(res).unwrap();
-        });
+/// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
+#[derive(Debug)]
+struct Context {
+    game_master: OnceLock<GameMasterClient<GameMasterServiceClient<tonic::transport::Channel>>>,
+}
 
-        // FIXME: 普通にブロックする. slint::spawn_local()など
-        let pool = rx
-            .blocking_recv()
-            .unwrap()
-            .expect("failed to connec to database");
+impl Context {
+    /// Constructs empty context.
+    fn new_empty() -> Self {
         Self {
-            player: Rc::new(PlayerRepository::new(pool, &worker)),
-            projector: Rc::new(RefCell::new(ProjectorTransport::new::<TcpListener>(
-                &worker,
-            ))),
-            worker,
+            game_master: OnceLock::new(),
+        }
+    }
+}
+
+/// CLI arguments.
+#[derive(Parser)]
+struct Cli {
+    #[arg(
+        short = 'a',
+        long = "address",
+        help = "the address of game-master's gRPC server"
+    )]
+    server_addr: String,
+    #[arg(short = 'm', help = "the id of this machine")]
+    machine_id: u32,
+}
+
+/// Application configs.
+///
+/// The fields are similar with [`Cli`] for now, but in future it's possible to
+/// read config from a YAML file and merge it with CLI args, so it's better to define
+/// each struct.
+struct Config {
+    /// The address of game-master's gRPC server.
+    server_addr: String,
+    /// The id of this machine.
+    machine_id: u32,
+}
+
+impl Config {
+    /// Constructs [`Config`] from CLI arguments.
+    fn from_cli(cli: Cli) -> Self {
+        Self {
+            server_addr: cli.server_addr,
+            machine_id: cli.machine_id,
         }
     }
 }
 
 pub fn run_main() {
+    let cli = Cli::parse();
+    let config = Rc::new(Config::from_cli(cli));
+
     let ui = ui::AppWindow::new().unwrap();
 
     let nav_controller = NavController::new(ui::NavRoute::Connecting, {
@@ -98,22 +113,21 @@ pub fn run_main() {
             ui.set_nav_route(route.into());
         }
     });
-    let repositories = RepositoryOwner::new();
-    let session_manager = Rc::new(RefCell::new(SessionManager::new(
-        repositories.projector.clone(),
-    )));
+
+    let cx = Context::new_empty();
+    let worker = WorkerThread::new(cx);
 
     let application = Application {
         nav_controller,
         ui,
-        session_manager,
-        repositories,
+        worker,
+        config,
     };
 
     attach_navhost(&application);
 
     // NavHostを初期化したあとで
-    init_connection(&application);
+    init_worker_context(&application);
 
     info!("starting event loop");
     application.ui.run().unwrap();
