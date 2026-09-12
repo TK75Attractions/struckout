@@ -130,11 +130,13 @@ impl GameMasterGrpcClient for GameMasterServiceClient<tonic::transport::Channel>
 
 impl<T: GameMasterGrpcClient> GameMasterClient<T> {
     pub async fn connect(server_addr: &str, machine_id: MachineId) -> Result<Self, ConnectError> {
-        let endpoint = format!("{}:{}", server_addr, GAME_MASTER_GRPC_PORT);
-        let endpoint = Endpoint::new(endpoint).map_err(|e| ConnectError::InvalidServerAddr {
-            server_addr: server_addr.to_string(),
-            source: e,
-        })?;
+        // TODO: httpsも使えるようにする
+        let endpoint = format!("http://{}:{}", server_addr, GAME_MASTER_GRPC_PORT);
+        let endpoint =
+            Endpoint::from_shared(endpoint).map_err(|e| ConnectError::InvalidServerAddr {
+                server_addr: server_addr.to_string(),
+                source: e,
+            })?;
 
         let client = T::connect(endpoint).await?;
         Ok(Self {
