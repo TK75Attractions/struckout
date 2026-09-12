@@ -16,7 +16,7 @@ tracing-subscriber = "0.3.23"
 futures-util = "0.3"
 tokio-util = "0.7"
 backon = "1.6.0"
-tokio-stream = "0.1"
+tokio-stream = "0.1.19"
 async-stream = "0.3.6"
 
 anyhow = "1.0"
