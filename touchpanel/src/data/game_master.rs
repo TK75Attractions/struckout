@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use derive_getters::Getters;
 use futures_util::Stream;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockReadGuard};
 use struckout_proto::{
     AddPlayerRequest, AddPlayerResponse, Difficulty, StartGameRequest, StartGameResponse,
     event::EventData, game_master_service_client::GameMasterServiceClient,
 };
 use thiserror::Error;
-use tokio::sync::watch;
+use tokio::sync::{broadcast, watch};
 use tokio_stream::StreamExt;
 use tonic::{Response, Status, transport::Endpoint};
+use tracing::trace;
 
 use crate::data::{MachineId, PlayerId, remaining_time::DisplayableRemainingTime};
 
@@ -193,31 +193,57 @@ impl<T: GameMasterGrpcClient> GameMasterClient<T> {
             );
         }
 
-        let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
-        let (score_tx, score_rx) = watch::channel(0);
-        let (error_tx, error_rx) = watch::channel(None);
+        let (rem_tx, _rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
+        let (score_tx, _score_rx) = watch::channel(0);
+        let (error_tx, _error_rx) = watch::channel(None);
+        let (complete_tx, mut complete_rx) = broadcast::channel(1);
         {
             let mut guard = self.session.write();
             *guard = Some(Session {
                 difficulty: difficulty,
-                rem_rx,
-                score_rx,
+                rem_tx: rem_tx.clone(),
+                score_tx: score_tx.clone(),
+                error_tx: error_tx.clone(),
+                complete_tx: complete_tx.clone(),
             });
         }
 
-        tokio::spawn(handle_subsequent_events(stream, error_tx, rem_tx));
+        tokio::spawn(handle_subsequent_events(
+            stream,
+            error_tx,
+            rem_tx,
+            complete_tx,
+        ));
+        tokio::spawn({
+            let session = Arc::clone(&self.session);
+            async move {
+                complete_rx.recv().await.unwrap();
+                {
+                    let mut guard = session.write();
+                    *guard = None;
+                }
+                trace!("removed current session");
+            }
+        });
 
         Ok(())
+    }
+
+    /// Returns the current session state.
+    pub fn session(&self) -> RwLockReadGuard<'_, Option<Session>> {
+        self.session.read()
     }
 }
 
 /// Handles events from game-master's gRPC server after receiving `GameStarted` event.
 ///
+/// The function returns when it received the `GameFinished` event.
 /// error_tx's newly-sent value is always `Some`.
 async fn handle_subsequent_events<S>(
     mut stream: S,
     error_tx: watch::Sender<Option<RequestError>>,
     rem_tx: watch::Sender<DisplayableRemainingTime>,
+    complete_tx: broadcast::Sender<()>,
 ) where
     S: Stream<Item = Result<StartGameResponse, Status>> + Unpin,
 {
@@ -235,6 +261,7 @@ async fn handle_subsequent_events<S>(
                 break;
             }
         };
+        trace!(resp = ?resp, "received event");
         let Some(ev) = resp.event else {
             error_tx
                 .send(Some(RequestError::missing_field(
@@ -279,17 +306,51 @@ async fn handle_subsequent_events<S>(
                 };
                 rem_tx.send(rem).unwrap();
             }
-            EventData::GameFinished(_) => todo!(),
+            EventData::GameFinished(_) => {
+                complete_tx.send(()).unwrap();
+            }
         }
     }
 }
 
 /// States of a game session.
-#[derive(Debug, Clone, Getters)]
+///
+/// The struct holds [`watch::Sender`]s, but they are used only for creating new [`watch::Receiver`]
+/// by calling [`Receiver::subscribe()`].
+///
+/// [Receiver::subscribe]: watch::Receiver::subscribe
+#[derive(Debug, Clone)]
 pub struct Session {
     difficulty: struckout_proto::Difficulty,
-    score_rx: watch::Receiver<u32>,
-    rem_rx: watch::Receiver<DisplayableRemainingTime>,
+    score_tx: watch::Sender<u32>,
+    rem_tx: watch::Sender<DisplayableRemainingTime>,
+    error_tx: watch::Sender<Option<RequestError>>,
+    complete_tx: broadcast::Sender<()>,
+}
+
+impl Session {
+    /// Subscribes to [`watch::Sender`] and returns new [`Receiver`].
+    ///
+    /// Note that all [`Sender`] will be dropped after receiving `GameFinished` event, so calling [`Receiver::recv()`] can
+    /// fail.
+    ///
+    /// [`Sender`]: watch::Sender
+    /// [`Receiver`]: watch::Receiver
+    pub fn score(&self) -> watch::Receiver<u32> {
+        self.score_tx.subscribe()
+    }
+
+    pub fn remaining_time(&self) -> watch::Receiver<DisplayableRemainingTime> {
+        self.rem_tx.subscribe()
+    }
+
+    pub fn error(&self) -> watch::Receiver<Option<RequestError>> {
+        self.error_tx.subscribe()
+    }
+
+    pub fn complete(&self) -> broadcast::Receiver<()> {
+        self.complete_tx.subscribe()
+    }
 }
 
 #[cfg(test)]
@@ -304,7 +365,7 @@ mod tests {
 
     use super::*;
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     struct FakeGrpcClient {}
 
     impl GameMasterGrpcClient for FakeGrpcClient {

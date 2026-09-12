@@ -34,6 +34,7 @@ macro_rules! viewmodel_rc {
             struct [<$vm Rc>](std::rc::Rc<std::cell::RefCell<$vm>>);
 
             impl [<$vm Rc>] {
+                #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
                 fn new(application: &Application) -> Self {
                     let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
                     application.ui.global::<crate::ui::$adopter>()

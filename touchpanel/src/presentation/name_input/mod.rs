@@ -76,8 +76,8 @@ impl NameInputViewModelTrait for NameInputViewModel {
         });
         slint::spawn_local(async move {
             match rx.await.unwrap() {
-                Ok(_player_id) => {
-                    nc.navigate(NavRoute::DifficulitySelect);
+                Ok(player_id) => {
+                    nc.navigate(NavRoute::DifficulitySelect { player_id });
                 }
                 Err(e) => {
                     msg.set(

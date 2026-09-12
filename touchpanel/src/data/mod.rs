@@ -51,6 +51,10 @@ macro_rules! id_new_type {
         pub struct $new_type($inner_type);
 
         impl $new_type {
+            pub fn new(value: $inner_type) -> Self {
+                Self(value)
+            }
+
             /// Returns inner value of self.
             pub fn into_inner(self) -> $inner_type {
                 <$new_type as Into<$inner_type>>::into(self)
