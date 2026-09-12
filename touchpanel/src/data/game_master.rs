@@ -191,23 +191,8 @@ impl<T: GameMasterGrpcClient> GameMasterClient<T> {
 pub struct Session {
     cur_score: u32,
     difficulty: struckout_proto::Difficulty,
-    remaining_time: DisplayableRemainingTime,
-}
-
-#[derive(Debug, Clone)]
-pub struct DisplayableRemainingTime {
-    pub mins: usize,
-    pub secs: usize,
-}
-
-impl Display for DisplayableRemainingTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.mins, self.secs)
-    }
-}
-
-impl DisplayableRemainingTime {
-    const ZERO: Self = DisplayableRemainingTime { mins: 0, secs: 0 };
+    score_rx: watch::Receiver<u32>,
+    rem_rx: watch::Receiver<DisplayableRemainingTime>,
 }
 
 #[cfg(test)]

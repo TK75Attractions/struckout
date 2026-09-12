@@ -60,6 +60,8 @@ macro_rules! id_new_type {
 }
 
 pub mod game_master;
+mod remaining_time;
+pub use remaining_time::*;
 //pub mod player;
 //pub mod projector;
 
