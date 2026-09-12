@@ -13,6 +13,8 @@ use crate::{
 };
 
 mod ui {
+    use crate::data::PlayerId;
+
     slint::include_modules!();
 
     #[stern::route]
@@ -20,7 +22,7 @@ mod ui {
     pub enum NavRoute {
         Start,
         NameInput,
-        DifficulitySelect,
+        DifficulitySelect { player_id: PlayerId },
         Playing(self::Difficulity),
         Score,
         Ranking,

@@ -1,10 +1,12 @@
 use slint::{ComponentHandle, Global};
+use tokio::sync::oneshot;
 
 use crate::{
-    Application, NavController,
+    Application, Context, NavController,
+    data::PlayerId,
     ui::{self, DifficulitySelectStates, DifficulitySelectViewModelTrait, NavRoute, NavRouteKind},
 };
-use stern::{GlobalExt as _, nav::NavDestination};
+use stern::{GlobalExt as _, WorkerThread, nav::NavDestination};
 use tracing::{debug, trace};
 
 viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
@@ -12,19 +14,23 @@ viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 #[derive(Debug)]
 struct DifficulitySelectViewModel {
     nav_controller: NavController,
+    worker: WorkerThread<Context>,
     state: DifficulitySelectStates,
+    player_id: Option<PlayerId>,
 }
 
 impl DifficulitySelectViewModel {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
+            worker: application.worker.clone(),
             state: DifficulitySelectStates::new(
                 application
                     .ui
                     .global::<ui::DifficulitySelectAdopter>()
                     .as_weak(),
             ),
+            player_id: None,
         }
     }
 }
@@ -33,25 +39,34 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
     fn on_start_game(&mut self) {
         trace!("DifficulitySelectViewModel::on_start_game");
 
-        let difficulty = self.state.selected_difficulity.get();
-        let error_msg = self.state.error_msg.clone();
         let nc = self.nav_controller.clone();
-        /*let trans = self.projector_transport.clone();
+        let (tx, rx) = oneshot::channel();
+
+        let difficulty_ui = self.state.selected_difficulity.get();
+        let difficulty = difficulty_ui.into();
+        let player_id = self
+            .player_id
+            .expect("should be some while this screen is shown");
+
+        self.worker.spawn_cx(async move |cx| {
+            let mut gm = {
+                let guard = cx.read();
+                guard.game_master.get().unwrap().clone()
+            };
+            let res = gm.start_game(player_id, difficulty).await;
+            tx.send(res).unwrap();
+        });
         slint::spawn_local(async move {
-            let res = trans.borrow().start_game(difficulty).await;
-            match res {
-                Ok(()) => {
-                    nc.navigate(NavRoute::Playing(difficulty));
+            match rx.await.unwrap() {
+                Ok(_) => {
+                    nc.navigate(NavRoute::Playing(difficulty_ui));
                 }
-                Err(StartGameError::NotConnected) => panic!("should be already connected"),
-                Err(StartGameError::Tcp(e)) => {
-                    error!(?e, "failed to send StartGame message to projector");
-                    error_msg.set("ネットワーク接続に失敗しました".to_shared_string());
+                Err(e) => {
+                    nc.navigate(NavRoute::Fallback(e.to_string()));
                 }
             }
         })
-        .unwrap();*/
-        todo!()
+        .unwrap();
     }
 
     fn on_select_difficulity(&mut self, val: ui::Difficulity) {
@@ -60,26 +75,26 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
     }
 }
 
-pub struct DifficultySelectDestination {
-    #[allow(unused)] // just for initialize viewmodel
-    viewmodel: DifficulitySelectViewModelRc,
-}
+pub struct DifficultySelectDestination(
+    #[allow(unused)] // may used when some arg is added to the route
+    DifficulitySelectViewModelRc,
+);
 
 impl DifficultySelectDestination {
     pub fn new(application: &Application) -> Self {
-        Self {
-            viewmodel: DifficulitySelectViewModelRc::new(application),
-        }
+        Self(DifficulitySelectViewModelRc::new(application))
     }
 }
 
 impl NavDestination<NavRoute> for DifficultySelectDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading DifficultySelectViewModel");
-        let NavRoute::DifficulitySelect = route else {
+        let NavRoute::DifficulitySelect { player_id } = route else {
             panic!("matched variant should be given");
         };
-        // do nothing because `NavRoute::DifficulitySelect` has no extra arguments
+
+        let mut vm = self.0.borrow_mut();
+        vm.player_id = Some(*player_id);
     }
 
     fn route(&self) -> NavRouteKind {

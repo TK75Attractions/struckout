@@ -9,7 +9,7 @@ use crate::{
         name_input::NameInputDestination, playing::PlayingDestination, ranking::RankingDestination,
         score::ScoreDestination, start::StartScreenDestination,
     },
-    ui::NavRoute,
+    ui::{self, NavRoute},
 };
 use stern::nav::NavHost;
 use struckout_proto::game_master_service_client::GameMasterServiceClient;
@@ -21,7 +21,7 @@ use tracing::{debug, warn};
 /// `XxxViewModelRc::new()` registers viewmodel to the adopter
 /// by calling [`stern::GlobalExt::register_viewmodel()`]).
 ///
-/// `vm` is the name of viewmodel type (e.g. XxxViewModel)/
+/// `vm` is the name of viewmodel type (e.g. XxxViewModel).
 macro_rules! viewmodel_rc {
     ($vm:ident, $adopter:ty) => {
         pastey::paste! {
@@ -135,6 +135,16 @@ pub fn attach_navhost(application: &Application) {
         .register(RankingDestination::new(&application))
         .finish()
         .expect("failed to build NavHost");
+}
+
+impl From<ui::Difficulity> for struckout_proto::Difficulty {
+    fn from(value: ui::Difficulity) -> Self {
+        match value {
+            ui::Difficulity::Normal => struckout_proto::Difficulty::Normal,
+            ui::Difficulity::Hard => struckout_proto::Difficulty::Hard,
+            ui::Difficulity::VeryHard => struckout_proto::Difficulty::Veryhard,
+        }
+    }
 }
 
 #[cfg(test)]
