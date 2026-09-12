@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::Arc};
+use std::sync::Arc;
 
 use derive_getters::Getters;
 use futures_util::Stream;
@@ -8,10 +8,11 @@ use struckout_proto::{
     event::EventData, game_master_service_client::GameMasterServiceClient,
 };
 use thiserror::Error;
+use tokio::sync::watch;
 use tokio_stream::StreamExt;
 use tonic::{Response, Status, transport::Endpoint};
 
-use crate::data::{MachineId, PlayerId};
+use crate::data::{MachineId, PlayerId, remaining_time::DisplayableRemainingTime};
 
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
@@ -66,10 +67,34 @@ pub enum RequestError {
     Grpc(#[from] Status),
     #[error("stream unexpectedly ended")]
     UnexpectedEndOfStream,
-    #[error("field {0} of packet was invalid")]
-    InvalidPacket(String),
+    #[error("field {field_name} of message {message_name} was invalid: {detail}")]
+    InvalidPacket {
+        message_name: String,
+        field_name: String,
+        detail: String,
+    },
     #[error("unexpected event was sent from server: {0:?}")]
     UnexpectedEvent(struckout_proto::Event),
+}
+
+impl RequestError {
+    /// Utility method to construct [`RequestError::InvalidPacket`].
+    fn missing_field(message_name: &str, field_name: &str) -> Self {
+        Self::InvalidPacket {
+            message_name: message_name.to_string(),
+            field_name: field_name.to_string(),
+            detail: "field was missing despite it should include some data".to_string(),
+        }
+    }
+
+    /// Utility method to construct [`RequestError::InvalidPacket`].
+    fn invalid_packet(message_name: &str, field_name: &str, detail: &str) -> Self {
+        Self::InvalidPacket {
+            message_name: message_name.to_string(),
+            field_name: field_name.to_string(),
+            detail: detail.to_string(),
+        }
+    }
 }
 
 impl GameMasterGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
@@ -150,11 +175,11 @@ impl<T: GameMasterGrpcClient> GameMasterClient<T> {
             .ok_or(RequestError::UnexpectedEndOfStream)??;
         let event = resp
             .event
-            .ok_or(RequestError::InvalidPacket("event".into()))?;
+            .ok_or(RequestError::missing_field("StartGameResponse", "event"))?;
         let started = event
             .event_data
             .as_ref()
-            .ok_or(RequestError::InvalidPacket("event_data".into()))?;
+            .ok_or(RequestError::missing_field("Event", "event_data"))?;
         let EventData::GameStarted(started) = started else {
             return Err(RequestError::UnexpectedEvent(event));
         };
@@ -166,30 +191,100 @@ impl<T: GameMasterGrpcClient> GameMasterClient<T> {
             );
         }
 
+        let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
+        let (score_tx, score_rx) = watch::channel(0);
+        let (error_tx, error_rx) = watch::channel(None);
         {
             let mut guard = self.session.write();
             *guard = Some(Session {
-                cur_score: 0,
                 difficulty: difficulty,
-                remaining_time: DisplayableRemainingTime::ZERO,
+                rem_rx,
+                score_rx,
             });
         }
 
-        tokio::spawn(async move {
-            loop {
-                stream.next().await;
-                todo!()
-            }
-        });
+        tokio::spawn(handle_subsequent_events(stream, error_tx, rem_tx));
 
         Ok(())
+    }
+}
+
+/// Handles events from game-master's gRPC server after receiving `GameStarted` event.
+///
+/// error_tx's newly-sent value is always `Some`.
+async fn handle_subsequent_events<S>(
+    mut stream: S,
+    error_tx: watch::Sender<Option<RequestError>>,
+    rem_tx: watch::Sender<DisplayableRemainingTime>,
+) where
+    S: Stream<Item = Result<StartGameResponse, Status>> + Unpin,
+{
+    loop {
+        let resp = match stream.next().await {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => {
+                error_tx.send(Some(RequestError::Grpc(e))).unwrap();
+                continue;
+            }
+            None => {
+                error_tx
+                    .send(Some(RequestError::UnexpectedEndOfStream))
+                    .unwrap();
+                break;
+            }
+        };
+        let Some(ev) = resp.event else {
+            error_tx
+                .send(Some(RequestError::missing_field(
+                    "StartGameResponse",
+                    "event",
+                )))
+                .unwrap();
+            continue;
+        };
+        let Some(ev_data) = ev.event_data else {
+            error_tx
+                .send(Some(RequestError::missing_field("EventData", "event_data")))
+                .unwrap();
+            continue;
+        };
+        match ev_data {
+            EventData::GameStarted(_) => {
+                error_tx
+                    .send(Some(RequestError::UnexpectedEvent(ev)))
+                    .unwrap();
+                continue;
+            }
+            EventData::GameTimeLimitNotify(v) => {
+                let Some(rem) = v.remaining else {
+                    error_tx
+                        .send(Some(RequestError::missing_field(
+                            "GameTimeLimitNotify",
+                            "remaining",
+                        )))
+                        .unwrap();
+                    continue;
+                };
+                let Ok(rem) = rem.try_into() else {
+                    error_tx
+                        .send(Some(RequestError::invalid_packet(
+                            "GameTimeLimitNotify",
+                            "remaining",
+                            "the value was negative",
+                        )))
+                        .unwrap();
+                    continue;
+                };
+                rem_tx.send(rem).unwrap();
+            }
+            EventData::GameFinished(_) => todo!(),
+        }
     }
 }
 
 /// States of a game session.
 #[derive(Debug, Clone, Getters)]
 pub struct Session {
-    cur_score: u32,
     difficulty: struckout_proto::Difficulty,
     score_rx: watch::Receiver<u32>,
     rem_rx: watch::Receiver<DisplayableRemainingTime>,
@@ -263,7 +358,18 @@ mod tests {
 
     #[tokio::test]
     async fn connect_returns_invalid_server_addr_when_addr_is_invalid() {
-        todo!()
+        let addr = "256.256.256.256";
+        let err = GameMasterClient::<FakeGrpcClient>::connect(addr, MachineId(1))
+            .await
+            .expect_err("should return error");
+        let ConnectError::InvalidServerAddr {
+            server_addr: addr_got,
+            source: _,
+        } = err
+        else {
+            panic!("error kind didn't match");
+        };
+        assert_eq!(addr_got, addr);
     }
 
     #[tokio::test]
