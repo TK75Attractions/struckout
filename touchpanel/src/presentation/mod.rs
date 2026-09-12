@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     Application, Config, NavController,
-    data::game_master::GameMasterClient,
+    data::GameMasterClient,
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
@@ -64,7 +64,7 @@ pub mod start;
 async fn connect_to_game_master(
     nc: NavController,
     config: &Config,
-) -> Result<GameMasterClient<GameMasterServiceClient<tonic::transport::Channel>>, ()> {
+) -> Result<GameMasterClient, ()> {
     match timeout(
         Duration::from_secs(5),
         GameMasterClient::connect(&config.server_addr, config.machine_id.into()),

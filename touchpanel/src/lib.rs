@@ -3,11 +3,10 @@ use slint::ComponentHandle;
 use std::rc::Rc;
 use std::sync::OnceLock;
 use stern::WorkerThread;
-use struckout_proto::game_master_service_client::GameMasterServiceClient;
 use tracing::info;
 
 use crate::{
-    data::game_master::GameMasterClient,
+    data::GameMasterClient,
     presentation::{attach_navhost, init_worker_context},
     ui::NavRoute,
 };
@@ -54,7 +53,7 @@ struct Application {
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
 #[derive(Debug)]
 struct Context {
-    game_master: OnceLock<GameMasterClient<GameMasterServiceClient<tonic::transport::Channel>>>,
+    game_master: OnceLock<GameMasterClient>,
 }
 
 impl Context {

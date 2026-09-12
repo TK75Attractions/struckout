@@ -17,7 +17,7 @@ use crate::data::{MachineId, PlayerId, remaining_time::DisplayableRemainingTime}
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
 /// A trait for [`GameMasterServiceClient`].
-pub trait GameMasterGrpcClient: Sized + Sync + Send + Clone {
+trait InternalGrpcClient: Sized + Sync + Send + Clone {
     fn connect<D>(dst: D) -> impl Future<Output = Result<Self, tonic::transport::Error>>
     where
         D: TryInto<tonic::transport::Endpoint>,
@@ -42,7 +42,7 @@ pub trait GameMasterGrpcClient: Sized + Sync + Send + Clone {
 }
 
 #[derive(derive_more::Debug, Clone)]
-pub struct GameMasterClient<T: GameMasterGrpcClient> {
+pub struct GameMasterClient<T: InternalGrpcClient> {
     machine_id: MachineId,
     client: T,
     session: Arc<RwLock<Option<Session>>>,
@@ -97,7 +97,7 @@ impl RequestError {
     }
 }
 
-impl GameMasterGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
+impl InternalGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
     fn connect<D>(dst: D) -> impl Future<Output = Result<Self, tonic::transport::Error>>
     where
         D: TryInto<tonic::transport::Endpoint>,
@@ -128,7 +128,7 @@ impl GameMasterGrpcClient for GameMasterServiceClient<tonic::transport::Channel>
     }
 }
 
-impl<T: GameMasterGrpcClient> GameMasterClient<T> {
+impl<T: InternalGrpcClient> GameMasterClient<T> {
     pub async fn connect(server_addr: &str, machine_id: MachineId) -> Result<Self, ConnectError> {
         // TODO: httpsも使えるようにする
         let endpoint = format!("http://{}:{}", server_addr, GAME_MASTER_GRPC_PORT);
@@ -368,7 +368,7 @@ mod tests {
     #[derive(Debug, Clone)]
     struct FakeGrpcClient {}
 
-    impl GameMasterGrpcClient for FakeGrpcClient {
+    impl InternalGrpcClient for FakeGrpcClient {
         async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
         where
             D: TryInto<tonic::transport::Endpoint>,

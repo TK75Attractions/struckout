@@ -63,9 +63,13 @@ macro_rules! id_new_type {
     };
 }
 
-pub mod game_master;
+mod game_master;
 mod remaining_time;
 pub use remaining_time::*;
+use struckout_proto::game_master_service_client::GameMasterServiceClient;
+
+pub type GameMasterClient =
+    game_master::GameMasterClient<GameMasterServiceClient<tonic::transport::Channel>>;
 //pub mod player;
 //pub mod projector;
 
