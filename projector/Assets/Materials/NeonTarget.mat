@@ -29,13 +29,16 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CoreFill: 0.06
-    - _GlowStrength: 0.85
-    - _GlowWidth: 0.07
-    - _Softness: 1.2
-    - _TargetEdgeUv: 0.42
-    - _Thickness: 0.05
+    - _CoreFill: 0
+    - _GlowStrength: 0.175
+    - _GlowWidth: 0.0273
+    - _RippleSoftness: 1.5
+    - _RippleWidth: 0.018
+    - _Softness: 0.5
+    - _TargetEdgeUv: 0.4
+    - _Thickness: 0.022
     m_Colors:
     - _NeonColor: {r: 0.18431373, g: 0.8901961, b: 0.9411765, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

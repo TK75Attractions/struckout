@@ -27,6 +27,15 @@ Shader "Struckout/NeonRing"
         _GlowStrength ("Glow strength", Range(0.0, 2.0)) = 0.85
         _CoreFill ("Core fill", Range(0.0, 0.5)) = 0.06
 
+        _RippleWidth ("Ripple width (UV)", Range(0.002, 0.08)) = 0.018
+        _RippleSoftness ("Ripple softness", Range(0.5, 4.0)) = 1.5
+
+        // ここから下は CircleTargetUI が的ごとに差し替える (MaterialPropertyBlock)。
+        // 休止中は _Phase = 1 / _RippleA = 0 で、何も足さない状態に戻る。
+        [HideInInspector] _Phase ("Ring scale (0-1)", Range(0.0, 1.0)) = 1
+        [HideInInspector] _RippleR ("Ripple radius (UV)", Range(0.0, 0.5)) = 0
+        [HideInInspector] _RippleA ("Ripple alpha", Range(0.0, 2.0)) = 0
+
         [HideInInspector] _RendererColor ("RendererColor", Color) = (1,1,1,1)
     }
 
@@ -82,6 +91,11 @@ Shader "Struckout/NeonRing"
                 float  _GlowWidth;
                 float  _GlowStrength;
                 float  _CoreFill;
+                float  _RippleWidth;
+                float  _RippleSoftness;
+                float  _Phase;
+                float  _RippleR;
+                float  _RippleA;
             CBUFFER_END
 
             Varyings vert (Attributes input)
@@ -98,8 +112,11 @@ Shader "Struckout/NeonRing"
                 // 中心からの距離。0 が中心、0.5 が四角の縁。
                 float d = length(input.uv - 0.5);
 
-                float edge  = _TargetEdgeUv;
-                float inner = max(edge - _Thickness, 0.0);
+                // _Phase はリングの縮尺。1 で通常、0 で中心に畳まれて消える。
+                // 太さとグロー幅も一緒に縮めるので、見た目は相似形のまま小さくなる。
+                float phase = saturate(_Phase);
+                float edge  = _TargetEdgeUv * phase;
+                float inner = max(edge - _Thickness * phase, 0.0);
 
                 // 画面上で常に同じ太さのアンチエイリアスにする。
                 // これがあるので、拡縮しても縁がぼけたりジャギったりしない。
@@ -108,12 +125,14 @@ Shader "Struckout/NeonRing"
                 float ring = smoothstep(inner - aa, inner + aa, d)
                            * (1.0 - smoothstep(edge - aa, edge + aa, d));
 
+                float glowWidth = max(_GlowWidth * phase, 1e-5);
+
                 // 外向きのグロー。二乗して中心寄りに寄せる。
-                float outward = 1.0 - saturate((d - edge) / max(_GlowWidth, 1e-5));
+                float outward = 1.0 - saturate((d - edge) / glowWidth);
                 outward = outward * outward * step(edge, d);
 
                 // 内向きのグロー。
-                float inward = 1.0 - saturate((inner - d) / max(_GlowWidth, 1e-5));
+                float inward = 1.0 - saturate((inner - d) / glowWidth);
                 inward = inward * inward * step(d, inner);
 
                 float glow = (outward + inward) * _GlowStrength;
@@ -121,8 +140,14 @@ Shader "Struckout/NeonRing"
                 // 中心の淡い塗り。的の内側であることが分かる程度。
                 float core = (1.0 - smoothstep(inner - aa, inner + aa, d)) * _CoreFill;
 
+                // 波紋。的が消えるとき・現れるときに外へ広がる 1 本のリング。
+                // _RippleA が 0 の間は何も足さないので、休止中の見た目は変わらない。
+                float rippleAa = max(fwidth(d), 1e-5) * _RippleSoftness;
+                float rippleBand = abs(d - _RippleR) - _RippleWidth * 0.5;
+                float ripple = (1.0 - smoothstep(-rippleAa, rippleAa, rippleBand)) * _RippleA;
+
                 half4 tint = _NeonColor * input.color;
-                float alpha = saturate(ring + glow + core) * tint.a;
+                float alpha = saturate(ring + glow + core + ripple) * tint.a;
 
                 return half4(tint.rgb, alpha);
             }

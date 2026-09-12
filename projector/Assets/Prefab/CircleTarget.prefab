@@ -100,4 +100,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2de6451adf047a941ba84183dd0f268a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.CircleTargetUI
-  _moveDurationSeconds: 0.15
+  _collapseSeconds: 0.18
+  _expandSeconds: 0.22
+  _rippleStrength: 1
