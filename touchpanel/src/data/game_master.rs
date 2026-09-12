@@ -126,7 +126,7 @@ impl<T: GameMasterGrpcClient> GameMasterClient<T> {
             .map(|res| res.into_inner().player_id.into())
     }
 
-    /// Starts new game.
+    /// Starts a new game.
     ///
     /// It returns when the first response from the server came.
     /// Subsequent responses (e.g. ScoreChanged) are handled internally in another task.
@@ -222,6 +222,7 @@ mod tests {
 
     use super::*;
 
+    #[derive(Clone)]
     struct FakeGrpcClient {}
 
     impl GameMasterGrpcClient for FakeGrpcClient {
@@ -243,21 +244,17 @@ mod tests {
         async fn start_game(
             &mut self,
             request: impl tonic::IntoRequest<StartGameRequest>,
-        ) -> Result<Response<impl Stream<Item = StartGameResponse>>, Status> {
-            fn map_ev(ev: EventData) -> StartGameResponse {
-                StartGameResponse {
-                    event: Some(struckout_proto::Event {
-                        machine_id: MachineId(1).into_inner(),
-                        game_id: GameId(5).into_inner(),
-                        event_data: Some(ev),
-                    }),
-                }
-            }
+        ) -> Result<
+            Response<
+                impl Stream<Item = Result<StartGameResponse, Status>> + Unpin + Send + Sync + 'static,
+            >,
+            Status,
+        > {
             let s = stream! {
                 yield EventData::GameStarted(GameStarted {
                     difficulty: struckout_proto::Difficulty::Normal.into(),
                 });
-                tokio::time::sleep(Duration::from_secs(10));
+                tokio::time::sleep(Duration::from_secs(10)).await;
                 yield EventData::GameTimeLimitNotify(GameTimeLimitNotify {
                     remaining: Some(prost_types::Duration {
                         seconds: 100,
@@ -265,12 +262,15 @@ mod tests {
                     }),
                 });
             };
-            let s = s.map(|ev| StartGameResponse {
-                event: Some(struckout_proto::Event {
-                    machine_id: MachineId(1).into_inner(),
-                    game_id: GameId(5).into_inner(),
-                    event_data: Some(ev),
-                }),
+            let s = Box::pin(s);
+            let s = s.map(|ev| {
+                Ok(StartGameResponse {
+                    event: Some(struckout_proto::Event {
+                        machine_id: MachineId(1).into_inner(),
+                        game_id: GameId(5).into_inner(),
+                        event_data: Some(ev),
+                    }),
+                })
             });
             Ok(Response::new(s))
         }
@@ -285,13 +285,12 @@ mod tests {
     async fn start_game_returns_immediately_after_first_reponse() {
         let player_id = PlayerId(12);
         let difficulty = struckout_proto::Difficulty::Normal;
-        let gm = GameMasterClient::<FakeGrpcClient>::connect("127.0.0.1", MachineId(1))
+        let mut gm = GameMasterClient::<FakeGrpcClient>::connect("127.0.0.1", MachineId(1))
             .await
             .unwrap();
 
         let res = timeout(Duration::from_secs(1), gm.start_game(player_id, difficulty)).await;
-        assert!(res.is_ok());
-        let res = res.unwrap();
+        let res = res.expect("should not timeout");
         assert!(res.is_ok());
     }
 }
