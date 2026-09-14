@@ -60,6 +60,19 @@ impl PlayingViewModel {
             }
         })
         .unwrap();
+
+        // Handle complete_rx.
+        slint::spawn_local({
+            let nc = self.nav_controller.clone();
+            async move {
+                complete_rx.recv().await.unwrap();
+                rem_cancel.cancel();
+                score_cancel.cancel();
+
+                nc.navigate(NavRoute::Score);
+            }
+        })
+        .unwrap()
     }
 }
 
