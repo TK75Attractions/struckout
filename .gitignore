@@ -36,3 +36,6 @@ tools/
 
 **/.env*
 !**/.env.example
+
+# ローカル限定で依存関係をオーバーライドしたいときに使う (Cargo.tomlをいじってコミットする前に戻す、とかをしなくて済む)。
+.cargo/config.toml
