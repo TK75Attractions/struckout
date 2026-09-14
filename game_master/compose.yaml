@@ -8,7 +8,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     ports:
-      - 8080:8080
+      - 8020:8020
 
   db:
     image: mysql:26.7.0

@@ -1,9 +1,8 @@
-use std::fmt::Display;
-
 use sqlx::{MySql, Pool};
+use struckout_proto::Difficulty;
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource, GameId, MachineId, PlayerId, proto::Difficulty};
+use crate::{AddPlayerError, DataSource, GameId, MachineId, PlayerId};
 
 #[derive(Clone)]
 pub struct DataSourceImpl {
@@ -69,7 +68,7 @@ impl DataSource for DataSourceImpl {
             machine_id,
             player_id,
             started_at,
-            difficulty.to_string()
+            difficulty.to_mysql_enum()
         )
         .execute(&self.pool)
         .await?;
@@ -91,15 +90,46 @@ impl DataSource for DataSourceImpl {
     }
 }
 
-impl Display for Difficulty {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Difficulty::Unspecified => "unspecified",
-            Difficulty::Normal => "normal",
-            Difficulty::Hard => "hard",
-            Difficulty::Veryhard => "veryhard",
-        };
-        write!(f, "{s}")
+/// The type implementing this trait can be converted from/into MySQL's enum column.
+trait MySqlEnum {
+    /// Convert type to MySQL's enum type.
+    ///
+    /// Returns `None` if `self`'s value is not part of defined values (e.g. UNSPECIFIED).
+    fn to_mysql_enum(&self) -> Option<&str>;
+
+    /// Convert raw string from database into a domain type.
+    ///
+    /// Returns `None` when the value is invalid.
+    #[allow(dead_code)] // Possibly we would convert a fetched content to domain type in future.
+    fn from_mysql_enum(s: &str) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+/// Possible enum values in database are defined in `{repo_root}/migrations/mysql/`.
+const MYSQL_DIFFICULTY_NORMAL: &str = "normal";
+/// Possible enum values in database are defined in `{repo_root}/migrations/mysql/`.
+const MYSQL_DIFFICULTY_HARD: &str = "hard";
+/// Possible enum values in database are defined in `{repo_root}/migrations/mysql/`.
+const MYSQL_DIFFICULTY_VERYHARD: &str = "veryhard";
+
+impl MySqlEnum for Difficulty {
+    fn to_mysql_enum(&self) -> Option<&str> {
+        match self {
+            Difficulty::Unspecified => None,
+            Difficulty::Normal => Some(MYSQL_DIFFICULTY_NORMAL),
+            Difficulty::Hard => Some(MYSQL_DIFFICULTY_HARD),
+            Difficulty::Veryhard => Some(MYSQL_DIFFICULTY_VERYHARD),
+        }
+    }
+
+    fn from_mysql_enum(s: &str) -> Option<Self> {
+        match s {
+            MYSQL_DIFFICULTY_NORMAL => Some(Self::Normal),
+            MYSQL_DIFFICULTY_HARD => Some(Self::Hard),
+            MYSQL_DIFFICULTY_VERYHARD => Some(Self::Veryhard),
+            _ => None,
+        }
     }
 }
 

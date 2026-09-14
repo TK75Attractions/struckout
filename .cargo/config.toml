@@ -1,2 +1,7 @@
+include = [
+    # ローカル限定で依存関係をオーバーライドしたいときに使う (Cargo.tomlをいじってコミットする前に戻す、とかをしなくて済む)。
+    { path = "./patches.toml", optional = true }
+]
+
 [alias]
 xtask = "run -p xtask --"

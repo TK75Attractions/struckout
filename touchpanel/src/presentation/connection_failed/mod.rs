@@ -1,19 +1,20 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use crate::{
-    Application, NavController,
-    data::projector::{ConnectError, ProjectorTransport},
+    Application, Config, Context, NavController,
+    presentation::connect_to_game_master,
     ui::{self, ConnectionFailedStates, ConnectionFailedViewModelTrait, NavRoute, NavRouteKind},
 };
 use slint::{ComponentHandle, Global, ToSharedString};
-use stern::{GlobalExt, nav::NavDestination};
-use tracing::debug;
+use stern::{GlobalExt, WorkerThread, nav::NavDestination};
+use tracing::{debug, warn};
 
 viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
 
 struct ConnectionFailedViewModel {
     nav_controller: NavController,
-    projector_transport: Rc<RefCell<ProjectorTransport>>,
+    config: Rc<Config>,
+    worker: WorkerThread<Context>,
     state: ConnectionFailedStates,
 }
 
@@ -21,7 +22,8 @@ impl ConnectionFailedViewModel {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
-            projector_transport: application.repositories.projector.clone(),
+            config: application.config.clone(),
+            worker: application.worker.clone(),
             state: ConnectionFailedStates::new(
                 application
                     .ui
@@ -35,28 +37,23 @@ impl ConnectionFailedViewModel {
 impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
     fn on_retry_connection(&mut self) {
         let nc = self.nav_controller.clone();
-        let trans = self.projector_transport.clone();
-        let error_msg = self.state.error_msg.clone();
+        let config = self.config.clone();
+        let mut worker = self.worker.clone();
         slint::spawn_local(async move {
-            let res = trans.borrow().connect().await;
-            match res {
-                Ok(()) => {
-                    nc.navigate(NavRoute::Start); // TODO: プレイ中に接続が切れた時どうするか
+            debug!("retrying connection to game-master");
+            let game_master = match connect_to_game_master(nc, &config).await{
+                Ok(v) => v,
+                Err(_) =>{
+                    warn!("failed to connect to game-master. user can retry it.");
+                    return;
                 }
-                Err(e) => match e {
-                    ConnectError::AlreadyConnected
-                    | ConnectError::PortNotBound
-                    | ConnectError::AlreadyWaitingForConnection => {
-                        panic!("status should not be {e:?} while showing ConnectionFailedScreen");
-                    }
-                    ConnectError::Timeout(_) => {
-                        error_msg.set("タイムアウトしました".to_shared_string());
-                    }
-                    ConnectError::Tcp(e) => {
-                        error_msg.set(format!("接続に失敗しました: {}", e).to_shared_string());
-                    }
-                },
+            };
+            {
+                let cx = worker.context();
+                let guard = cx.write();
+                guard.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
             }
+            debug!("connection retry to game-master succeeds and initialized worker context with game-master client");
         })
         .unwrap();
     }

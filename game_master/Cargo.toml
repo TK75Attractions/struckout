@@ -4,10 +4,11 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+struckout-proto = { workspace = true }
+
+tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
-tonic = { workspace = true }
-tonic-prost = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread","macros", "test-util"] }
 tokio-stream = { workspace = true, features = ["sync"] }
 
@@ -34,5 +35,4 @@ toml = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["mysql"] }
 
 [build-dependencies]
-tonic-prost-build = { workspace = true }
 struckout-yaml = { workspace = true }

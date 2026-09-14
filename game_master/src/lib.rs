@@ -1,18 +1,9 @@
-use std::{fs::File, future::Future, io::Read, path::Path};
+use std::future::Future;
 
-use anyhow::Context;
-use serde::Deserialize;
 use thiserror::Error;
 use time::UtcDateTime;
 
-use crate::proto::Difficulty;
-
-pub mod proto {
-    include!(concat!(
-        env!("OUT_DIR"),
-        concat!("/tk75attractions.struckout.v1.rs")
-    ));
-}
+use struckout_proto::Difficulty;
 
 mod data;
 pub use data::DataSourceImpl;

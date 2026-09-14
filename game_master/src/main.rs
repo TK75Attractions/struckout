@@ -1,9 +1,8 @@
 use std::ffi::OsStr;
 
-use game_master::{
-    DataSourceImpl, GameMasterServiceImpl,
-    proto::game_master_service_server::GameMasterServiceServer,
-};
+use game_master::{DataSourceImpl, GameMasterServiceImpl};
+use struckout_proto::game_master_service_server::GameMasterServiceServer;
+
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
 use tonic::transport::Server;
@@ -32,6 +31,7 @@ async fn main() {
     };
     info!("succeed to create MySQL pool");
 
+    info!("initializing gRPC service");
     let data_source = DataSourceImpl::new(pool);
     let game_master = GameMasterServiceImpl::new(data_source);
     let addr = format!("0.0.0.0:{}", GRPC_PORT)

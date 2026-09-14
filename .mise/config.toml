@@ -1,17 +1,21 @@
 [tools]
+# Languages
+java = "temurin-21"
+"rust" = "latest"
+dotnet = "10"
+
+# Tools
+
 # projectorのGoogle.Protobufのバージョンと合わせる
 protoc = "35.1"
 
-java = "temurin-21"
-# 生成済みの C# をコミットしているので、buf のバージョンがぶれると
-# 環境ごとに差分が出て proto:check が落ちる。latest にはしない。
+# 生成したファイルをコミットしているので環境による差異が出ないよう固定する
 buf = "1.72.0"
-"rust" = "latest"
+
 "cargo:slint-viewer" = "latest"
 "cargo:sqlx-cli" = "latest"
 tokei = "latest"
-
-dotnet = "10"
+grpcurl = "latest"
 
 [env]
 # grpc_csharp_plugin の置き場。buf が local プラグインを PATH から拾えるように

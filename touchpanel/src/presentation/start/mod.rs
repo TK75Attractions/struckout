@@ -32,7 +32,7 @@ impl StartViewModelTrait for StartViewModel {
 }
 
 pub struct StartScreenDestination(
-    #[allow(unused_variables)] // just for viewmodel initialization
+    #[allow(dead_code)] // just for viewmodel initialization
     StartViewModelRc,
 );
 

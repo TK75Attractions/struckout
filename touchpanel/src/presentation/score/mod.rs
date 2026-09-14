@@ -1,12 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
-    Application, NavController,
-    session::SessionManager,
+    Application, Context, NavController,
     ui::{self, NavRoute, NavRouteKind, ScoreStates, ScoreViewModelTrait},
 };
 use slint::{ComponentHandle, Global};
-use stern::nav::NavDestination;
+use stern::{WorkerThread, nav::NavDestination};
 use tracing::debug;
 
 viewmodel_rc!(ScoreViewModel, ScoreAdopter);
@@ -33,14 +30,14 @@ impl ScoreViewModelTrait for ScoreViewModel {
 }
 
 pub struct ScoreDestination {
-    session_manager: Rc<RefCell<SessionManager>>,
+    worker: WorkerThread<Context>,
     viewmodel: ScoreViewModelRc,
 }
 
 impl ScoreDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            session_manager: application.session_manager.clone(),
+            worker: application.worker.clone(),
             viewmodel: ScoreViewModelRc::new(application),
         }
     }
@@ -52,6 +49,12 @@ impl NavDestination<NavRoute> for ScoreDestination {
         let NavRoute::Score = route else {
             panic!("matched variant should be given");
         };
+
+        self.worker.spawn_cx(async move |cx| {
+            let mut guard = cx.write();
+            // context is initialized before navigated to StartScreen
+            let gm = guard.game_master.get_mut().unwrap();
+        });
 
         /*let session = self
             .session_manager

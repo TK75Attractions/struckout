@@ -16,20 +16,19 @@ RUN curl https://mise.run|sh
 WORKDIR /build/
 
 # mise.tomlの変更頻度は低いので先にコピーしてインストールしておく
-COPY mise.toml mise.toml
-RUN mise install
+COPY .mise/config.toml .mise/config.toml
+RUN mise install protoc
 
 COPY ./ ./
 RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/.cargo/registry \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-git,target=/home/builder/.cargo/git \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-target,target=/build/target \
-    mise exec -- cargo build --release -p game_master \
+    SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p game_master \
     && mkdir -p /build/bin/ \
     && cp /build/target/release/game_master /build/bin/game_master
 
 FROM debian:latest
 
-COPY --from=builder /build/game_master/assets/config.toml /app/config.toml
 COPY --from=builder /build/bin/game_master /app/game_master
 
 ENTRYPOINT [ "/app/game_master" ]
