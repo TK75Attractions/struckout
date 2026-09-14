@@ -67,7 +67,7 @@ where
                 .map(|v| v.to_shared_string())
                 .fuse();
             let rem_prop = self.state.remaining_time.clone();
-            rem_prop.bind_detached(rem_stream)
+            rem_prop.bind(rem_stream)
         };
 
         let score_cancel = {
@@ -75,7 +75,7 @@ where
                 .map(|v| v.try_into().expect("score overflowed"))
                 .fuse();
             let score_prop = self.state.score.clone();
-            score_prop.bind_detached(score_stream)
+            score_prop.bind(score_stream)
         };
 
         // Handle error_rx.
