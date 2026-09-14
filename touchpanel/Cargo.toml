@@ -5,7 +5,7 @@ edition = { workspace = true }
 
 [dependencies]
 struckout-proto = { workspace = true }
-stern = { path = "../stern/stern/" }
+stern = { git = "https://github.com/taichi765/stern" }
 
 tokio = { workspace = true, features = [
     "rt-multi-thread",
