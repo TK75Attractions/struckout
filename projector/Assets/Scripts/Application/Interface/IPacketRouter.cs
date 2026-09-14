@@ -9,8 +9,6 @@ namespace Struckout.Application
         public event Action<TestMessage> OnStringMessageReceived;
         public event Action<CollisionPoint> OnCollisionReceived;
 
-        public event Action<StartGame> OnGameStartReceived;
         void RoutePacket(ProjectorPacket packet);
-        void RoutePacket(MasterProjectorPacket packet);
     }
 }

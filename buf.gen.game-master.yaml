@@ -1,0 +1,20 @@
+# game-master.proto から C# を生成する。
+#
+# projector は game_master と gRPC で話すので、メッセージだけでなく
+# クライアントのスタブも要る。protoc 単体では作れず grpc_csharp_plugin が要る。
+#
+# testTcpCLI には渡さない。偽 ball_tracker としてしか使わないうえ、
+# gRPC スタブは Grpc.Core.Api を参照していないぶんビルドを壊す。
+#
+# grpc_csharp_plugin は .tools/bin から PATH 経由で拾う。
+# scripts/fetch-grpc-csharp-plugin.sh が用意する (mise の proto タスクが依存)。
+version: v2
+inputs:
+  - directory: api/proto
+    paths:
+      - api/proto/game-master.proto
+plugins:
+  - protoc_builtin: csharp
+    out: projector/Assets/Scripts/ProtoBuf/Generated
+  - local: grpc_csharp_plugin
+    out: projector/Assets/Scripts/ProtoBuf/Generated

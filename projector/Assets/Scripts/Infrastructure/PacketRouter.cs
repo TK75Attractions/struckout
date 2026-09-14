@@ -12,7 +12,6 @@ namespace Struckout.Infrastructure
         public event Action<TestMessage> OnStringMessageReceived;
         public event Action<CollisionPoint> OnCollisionReceived;
 
-        public event Action<StartGame> OnGameStartReceived;
 
         private readonly IMainThreadDispatcher _mainThreadDispatcher;
 
@@ -51,34 +50,5 @@ namespace Struckout.Infrastructure
             }
         }
 
-        public void RoutePacket(MasterProjectorPacket packet)
-        {
-            if (packet == null) return;
-
-            switch (packet.PayloadCase)
-            {
-                case MasterProjectorPacket.PayloadOneofCase.StartGame:
-                    {
-                        if (packet.StartGame == null) break;
-                        var startGame = packet.StartGame;
-                        _mainThreadDispatcher.Enqueue(() =>
-                        {
-                            if (OnGameStartReceived == null)
-                            {
-                                // まだ誰も StartGame を処理していない。
-                                // 届いていること自体は確認できるようにログには残す。
-                                Debug.Log($"[Master] StartGame({startGame.Difficulty}) received, but nothing handles it yet.");
-                                return;
-                            }
-
-                            OnGameStartReceived(startGame);
-                        });
-                        break;
-                    }
-                default:
-                    Debug.Log($"Unhandled master packet: {packet.PayloadCase}");
-                    break;
-            }
-        }
     }
 }

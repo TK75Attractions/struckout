@@ -9,11 +9,13 @@ namespace Struckout.Domain
     /// そのため係数はここに切り出して Inspector から調整できるようにしてある。
     /// 実測して値が固まったら、そのまま Inspector の値を確定させればよい。
     ///
-    /// 描画側は RectTransform.anchoredPosition なので Y は上向き。
-    /// TargetGenerator は X を 0〜1920、Y を 0〜1080 で置いている。
+    /// 移した先は盤面座標 (<see cref="FieldBounds"/>)。原点は左下で Y は上向き。
+    /// TargetGenerator が的を置くのと同じ座標系で、ワールド座標に直すのは
+    /// さらに後段の <see cref="WorldCoordinateTransform"/> の仕事。
     ///
-    /// 既定値は物理 x[-1, 1] m / y[0, 2] m がちょうど 1920x1080 に収まる想定。
-    /// 実測に基づく値ではないので、必ず現物で合わせること。
+    /// 既定値は物理 x[-1, 1] m / y[0, 2] m がちょうど既定の盤面 (1920x1080) に
+    /// 収まる想定。実測に基づく値ではないので、必ず現物で合わせること。
+    /// 盤面の広さを変えたときは、この係数も合わせて見直す必要がある。
     /// </summary>
     [Serializable]
     public class CollisionCoordinateTransform

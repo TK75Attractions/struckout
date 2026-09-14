@@ -11,13 +11,13 @@ namespace Struckout.Bootstrap
     public class NetworkBootstrap : IAsyncDestroy
     {
         private readonly IClientService<ProjectorPacket> _client;
-        private readonly IClientService<MasterProjectorPacket> _master;
+        private readonly IGameMasterClient _master;
         private readonly IPacketRouter _packetRouter;
         private readonly NetworkSettings _settings;
 
         public NetworkBootstrap(
             IClientService<ProjectorPacket> clientService,
-            IClientService<MasterProjectorPacket> masterService,
+            IGameMasterClient masterService,
             IPacketRouter packetRouter,
             NetworkSettings settings
         )
@@ -39,19 +39,19 @@ namespace Struckout.Bootstrap
 
 
             _client.OnReceived += _packetRouter.RoutePacket;
-            _master.OnReceived += _packetRouter.RoutePacket;
 
             // 自動再接続はまだ入れていないので、せめて切れたことは分かるようにする。
             _client.ConnectionLost += OnTrackerConnectionLost;
             _master.ConnectionLost += OnMasterConnectionLost;
 
             _client.RegisterPort(_settings.TrackerHost, _settings.TrackerPort);
-            _master.RegisterPort(_settings.MasterHost, _settings.MasterPort);
 
             bool isSuccessfullyClientConnect = await _client.ConnectRetryAsync(_settings.ConnectAttempts);
             if (!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
 
-            bool isSuccessfullyMasterConnect = await _master.ConnectRetryAsync(_settings.ConnectAttempts);
+            // gRPC のチャネルは遅延接続なので、ここで失敗するのはチャネルを作れないときだけ。
+            // 相手が居るかどうかはイベントの購読を始めて初めて分かる。
+            bool isSuccessfullyMasterConnect = await _master.ConnectAsync();
             if (!isSuccessfullyMasterConnect) return NetworkConnectionResult.MasterConnectFailed;
 
             return NetworkConnectionResult.Success;
@@ -73,7 +73,6 @@ namespace Struckout.Bootstrap
         {
             if (_client == null) return;
             _client.OnReceived -= _packetRouter.RoutePacket;
-            _master.OnReceived -= _packetRouter.RoutePacket;
             _client.ConnectionLost -= OnTrackerConnectionLost;
             _master.ConnectionLost -= OnMasterConnectionLost;
             _packetRouter.OnStringMessageReceived -= OnReceiveMessage;
