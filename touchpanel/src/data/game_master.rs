@@ -335,6 +335,22 @@ pub struct Session {
 }
 
 impl Session {
+    pub fn new(
+        difficulty: struckout_proto::Difficulty,
+        score_tx: watch::Sender<u32>,
+        rem_tx: watch::Sender<DisplayableRemainingTime>,
+        error_tx: watch::Sender<Option<RequestError>>,
+        complete_tx: broadcast::Sender<()>,
+    ) -> Self {
+        Self {
+            difficulty,
+            score_tx,
+            rem_tx,
+            error_tx,
+            complete_tx,
+        }
+    }
+
     /// Subscribes to [`watch::Sender`] and returns new [`Receiver`].
     ///
     /// Note that all [`Sender`] will be dropped after receiving `GameFinished` event, so calling [`Receiver::recv()`] can

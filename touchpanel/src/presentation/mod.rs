@@ -12,7 +12,6 @@ use crate::{
     ui::{self, NavRoute},
 };
 use stern::nav::NavHost;
-use struckout_proto::game_master_service_client::GameMasterServiceClient;
 use tokio::time::timeout;
 use tracing::{debug, warn};
 
@@ -34,6 +33,28 @@ macro_rules! viewmodel_rc {
             struct [<$vm Rc>](std::rc::Rc<std::cell::RefCell<$vm>>);
 
             impl [<$vm Rc>] {
+                #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
+                fn new(application: &Application) -> Self {
+                    let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
+                    application.ui.global::<crate::ui::$adopter>()
+                        .register_viewmodel(std::rc::Rc::clone(&this));
+
+                    Self(this)
+                }
+            }
+        }
+    };
+    ($vm:ident<$generics:ident>, $adopter:ty) => {
+        pastey::paste! {
+            #[allow(unused_imports)]
+            use slint::ComponentHandle as _;
+            #[allow(unused_imports)]
+            use stern::GlobalExt as _;
+
+            #[derive(derive_more::Deref)]
+            struct [<$vm Rc>]<$generics>(std::rc::Rc<std::cell::RefCell<$vm<$generics>>>);
+
+            impl [<$vm Rc>]<crate::Context> {
                 #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
                 fn new(application: &Application) -> Self {
                     let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
