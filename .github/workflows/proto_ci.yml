@@ -8,7 +8,6 @@ on:
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
       - buf.gen.*.yaml
-      - scripts/fetch-grpc-csharp-plugin.sh
       - .mise/config.toml
       - .github/workflows/proto_ci.yml
   pull_request:
@@ -17,7 +16,6 @@ on:
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
       - buf.gen.*.yaml
-      - scripts/fetch-grpc-csharp-plugin.sh
       - .mise/config.toml
       - .github/workflows/proto_ci.yml
   workflow_dispatch:
