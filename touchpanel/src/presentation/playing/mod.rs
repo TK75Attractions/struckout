@@ -50,9 +50,8 @@ where
 
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
             let cx = worker.context();
-            let cx_guard = cx.read();
-            let session_guard = cx_guard.session();
-            let session = session_guard.as_ref().expect("session should exists");
+            let session_guard = cx.session();
+            let session = session_guard.as_ref().expect("session should exist");
 
             (
                 session.remaining_time(),

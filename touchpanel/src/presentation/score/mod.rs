@@ -51,9 +51,8 @@ impl NavDestination<NavRoute> for ScoreDestination {
         };
 
         self.worker.spawn_cx(async move |cx| {
-            let mut guard = cx.write();
             // context is initialized before navigated to StartScreen
-            let gm = guard.game_master.get_mut().unwrap();
+            let gm = cx.game_master.get().unwrap();
         });
 
         /*let session = self

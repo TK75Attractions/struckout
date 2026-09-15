@@ -50,8 +50,7 @@ impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
             };
             {
                 let cx = worker.context();
-                let guard = cx.write();
-                guard.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
+                cx.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
             }
             debug!("connection retry to game-master succeeds and initialized worker context with game-master client");
         })

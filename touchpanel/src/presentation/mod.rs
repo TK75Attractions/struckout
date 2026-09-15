@@ -132,9 +132,7 @@ pub fn init_worker_context(application: &Application) {
 
         {
             let cx = worker.context();
-            let guard = cx.write();
-            guard
-                .game_master
+            cx.game_master
                 .set(game_master)
                 .expect("this should be a first successful attempt to connect to game-master");
         }

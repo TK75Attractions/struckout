@@ -70,7 +70,7 @@ impl NameInputViewModelTrait for NameInputViewModel {
         let nc = self.nav_controller.clone();
         let (tx, rx) = oneshot::channel();
         self.worker.spawn_cx(async move |cx| {
-            let mut gm = cx.read().game_master.get().unwrap().clone();
+            let mut gm = cx.game_master.get().unwrap().clone();
             let res = gm.add_player(name).await;
             tx.send(res).unwrap();
         });

@@ -49,10 +49,7 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
             .expect("should be some while this screen is shown");
 
         self.worker.spawn_cx(async move |cx| {
-            let mut gm = {
-                let guard = cx.read();
-                guard.game_master.get().unwrap().clone()
-            };
+            let mut gm = cx.game_master.get().unwrap().clone();
             let res = gm.start_game(player_id, difficulty).await;
             tx.send(res).unwrap();
         });
