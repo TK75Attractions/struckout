@@ -17,20 +17,9 @@ buf = "1.72.0"
 tokei = "latest"
 grpcurl = "latest"
 
-[env]
-# grpc_csharp_plugin の置き場。buf が local プラグインを PATH から拾えるように
-# しておくと、実行ファイルの拡張子 (.exe) を buf.gen.*.yaml に書かずに済む。
-_.path = [".tools/bin"]
-
-[tasks."proto:plugin"]
-# Windows でも Git Bash で動かす。mise の既定シェルではシェルスクリプトを
-# 直接は起動できない。
-shell = "bash -c"
-run = "scripts/fetch-grpc-csharp-plugin.sh"
-description = "Fetch grpc_csharp_plugin into .tools/bin"
-
 [tasks.proto]
-depends = ["proto:plugin"]
+# grpc_csharp_plugin は buf.gen.game-master.yaml が BSR の remote plugin を使うので、
+# ローカルに用意するものは buf と protoc だけ。
 run = [
     "buf generate --template buf.gen.ball-tracker.yaml",
     "buf generate --template buf.gen.game-master.yaml",
