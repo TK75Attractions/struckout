@@ -13,7 +13,7 @@ pub struct DisplayableRemainingTime {
 
 impl Display for DisplayableRemainingTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.mins, self.secs)
+        write!(f, "{:02}:{:02}", self.mins, self.secs)
     }
 }
 
