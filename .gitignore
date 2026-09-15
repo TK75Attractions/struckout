@@ -42,4 +42,4 @@ sandbox/fake_game_master/
 !**/.env.example
 
 # ローカル限定で依存関係をオーバーライドしたいときに使う (Cargo.tomlをいじってコミットする前に戻す、とかをしなくて済む)。
-.cargo/patches.toml
+.cargo/patches.toml*
