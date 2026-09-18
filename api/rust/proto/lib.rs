@@ -1,6 +1,8 @@
 mod proto {
     include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
 }
+pub mod types;
+
 use bytes::BytesMut;
 use prost::{DecodeError, EncodeError, Message};
 pub use proto::*;
@@ -26,6 +28,7 @@ pub async fn write_packet<T: Message, O: AsyncWrite + Unpin>(
     Ok(())
 }
 
+/// Error returned from [`write_packet()`].
 #[derive(Debug, Error)]
 pub enum WritePacketError {
     #[error(transparent)]
@@ -57,6 +60,7 @@ pub async fn read_packet_raw<I: AsyncRead + Unpin>(
     Ok(buf)
 }
 
+/// Error retured from [`read_packet()`].
 #[derive(Debug, Error)]
 pub enum ReadPacketError {
     #[error(transparent)]

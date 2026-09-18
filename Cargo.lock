@@ -6559,6 +6559,7 @@ name = "struckout-proto"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "derive_more",
  "prost",
  "prost-types",
  "thiserror 2.0.20",

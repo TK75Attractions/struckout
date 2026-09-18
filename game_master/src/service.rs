@@ -5,6 +5,7 @@ use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
     ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
     game_master_service_server::GameMasterService,
+    types::{GameId, MachineId},
 };
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
@@ -15,7 +16,7 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{AddPlayerError, DataSource, GameId, MachineId};
+use crate::{AddPlayerError, DataSource};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 

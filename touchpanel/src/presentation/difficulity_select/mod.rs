@@ -3,9 +3,10 @@ use tokio::sync::oneshot;
 
 use crate::{Application, Context, NavController};
 use stern::{GlobalExt as _, WorkerThread, nav::NavDestination};
+use struckout_proto::types::PlayerId;
 use touchpanel_ui::{
     DifficulitySelectPropertyMappers, DifficulitySelectStates, DifficulitySelectViewModelTrait,
-    NavRoute, NavRouteKind, types::PlayerId,
+    NavRoute, NavRouteKind,
 };
 use tracing::{debug, trace};
 

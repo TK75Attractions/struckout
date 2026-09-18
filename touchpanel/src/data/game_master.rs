@@ -14,7 +14,7 @@ use tracing::trace;
 
 use crate::data::remaining_time::DisplayableRemainingTime;
 
-use touchpanel_ui::types::{MachineId, PlayerId};
+use struckout_proto::types::{MachineId, PlayerId};
 
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
