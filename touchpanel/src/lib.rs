@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables)]
+
 use clap::Parser;
 use slint::ComponentHandle;
 use std::rc::Rc;
@@ -5,31 +7,12 @@ use std::sync::OnceLock;
 use stern::WorkerThread;
 use tracing::info;
 
+use touchpanel_ui::NavRoute;
+
 use crate::{
     data::GameMasterClient,
     presentation::{attach_navhost, init_worker_context},
-    ui::NavRoute,
 };
-
-mod ui {
-    use crate::data::PlayerId;
-
-    slint::include_modules!();
-
-    #[stern::route]
-    #[derive(Debug, Clone)]
-    pub enum NavRoute {
-        Start,
-        NameInput,
-        DifficulitySelect { player_id: PlayerId },
-        Playing(self::Difficulity),
-        Score,
-        Ranking,
-        Fallback(String),
-        ConnectionFailed(String),
-        Connecting,
-    }
-}
 
 mod data;
 mod presentation;
@@ -44,7 +27,7 @@ type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 
 struct Application {
     nav_controller: NavController,
-    ui: ui::AppWindow,
+    ui: touchpanel_ui::AppWindow,
     #[allow(dead_code)] // チャンネルを生存させるために必要
     pub worker: WorkerThread<Context>,
     config: Rc<Config>,
@@ -104,9 +87,9 @@ pub fn run_main() {
     let cli = Cli::parse();
     let config = Rc::new(Config::from_cli(cli));
 
-    let ui = ui::AppWindow::new().unwrap();
+    let ui = touchpanel_ui::AppWindow::new().unwrap();
 
-    let nav_controller = NavController::new(ui::NavRoute::Connecting, {
+    let nav_controller = NavController::new(NavRoute::Connecting, {
         let ui = ui.as_weak();
 
         move |route| {

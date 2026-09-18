@@ -1,22 +1,27 @@
-use crate::{
-    Application,
-    ui::{self, ConnectingStates, ConnectingViewModelTrait, NavRoute, NavRouteKind},
-};
+use crate::Application;
 use slint::{ComponentHandle as _, Global as _};
 use stern::nav::NavDestination;
+use touchpanel_ui::{
+    ConnectingPropertyMappers, ConnectingStates, ConnectingViewModelTrait, NavRoute, NavRouteKind,
+};
 use tracing::debug;
+
+touchpanel_ui::define_connecting_mapper! {}
 
 viewmodel_rc!(ConnectingViewModel, ConnectingAdopter);
 
 struct ConnectingViewModel {
-    _state: ConnectingStates,
+    _state: ConnectingStates<Mapper>,
 }
 
 impl ConnectingViewModel {
     fn new(application: &Application) -> Self {
         Self {
-            _state: ConnectingStates::new(
-                application.ui.global::<ui::ConnectingAdopter>().as_weak(),
+            _state: ConnectingStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::ConnectingAdopter>()
+                    .as_weak(),
             ),
         }
     }

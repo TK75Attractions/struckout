@@ -143,12 +143,12 @@ pub enum BindError {
     Other(#[from] std::io::Error),
 }
 
-impl From<ui::Difficulity> for struckout_proto::Difficulty {
-    fn from(value: ui::Difficulity) -> Self {
+impl From<touchpanel_ui::Difficulity> for struckout_proto::Difficulty {
+    fn from(value: touchpanel_ui::Difficulity) -> Self {
         match value {
-            ui::Difficulity::Normal => struckout_proto::Difficulty::Normal,
-            ui::Difficulity::Hard => struckout_proto::Difficulty::Hard,
-            ui::Difficulity::VeryHard => struckout_proto::Difficulty::Veryhard,
+            touchpanel_ui::Difficulity::Normal => struckout_proto::Difficulty::Normal,
+            touchpanel_ui::Difficulity::Hard => struckout_proto::Difficulty::Hard,
+            touchpanel_ui::Difficulity::VeryHard => struckout_proto::Difficulty::Veryhard,
         }
     }
 }

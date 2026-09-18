@@ -12,7 +12,9 @@ use tokio_stream::StreamExt;
 use tonic::{Response, Status, transport::Endpoint};
 use tracing::trace;
 
-use crate::data::{MachineId, PlayerId, remaining_time::DisplayableRemainingTime};
+use crate::data::remaining_time::DisplayableRemainingTime;
+
+use touchpanel_ui::types::{MachineId, PlayerId};
 
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
