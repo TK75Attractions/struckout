@@ -54,6 +54,10 @@ message Event {
     google.protobuf.Duration remaining = 1;
   }
 
+  message GameScoreChanged {
+      uint32 total_score = 1;
+  }
+
   message GameFinished {}
 
   uint32 machine_id = 1;
@@ -63,6 +67,7 @@ message Event {
     GameStarted game_started = 3;
     GameTimeLimitNotify game_time_limit_notify = 4;
     GameFinished game_finished = 5;
+    GameScoreChanged game_score_changed = 6;
   }
 }
 

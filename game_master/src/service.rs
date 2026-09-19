@@ -50,19 +50,25 @@ pub enum SuccessfulEvent {
     GameStarted { difficulty: Difficulty },
     /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
+    /// [`struckout_proto::event::GameScoreChanged`]
+    GameScoreChanged { total_score: u32 },
     /// [`struckout_proto::event::GameFinished`]
     GameFinished,
 }
 
 impl From<SuccessfulEvent> for struckout_proto::event::EventData {
     fn from(ev: SuccessfulEvent) -> Self {
-        use struckout_proto::event::{EventData, GameFinished, GameStarted, GameTimeLimitNotify};
+        use struckout_proto::event::{
+            EventData, GameFinished, GameScoreChanged, GameStarted, GameTimeLimitNotify,
+        };
 
         match ev {
             SuccessfulEvent::GameStarted { difficulty } => EventData::GameStarted(GameStarted {
                 difficulty: difficulty.into(),
             }),
-
+            SuccessfulEvent::GameScoreChanged { total_score } => {
+                EventData::GameScoreChanged(GameScoreChanged { total_score })
+            }
             SuccessfulEvent::GameTimeLimitNotify { remaining } => {
                 EventData::GameTimeLimitNotify(GameTimeLimitNotify {
                     remaining: Some(prost_types::Duration {
@@ -231,7 +237,8 @@ where
     ) -> Result<Response<AddScoreResponse>, Status> {
         let req = req.into_inner();
         let game_id = req.game_id.into();
-        {
+        let machine_id = req.machine_id.into();
+        let total_score = {
             let mut guard = self.running_games.write();
             let Some(game) = guard.get_mut(&game_id) else {
                 return Err(Status::not_found(format!(
@@ -240,7 +247,15 @@ where
                 )));
             };
             game.score += req.score_to_add;
-        }
+            game.score
+        };
+        self.event_tx
+            .send(Event {
+                game_id,
+                machine_id,
+                data: Ok(SuccessfulEvent::GameScoreChanged { total_score }),
+            })
+            .unwrap();
         Ok(Response::new(AddScoreResponse {}))
     }
 
