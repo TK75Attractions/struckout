@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::{Application, Config, Context, NavController, presentation::connect_to_game_master};
 use slint::{ComponentHandle, Global, ToSharedString};
@@ -15,7 +15,7 @@ viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
 
 struct ConnectionFailedViewModel {
     nav_controller: NavController,
-    config: Rc<Config>,
+    config: Arc<Config>,
     worker: WorkerThread<Context>,
     state: ConnectionFailedStates<Mapper>,
 }
@@ -43,7 +43,7 @@ impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
         let mut worker = self.worker.clone();
         slint::spawn_local(async move {
             debug!("retrying connection to game-master");
-            let game_master = match connect_to_game_master(nc, &config).await{
+            let game_master = match connect_to_game_master(&worker,nc, config).await{
                 Ok(v) => v,
                 Err(_) =>{
                     warn!("failed to connect to game-master. user can retry it.");

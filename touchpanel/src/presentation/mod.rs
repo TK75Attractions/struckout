@@ -1,7 +1,7 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use crate::{
-    Application, Config, NavController,
+    Application, Config, Context, NavController,
     data::GameMasterClient,
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
@@ -10,8 +10,8 @@ use crate::{
         score::ScoreDestination, start::StartScreenDestination,
     },
 };
-use stern::nav::NavHost;
-use tokio::time::timeout;
+use stern::{WorkerThread, nav::NavHost};
+use tokio::{sync::oneshot, time::timeout};
 use touchpanel_ui::NavRoute;
 use tracing::{debug, warn};
 
@@ -78,20 +78,28 @@ pub mod ranking;
 pub mod score;
 pub mod start;
 
-/// Connects to game-master's gRPC server.
+/// Connects to game-master's gRPC server. **Must be called within tokio context**.
 ///
 /// When succeeded, it navigates to `StartScreen` and returns connected [`GameMasterClient`].
 /// When failed, it navigates to `ConnectionFailedScreen` with error message.
 async fn connect_to_game_master(
+    worker: &WorkerThread<Context>,
     nc: NavController,
-    config: &Config,
+    config: Arc<Config>,
 ) -> Result<GameMasterClient, ()> {
-    match timeout(
-        Duration::from_secs(5),
-        GameMasterClient::connect(&config.server_addr, config.machine_id.into()),
-    )
-    .await
-    {
+    let (tx, rx) = oneshot::channel();
+
+    worker.spawn_cx({
+        async move |cx| {
+            let res = timeout(
+                Duration::from_secs(5),
+                GameMasterClient::connect(config.server_addr.as_ref(), config.machine_id.into()),
+            )
+            .await;
+            tx.send(res).unwrap();
+        }
+    });
+    match rx.await.expect("channel should not be closed") {
         Ok(Ok(v)) => {
             nc.navigate(NavRoute::Start);
             Ok(v)
@@ -122,7 +130,7 @@ pub fn init_worker_context(application: &Application) {
     let config = application.config.clone();
     slint::spawn_local(async move {
         debug!("initializing worker context");
-        let game_master = match connect_to_game_master(nc, &config).await {
+        let game_master = match connect_to_game_master(&worker, nc, config).await {
             Ok(v) => v,
             Err(_) => {
                 warn!("failed to connect to game-master. user can retry it.");
