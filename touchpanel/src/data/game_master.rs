@@ -11,7 +11,7 @@ use thiserror::Error;
 use tokio::sync::{broadcast, watch};
 use tokio_stream::StreamExt;
 use tonic::{Response, Status, transport::Endpoint};
-use tracing::trace;
+use tracing::{instrument, trace};
 
 use crate::data::remaining_time::DisplayableRemainingTime;
 
@@ -178,6 +178,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
     ///
     /// It returns when the first response from the server came.
     /// Subsequent responses (e.g. ScoreChanged) are handled internally in another task.
+    #[instrument(skip(self))]
     pub async fn start_game(
         &mut self,
         player_id: PlayerId,
@@ -254,6 +255,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
     }
 
     /// Gets the result of a specified game.
+    #[instrument(skip(self))]
     pub async fn get_game_result(&mut self, game_id: GameId) -> Result<u32, Status> {
         self.client
             .get_game_result(GetGameResultRequest {
