@@ -6,7 +6,7 @@ edition = { workspace = true }
 [dependencies]
 struckout-proto = { workspace = true }
 stern = { workspace = true }
-touchpanel-ui = { workspace = true }
+touchpanel-ui = { path = "./ui/" }
 
 tokio = { workspace = true, features = [
     "rt-multi-thread",
