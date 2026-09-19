@@ -17,3 +17,6 @@ README.md
 
 # stale rust packages
 mcu
+
+# local dependency overrides
+.cargo/patches.toml
