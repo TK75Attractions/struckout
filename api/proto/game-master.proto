@@ -45,6 +45,14 @@ message AddPlayerResponse {
   uint32 player_id = 1;
 }
 
+message GetGameResultRequest {
+  uint32 game_id = 1;
+}
+
+message GetGameResultResponse {
+  uint32 total_score = 1;
+}
+
 message Event {
   message GameStarted {
     Difficulty difficulty = 1;
@@ -84,4 +92,7 @@ service GameMasterService {
 
   // Adds score for the game. Used by `projector`.
   rpc AddScore(AddScoreRequest) returns (AddScoreResponse);
+
+  // Gets the result of a specific game.
+  rpc GetGameResult(GetGameResultRequest) returns (GetGameResultResponse);
 }

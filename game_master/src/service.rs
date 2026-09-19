@@ -3,7 +3,8 @@ use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 use parking_lot::RwLock;
 use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
-    ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
+    GetGameResultRequest, GetGameResultResponse, ListenEventsRequest, ListenEventsResponse,
+    StartGameRequest, StartGameResponse,
     game_master_service_server::GameMasterService,
     types::{GameId, MachineId},
 };
@@ -16,7 +17,7 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{AddPlayerError, DataSource};
+use crate::{AddPlayerError, DataSource, GetGameResultError};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
@@ -272,6 +273,22 @@ where
             Err(AddPlayerError::Sqlx(e)) => Err(Status::unavailable(e.to_string())),
         }
     }
+
+    async fn get_game_result(
+        &self,
+        req: Request<GetGameResultRequest>,
+    ) -> Result<Response<GetGameResultResponse>, Status> {
+        let req = req.into_inner();
+        let game_id = req.game_id.into();
+        match self.data_source.get_game_result(game_id).await {
+            Ok(record) => Ok(Response::new(GetGameResultResponse {
+                total_score: record.score,
+            })),
+            Err(e @ GetGameResultError::GameNotFound) => Err(Status::not_found(e.to_string())),
+            Err(e @ GetGameResultError::NotYetCompleted) => Err(Status::aborted(e.to_string())),
+            Err(GetGameResultError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        }
+    }
 }
 
 /// Filters events from `event_rx` by `game_id` and pass it through the response stream.
@@ -380,6 +397,13 @@ mod tests {
 
         async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
             Ok(self.player_id)
+        }
+
+        async fn get_game_result(
+            &self,
+            game_id: GameId,
+        ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
+            unimplemented!()
         }
     }
 

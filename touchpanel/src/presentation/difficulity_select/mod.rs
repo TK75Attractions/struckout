@@ -58,8 +58,8 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
         });
         slint::spawn_local(async move {
             match rx.await.unwrap() {
-                Ok(_) => {
-                    nc.navigate(NavRoute::Playing(difficulty_ui));
+                Ok(game_id) => {
+                    nc.navigate(NavRoute::Playing(difficulty_ui, game_id));
                 }
                 Err(e) => {
                     nc.navigate(NavRoute::Fallback(e.to_string()));
