@@ -5,7 +5,10 @@ use struckout_proto::{
 };
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource};
+use crate::{AddPlayerError, DataSource, GetGameResultError};
+
+const STATUS_FINISHED: &str = "finished";
+const STATUS_RUNNING: &str = "running";
 
 #[derive(Clone)]
 pub struct DataSourceImpl {
@@ -67,11 +70,12 @@ impl DataSource for DataSourceImpl {
                 started_at ,
                 difficulty,
                 status
-            ) VALUES (?, ?, ?, ?, 'running')",
+            ) VALUES (?, ?, ?, ?, ?)",
             machine_id,
             player_id,
             started_at,
-            difficulty.to_mysql_enum()
+            difficulty.to_mysql_enum(),
+            STATUS_RUNNING,
         )
         .execute(&self.pool)
         .await?;
@@ -91,6 +95,32 @@ impl DataSource for DataSourceImpl {
         .await?;
         Ok(())
     }
+
+    /// Gets the result of a completed game.
+    async fn get_game_result(&self, game_id: GameId) -> Result<GameRecord, GetGameResultError> {
+        let row = sqlx::query!(
+            "SELECT score, status FROM games WHERE game_id = ?",
+            game_id.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => GetGameResultError::GameNotFound,
+            _ => e.into(),
+        })?;
+
+        if row.status != STATUS_FINISHED {
+            return Err(GetGameResultError::NotYetCompleted);
+        }
+        // guaranteed by CHECK constraint
+        let score = row.score.unwrap();
+
+        Ok(GameRecord { score })
+    }
+}
+
+pub struct GameRecord {
+    pub score: u32,
 }
 
 /// The type implementing this trait can be converted from/into MySQL's enum column.

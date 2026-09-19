@@ -9,8 +9,10 @@ mod ui {
         DifficulitySelect {
             player_id: struckout_proto::types::PlayerId,
         },
-        Playing(self::Difficulity),
-        Score,
+        Playing(self::Difficulity, struckout_proto::types::GameId),
+        Score {
+            game_id: struckout_proto::types::GameId,
+        },
         Ranking,
         Fallback(String),
         ConnectionFailed(String),

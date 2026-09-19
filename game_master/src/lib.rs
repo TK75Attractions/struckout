@@ -13,6 +13,8 @@ pub use data::DataSourceImpl;
 mod service;
 pub use service::GameMasterServiceImpl;
 
+use crate::data::GameRecord;
+
 pub trait DataSource: Clone + Send + Sync + 'static {
     fn insert_game(
         &self,
@@ -32,6 +34,11 @@ pub trait DataSource: Clone + Send + Sync + 'static {
         &self,
         name: impl Into<String> + Send,
     ) -> impl Future<Output = Result<PlayerId, AddPlayerError>> + Send;
+
+    fn get_game_result(
+        &self,
+        game_id: GameId,
+    ) -> impl Future<Output = Result<GameRecord, GetGameResultError>> + Send;
 }
 
 /// Error returned from [`DataSource::add_player()`].
@@ -39,6 +46,17 @@ pub trait DataSource: Clone + Send + Sync + 'static {
 pub enum AddPlayerError {
     #[error("player name is already used")]
     NameAlreadyUsed,
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::get_game_result()`].
+#[derive(Debug, Error)]
+pub enum GetGameResultError {
+    #[error("game is not yet completed")]
+    NotYetCompleted,
+    #[error("game not found in the database")]
+    GameNotFound,
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }

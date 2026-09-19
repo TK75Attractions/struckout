@@ -1,6 +1,8 @@
 use crate::{Application, Context, NavController};
 use slint::{ComponentHandle, Global};
 use stern::{WorkerThread, nav::NavDestination};
+use struckout_proto::types::GameId;
+use tokio::sync::oneshot;
 use touchpanel_ui::{
     NavRoute, NavRouteKind, ScorePropertyMappers, ScoreStates, ScoreViewModelTrait,
 };
@@ -8,17 +10,18 @@ use tracing::debug;
 
 touchpanel_ui::define_score_mapper! {}
 
-viewmodel_rc!(ScoreViewModel, ScoreAdopter);
+viewmodel_rc!(ScoreViewModel<C>, ScoreAdopter);
 
 #[derive(Debug)]
-struct ScoreViewModel {
+struct ScoreViewModel<C> {
+    worker: WorkerThread<C>,
     nav_controller: NavController,
     state: ScoreStates<Mapper>,
 }
-
-impl ScoreViewModel {
+impl ScoreViewModel<Context> {
     fn new(application: &Application) -> Self {
         Self {
+            worker: application.worker.clone(),
             nav_controller: application.nav_controller.clone(),
             state: ScoreStates::<Mapper>::new(
                 application
@@ -30,15 +33,63 @@ impl ScoreViewModel {
     }
 }
 
-impl ScoreViewModelTrait for ScoreViewModel {
+impl<C> ScoreViewModel<C> {
+    fn show_result(&self, game_id: GameId)
+    where
+        C: GameResultProvider,
+    {
+        let (tx, rx) = oneshot::channel();
+
+        self.worker.spawn_cx({
+            async move |cx| {
+                // context is initialized before navigated to StartScreen
+                let res = cx.get_game_result(game_id).await;
+                tx.send(res).unwrap();
+            }
+        });
+
+        slint::spawn_local({
+            let nc = self.nav_controller.clone();
+            let score_prop = self.state.score.clone();
+
+            async move {
+                match rx.await.expect("channel should not be closed") {
+                    Ok(v) => {
+                        score_prop.set(v.try_into().unwrap());
+                    }
+                    Err(e) => {
+                        nc.navigate(NavRoute::Fallback(e.to_string()));
+                    }
+                };
+            }
+        })
+        .unwrap();
+    }
+}
+
+impl<C> ScoreViewModelTrait for ScoreViewModel<C> {
     fn on_next_clicked(&mut self) {
         self.nav_controller.navigate(NavRoute::Ranking);
     }
 }
 
+trait GameResultProvider: Send + Sync + 'static {
+    fn get_game_result(
+        &self,
+        game_id: GameId,
+    ) -> impl Future<Output = Result<u32, tonic::Status>> + Send;
+}
+
+impl GameResultProvider for Context {
+    async fn get_game_result(&self, game_id: GameId) -> Result<u32, tonic::Status> {
+        let mut gm = self.game_master.get().unwrap().clone();
+        gm.get_game_result(game_id).await
+    }
+}
+
 pub struct ScoreDestination {
     worker: WorkerThread<Context>,
-    viewmodel: ScoreViewModelRc,
+    viewmodel: ScoreViewModelRc<Context>,
 }
 
 impl ScoreDestination {
@@ -53,30 +104,17 @@ impl ScoreDestination {
 impl NavDestination<NavRoute> for ScoreDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading ScoreViewModel");
-        let NavRoute::Score = route else {
+        let NavRoute::Score { game_id } = route else {
             panic!("matched variant should be given");
         };
 
-        self.worker.spawn_cx(async move |cx| {
-            // context is initialized before navigated to StartScreen
-            let gm = cx.game_master.get().unwrap();
-        });
-
-        /*let session = self
-            .session_manager
-            .borrow()
-            .session()
-            .expect("session should exist when ScoreDestination is loaded");
-        viewmodel.state.rank.set(ui::Rank::S); //TODO: 難易度に応じて切り替える
-        viewmodel
-            .state
-            .score
-            .set(session.cur_score().try_into().unwrap());*/
-
-        todo!()
+        self.viewmodel.borrow().show_result(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {
         NavRouteKind::Score
     }
 }
+
+#[cfg(test)]
+mod tests {}

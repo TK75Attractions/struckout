@@ -5,6 +5,7 @@ use crate::{
 use parking_lot::RwLockReadGuard;
 use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{WorkerThread, nav::NavDestination};
+use struckout_proto::types::GameId;
 use tokio_stream::{StreamExt as _, wrappers::WatchStream};
 use touchpanel_ui::{
     NavRoute, NavRouteKind, PlayingPropertyMappers, PlayingStates, PlayingViewModelTrait,
@@ -61,7 +62,7 @@ where
     /// Start listening states of the current session.
     ///
     /// Returns [`slint::JoinHandle`] which completes after cleaning all properties.
-    fn listen_session(&self) -> slint::JoinHandle<()> {
+    fn listen_session(&self, game_id: GameId) -> slint::JoinHandle<()> {
         let mut worker = self.worker.clone();
 
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
@@ -117,7 +118,7 @@ where
                 rem_cancel.cancel();
                 score_cancel.cancel();
 
-                nc.navigate(NavRoute::Score);
+                nc.navigate(NavRoute::Score { game_id });
             }
         })
         .unwrap()
@@ -141,11 +142,11 @@ impl NavDestination<NavRoute> for PlayingDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading PlayingViewModel");
 
-        let NavRoute::Playing(_difficulty) = route else {
+        let NavRoute::Playing(_difficulty, game_id) = route else {
             panic!("matched variant should be given");
         };
 
-        self.0.borrow().listen_session();
+        self.0.borrow().listen_session(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {
@@ -250,7 +251,7 @@ mod tests {
 
         let test = PlayingScreenTest::new();
 
-        let join = test.vm.listen_session();
+        let join = test.vm.listen_session(GameId::new(1));
 
         // complete and drop session.
         test.complete_tx.send(()).unwrap();
@@ -274,7 +275,7 @@ mod tests {
 
         let test = PlayingScreenTest::new();
 
-        let join = test.vm.listen_session();
+        let join = test.vm.listen_session(GameId::new(1));
 
         slint::spawn_local({
             let rem_tx = test.rem_tx.clone();

@@ -3,8 +3,9 @@ use std::sync::Arc;
 use futures_util::Stream;
 use parking_lot::{RwLock, RwLockReadGuard};
 use struckout_proto::{
-    AddPlayerRequest, AddPlayerResponse, Difficulty, StartGameRequest, StartGameResponse,
-    event::EventData, game_master_service_client::GameMasterServiceClient,
+    AddPlayerRequest, AddPlayerResponse, Difficulty, GetGameResultRequest, GetGameResultResponse,
+    StartGameRequest, StartGameResponse, event::EventData,
+    game_master_service_client::GameMasterServiceClient, types::GameId,
 };
 use thiserror::Error;
 use tokio::sync::{broadcast, watch};
@@ -45,6 +46,11 @@ pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
             Status,
         >,
     >;
+
+    fn get_game_result(
+        &mut self,
+        request: impl tonic::IntoRequest<GetGameResultRequest>,
+    ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>>;
 }
 
 #[derive(derive_more::Debug, Clone)]
@@ -134,6 +140,13 @@ impl InternalGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
     > {
         self.start_game(request)
     }
+
+    fn get_game_result(
+        &mut self,
+        request: impl tonic::IntoRequest<GetGameResultRequest>,
+    ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>> {
+        self.get_game_result(request)
+    }
 }
 
 impl<T: InternalGrpcClient> GameMasterClient<T> {
@@ -169,7 +182,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
         &mut self,
         player_id: PlayerId,
         difficulty: Difficulty,
-    ) -> Result<(), RequestError> {
+    ) -> Result<GameId, RequestError> {
         let mut stream = self
             .client
             .start_game(StartGameRequest {
@@ -200,6 +213,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
                 "difficulty in request and in response should be same"
             );
         }
+        let game_id = event.game_id.into();
 
         let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
         let (score_tx, score_rx) = watch::channel(0);
@@ -220,6 +234,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
             stream,
             error_tx,
             rem_tx,
+            score_tx,
             complete_tx,
         ));
         tokio::spawn(keep_rx_alive(rem_rx, score_rx, error_rx));
@@ -235,7 +250,17 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
             }
         });
 
-        Ok(())
+        Ok(game_id)
+    }
+
+    /// Gets the result of a specified game.
+    pub async fn get_game_result(&mut self, game_id: GameId) -> Result<u32, Status> {
+        self.client
+            .get_game_result(GetGameResultRequest {
+                game_id: game_id.into_inner(),
+            })
+            .await
+            .map(|resp| resp.into_inner().total_score)
     }
 
     /// Returns the current session state.
@@ -252,6 +277,7 @@ async fn handle_subsequent_events<S>(
     mut stream: S,
     error_tx: watch::Sender<Option<RequestError>>,
     rem_tx: watch::Sender<DisplayableRemainingTime>,
+    score_tx: watch::Sender<u32>,
     complete_tx: broadcast::Sender<()>,
 ) where
     S: Stream<Item = Result<StartGameResponse, Status>> + Unpin,
@@ -314,6 +340,9 @@ async fn handle_subsequent_events<S>(
                     continue;
                 };
                 rem_tx.send(rem).unwrap();
+            }
+            EventData::GameScoreChanged(v) => {
+                score_tx.send(v.total_score).unwrap();
             }
             EventData::GameFinished(_) => {
                 complete_tx.send(()).unwrap();
@@ -466,6 +495,13 @@ mod tests {
                 })
             });
             Ok(Response::new(s))
+        }
+
+        async fn get_game_result(
+            &mut self,
+            request: impl tonic::IntoRequest<GetGameResultRequest>,
+        ) -> Result<Response<GetGameResultResponse>, Status> {
+            unimplemented!()
         }
     }
 
