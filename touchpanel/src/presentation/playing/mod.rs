@@ -14,7 +14,7 @@ use tracing::debug;
 
 viewmodel_rc!(PlayingViewModel<C>, PlayingAdopter);
 
-struct PlayingViewModel<C> {
+pub struct PlayingViewModel<C> {
     nav_controller: NavController,
     worker: WorkerThread<C>,
     state: PlayingStates<Mapper>,
@@ -29,7 +29,7 @@ touchpanel_ui::define_playing_mapper! {
     },
 }
 
-trait SessionProvider {
+pub trait SessionProvider {
     fn session(&self) -> RwLockReadGuard<'_, Option<Session>>;
 }
 
@@ -62,7 +62,7 @@ where
     /// Start listening states of the current session.
     ///
     /// Returns [`slint::JoinHandle`] which completes after cleaning all properties.
-    fn listen_session(&self, game_id: GameId) -> slint::JoinHandle<()> {
+    pub fn listen_session(&self, game_id: GameId) -> slint::JoinHandle<()> {
         let mut worker = self.worker.clone();
 
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
@@ -154,9 +154,8 @@ impl NavDestination<NavRoute> for PlayingDestination {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::{cell::RefCell, rc::Rc, time::Duration};
+pub mod test_utils {
+    use std::{cell::RefCell, rc::Rc};
 
     use parking_lot::RwLock;
     use slint::SharedString;
@@ -169,12 +168,12 @@ mod tests {
     use super::*;
 
     /// Fake for [`SessionProvider`].
-    struct FakeSessionProvider {
+    pub struct FakeSessionProvider {
         session: RwLock<Option<Session>>,
     }
 
     impl FakeSessionProvider {
-        fn drop_session(&self) {
+        pub fn drop_session(&self) {
             let mut guard = self.session.write();
             *guard = None;
         }
@@ -186,21 +185,21 @@ mod tests {
         }
     }
 
-    struct PlayingScreenTest {
-        route: Rc<RefCell<UiNavRoute>>,
-        remaining_time: Rc<RefCell<SharedString>>,
-        score: Rc<RefCell<i32>>,
-        worker: WorkerThread<FakeSessionProvider>,
-        vm: PlayingViewModel<FakeSessionProvider>,
+    pub struct PlayingScreenTest {
+        pub route: Rc<RefCell<UiNavRoute>>,
+        pub remaining_time: Rc<RefCell<SharedString>>,
+        pub score: Rc<RefCell<i32>>,
+        pub worker: WorkerThread<FakeSessionProvider>,
+        pub vm: PlayingViewModel<FakeSessionProvider>,
 
-        score_tx: watch::Sender<u32>,
-        rem_tx: watch::Sender<DisplayableRemainingTime>,
-        error_tx: watch::Sender<Option<RequestError>>,
-        complete_tx: broadcast::Sender<()>,
+        pub score_tx: watch::Sender<u32>,
+        pub rem_tx: watch::Sender<DisplayableRemainingTime>,
+        pub error_tx: watch::Sender<Option<RequestError>>,
+        pub complete_tx: broadcast::Sender<()>,
     }
 
     impl PlayingScreenTest {
-        fn new() -> Self {
+        pub fn new() -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
 
             let nav_controller = NavController::new(NavRoute::Start, {
@@ -243,69 +242,5 @@ mod tests {
                 complete_tx,
             }
         }
-    }
-
-    #[test]
-    fn listen_session_does_not_panic_when_session_completes() {
-        i_slint_backend_testing::init_integration_test_with_system_time();
-
-        let test = PlayingScreenTest::new();
-
-        let join = test.vm.listen_session(GameId::new(1));
-
-        // complete and drop session.
-        test.complete_tx.send(()).unwrap();
-        test.worker.spawn_cx(async move |cx| {
-            cx.drop_session();
-        });
-
-        slint::spawn_local(async move {
-            join.await;
-            slint::quit_event_loop().unwrap();
-            test.worker.shutdown();
-        })
-        .unwrap();
-
-        slint::run_event_loop().unwrap();
-    }
-
-    #[test]
-    fn remaining_time_updated_when_rem_tx_sends_new_val() {
-        i_slint_backend_testing::init_integration_test_with_system_time();
-
-        let test = PlayingScreenTest::new();
-
-        let join = test.vm.listen_session(GameId::new(1));
-
-        slint::spawn_local({
-            let rem_tx = test.rem_tx.clone();
-            let complete_tx = test.complete_tx.clone();
-            let worker = test.worker.clone();
-            async move {
-                let time = DisplayableRemainingTime { mins: 3, secs: 14 };
-                let rem_rx = rem_tx.subscribe();
-                rem_tx.send(time).unwrap();
-
-                slint::Timer::single_shot(Duration::from_millis(100), move || {
-                    assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
-                });
-
-                // complete and drop session
-                complete_tx.send(()).unwrap();
-                worker.spawn_cx(async move |cx| {
-                    cx.drop_session();
-                });
-            }
-        })
-        .unwrap();
-
-        slint::spawn_local(async move {
-            join.await;
-            slint::quit_event_loop().unwrap();
-            test.worker.shutdown();
-        })
-        .unwrap();
-
-        slint::run_event_loop().unwrap();
     }
 }

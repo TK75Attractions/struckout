@@ -13,8 +13,8 @@ use crate::{
     presentation::{attach_navhost, init_worker_context},
 };
 
-mod data;
-mod presentation;
+pub mod data;
+pub mod presentation;
 mod state_ext;
 
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
@@ -24,7 +24,7 @@ type NavHost = stern::nav::NavHost<NavRoute>;
 type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;
 type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 
-struct Application {
+pub struct Application {
     nav_controller: NavController,
     ui: touchpanel_ui::AppWindow,
     #[allow(dead_code)] // チャンネルを生存させるために必要
@@ -34,7 +34,7 @@ struct Application {
 
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
 #[derive(Debug)]
-struct Context {
+pub struct Context {
     game_master: OnceLock<GameMasterClient>,
 }
 
