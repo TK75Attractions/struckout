@@ -1,22 +1,29 @@
 use slint::{ComponentHandle, Global, ToSharedString};
 
-use crate::{
-    Application,
-    ui::{self, FallbackStates, FallbackViewModelTrait, NavRoute, NavRouteKind},
-};
+use crate::Application;
 use stern::{GlobalExt, nav::NavDestination};
+use touchpanel_ui::{
+    FallbackPropertyMappers, FallbackStates, FallbackViewModelTrait, NavRoute, NavRouteKind,
+};
+
+touchpanel_ui::define_fallback_mapper! {}
 
 viewmodel_rc!(FallbackViewModel, FallbackAdopter);
 
 #[derive(Debug)]
 struct FallbackViewModel {
-    state: FallbackStates,
+    state: FallbackStates<Mapper>,
 }
 
 impl FallbackViewModel {
     fn new(application: &Application) -> Self {
         Self {
-            state: FallbackStates::new(application.ui.global::<ui::FallbackAdopter>().as_weak()),
+            state: FallbackStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::FallbackAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }

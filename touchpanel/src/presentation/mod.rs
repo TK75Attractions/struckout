@@ -9,10 +9,10 @@ use crate::{
         name_input::NameInputDestination, playing::PlayingDestination, ranking::RankingDestination,
         score::ScoreDestination, start::StartScreenDestination,
     },
-    ui::{self, NavRoute},
 };
 use stern::nav::NavHost;
 use tokio::time::timeout;
+use touchpanel_ui::NavRoute;
 use tracing::{debug, warn};
 
 /// Defines `XxxViewModelRc` which wraps `XxxViewModel`.
@@ -36,7 +36,7 @@ macro_rules! viewmodel_rc {
                 #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
                 fn new(application: &Application) -> Self {
                     let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
-                    application.ui.global::<crate::ui::$adopter>()
+                    application.ui.global::<touchpanel_ui::$adopter>()
                         .register_viewmodel(std::rc::Rc::clone(&this));
 
                     Self(this)
@@ -58,7 +58,7 @@ macro_rules! viewmodel_rc {
                 #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
                 fn new(application: &Application) -> Self {
                     let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
-                    application.ui.global::<crate::ui::$adopter>()
+                    application.ui.global::<touchpanel_ui::$adopter>()
                         .register_viewmodel(std::rc::Rc::clone(&this));
 
                     Self(this)
@@ -132,9 +132,7 @@ pub fn init_worker_context(application: &Application) {
 
         {
             let cx = worker.context();
-            let guard = cx.write();
-            guard
-                .game_master
+            cx.game_master
                 .set(game_master)
                 .expect("this should be a first successful attempt to connect to game-master");
         }
@@ -157,16 +155,6 @@ pub fn attach_navhost(application: &Application) {
         .register(RankingDestination::new(&application))
         .finish()
         .expect("failed to build NavHost");
-}
-
-impl From<ui::Difficulity> for struckout_proto::Difficulty {
-    fn from(value: ui::Difficulity) -> Self {
-        match value {
-            ui::Difficulity::Normal => struckout_proto::Difficulty::Normal,
-            ui::Difficulity::Hard => struckout_proto::Difficulty::Hard,
-            ui::Difficulity::VeryHard => struckout_proto::Difficulty::Veryhard,
-        }
-    }
 }
 
 #[cfg(test)]

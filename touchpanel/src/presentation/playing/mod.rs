@@ -1,12 +1,14 @@
 use crate::{
     Application, Context, NavController,
-    data::Session,
-    ui::{self, NavRoute, NavRouteKind, PlayingStates, PlayingViewModelTrait},
+    data::{DisplayableRemainingTime, Session},
 };
 use parking_lot::RwLockReadGuard;
 use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{WorkerThread, nav::NavDestination};
 use tokio_stream::{StreamExt as _, wrappers::WatchStream};
+use touchpanel_ui::{
+    NavRoute, NavRouteKind, PlayingPropertyMappers, PlayingStates, PlayingViewModelTrait,
+};
 use tracing::debug;
 
 viewmodel_rc!(PlayingViewModel<C>, PlayingAdopter);
@@ -14,7 +16,16 @@ viewmodel_rc!(PlayingViewModel<C>, PlayingAdopter);
 struct PlayingViewModel<C> {
     nav_controller: NavController,
     worker: WorkerThread<C>,
-    state: PlayingStates,
+    state: PlayingStates<Mapper>,
+}
+
+touchpanel_ui::define_playing_mapper! {
+    remaining_time to DisplayableRemainingTime {
+        |value: DisplayableRemainingTime| value.to_shared_string()
+    },
+    score to u32 {
+        |value: u32| value.try_into().expect("failed to convert u32 into i32")
+    },
 }
 
 trait SessionProvider {
@@ -33,14 +44,19 @@ impl PlayingViewModel<Context> {
         Self {
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
-            state: PlayingStates::new(application.ui.global::<ui::PlayingAdopter>().as_weak()),
+            state: PlayingStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::PlayingAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }
 
 impl<C> PlayingViewModel<C>
 where
-    C: SessionProvider,
+    C: SessionProvider + 'static,
 {
     /// Start listening states of the current session.
     ///
@@ -50,9 +66,8 @@ where
 
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
             let cx = worker.context();
-            let cx_guard = cx.read();
-            let session_guard = cx_guard.session();
-            let session = session_guard.as_ref().expect("session should exists");
+            let session_guard = cx.session();
+            let session = session_guard.as_ref().expect("session should exist");
 
             (
                 session.remaining_time(),
@@ -63,9 +78,7 @@ where
         };
 
         let rem_cancel = {
-            let rem_stream = WatchStream::new(rem_rx)
-                .map(|v| v.to_shared_string())
-                .fuse();
+            let rem_stream = WatchStream::new(rem_rx).fuse();
             let rem_prop = self.state.remaining_time.clone();
             rem_prop.bind(rem_stream)
         };
@@ -142,19 +155,19 @@ impl NavDestination<NavRoute> for PlayingDestination {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc, sync::OnceLock};
+    use std::{cell::RefCell, rc::Rc, time::Duration};
 
     use parking_lot::RwLock;
-    use stern::PropertyHandle;
+    use slint::SharedString;
     use tokio::sync::{broadcast, watch};
 
-    use crate::{
-        data::{DisplayableRemainingTime, GameMasterClient, MachineId},
-        ui::UiNavRoute,
-    };
+    use touchpanel_ui::{NavRoute, UiNavRoute};
+
+    use crate::data::{DisplayableRemainingTime, RequestError};
 
     use super::*;
 
+    /// Fake for [`SessionProvider`].
     struct FakeSessionProvider {
         session: RwLock<Option<Session>>,
     }
@@ -172,84 +185,123 @@ mod tests {
         }
     }
 
-    #[test]
-    fn listen_session_does_not_panic_when_session_completes() {
-        let route = Rc::new(RefCell::new(UiNavRoute::Start));
-        let rem = Rc::new(RefCell::new(DisplayableRemainingTime::ZERO));
-        let score = Rc::new(RefCell::new(0));
+    struct PlayingScreenTest {
+        route: Rc<RefCell<UiNavRoute>>,
+        remaining_time: Rc<RefCell<SharedString>>,
+        score: Rc<RefCell<i32>>,
+        worker: WorkerThread<FakeSessionProvider>,
+        vm: PlayingViewModel<FakeSessionProvider>,
 
-        let nc = NavController::new(NavRoute::Start, {
-            let route = Rc::clone(&route);
-            move |new| {
-                let mut guard = route.borrow_mut();
-                *guard = new.into();
-            }
-        });
-        let (score_tx, score_rx) = watch::channel(0);
-        let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
-        let (error_tx, error_rx) = watch::channel(None);
-        let (complete_tx, complete_rx) = broadcast::channel(8);
-        let mut worker = WorkerThread::new(FakeSessionProvider {
-            session: RwLock::new(Some(Session::new(
-                struckout_proto::Difficulty::Normal,
+        score_tx: watch::Sender<u32>,
+        rem_tx: watch::Sender<DisplayableRemainingTime>,
+        error_tx: watch::Sender<Option<RequestError>>,
+        complete_tx: broadcast::Sender<()>,
+    }
+
+    impl PlayingScreenTest {
+        fn new() -> Self {
+            let route = Rc::new(RefCell::new(UiNavRoute::Start));
+
+            let nav_controller = NavController::new(NavRoute::Start, {
+                let route = Rc::clone(&route);
+                move |new| {
+                    let mut guard = route.borrow_mut();
+                    *guard = new.into();
+                }
+            });
+            let (score_tx, score_rx) = watch::channel(0);
+            let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
+            let (error_tx, error_rx) = watch::channel(None);
+            let (complete_tx, complete_rx) = broadcast::channel(8);
+            let worker = WorkerThread::new(FakeSessionProvider {
+                session: RwLock::new(Some(Session::new(
+                    struckout_proto::Difficulty::Normal,
+                    score_tx.clone(),
+                    rem_tx.clone(),
+                    error_tx.clone(),
+                    complete_tx.clone(),
+                ))),
+            });
+            let (state, mock) = PlayingStates::new_mocked();
+            let vm = PlayingViewModel {
+                nav_controller,
+                worker: worker.clone(),
+                state,
+            };
+
+            Self {
+                route,
+                remaining_time: mock.remaining_time,
+                score: mock.score,
+                worker,
+                vm,
+
                 score_tx,
                 rem_tx,
                 error_tx,
-                complete_tx.clone(),
-            ))),
-        });
-        let vm = PlayingViewModel {
-            nav_controller: nc,
-            worker: worker.clone(),
-            state: PlayingStates {
-                remaining_time: PropertyHandle::new(
-                    {
-                        let rem = Rc::clone(&rem);
-                        move || rem.borrow().to_shared_string()
-                    },
-                    {
-                        let rem = Rc::clone(&rem);
-                        move |new| {
-                            let mut guard = rem.borrow_mut();
-                            *guard = DisplayableRemainingTime::ZERO;
-                            // TODO
-                        }
-                    },
-                ),
-                score: PropertyHandle::new(
-                    {
-                        let score = Rc::clone(&score);
-                        move || {
-                            let ret: i32 = *score.borrow();
-                            ret
-                        }
-                    },
-                    {
-                        let score = Rc::clone(&score);
-                        move |new| {
-                            let mut guard = score.borrow_mut();
-                            *guard = new.try_into().unwrap();
-                        }
-                    },
-                ),
-            },
-        };
+                complete_tx,
+            }
+        }
+    }
 
+    #[test]
+    fn listen_session_does_not_panic_when_session_completes() {
         i_slint_backend_testing::init_integration_test_with_system_time();
 
-        let join = vm.listen_session();
+        let test = PlayingScreenTest::new();
+
+        let join = test.vm.listen_session();
 
         // complete and drop session.
-        complete_tx.send(()).unwrap();
-        worker.spawn_cx(async move |cx| {
-            let guard = cx.read();
-            guard.drop_session();
+        test.complete_tx.send(()).unwrap();
+        test.worker.spawn_cx(async move |cx| {
+            cx.drop_session();
         });
 
         slint::spawn_local(async move {
             join.await;
             slint::quit_event_loop().unwrap();
-            worker.shutdown();
+            test.worker.shutdown();
+        })
+        .unwrap();
+
+        slint::run_event_loop().unwrap();
+    }
+
+    #[test]
+    fn remaining_time_updated_when_rem_tx_sends_new_val() {
+        i_slint_backend_testing::init_integration_test_with_system_time();
+
+        let test = PlayingScreenTest::new();
+
+        let join = test.vm.listen_session();
+
+        slint::spawn_local({
+            let rem_tx = test.rem_tx.clone();
+            let complete_tx = test.complete_tx.clone();
+            let worker = test.worker.clone();
+            async move {
+                let time = DisplayableRemainingTime { mins: 3, secs: 14 };
+                let mut rem_rx = rem_tx.subscribe();
+                rem_tx.send(time).unwrap();
+
+                slint::Timer::single_shot(Duration::from_millis(100), move || {
+                    assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
+                });
+
+                // complete and drop session
+                complete_tx.send(()).unwrap();
+                worker.spawn_cx(async move |cx| {
+                    cx.drop_session();
+                });
+            }
+        })
+        .unwrap();
+
+        slint::spawn_local(async move {
+            join.await;
+            slint::quit_event_loop().unwrap();
+            test.worker.shutdown();
         })
         .unwrap();
 

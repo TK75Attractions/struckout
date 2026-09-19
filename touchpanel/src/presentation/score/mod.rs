@@ -1,24 +1,31 @@
-use crate::{
-    Application, Context, NavController,
-    ui::{self, NavRoute, NavRouteKind, ScoreStates, ScoreViewModelTrait},
-};
+use crate::{Application, Context, NavController};
 use slint::{ComponentHandle, Global};
 use stern::{WorkerThread, nav::NavDestination};
+use touchpanel_ui::{
+    NavRoute, NavRouteKind, ScorePropertyMappers, ScoreStates, ScoreViewModelTrait,
+};
 use tracing::debug;
+
+touchpanel_ui::define_score_mapper! {}
 
 viewmodel_rc!(ScoreViewModel, ScoreAdopter);
 
 #[derive(Debug)]
 struct ScoreViewModel {
     nav_controller: NavController,
-    state: ScoreStates,
+    state: ScoreStates<Mapper>,
 }
 
 impl ScoreViewModel {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
-            state: ScoreStates::new(application.ui.global::<ui::ScoreAdopter>().as_weak()),
+            state: ScoreStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::ScoreAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }
@@ -51,9 +58,8 @@ impl NavDestination<NavRoute> for ScoreDestination {
         };
 
         self.worker.spawn_cx(async move |cx| {
-            let mut guard = cx.write();
             // context is initialized before navigated to StartScreen
-            let gm = guard.game_master.get_mut().unwrap();
+            let gm = cx.game_master.get().unwrap();
         });
 
         /*let session = self

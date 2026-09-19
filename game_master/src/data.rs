@@ -1,8 +1,11 @@
 use sqlx::{MySql, Pool};
-use struckout_proto::Difficulty;
+use struckout_proto::{
+    Difficulty,
+    types::{GameId, MachineId, PlayerId},
+};
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource, GameId, MachineId, PlayerId};
+use crate::{AddPlayerError, DataSource};
 
 #[derive(Clone)]
 pub struct DataSourceImpl {

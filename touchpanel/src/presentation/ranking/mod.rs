@@ -1,22 +1,29 @@
 use tracing::debug;
 
-use crate::{
-    Application,
-    ui::{self, NavRoute, NavRouteKind, RankingStates, RankingViewModelTrait},
-};
+use crate::Application;
 use slint::{ComponentHandle as _, Global as _};
 use stern::nav::NavDestination;
+use touchpanel_ui::{
+    NavRoute, NavRouteKind, RankingPropertyMappers, RankingStates, RankingViewModelTrait,
+};
+
+touchpanel_ui::define_ranking_mapper! {}
 
 viewmodel_rc!(RankingViewModel, RankingAdopter);
 
 struct RankingViewModel {
-    _state: RankingStates,
+    _state: RankingStates<Mapper>,
 }
 
 impl RankingViewModel {
     fn new(application: &Application) -> Self {
         Self {
-            _state: RankingStates::new(application.ui.global::<ui::RankingAdopter>().as_weak()),
+            _state: RankingStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::RankingAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }
@@ -35,7 +42,7 @@ impl RankingDestination {
 }
 
 impl NavDestination<NavRoute> for RankingDestination {
-    fn load(&self, route: &crate::ui::NavRoute) {
+    fn load(&self, route: &touchpanel_ui::NavRoute) {
         debug!("loading RankingScreen");
 
         let NavRoute::Ranking = route else {

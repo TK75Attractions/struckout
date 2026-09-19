@@ -1,13 +1,15 @@
 use std::rc::Rc;
 
-use crate::{
-    Application, Config, Context, NavController,
-    presentation::connect_to_game_master,
-    ui::{self, ConnectionFailedStates, ConnectionFailedViewModelTrait, NavRoute, NavRouteKind},
-};
+use crate::{Application, Config, Context, NavController, presentation::connect_to_game_master};
 use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{GlobalExt, WorkerThread, nav::NavDestination};
+use touchpanel_ui::{
+    ConnectionFailedPropertyMappers, ConnectionFailedStates, ConnectionFailedViewModelTrait,
+    NavRoute, NavRouteKind,
+};
 use tracing::{debug, warn};
+
+touchpanel_ui::define_connection_failed_mapper! {}
 
 viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
 
@@ -15,7 +17,7 @@ struct ConnectionFailedViewModel {
     nav_controller: NavController,
     config: Rc<Config>,
     worker: WorkerThread<Context>,
-    state: ConnectionFailedStates,
+    state: ConnectionFailedStates<Mapper>,
 }
 
 impl ConnectionFailedViewModel {
@@ -24,10 +26,10 @@ impl ConnectionFailedViewModel {
             nav_controller: application.nav_controller.clone(),
             config: application.config.clone(),
             worker: application.worker.clone(),
-            state: ConnectionFailedStates::new(
+            state: ConnectionFailedStates::<Mapper>::new(
                 application
                     .ui
-                    .global::<ui::ConnectionFailedAdopter>()
+                    .global::<touchpanel_ui::ConnectionFailedAdopter>()
                     .as_weak(),
             ),
         }
@@ -50,8 +52,7 @@ impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
             };
             {
                 let cx = worker.context();
-                let guard = cx.write();
-                guard.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
+                cx.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
             }
             debug!("connection retry to game-master succeeds and initialized worker context with game-master client");
         })

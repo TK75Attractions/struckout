@@ -3,10 +3,14 @@ use stern::{WorkerThread, nav::NavDestination};
 use tokio::sync::oneshot;
 use tracing::{debug, trace};
 
-use crate::{
-    Application, Context, NavController,
-    ui::{self, KeyBoardMode, NameInputStates, NameInputViewModelTrait, NavRoute, NavRouteKind},
+use crate::{Application, Context, NavController};
+
+use touchpanel_ui::{
+    KeyBoardMode, NameInputPropertyMappers, NameInputStates, NameInputViewModelTrait, NavRoute,
+    NavRouteKind,
 };
+
+touchpanel_ui::define_name_input_mapper! {}
 
 viewmodel_rc!(NameInputViewModel, NameInputAdopter);
 
@@ -16,7 +20,7 @@ viewmodel_rc!(NameInputViewModel, NameInputAdopter);
 struct NameInputViewModel {
     nav_controller: NavController,
     worker: WorkerThread<Context>,
-    state: NameInputStates,
+    state: NameInputStates<Mapper>,
 }
 
 impl NameInputViewModel {
@@ -24,7 +28,12 @@ impl NameInputViewModel {
         Self {
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
-            state: NameInputStates::new(application.ui.global::<ui::NameInputAdopter>().as_weak()),
+            state: NameInputStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::NameInputAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }
@@ -45,7 +54,7 @@ impl NameInputViewModelTrait for NameInputViewModel {
         trace!("NameInputViewModel::on_push_character");
 
         assert_eq!(char.chars().count(), 1, "character length must 1");
-        let old_text = self.state.player_name_text.get();
+        let old_text = self.state.player_name_text.get_ref().clone();
         let new_text = old_text + &char;
         self.state.player_name_text.set(new_text);
     }
@@ -53,24 +62,24 @@ impl NameInputViewModelTrait for NameInputViewModel {
     fn on_remove_character(&mut self) {
         trace!("NameInputViewModel::on_remove_character");
 
-        let old_text = self.state.player_name_text.get();
+        let old_text = self.state.player_name_text.get_ref();
         if old_text.is_empty() {
             return;
         }
 
-        let new_text = pop_player_name(old_text);
+        let new_text = pop_player_name(old_text.as_str());
         self.state.player_name_text.set(new_text)
     }
 
     fn on_submit_name(&mut self) {
         trace!("NameInputViewModel::on_submit_name");
 
-        let name = self.state.player_name_text.get();
+        let name = self.state.player_name_text.get_ref().clone();
         let msg = self.state.error_msg.clone();
         let nc = self.nav_controller.clone();
         let (tx, rx) = oneshot::channel();
         self.worker.spawn_cx(async move |cx| {
-            let mut gm = cx.read().game_master.get().unwrap().clone();
+            let mut gm = cx.game_master.get().unwrap().clone();
             let res = gm.add_player(name).await;
             tx.send(res).unwrap();
         });
@@ -92,7 +101,8 @@ impl NameInputViewModelTrait for NameInputViewModel {
 }
 
 /// 最後の文字を消した値を返す
-fn pop_player_name(old_text: SharedString) -> SharedString {
+fn pop_player_name(old_text: impl AsRef<str>) -> SharedString {
+    let old_text = old_text.as_ref();
     old_text[0..old_text.len() - 1].to_shared_string()
 }
 

@@ -1,13 +1,16 @@
 use slint::{ComponentHandle, Global};
 use tokio::sync::oneshot;
 
-use crate::{
-    Application, Context, NavController,
-    data::PlayerId,
-    ui::{self, DifficulitySelectStates, DifficulitySelectViewModelTrait, NavRoute, NavRouteKind},
-};
+use crate::{Application, Context, NavController};
 use stern::{GlobalExt as _, WorkerThread, nav::NavDestination};
+use struckout_proto::types::PlayerId;
+use touchpanel_ui::{
+    DifficulitySelectPropertyMappers, DifficulitySelectStates, DifficulitySelectViewModelTrait,
+    NavRoute, NavRouteKind,
+};
 use tracing::{debug, trace};
+
+touchpanel_ui::define_difficulity_select_mapper! {}
 
 viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 
@@ -15,7 +18,7 @@ viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 struct DifficulitySelectViewModel {
     nav_controller: NavController,
     worker: WorkerThread<Context>,
-    state: DifficulitySelectStates,
+    state: DifficulitySelectStates<Mapper>,
     player_id: Option<PlayerId>,
 }
 
@@ -24,10 +27,10 @@ impl DifficulitySelectViewModel {
         Self {
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
-            state: DifficulitySelectStates::new(
+            state: DifficulitySelectStates::<Mapper>::new(
                 application
                     .ui
-                    .global::<ui::DifficulitySelectAdopter>()
+                    .global::<touchpanel_ui::DifficulitySelectAdopter>()
                     .as_weak(),
             ),
             player_id: None,
@@ -49,10 +52,7 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
             .expect("should be some while this screen is shown");
 
         self.worker.spawn_cx(async move |cx| {
-            let mut gm = {
-                let guard = cx.read();
-                guard.game_master.get().unwrap().clone()
-            };
+            let mut gm = cx.game_master.get().unwrap().clone();
             let res = gm.start_game(player_id, difficulty).await;
             tx.send(res).unwrap();
         });
@@ -69,7 +69,7 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
         .unwrap();
     }
 
-    fn on_select_difficulity(&mut self, val: ui::Difficulity) {
+    fn on_select_difficulity(&mut self, val: touchpanel_ui::Difficulity) {
         trace!(?val, "DifficulitySelectViewModel::on_select_difficulity");
         self.state.selected_difficulity.set(val);
     }

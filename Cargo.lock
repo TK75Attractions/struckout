@@ -6505,7 +6505,6 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stern"
 version = "0.1.0"
-source = "git+https://github.com/taichi765/stern#d96c1dd9dfdb7659442fdbe2312685bb61d91eb0"
 dependencies = [
  "derive_more",
  "futures-util",
@@ -6522,11 +6521,11 @@ dependencies = [
 [[package]]
 name = "stern-macros"
 version = "0.1.0"
-source = "git+https://github.com/taichi765/stern#d96c1dd9dfdb7659442fdbe2312685bb61d91eb0"
 dependencies = [
+ "heck",
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.5",
 ]
 
 [[package]]
@@ -6560,6 +6559,7 @@ name = "struckout-proto"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "derive_more",
  "prost",
  "prost-types",
  "thiserror 2.0.20",
@@ -7224,8 +7224,21 @@ dependencies = [
  "tokio-util",
  "tonic",
  "tonic-prost",
+ "touchpanel-ui",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "touchpanel-ui"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "slint",
+ "slint-build",
+ "stern",
+ "struckout-proto",
+ "strum",
 ]
 
 [[package]]

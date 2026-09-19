@@ -2,24 +2,32 @@ use slint::{ComponentHandle, Global};
 use stern::nav::NavDestination;
 use tracing::{debug, trace};
 
-use crate::{
-    Application, NavController,
-    ui::{self, NavRoute, NavRouteKind, StartStates, StartViewModelTrait},
+use crate::{Application, NavController};
+
+use touchpanel_ui::{
+    NavRoute, NavRouteKind, StartPropertyMappers, StartStates, StartViewModelTrait,
 };
 
 viewmodel_rc!(StartViewModel, StartAdopter);
 
+touchpanel_ui::define_start_mapper! {}
+
 #[derive(Debug)]
 struct StartViewModel {
     nav_controller: NavController,
-    _state: StartStates,
+    _state: StartStates<Mapper>,
 }
 
 impl StartViewModel {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
-            _state: StartStates::new(application.ui.global::<ui::StartAdopter>().as_weak()),
+            _state: StartStates::<Mapper>::new(
+                application
+                    .ui
+                    .global::<touchpanel_ui::StartAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }
