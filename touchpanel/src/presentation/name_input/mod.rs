@@ -101,9 +101,10 @@ impl NameInputViewModelTrait for NameInputViewModel {
 }
 
 /// 最後の文字を消した値を返す
-fn pop_player_name(old_text: impl AsRef<str>) -> SharedString {
-    let old_text = old_text.as_ref();
-    old_text[0..old_text.len() - 1].to_shared_string()
+fn pop_player_name(old_text: impl Into<String>) -> SharedString {
+    let mut text = old_text.into();
+    let _last = text.pop();
+    text.to_shared_string()
 }
 
 pub struct NameInputDestination(
@@ -141,5 +142,12 @@ mod tests {
         let old_text = "bobb".to_shared_string();
         let new_text = pop_player_name(old_text);
         assert_eq!("bob", new_text.as_str());
+    }
+
+    #[test]
+    fn pop_player_name_works_with_multi_byte_characters() {
+        let old_text = "たろうう".to_shared_string();
+        let new_text = pop_player_name(old_text);
+        assert_eq!("たろう", new_text.as_str());
     }
 }
