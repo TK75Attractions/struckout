@@ -56,7 +56,7 @@ impl PlayingViewModel<Context> {
 
 impl<C> PlayingViewModel<C>
 where
-    C: SessionProvider,
+    C: SessionProvider + 'static,
 {
     /// Start listening states of the current session.
     ///
@@ -187,7 +187,7 @@ mod tests {
 
     struct PlayingScreenTest {
         route: Rc<RefCell<UiNavRoute>>,
-        remaining_time: Rc<RefCell<DisplayableRemainingTime>>,
+        remaining_time: Rc<RefCell<SharedString>>,
         score: Rc<RefCell<i32>>,
         worker: WorkerThread<FakeSessionProvider>,
         vm: PlayingViewModel<FakeSessionProvider>,
@@ -201,8 +201,6 @@ mod tests {
     impl PlayingScreenTest {
         fn new() -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
-            let remaining_time = Rc::new(RefCell::new(DisplayableRemainingTime::ZERO));
-            let score = Rc::new(RefCell::new(0));
 
             let nav_controller = NavController::new(NavRoute::Start, {
                 let route = Rc::clone(&route);
@@ -224,34 +222,17 @@ mod tests {
                     complete_tx.clone(),
                 ))),
             });
+            let (state, mock) = PlayingStates::new_mocked();
             let vm = PlayingViewModel {
                 nav_controller,
                 worker: worker.clone(),
-                state: PlayingStates {
-                    remaining_time: MappedPropertyHandle::new_mapped(
-                        {
-                            let rem = Rc::clone(&remaining_time);
-                            move |new| {
-                                let mut guard = rem.borrow_mut();
-                                *guard = new;
-                            }
-                        },
-                        move |time| format!("{}", time).to_shared_string(),
-                    ),
-                    score: PropertyHandle::new({
-                        let score = Rc::clone(&score);
-                        move |new: i32| {
-                            let mut guard = score.borrow_mut();
-                            *guard = new.try_into().unwrap();
-                        }
-                    }),
-                },
+                state,
             };
 
             Self {
                 route,
-                remaining_time,
-                score,
+                remaining_time: mock.remaining_time,
+                score: mock.score,
                 worker,
                 vm,
 
@@ -302,7 +283,7 @@ mod tests {
             test.rem_tx.send(time).unwrap();
             rem_rx.changed().await.unwrap();
             slint::Timer::single_shot(Duration::from_millis(100), move || {
-                assert_eq!(*test.remaining_time.borrow(), time);
+                assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
             });
         })
         .unwrap();
