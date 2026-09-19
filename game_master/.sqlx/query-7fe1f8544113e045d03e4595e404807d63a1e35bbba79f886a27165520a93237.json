@@ -1,0 +1,48 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT score, status FROM games WHERE game_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "score",
+        "type_info": {
+          "type": "Long",
+          "flags": "UNSIGNED",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "status",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | ENUM | NO_DEFAULT_VALUE",
+          "collation": 255,
+          "max_size": 32
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "7fe1f8544113e045d03e4595e404807d63a1e35bbba79f886a27165520a93237"
+}
