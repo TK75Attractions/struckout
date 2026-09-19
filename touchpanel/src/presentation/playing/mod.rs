@@ -274,19 +274,37 @@ mod tests {
 
         let test = PlayingScreenTest::new();
 
-        let _join = test.vm.listen_session();
+        let join = test.vm.listen_session();
 
-        slint::spawn_local(async move {
-            let test = test;
-            let time = DisplayableRemainingTime { mins: 3, secs: 14 };
-            let mut rem_rx = test.rem_tx.subscribe();
-            test.rem_tx.send(time).unwrap();
-            rem_rx.changed().await.unwrap();
-            slint::Timer::single_shot(Duration::from_millis(100), move || {
-                assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
-            });
+        slint::spawn_local({
+            let rem_tx = test.rem_tx.clone();
+            let complete_tx = test.complete_tx.clone();
+            let worker = test.worker.clone();
+            async move {
+                let time = DisplayableRemainingTime { mins: 3, secs: 14 };
+                let mut rem_rx = rem_tx.subscribe();
+                rem_tx.send(time).unwrap();
+
+                slint::Timer::single_shot(Duration::from_millis(100), move || {
+                    assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
+                });
+
+                // complete and drop session
+                complete_tx.send(()).unwrap();
+                worker.spawn_cx(async move |cx| {
+                    cx.drop_session();
+                });
+            }
         })
         .unwrap();
+
+        slint::spawn_local(async move {
+            join.await;
+            slint::quit_event_loop().unwrap();
+            test.worker.shutdown();
+        })
+        .unwrap();
+
         slint::run_event_loop().unwrap();
     }
 }
