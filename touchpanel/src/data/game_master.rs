@@ -10,7 +10,7 @@ use struckout_proto::{
 use thiserror::Error;
 use tokio::sync::{broadcast, watch};
 use tokio_stream::StreamExt;
-use tonic::{Response, Status, transport::Endpoint};
+use tonic::{Response, Status};
 use tracing::{instrument, trace};
 
 use crate::data::remaining_time::DisplayableRemainingTime;
@@ -63,11 +63,6 @@ pub struct GameMasterClient<T: InternalGrpcClient> {
 /// Error returned from [`GameMasterClient::connect()`].
 #[derive(Debug, Error)]
 pub enum ConnectError {
-    #[error("given server address {server_addr} is invalid: {source}")]
-    InvalidServerAddr {
-        server_addr: String,
-        source: tonic::transport::Error,
-    },
     #[error(transparent)]
     Other(#[from] tonic::transport::Error),
 }
@@ -153,12 +148,6 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
     pub async fn connect(server_addr: &str, machine_id: MachineId) -> Result<Self, ConnectError> {
         // TODO: httpsも使えるようにする
         let endpoint = format!("http://{}:{}", server_addr, GAME_MASTER_GRPC_PORT);
-        let endpoint =
-            Endpoint::from_shared(endpoint).map_err(|e| ConnectError::InvalidServerAddr {
-                server_addr: server_addr.to_string(),
-                source: e,
-            })?;
-
         let client = T::connect(endpoint).await?;
         Ok(Self {
             machine_id,
@@ -508,22 +497,6 @@ mod tests {
     }
 
     impl private::Sealed for FakeGrpcClient {}
-
-    #[tokio::test]
-    async fn connect_returns_invalid_server_addr_when_addr_is_invalid() {
-        let addr = "256.256.256.256";
-        let err = GameMasterClient::<FakeGrpcClient>::connect(addr, MachineId::new(1))
-            .await
-            .expect_err("should return error");
-        let ConnectError::InvalidServerAddr {
-            server_addr: addr_got,
-            source: _,
-        } = err
-        else {
-            panic!("error kind didn't match");
-        };
-        assert_eq!(addr_got, addr);
-    }
 
     #[tokio::test]
     async fn start_game_returns_immediately_after_first_reponse() {
