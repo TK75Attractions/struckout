@@ -57,7 +57,34 @@ run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up
 dir = "game_master/"
 description = "Start a MySQL service for game-master."
 
-[tasks."tokei"]
-run = "tokei"
-dir = "./"
-description = "Count our code quickly, using tokei"
+[tasks."game-master:build"]
+depends = ["escape-patches", "game-master:prepare"]
+depends_post = "post-escape-patches"
+run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml build"
+dir = "game_master/"
+description = "game-masterをビルドする"
+
+[tasks."game-master:prepare"]
+run = "cargo sqlx prepare"
+dir = "game_master/"
+description = "game-masterのクエリ検証用メタデータを生成する"
+
+[tasks."escape-patches"]
+run = """
+    if [ -f ./patches.toml ]; then
+        mv ./patches.toml ./patches.toml.bak
+    fi
+"""
+dir = ".cargo/"
+description = ".cargo/patches.tomlを一時的に退避する"
+hide = true
+
+[tasks."post-escape-patches"]
+run = """
+    if [ -f ./patches.toml.bak ]; then
+        mv ./patches.toml.bak ./patches.toml
+    fi
+"""
+dir = ".cargo/"
+description = "'escape-patches'で移動したファイルを元に戻す"
+hide = true
