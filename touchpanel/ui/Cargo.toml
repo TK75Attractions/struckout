@@ -3,6 +3,9 @@ name = "touchpanel-ui"
 version = "0.1.0"
 edition.workspace = true
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
 slint = { workspace = true }
 stern = { workspace = true }

@@ -7,7 +7,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             |typ_name| typ_name.starts_with("Inner") && typ_name.ends_with("Adopter"),
             "#[stern::adopter]",
         );
-    slint_build::compile_with_config("ui/app-window.slint", config)?;
+    slint_build::compile_with_config("./app-window.slint", config)?;
 
     Ok(())
 }
