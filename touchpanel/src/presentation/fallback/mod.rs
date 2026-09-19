@@ -1,4 +1,4 @@
-use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
 
 use crate::Application;
 use stern::{GlobalExt, nav::NavDestination};

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{Application, Config, Context, NavController, presentation::connect_to_game_master};
-use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{GlobalExt, WorkerThread, nav::NavDestination};
 use touchpanel_ui::{
     ConnectionFailedPropertyMappers, ConnectionFailedStates, ConnectionFailedViewModelTrait,

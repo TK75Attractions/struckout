@@ -3,7 +3,7 @@ use crate::{
     data::{DisplayableRemainingTime, Session},
 };
 use parking_lot::RwLockReadGuard;
-use slint::{ComponentHandle, Global, SharedString, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{WorkerThread, nav::NavDestination};
 use tokio_stream::{StreamExt as _, wrappers::WatchStream};
 use touchpanel_ui::{
@@ -18,33 +18,6 @@ struct PlayingViewModel<C> {
     worker: WorkerThread<C>,
     state: PlayingStates<Mapper>,
 }
-
-/*macro_rules! define_playing_mapper {
-    {
-        $(remaining_time to $remaining_time_typ:ty {
-            $remaining_time_mapper:expr
-        },)?
-        $(score to $score_typ:ty {
-            $score_mapper:expr
-        },)?
-    } => {
-        stern::define_mapper_impl!{
-            base_name: Playing,
-            properties: {
-                remaining_time: {
-                    $(domain_typ: $remaining_time_typ)?,
-                    slint_typ: slint::SharedString,
-                    $(mapper: $remaining_time_mapper)?,
-                },
-                score: {
-                    $(domain_typ: $score_typ)?,
-                    slint_typ: i32,
-                    $(mapper: $score_mapper)?,
-                },
-            }
-        }
-    };
-}*/
 
 touchpanel_ui::define_playing_mapper! {
     remaining_time to DisplayableRemainingTime {
@@ -182,16 +155,15 @@ impl NavDestination<NavRoute> for PlayingDestination {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc, sync::OnceLock, time::Duration};
+    use std::{cell::RefCell, rc::Rc, time::Duration};
 
     use parking_lot::RwLock;
-    use stern::{MappedPropertyHandle, PropertyHandle};
-    use tokio::sync::{broadcast, oneshot, watch};
+    use slint::SharedString;
+    use tokio::sync::{broadcast, watch};
 
-    use crate::{
-        data::{DisplayableRemainingTime, GameMasterClient, MachineId, RequestError},
-        ui::UiNavRoute,
-    };
+    use touchpanel_ui::{NavRoute, UiNavRoute};
+
+    use crate::data::{DisplayableRemainingTime, RequestError};
 
     use super::*;
 
@@ -243,7 +215,7 @@ mod tests {
             let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
             let (error_tx, error_rx) = watch::channel(None);
             let (complete_tx, complete_rx) = broadcast::channel(8);
-            let mut worker = WorkerThread::new(FakeSessionProvider {
+            let worker = WorkerThread::new(FakeSessionProvider {
                 session: RwLock::new(Some(Session::new(
                     struckout_proto::Difficulty::Normal,
                     score_tx.clone(),

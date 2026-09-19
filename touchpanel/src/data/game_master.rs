@@ -382,10 +382,11 @@ mod tests {
     use std::time::Duration;
 
     use async_stream::stream;
-    use struckout_proto::event::{EventData, GameStarted, GameTimeLimitNotify};
+    use struckout_proto::{
+        event::{EventData, GameStarted, GameTimeLimitNotify},
+        types::GameId,
+    };
     use tokio::time::timeout;
-
-    use crate::data::GameId;
 
     use super::*;
 
@@ -433,8 +434,8 @@ mod tests {
             let s = s.map(|ev| {
                 Ok(StartGameResponse {
                     event: Some(struckout_proto::Event {
-                        machine_id: MachineId(1).into_inner(),
-                        game_id: GameId(5).into_inner(),
+                        machine_id: MachineId::new(1).into_inner(),
+                        game_id: GameId::new(5).into_inner(),
                         event_data: Some(ev),
                     }),
                 })
@@ -448,7 +449,7 @@ mod tests {
     #[tokio::test]
     async fn connect_returns_invalid_server_addr_when_addr_is_invalid() {
         let addr = "256.256.256.256";
-        let err = GameMasterClient::<FakeGrpcClient>::connect(addr, MachineId(1))
+        let err = GameMasterClient::<FakeGrpcClient>::connect(addr, MachineId::new(1))
             .await
             .expect_err("should return error");
         let ConnectError::InvalidServerAddr {
@@ -463,9 +464,9 @@ mod tests {
 
     #[tokio::test]
     async fn start_game_returns_immediately_after_first_reponse() {
-        let player_id = PlayerId(12);
+        let player_id = PlayerId::new(12);
         let difficulty = struckout_proto::Difficulty::Normal;
-        let mut gm = GameMasterClient::<FakeGrpcClient>::connect("127.0.0.1", MachineId(1))
+        let mut gm = GameMasterClient::<FakeGrpcClient>::connect("127.0.0.1", MachineId::new(1))
             .await
             .unwrap();
 
