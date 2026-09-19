@@ -201,9 +201,9 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
             );
         }
 
-        let (rem_tx, _rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
-        let (score_tx, _score_rx) = watch::channel(0);
-        let (error_tx, _error_rx) = watch::channel(None);
+        let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
+        let (score_tx, score_rx) = watch::channel(0);
+        let (error_tx, error_rx) = watch::channel(None);
         let (complete_tx, mut complete_rx) = broadcast::channel(1);
         {
             let mut guard = self.session.write();
@@ -222,6 +222,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
             rem_tx,
             complete_tx,
         ));
+        tokio::spawn(keep_rx_alive(rem_rx, score_rx, error_rx));
         tokio::spawn({
             let session = Arc::clone(&self.session);
             async move {
@@ -316,6 +317,30 @@ async fn handle_subsequent_events<S>(
             }
             EventData::GameFinished(_) => {
                 complete_tx.send(()).unwrap();
+            }
+        }
+    }
+}
+
+/// Keep channel receivers alive in order to avoid error while sending.
+async fn keep_rx_alive(
+    mut rem_rx: watch::Receiver<DisplayableRemainingTime>,
+    mut score_rx: watch::Receiver<u32>,
+    mut error_rx: watch::Receiver<Option<RequestError>>,
+) {
+    loop {
+        tokio::select! {
+            _ = rem_rx.changed() => {
+                let val = rem_rx.borrow_and_update();
+                trace!(?val, "remaining_time changed");
+            }
+            _ = score_rx.changed() => {
+                let val = score_rx.borrow_and_update();
+                trace!(?val, "score_rx changed");
+            }
+            _ = error_rx.changed() => {
+                let val = error_rx.borrow_and_update();
+                trace!(?val, "error_rx changed");
             }
         }
     }
