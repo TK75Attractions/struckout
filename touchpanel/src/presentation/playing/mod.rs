@@ -282,7 +282,7 @@ mod tests {
             let worker = test.worker.clone();
             async move {
                 let time = DisplayableRemainingTime { mins: 3, secs: 14 };
-                let mut rem_rx = rem_tx.subscribe();
+                let rem_rx = rem_tx.subscribe();
                 rem_tx.send(time).unwrap();
 
                 slint::Timer::single_shot(Duration::from_millis(100), move || {

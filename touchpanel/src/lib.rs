@@ -2,8 +2,7 @@
 
 use clap::Parser;
 use slint::ComponentHandle;
-use std::rc::Rc;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use stern::WorkerThread;
 use tracing::info;
 
@@ -30,7 +29,7 @@ struct Application {
     ui: touchpanel_ui::AppWindow,
     #[allow(dead_code)] // チャンネルを生存させるために必要
     pub worker: WorkerThread<Context>,
-    config: Rc<Config>,
+    config: Arc<Config>,
 }
 
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
@@ -85,7 +84,7 @@ impl Config {
 
 pub fn run_main() {
     let cli = Cli::parse();
-    let config = Rc::new(Config::from_cli(cli));
+    let config = Arc::new(Config::from_cli(cli));
 
     let ui = touchpanel_ui::AppWindow::new().unwrap();
 
