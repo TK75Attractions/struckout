@@ -15,23 +15,23 @@ jobs:
           - os: ["windows-2022","macos-13", "ubuntu-22.04"]
     runs-on: ${{matrix.os}}
     steps:
-    - uses: actions/checkout@v7
-    - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-    - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
-      with:
-        install_args: protoc
-    - name: Build
-      run: mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
-    - name: Upload executables (Windows)
-      uses: actions/upload-artifact@v7
-      if: ${{ matrix.os == 'windows-2022' }}
-      with:
-        name: Windows executables
-        path: |
-          ./target/release/ball_tracker.exe
-          ./target/release/touchpanel.exe
-    - name: Upload executables (${{matrix.os}})
-      uses: actions/upload-artifact@v7
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+      - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
+        with:
+          install_args: protoc
+      - name: Build
+        run: mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
+      - name: Upload executables (Windows)
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.os == 'windows-2022' }}
+        with:
+          name: Windows executables
+          path: |
+            ./target/release/ball_tracker.exe
+            ./target/release/touchpanel.exe
+      - name: Upload executables (${{matrix.os}})
+        uses: actions/upload-artifact@v7
       with:
         name: ${{matrix.os}} executables
         path: |
