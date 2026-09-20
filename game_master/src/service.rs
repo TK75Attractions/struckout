@@ -368,9 +368,10 @@ async fn game_timer(
 mod tests {
     use std::assert_matches;
 
+    use struckout_proto::event::EventData;
     use tracing::Level;
 
-    use crate::{AddPlayerError, PlayerId, proto::event::EventData};
+    use crate::{AddPlayerError, PlayerId};
 
     use super::*;
 
@@ -410,10 +411,10 @@ mod tests {
     #[tokio::test]
     async fn start_game_triggers_game_started_event() {
         let ds = StubDataSource {
-            game_id: GameId(14),
-            player_id: PlayerId(334),
+            game_id: GameId::new(14),
+            player_id: PlayerId::new(334),
         };
-        let machine_id = MachineId(1);
+        let machine_id = MachineId::new(1);
         let difficulty = Difficulty::Normal;
         let service = GameMasterServiceImpl::new(ds.clone());
         let mut rx = service.event_tx.subscribe();
@@ -447,10 +448,10 @@ mod tests {
         .expect("failed to set default subscriber");
 
         let ds = StubDataSource {
-            game_id: GameId(20),
-            player_id: PlayerId(13),
+            game_id: GameId::new(20),
+            player_id: PlayerId::new(13),
         };
-        let machine_id = MachineId(2);
+        let machine_id = MachineId::new(2);
         let difficulty = Difficulty::Normal;
         let service = GameMasterServiceImpl::new(ds.clone());
 
@@ -470,7 +471,7 @@ mod tests {
         let Some(Ok(started)) = stream.next().await else {
             panic!("stream shouldn't finish nor have error");
         };
-        let Some(proto::Event {
+        let Some(struckout_proto::Event {
             game_id: ev_game_id,
             machine_id: ev_machine_id,
             event_data: Some(EventData::GameStarted(started)),
@@ -511,11 +512,11 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn listen_events_filters_events_by_machine_id() {
         let ds = StubDataSource {
-            game_id: GameId(14),
-            player_id: PlayerId(334),
+            game_id: GameId::new(14),
+            player_id: PlayerId::new(334),
         };
-        let machine_id_to_listen = MachineId(1);
-        let machine_id_to_ignore = MachineId(2);
+        let machine_id_to_listen = MachineId::new(1);
+        let machine_id_to_ignore = MachineId::new(2);
         let difficulty = Difficulty::Normal;
         let service = GameMasterServiceImpl::new(ds.clone());
 
