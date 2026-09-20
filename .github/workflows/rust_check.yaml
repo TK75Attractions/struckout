@@ -18,6 +18,8 @@ jobs:
       - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
         with:
           install_args: protoc
+      - name: Install fontconfig
+        run: apt-get install -y libfontconfig1-dev
       - name: Run check 
         run:
           mise exec protoc -- cargo check --all-targets

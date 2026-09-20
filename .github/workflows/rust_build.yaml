@@ -20,6 +20,9 @@ jobs:
       - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
         with:
           install_args: protoc
+      - name: Install fontconfig on Linux
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        run: apt-get install -y libfontconfig1-dev
       - name: Build
         run: mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
       - name: Upload executables (Windows)
