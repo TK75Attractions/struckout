@@ -62,12 +62,12 @@ impl NameInputViewModelTrait for NameInputViewModel {
     fn on_remove_character(&mut self) {
         trace!("NameInputViewModel::on_remove_character");
 
-        let old_text = self.state.player_name_text.get_ref();
+        let old_text = self.state.player_name_text.get_ref().clone();
         if old_text.is_empty() {
             return;
         }
 
-        let new_text = pop_player_name(old_text.as_str());
+        let new_text = pop_player_name(old_text);
         self.state.player_name_text.set(new_text)
     }
 
