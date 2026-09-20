@@ -2,7 +2,7 @@ package com.taichi765.struckoutCameraApp.network
 
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.ConnectionError
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.UploadError
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.recording.FrameEntity
 import com.taichi765.struckoutCameraApp.recording.LocalDetectionRepository
 import kotlinx.coroutines.CoroutineScope
@@ -90,7 +90,8 @@ class LocalDetectionUploaderImpl @Inject constructor() : LocalDetectionUploader 
 
         try {
             frames.forEach {
-                val packet = Struckout.DetectionsPacket.newBuilder().mergeFrom(it.data).build()
+                val packet =
+                    CameraBallTracker.DetectionsPacket.newBuilder().mergeFrom(it.data).build()
                 writePacket(curState.output, packet)
             }
         } catch (e: IOException) {

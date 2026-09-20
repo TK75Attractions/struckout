@@ -9,7 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository.Companion.ENABLE_RECORDING_MODE_DEFAULT
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -79,7 +79,7 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateCameraLocation(location: Struckout.CameraLocation) {
+    override suspend fun updateCameraLocation(location: CameraBallTracker.CameraLocation) {
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
                 preferences[CAMERA_LOCATION_Y] = location.x

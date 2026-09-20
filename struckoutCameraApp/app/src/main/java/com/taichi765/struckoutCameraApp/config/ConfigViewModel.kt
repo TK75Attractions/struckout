@@ -7,7 +7,7 @@ import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.TcpSession
 import com.taichi765.struckoutCameraApp.network.types.tcpIsConnected
 import com.taichi765.struckoutCameraApp.network.types.udpIsConnected
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.proto.cameraLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +27,7 @@ class ConfigViewModel @Inject constructor(
     /**
      * TODO: [TcpSession]に持たせる
      */
-    private val _cameraLocation = MutableStateFlow<Struckout.CameraLocation?>(null)
+    private val _cameraLocation = MutableStateFlow<CameraBallTracker.CameraLocation?>(null)
 
     val uiState = combine(
         configRepository.recordingModeEnabled,
@@ -101,7 +101,7 @@ class ConfigViewModel @Inject constructor(
 /**
  * @return `null` if [CharSequence]s contains invalid characters.
  */
-private fun convertCharsToCameraLocation(newState: ConfigUiState): Struckout.CameraLocation? {
+private fun convertCharsToCameraLocation(newState: ConfigUiState): CameraBallTracker.CameraLocation? {
     val x = runCatching { newState.locationX.toString().toDouble() }.getOrNull() ?: return null
     val y = runCatching { newState.locationY.toString().toDouble() }.getOrNull() ?: return null
     val z = runCatching { newState.locationZ.toString().toDouble() }.getOrNull() ?: return null

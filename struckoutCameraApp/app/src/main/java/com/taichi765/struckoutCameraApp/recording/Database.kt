@@ -9,7 +9,7 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import kotlinx.coroutines.flow.Flow
 
 
@@ -20,7 +20,7 @@ data class FrameEntity(
     @PrimaryKey
     val timestamp: Long,
 
-    val data: Struckout.DetectionsPacket
+    val data: CameraBallTracker.DetectionsPacket
 )
 
 @Dao
@@ -46,11 +46,11 @@ abstract class AppDatabase : RoomDatabase() {
 
 class Converters {
     @TypeConverter
-    fun packetToBlob(packet: Struckout.DetectionsPacket): ByteArray {
+    fun packetToBlob(packet: CameraBallTracker.DetectionsPacket): ByteArray {
         return packet.toByteArray()
     }
 
     @TypeConverter
-    fun blobToPacket(blob: ByteArray): Struckout.DetectionsPacket =
-        Struckout.DetectionsPacket.newBuilder().mergeFrom(blob).build()
+    fun blobToPacket(blob: ByteArray): CameraBallTracker.DetectionsPacket =
+        CameraBallTracker.DetectionsPacket.newBuilder().mergeFrom(blob).build()
 }

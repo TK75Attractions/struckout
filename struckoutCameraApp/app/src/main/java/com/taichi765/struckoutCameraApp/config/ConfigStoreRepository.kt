@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.config
 
 import com.taichi765.struckoutCameraApp.network.CameraLocationDataSource
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import kotlinx.coroutines.flow.StateFlow
 
 interface ConfigStoreRepository : CameraLocationDataSource {
@@ -10,7 +10,7 @@ interface ConfigStoreRepository : CameraLocationDataSource {
 
     suspend fun setDetectionOutputKind(kind: DetectionOutputKind)
     suspend fun toggleRecordingMode()
-    suspend fun updateCameraLocation(location: Struckout.CameraLocation)
+    suspend fun updateCameraLocation(location: CameraBallTracker.CameraLocation)
 
     companion object {
         const val ENABLE_RECORDING_MODE_DEFAULT = false
