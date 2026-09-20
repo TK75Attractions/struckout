@@ -56,7 +56,7 @@ struct Cli {
         help = "the address of game-master's gRPC server"
     )]
     server_addr: String,
-    #[arg(short = 'm', help = "the id of this machine")]
+    #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
     machine_id: u32,
 }
 
