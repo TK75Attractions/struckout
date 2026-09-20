@@ -208,7 +208,7 @@ mod tests {
 
         let player_id = ds.add_player("Bob").await.expect("should succeed");
 
-        assert_eq!(player_id, PlayerId(1));
+        assert_eq!(player_id, PlayerId::new(1));
     }
 
     #[tokio::test]
@@ -235,7 +235,7 @@ mod tests {
 
         let game_id = ds
             .insert_game(
-                MachineId(0),
+                MachineId::new(0),
                 player_id,
                 time::UtcDateTime::new(
                     Date::from_calendar_date(2026, Month::September, 6).unwrap(),
@@ -246,7 +246,7 @@ mod tests {
             .await
             .expect("should succeed");
 
-        assert_eq!(game_id, GameId(1));
+        assert_eq!(game_id, GameId::new(1));
     }
 
     #[tokio::test]
@@ -258,7 +258,7 @@ mod tests {
 
         let game_id = ds
             .insert_game(
-                MachineId(0),
+                MachineId::new(0),
                 player_id,
                 time::UtcDateTime::new(
                     Date::from_calendar_date(2026, Month::September, 6).unwrap(),
