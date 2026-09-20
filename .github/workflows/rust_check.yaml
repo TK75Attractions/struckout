@@ -24,7 +24,7 @@ jobs:
           sudo apt-get install -y libfontconfig1-dev
       - name: Run check 
         run:
-          mise exec protoc -- SQLX_OFFLINE=true cargo check --all-targets
+          SQLX_OFFLINE=true mise exec protoc -- cargo check --all-targets
       - name: Run tests
         run:
-          mise exec protoc -- SQLX_OFFLINE=true cargo test
+          SQLX_OFFLINE=true mise exec protoc -- cargo test
