@@ -23,8 +23,8 @@ jobs:
       - name: Install fontconfig on Linux
         if: ${{ matrix.os == 'ubuntu-22.04' }}
         run: |
-          apt-get update
-          apt-get install -y libfontconfig1-dev
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev
       - name: Build
         run: mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
       - name: Upload executables (Windows)
