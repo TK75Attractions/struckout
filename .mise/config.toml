@@ -88,3 +88,7 @@ run = """
 dir = ".cargo/"
 description = "'escape-patches'で移動したファイルを元に戻す"
 hide = true
+
+[tasks."adb-reverse"]
+file = "scripts/adb-reverse.sh"
+description = "接続されたそれぞれのデバイスに対し'adb reverse'を実行する"
