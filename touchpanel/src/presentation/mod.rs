@@ -5,7 +5,7 @@ use crate::{
     data::GameMasterClient,
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
-        difficulity_select::DifficultySelectDestination, fallback::FallbackDestination,
+        difficulty_select::DifficultySelectDestination, fallback::FallbackDestination,
         name_input::NameInputDestination, playing::PlayingDestination, ranking::RankingDestination,
         score::ScoreDestination, start::StartScreenDestination,
     },
@@ -70,7 +70,7 @@ macro_rules! viewmodel_rc {
 
 pub mod connecting;
 pub mod connection_failed;
-pub mod difficulity_select;
+pub mod difficulty_select;
 pub mod fallback;
 pub mod name_input;
 pub mod playing;
