@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
       - name: Build
-        run: mise exec protoc -- SQLX_OFFLINE=true cargo build --release -p ball_tracker -p touchpanel
+        run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
       - name: Upload executables (Windows)
         uses: actions/upload-artifact@v7
         if: ${{ matrix.os == 'windows-2022' }}
