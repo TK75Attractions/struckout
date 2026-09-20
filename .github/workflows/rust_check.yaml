@@ -15,9 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - name: Install protoc
-        run:
-          mise install protoc
+      - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
+        with:
+          install_args: protoc
       - name: Run check 
         run:
           mise exec protoc -- cargo check --all-targets
