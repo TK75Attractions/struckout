@@ -23,8 +23,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
       - name: Run check 
-        run:
-          SQLX_OFFLINE=true mise exec protoc -- cargo check --all-targets
+        run: |
+          SQLX_OFFLINE=true\
+          mise exec protoc -- \
+          cargo check --all-targets -p touchpanel -p ball_tracker -p game_master
       - name: Run tests
-        run:
-          SQLX_OFFLINE=true mise exec protoc -- cargo test
+        run: |
+          SQLX_OFFLINE=true\
+           mise exec protoc -- \
+           cargo test -p touchpanel -p ball_tracker -p game_master
