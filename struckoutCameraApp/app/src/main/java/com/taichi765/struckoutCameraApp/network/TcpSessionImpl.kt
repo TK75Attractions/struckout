@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.network
 
 import com.taichi765.struckoutCameraApp.network.TcpSession.ConnectionError
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
 import com.taichi765.struckoutCameraApp.proto.tcpClientPacket
 import kotlinx.coroutines.CoroutineScope
@@ -82,7 +82,7 @@ class TcpSessionImpl(
             Timber.tag(TAG).i("initializing states via TCP")
             val packet = try {
                 val inputStream = socket.getInputStream()
-                readPacket(inputStream, Struckout.TcpServerPacket::parseFrom)
+                readPacket(inputStream, CameraBallTracker.TcpServerPacket::parseFrom)
             } catch (e: IOException) {
                 Timber.tag(TAG).w("failed to initialize connection states: $e")
                 return@withContext ConnectionError.InitializationFailed(
@@ -93,7 +93,7 @@ class TcpSessionImpl(
             }
 
             when (packet.dataCase) {
-                Struckout.TcpServerPacket.DataCase.CAMERA_ID -> {
+                CameraBallTracker.TcpServerPacket.DataCase.CAMERA_ID -> {
                     val cameraId = packet.cameraId.toUInt()
                     _connState.value = InternalSessionState.Connected(
                         socket,
@@ -102,7 +102,7 @@ class TcpSessionImpl(
                     Timber.tag(TAG).i("successfully initialized connection states")
                 }
 
-                Struckout.TcpServerPacket.DataCase.DATA_NOT_SET -> {
+                CameraBallTracker.TcpServerPacket.DataCase.DATA_NOT_SET -> {
                     Timber.tag(TAG)
                         .w("received invalid TCP packet from server")
                     return@withContext ConnectionError.InitializationFailed(ConnectionError.InitializationError.InvalidPacket)
@@ -148,7 +148,8 @@ class TcpSessionImpl(
      * Tells [outChannel] which actions to run.
      */
     private sealed interface OutputAction {
-        data class UpdateCameraLocation(val location: Struckout.CameraLocation) : OutputAction
+        data class UpdateCameraLocation(val location: CameraBallTracker.CameraLocation) :
+            OutputAction
     }
 
     private sealed interface InternalSessionState {
