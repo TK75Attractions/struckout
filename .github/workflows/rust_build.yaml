@@ -32,8 +32,8 @@ jobs:
             ./target/release/touchpanel.exe
       - name: Upload executables (${{matrix.os}})
         uses: actions/upload-artifact@v7
-      with:
-        name: ${{matrix.os}} executables
-        path: |
-          ./target/release/ball_tracker
-          ./target/release/touchpanel
+        with:
+          name: ${{matrix.os}} executables
+          path: |
+            ./target/release/ball_tracker
+            ./target/release/touchpanel
