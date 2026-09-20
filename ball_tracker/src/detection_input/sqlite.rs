@@ -64,11 +64,9 @@ async fn fetch_frames(pool: &Pool<Sqlite>) -> Result<Vec<FrameEntity>, sqlx::Err
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
-
     use bytes::BytesMut;
-    use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Timelike, Utc};
-    use futures::{StreamExt, stream};
+    use chrono::{TimeDelta, TimeZone, Utc};
+    use futures_util::StreamExt;
     use prost::Message;
     use rand::seq::SliceRandom;
     use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};

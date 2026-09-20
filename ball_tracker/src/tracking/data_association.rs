@@ -224,36 +224,36 @@ mod tests {
 
         let track1 = StubObjectTrack {
             scores_a: evaluate_scores_for_detections(
-                new_frame.a.detected_objects.iter(),
+                new_frame.a.detections.iter(),
                 camera_loc_a,
                 predict1,
             ),
             scores_b: evaluate_scores_for_detections(
-                new_frame.b.detected_objects.iter(),
+                new_frame.b.detections.iter(),
                 camera_loc_b,
                 predict1,
             ),
         };
         let track2 = StubObjectTrack {
             scores_a: evaluate_scores_for_detections(
-                new_frame.a.detected_objects.iter(),
+                new_frame.a.detections.iter(),
                 camera_loc_a,
                 predict2,
             ),
             scores_b: evaluate_scores_for_detections(
-                new_frame.b.detected_objects.iter(),
+                new_frame.b.detections.iter(),
                 camera_loc_b,
                 predict2,
             ),
         };
         let track3 = StubObjectTrack {
             scores_a: evaluate_scores_for_detections(
-                new_frame.a.detected_objects.iter(),
+                new_frame.a.detections.iter(),
                 camera_loc_a,
                 predict3,
             ),
             scores_b: evaluate_scores_for_detections(
-                new_frame.b.detected_objects.iter(),
+                new_frame.b.detections.iter(),
                 camera_loc_b,
                 predict3,
             ),
@@ -262,12 +262,12 @@ mod tests {
         let id_1 = id_gen.next();
         let id_2 = id_gen.next();
         let id_3 = id_gen.next();
-        let mut tracks = vec![(id_1, track1), (id_2, track2), (id_3, track3)].into();
+        let mut tracks = [(id_1, track1), (id_2, track2), (id_3, track3)].into();
 
         let assignment = associate_objects(&mut tracks, &new_frame);
         assert_eq!(assignment.len(), 3);
-        assert_eq!(assignment[&0], (Some(0), Some(0)));
-        assert_eq!(assignment[&1], (Some(1), Some(1)));
-        assert_eq!(assignment[&2], (Some(2), Some(2)));
+        assert_eq!(assignment[&TrackId(0)], (Some(0), Some(0)));
+        assert_eq!(assignment[&TrackId(1)], (Some(1), Some(1)));
+        assert_eq!(assignment[&TrackId(2)], (Some(2), Some(2)));
     }
 }
