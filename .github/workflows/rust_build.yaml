@@ -17,8 +17,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+    - name: Install protoc
+      run: mise install protoc
     - name: Build
-      run: cargo build --release -p ball_tracker -p touchpanel
+      run: mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
     - name: Upload executables (Windows)
       uses: actions/upload-artifact@v7
       if: ${{ matrix.os == 'windows-2022' }}
