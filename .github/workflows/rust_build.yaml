@@ -1,0 +1,36 @@
+name: Rust build
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ["windows-2022","macos-13", "ubuntu-22.04"]
+    runs-on: ${{matrix.os}}
+    steps:
+    - uses: actions/checkout@v7
+    - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+    - name: Build
+      run: cargo build --release -p ball_tracker -p touchpanel
+    - name: Upload executables (Windows)
+      uses: actions/upload-artifact@v7
+      if: ${{ matrix.os == 'windows-2022' }}
+      with:
+        name: Windows executables
+        path: |
+          ./target/release/ball_tracker.exe
+          ./target/release/touchpanel.exe
+    - name: Upload executables (${{matrix.os}})
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{matrix.os}} executables
+        path: |
+          ./target/release/ball_tracker
+          ./target/release/touchpanel
