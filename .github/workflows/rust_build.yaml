@@ -12,33 +12,57 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ["ubuntu-22.04", "windows-2022"]
-    runs-on: ${{matrix.os}}
+          - target: ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc", "aarch64-apple-darwin"]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
       - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
         with:
           install_args: protoc
-      - name: Install fontconfig on Linux
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
+      - name: Install fontconfig for Linux target
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
       - name: Build
-        run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
-      - name: Upload executables (Windows)
+        run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel --target ${{matrix.target}}
+      
+      - name: Upload ball-tracker (Windows)
         uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'windows-2022' }}
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         with:
-          name: Windows executables
-          path: |
-            ./target/release/ball_tracker.exe
-            ./target/release/touchpanel.exe
-      - name: Upload executables (${{matrix.os}})
+          name: ball_tracker-x86_64-windows
+          path: ./target/release/ball_tracker.exe
+      - name: Upload touchpanel (Windows)
         uses: actions/upload-artifact@v7
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         with:
-          name: ${{matrix.os}} executables
-          path: |
-            ./target/release/ball_tracker
-            ./target/release/touchpanel
+          name: touchpanel-x86_64-windows
+          path: ./target/release/touchpanel.exe
+          
+      - name: Upload ball-tracker (macOS)
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.target == 'aarch64-apple-darwin' }} 
+        with:
+          name: ball_tracker-aarch64-macos
+          path: ./target/release/ball_tracker
+      - name: Upload touchpanel (macOS)
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.target == 'aarch64-apple-darwin' }}
+        with:
+          name: touchpanel-aarch64-macos
+          path: ./target/release/touchpanel
+
+      - name: Upload ball-tracker (Linux)
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        with:
+          name: ball-tracker-x86_64-linux
+          path: ./target/release/ball_tracker
+      - name: Upload touchpanel (Linux)
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+        with:
+          name: touchpanel-x86_64-linux
+          path: ./target/release/touchpanel
