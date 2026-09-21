@@ -139,6 +139,7 @@ where
         pair: &PairedFrames,
         assignments: &HashMap<TrackId, (Option<usize>, Option<usize>)>,
     ) -> AssignedTrackResult {
+        trace!(?pair, ?assignments, "updating assigned tracks");
         let mut assigned_dets_a = Vec::new();
         let mut assigned_dets_b = Vec::new();
         let mut assigned_tracks = Vec::new();

@@ -5,6 +5,7 @@ use std::{
 
 use chrono::{DateTime, Duration, Local, Utc};
 use serde::{Deserialize, Serialize};
+use tracing::trace;
 
 use crate::tracking::{AssignedTrackResult, TrackId};
 
@@ -78,11 +79,11 @@ impl EventLogger for SentryEventLogger {
     }
 }
 
-/// Dummy [`EventLogger`].
-pub struct EmptyEventLogger;
+/// [`EventLogger`] to stdout.
+pub struct FmtEventLogger;
 
-impl EventLogger for EmptyEventLogger {
-    fn push_events(&mut self, _events: TrackingEventsDto) {
-        todo!()
+impl EventLogger for FmtEventLogger {
+    fn push_events(&mut self, events: TrackingEventsDto) {
+        trace!(?events, "new event");
     }
 }

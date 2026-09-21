@@ -5,7 +5,7 @@ use ball_tracker::{
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
     tracking::{
-        EmptyEventLogger, EventLogger, JsonEventLogger, KalmanTrack, SentryEventLogger,
+        EventLogger, FmtEventLogger, JsonEventLogger, KalmanTrack, SentryEventLogger,
         TrackingEventsDto,
     },
     types::CollisionPoint3D,
@@ -117,7 +117,7 @@ enum EventLoggerImpl {
     Json(JsonEventLogger),
     #[allow(dead_code)] // 後で追加する
     Sentry(SentryEventLogger),
-    Empty(EmptyEventLogger),
+    Fmt(FmtEventLogger),
 }
 
 impl EventLoggerImpl {
@@ -127,7 +127,7 @@ impl EventLoggerImpl {
         //}else if  {
         //    Self::Sentry(SentryEventLogger::new())
         } else {
-            Self::Empty(EmptyEventLogger)
+            Self::Fmt(FmtEventLogger)
         }
     }
 }
@@ -137,7 +137,7 @@ impl EventLogger for EventLoggerImpl {
         match self {
             EventLoggerImpl::Json(l) => l.push_events(events),
             EventLoggerImpl::Sentry(l) => l.push_events(events),
-            EventLoggerImpl::Empty(l) => l.push_events(events),
+            EventLoggerImpl::Fmt(l) => l.push_events(events),
         }
     }
 }
