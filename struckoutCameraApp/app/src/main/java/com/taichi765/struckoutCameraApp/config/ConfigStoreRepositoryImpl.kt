@@ -82,7 +82,7 @@ class ConfigStoreRepositoryImpl @Inject constructor(
     override suspend fun updateCameraLocation(location: CameraBallTracker.CameraLocation) {
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
-                preferences[CAMERA_LOCATION_Y] = location.x
+                preferences[CAMERA_LOCATION_X] = location.x
                 preferences[CAMERA_LOCATION_Y] = location.y
                 preferences[CAMERA_LOCATION_Z] = location.z
             }
