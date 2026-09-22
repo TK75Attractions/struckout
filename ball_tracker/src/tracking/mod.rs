@@ -7,7 +7,10 @@ use std::{
 use crate::{
     CameraLocationStore,
     detection_input::PairedFrames,
-    tracking::{data_association::associate_objects, triangulate::triangulate},
+    tracking::{
+        data_association::associate_objects,
+        triangulate::{TriangulationError, triangulate},
+    },
     types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D},
 };
 
@@ -131,13 +134,14 @@ where
             events.push(TrackingEventBodyDto::DropTrack(track_id));
         }
 
-        let new_tracks: Vec<Track> = create_new_tracks(
+        let (new_tracks, diagnostics): (Vec<Track>, _) = create_new_tracks(
             &self.id_gen,
             &res.assigned_dets_a,
             &res.assigned_dets_b,
             &pair,
             self.camera_locs.clone(),
         );
+        events.push(TrackingEventBodyDto::NewTrackDiagnostics(diagnostics));
         for track in new_tracks {
             let track_id = track.id();
             self.tracks.insert(track_id, track);
@@ -170,7 +174,7 @@ where
             let (Some(detection_a), Some(detection_b)) = (*detection_a, *detection_b) else {
                 continue;
             };
-            let Some(triangulation) = triangulate(
+            let Ok(triangulation) = triangulate(
                 self.camera_locs.get(pair.a.camera_id.into()).unwrap(),
                 pair.a.detections[detection_a].get_lay(),
                 self.camera_locs.get(pair.b.camera_id.into()).unwrap(),
@@ -206,7 +210,7 @@ fn create_new_tracks<Track>(
     assigned_dets_b: &[usize],
     pair: &PairedFrames,
     camera_locs: Arc<CameraLocationStore>,
-) -> Vec<Track>
+) -> (Vec<Track>, NewTrackDiagnosticsDto)
 where
     Track: ObjectTrack,
 {
@@ -219,8 +223,14 @@ where
         .filter(|idx| !assigned_dets_b.contains(idx))
         .collect::<Vec<_>>();
 
+    let mut diagnostics = NewTrackDiagnosticsDto {
+        unmatched_detections_a: remaining_dets_a.len(),
+        unmatched_detections_b: remaining_dets_b.len(),
+        candidate_pairs: remaining_dets_a.len() * remaining_dets_b.len(),
+        ..Default::default()
+    };
     if remaining_dets_a.is_empty() || remaining_dets_b.is_empty() {
-        return Vec::new();
+        return (Vec::new(), diagnostics);
     }
 
     let camera_a = camera_locs.get(pair.a.camera_id.into()).unwrap();
@@ -233,19 +243,37 @@ where
 
     for (row, detection_a) in remaining_dets_a.iter().enumerate() {
         for (column, detection_b) in remaining_dets_b.iter().enumerate() {
-            if let Some(triangulation) = triangulate(
+            match triangulate(
                 camera_a.clone(),
                 pair.a.detections[*detection_a].get_lay(),
                 camera_b.clone(),
                 pair.b.detections[*detection_b].get_lay(),
             ) {
-                costs.set(row, column, triangulation.ray_distance);
+                Ok(triangulation) => {
+                    diagnostics.min_ray_distance = Some(
+                        diagnostics
+                            .min_ray_distance
+                            .map_or(triangulation.ray_distance, |current| {
+                                current.min(triangulation.ray_distance)
+                            }),
+                    );
+                    if triangulation.ray_distance <= NEW_TRACK_RAY_DISTANCE_GATE {
+                        diagnostics.within_gate_candidates += 1;
+                    } else {
+                        diagnostics.ray_distance_rejections += 1;
+                    }
+                    costs.set(row, column, triangulation.ray_distance);
+                }
+                Err(TriangulationError::ParallelRays) => diagnostics.parallel_ray_rejections += 1,
+                Err(TriangulationError::IntersectionBehindCamera) => {
+                    diagnostics.behind_camera_rejections += 1
+                }
             }
         }
     }
 
     let assignment = hungarian_gated(&costs, NEW_TRACK_RAY_DISTANCE_GATE).unwrap();
-    assignment
+    let tracks: Vec<Track> = assignment
         .pairs()
         .filter_map(|(row, column)| {
             let detection_a = remaining_dets_a[row];
@@ -255,7 +283,8 @@ where
                 pair.a.detections[detection_a].get_lay(),
                 camera_b.clone(),
                 pair.b.detections[detection_b].get_lay(),
-            )?;
+            )
+            .ok()?;
             Some(Track::new(
                 id_gen.next(),
                 Vector3::new(
@@ -267,7 +296,13 @@ where
                 camera_locs.clone(),
             ))
         })
-        .collect()
+        .collect();
+
+    diagnostics.accepted_tracks = tracks.len();
+    diagnostics.unselected_within_gate_candidates = diagnostics
+        .within_gate_candidates
+        .saturating_sub(tracks.len());
+    (tracks, diagnostics)
 }
 
 /// Result of [`TrackRunner::update_assigned_tracks()`]
@@ -414,7 +449,7 @@ mod tests {
             ],
         );
 
-        let tracks: Vec<StubTrack> = create_new_tracks(
+        let (tracks, diagnostics): (Vec<StubTrack>, _) = create_new_tracks(
             &TrackIdGenerator::new(),
             &[],
             &[],
@@ -422,6 +457,9 @@ mod tests {
             camera_locations(),
         );
 
+        assert_eq!(diagnostics.candidate_pairs, 4);
+        assert_eq!(diagnostics.accepted_tracks, 2);
+        assert_relative_eq!(diagnostics.min_ray_distance.unwrap(), 0.0);
         assert_eq!(tracks.len(), 2);
         assert_relative_eq!(tracks[0].initial_position.x, target_1.x);
         assert_relative_eq!(tracks[0].initial_position.y, target_1.y);
@@ -439,7 +477,7 @@ mod tests {
             vec![target - Vector3::new(0.0, 10.0, 0.0)],
         );
 
-        let tracks: Vec<StubTrack> = create_new_tracks(
+        let (tracks, diagnostics): (Vec<StubTrack>, _) = create_new_tracks(
             &TrackIdGenerator::new(),
             &[],
             &[],
@@ -447,9 +485,64 @@ mod tests {
             camera_locations(),
         );
 
+        assert_eq!(diagnostics.candidate_pairs, 2);
+        assert_eq!(diagnostics.accepted_tracks, 1);
         assert_eq!(tracks.len(), 1);
         assert_relative_eq!(tracks[0].initial_position.x, target.x);
         assert_relative_eq!(tracks[0].initial_position.y, target.y);
+    }
+
+    #[test]
+    fn reports_triangulation_rejection_reasons() {
+        let frame = pair(
+            vec![Vector3::new(1.0, 0.0, 0.0)],
+            vec![Vector3::new(1.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 0.0)],
+        );
+
+        let (tracks, diagnostics): (Vec<StubTrack>, _) = create_new_tracks(
+            &TrackIdGenerator::new(),
+            &[],
+            &[],
+            &frame,
+            camera_locations(),
+        );
+
+        assert!(tracks.is_empty());
+        assert_eq!(diagnostics.candidate_pairs, 2);
+        assert_eq!(diagnostics.parallel_ray_rejections, 1);
+        assert_eq!(diagnostics.behind_camera_rejections, 1);
+        assert_eq!(diagnostics.ray_distance_rejections, 0);
+        assert!(diagnostics.min_ray_distance.is_none());
+        assert_eq!(diagnostics.accepted_tracks, 0);
+    }
+
+    #[test]
+    fn reports_candidates_rejected_by_ray_distance() {
+        let locations = camera_locations();
+        locations.insert(
+            CameraId::new(1),
+            CameraLocation {
+                x: 0.0,
+                y: 100.0,
+                z: 0.0,
+            },
+        );
+        let frame = pair(
+            vec![Vector3::new(1.0, 0.0, 0.0)],
+            vec![Vector3::new(1.0, 0.0, 1.0)],
+        );
+
+        let (tracks, diagnostics): (Vec<StubTrack>, _) =
+            create_new_tracks(&TrackIdGenerator::new(), &[], &[], &frame, locations);
+
+        assert!(tracks.is_empty());
+        assert_eq!(diagnostics.candidate_pairs, 1);
+        assert_eq!(diagnostics.parallel_ray_rejections, 0);
+        assert_eq!(diagnostics.behind_camera_rejections, 0);
+        assert_eq!(diagnostics.ray_distance_rejections, 1);
+        assert_eq!(diagnostics.within_gate_candidates, 0);
+        assert_eq!(diagnostics.accepted_tracks, 0);
+        assert_relative_eq!(diagnostics.min_ray_distance.unwrap(), 100.0);
     }
 
     #[test]
@@ -465,7 +558,7 @@ mod tests {
         for _ in 0..MAX_MISSED_UPDATES - 1 {
             let (_, events) = runner.update_frame(pair(Vec::new(), Vec::new()));
             assert!(runner.tracks.contains_key(&track_id));
-            assert_eq!(events.events.len(), 1);
+            assert_eq!(events.events.len(), 2);
         }
 
         let (_, events) = runner.update_frame(pair(Vec::new(), Vec::new()));
