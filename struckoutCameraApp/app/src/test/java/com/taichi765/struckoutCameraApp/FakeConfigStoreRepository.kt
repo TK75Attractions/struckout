@@ -2,7 +2,7 @@ package com.taichi765.struckoutCameraApp
 
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -29,7 +29,7 @@ class FakeConfigStoreRepository(
         _detectionOutputKind.value = kind
     }
 
-    override suspend fun updateCameraLocation(location: Struckout.CameraLocation) {
+    override suspend fun updateCameraLocation(location: CameraBallTracker.CameraLocation) {
         throw NotImplementedError("stub!")
     }
 }
