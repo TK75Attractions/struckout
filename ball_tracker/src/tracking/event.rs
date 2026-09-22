@@ -69,7 +69,7 @@ impl JsonEventLogger {
 
 impl EventLogger for JsonEventLogger {
     fn push_events(&mut self, events: TrackingEventsDto) {
-        serde_json::to_writer(&mut self.events_file, &events)
+        serde_json::to_writer_pretty(&mut self.events_file, &events)
             .expect("failed to write events to file");
         self.events_file
             .flush()
@@ -77,7 +77,8 @@ impl EventLogger for JsonEventLogger {
     }
 
     fn push_pair(&mut self, pair: &PairedFrames) {
-        serde_json::to_writer(&mut self.pair_file, &pair).expect("failed to write events to file");
+        serde_json::to_writer_pretty(&mut self.pair_file, &pair)
+            .expect("failed to write events to file");
         self.pair_file
             .flush()
             .expect("failed to flush pairs to file");
