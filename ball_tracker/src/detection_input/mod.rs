@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use chrono::{DateTime, TimeDelta, TimeZone as _, Utc};
+use serde::Serialize;
 use struckout_proto::DetectionsPacket;
 use tokio::sync::mpsc;
 
@@ -67,7 +68,7 @@ impl FramePairMatcher {
 }
 
 /// Paired frames from two cameras at the same timestamp.
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct PairedFrames {
     pub timestamp_avr: DateTime<Utc>,
     pub a: DetectionsPacket,
