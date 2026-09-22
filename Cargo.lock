@@ -6505,6 +6505,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stern"
 version = "0.1.0"
+source = "git+https://github.com/taichi765/stern#ca0a7b0b9ef99cb0d7b8c2e3a01738c21886fba9"
 dependencies = [
  "derive_more",
  "futures-util",
@@ -6521,6 +6522,7 @@ dependencies = [
 [[package]]
 name = "stern-macros"
 version = "0.1.0"
+source = "git+https://github.com/taichi765/stern#ca0a7b0b9ef99cb0d7b8c2e3a01738c21886fba9"
 dependencies = [
  "heck",
  "proc-macro2",

@@ -1,16 +1,29 @@
 import { Button } from "std-widgets.slint";
 global Adopter {
-    callback click();
+    callback click-first-play();
+    callback click-non-first-play();
 }
 
 export component StartScreen {
     HorizontalLayout {
         alignment: LayoutAlignment.center;
 
-        Button {
-            text: "スタート";
-            clicked => {
-                Adopter.click();
+        VerticalLayout {
+            alignment: LayoutAlignment.center;
+            spacing: 16px;
+
+            Button {
+                text: "プレイ(初回)";
+                clicked => {
+                    Adopter.click-first-play();
+                }
+            }
+
+            Button {
+                text: "プレイ(2回目以降)";
+                clicked => {
+                    Adopter.click-non-first-play();
+                }
             }
         }
     }
