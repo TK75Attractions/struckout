@@ -121,7 +121,7 @@ impl NameInputDestination {
 impl NavDestination<NavRoute> for NameInputDestination {
     fn load(&self, route: &NavRoute) {
         debug!("loading NameInputViewModel");
-        let NavRoute::NameInput = route else {
+        let NavRoute::NameInput(mode) = route else {
             panic!("matched variant should be given");
         };
 
