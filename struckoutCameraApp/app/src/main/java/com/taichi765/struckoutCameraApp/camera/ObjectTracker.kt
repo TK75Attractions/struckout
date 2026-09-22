@@ -6,6 +6,7 @@ import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.Point
 import org.opencv.core.Rect
+import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY
@@ -13,9 +14,15 @@ import org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY
 class ObjectTracker(
     val accumulateWeight: Double,
     val binaryThreshold: Double,
-    val minContourArea: Double
+    val minContourArea: Double,
+    val foregroundPersistenceFrames: Int = 15
 ) {
     private lateinit var background: Mat
+    private lateinit var foregroundAge: Mat
+
+    init {
+        require(foregroundPersistenceFrames > 0)
+    }
 
     fun nextFrame(frame: Mat): List<Rect> {
         val gray = Mat()
@@ -24,6 +31,7 @@ class ObjectTracker(
         if (!::background.isInitialized) {
             background = Mat()
             gray.convertTo(background, CvType.CV_32F)
+            foregroundAge = Mat.zeros(gray.size(), CvType.CV_16UC1)
             return emptyList()
         }
 
@@ -61,7 +69,25 @@ class ObjectTracker(
 
         val backgroundMask = Mat()
         Core.bitwise_not(thresholdClean, backgroundMask)
-        Imgproc.accumulateWeighted(gray, background, accumulateWeight, backgroundMask)
+        foregroundAge.setTo(Scalar(0.0), backgroundMask)
+        Core.add(
+            foregroundAge,
+            Scalar(1.0),
+            foregroundAge,
+            thresholdClean,
+            CvType.CV_16UC1
+        )
+
+        val persistentForegroundMask = Mat()
+        Core.compare(
+            foregroundAge,
+            Scalar(foregroundPersistenceFrames.toDouble()),
+            persistentForegroundMask,
+            Core.CMP_GE
+        )
+        val backgroundUpdateMask = Mat()
+        Core.bitwise_or(backgroundMask, persistentForegroundMask, backgroundUpdateMask)
+        Imgproc.accumulateWeighted(gray, background, accumulateWeight, backgroundUpdateMask)
 
         val contours = mutableListOf<MatOfPoint>()
         Imgproc.findContours(

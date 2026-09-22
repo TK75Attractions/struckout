@@ -79,6 +79,31 @@ class ObjectTrackerInstrumentedTest {
         assertTrue(detections.single().x >= 85)
     }
 
+    @Test
+    fun persistentForegroundBecomesBackground() {
+        OpenCVLoader.initLocal()
+        val tracker = ObjectTracker(0.5, 15.0, 80.0, foregroundPersistenceFrames = 3)
+        val background = Mat.zeros(120, 160, CvType.CV_8UC3)
+        val changedBackground = background.clone()
+        Imgproc.rectangle(
+            changedBackground,
+            Point(20.0, 40.0),
+            Point(60.0, 80.0),
+            Scalar(255.0, 255.0, 255.0),
+            Imgproc.FILLED
+        )
+
+        assertTrue(tracker.nextFrame(background).isEmpty())
+        assertEquals(1, tracker.nextFrame(changedBackground).size)
+
+        var detections = emptyList<org.opencv.core.Rect>()
+        repeat(10) {
+            detections = tracker.nextFrame(changedBackground)
+        }
+
+        assertTrue(detections.isEmpty())
+    }
+
     companion object {
         const val TAG = "ObjectTrackerTest"
         const val FILENAME = "sample.mp4"
