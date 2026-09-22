@@ -49,6 +49,7 @@ sqlx = { workspace = true, features = [
 ] }
 
 [features]
+input-sqlite = []
 
 [build-dependencies]
 prost-build = { workspace = true }
