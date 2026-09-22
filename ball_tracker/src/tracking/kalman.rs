@@ -101,7 +101,7 @@ impl ObjectTrack for KalmanTrack {
             .filter
             .update(&self.kalman_state, &measurement)
             .unwrap(); // FIXME: たぶんunwrapしないほうがいい
-        if estimate.mean.get(0).copied().unwrap() <= 0. {
+        let collision = if estimate.mean.get(0).copied().unwrap() <= 0. {
             Some(CollisionPoint3D {
                 x: 0., // FIXME: ちゃんと計算する
                 y: estimate.mean.get(1).copied().unwrap(),
@@ -109,7 +109,9 @@ impl ObjectTrack for KalmanTrack {
             })
         } else {
             None
-        }
+        };
+        self.kalman_state = estimate;
+        collision
     }
 }
 
