@@ -28,9 +28,24 @@ pub struct TrackingEventsDto {
     pub events: Vec<TrackingEventBodyDto>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NewTrackDiagnosticsDto {
+    pub unmatched_detections_a: usize,
+    pub unmatched_detections_b: usize,
+    pub candidate_pairs: usize,
+    pub parallel_ray_rejections: usize,
+    pub behind_camera_rejections: usize,
+    pub ray_distance_rejections: usize,
+    pub within_gate_candidates: usize,
+    pub unselected_within_gate_candidates: usize,
+    pub min_ray_distance: Option<f64>,
+    pub accepted_tracks: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TrackingEventBodyDto {
     NewTrack,
+    NewTrackDiagnostics(NewTrackDiagnosticsDto),
     UpdateTrack(AssignedTrackResult),
     DropTrack(TrackId),
 }

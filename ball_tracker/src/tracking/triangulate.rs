@@ -9,13 +9,19 @@ pub struct Triangulation {
     pub ray_distance: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TriangulationError {
+    ParallelRays,
+    IntersectionBehindCamera,
+}
+
 #[must_use]
 pub fn triangulate(
     camera_loc_1: CameraLocation,
     orientation_1: Vector3<f64>,
     camera_loc_2: CameraLocation,
     orientation_2: Vector3<f64>,
-) -> Option<Triangulation> {
+) -> Result<Triangulation, TriangulationError> {
     let p = camera_loc_1.to_vector3();
     let q = camera_loc_2.to_vector3();
     let a = orientation_1;
@@ -30,18 +36,18 @@ pub fn triangulate(
     let denominator = a_dot_a * b_dot_b - a_dot_b * a_dot_b;
 
     if denominator.abs() < f64::EPSILON {
-        return None;
+        return Err(TriangulationError::ParallelRays);
     }
 
     let t = (a_dot_b * b_dot_p_to_q - b_dot_b * a_dot_p_to_q) / denominator;
     let s = (a_dot_a * b_dot_p_to_q - a_dot_b * a_dot_p_to_q) / denominator;
     if t < 0.0 || s < 0.0 {
-        return None;
+        return Err(TriangulationError::IntersectionBehindCamera);
     }
 
     let point_a = p + t * a;
     let point_b = q + s * b;
-    Some(Triangulation {
+    Ok(Triangulation {
         position: ((point_a + point_b) / 2.0).into(),
         ray_distance: (point_a - point_b).norm(),
     })
@@ -98,7 +104,7 @@ mod tests {
             Vector3::new(1.0, 0.0, 0.0),
         );
 
-        assert!(result.is_none());
+        assert!(matches!(result, Err(TriangulationError::ParallelRays)));
     }
 
     #[test]
@@ -110,6 +116,9 @@ mod tests {
             Vector3::new(0.0, 1.0, 0.0),
         );
 
-        assert!(result.is_none());
+        assert!(matches!(
+            result,
+            Err(TriangulationError::IntersectionBehindCamera)
+        ));
     }
 }
