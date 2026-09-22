@@ -48,12 +48,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=49190DLAQ00201" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=MZH649AUOREYBUN7" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=MZH649AUOREYBUN7" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=SM2CH1Y00126" />
               </handle>
             </Target>
           </targets>
