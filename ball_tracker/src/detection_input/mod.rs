@@ -10,7 +10,9 @@ mod network;
 pub use network::{NetworkDetectionInput, NetworkDetectionInputCreationError};
 use tracing::{trace, warn};
 
+#[cfg(feature = "input-sqlite")]
 mod sqlite;
+#[cfg(feature = "input-sqlite")]
 pub use sqlite::SqliteDetectionInput;
 
 pub trait DetectionInput {

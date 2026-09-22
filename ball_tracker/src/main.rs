@@ -1,9 +1,11 @@
 use std::{path::PathBuf, sync::Arc};
 
+#[cfg(feature = "input-sqlite")]
+use ball_tracker::detection_input::SqliteDetectionInput;
 use ball_tracker::{
     Application, CameraLocationStore,
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
-    detection_input::{DetectionInput, NetworkDetectionInput, SqliteDetectionInput},
+    detection_input::{DetectionInput, NetworkDetectionInput, PairedFrames},
     tracking::{
         EventLogger, FmtEventLogger, JsonEventLogger, KalmanTrack, SentryEventLogger,
         TrackingEventsDto,
@@ -34,6 +36,7 @@ enum DetectionInputKind {
     /// TCP経由 (camera)
     Network,
     /// ローカルのSQLiteから
+    #[cfg(feature = "input-sqlite")]
     Sqlite,
 }
 
@@ -48,16 +51,15 @@ enum CollisionOutputKind {
 /// [`DetectionInput`] is not dyn compatible, so we need this enum.
 enum DetectionInputImpl {
     Network(NetworkDetectionInput),
+    #[cfg(feature = "input-sqlite")]
     Sqlite(SqliteDetectionInput),
 }
 
 impl DetectionInput for DetectionInputImpl {
-    async fn start(
-        self,
-        tx: mpsc::Sender<ball_tracker::detection_input::PairedFrames>,
-    ) -> std::io::Result<()> {
+    async fn start(self, tx: mpsc::Sender<PairedFrames>) -> std::io::Result<()> {
         match self {
             DetectionInputImpl::Network(input) => input.start(tx).await,
+            #[cfg(feature = "input-sqlite")]
             DetectionInputImpl::Sqlite(input) => input.start(tx).await,
         }
     }
@@ -69,6 +71,7 @@ impl DetectionInputImpl {
             DetectionInputKind::Network => {
                 DetectionInputImpl::Network(NetworkDetectionInput::new(camera_locs).await.unwrap())
             }
+            #[cfg(feature = "input-sqlite")]
             DetectionInputKind::Sqlite => DetectionInputImpl::Sqlite(SqliteDetectionInput {}),
         }
     }
@@ -138,6 +141,14 @@ impl EventLogger for EventLoggerImpl {
             EventLoggerImpl::Json(l) => l.push_events(events),
             EventLoggerImpl::Sentry(l) => l.push_events(events),
             EventLoggerImpl::Fmt(l) => l.push_events(events),
+        }
+    }
+
+    fn push_pair(&mut self, pair: &PairedFrames) {
+        match self {
+            EventLoggerImpl::Json(l) => l.push_pair(pair),
+            EventLoggerImpl::Sentry(l) => l.push_pair(pair),
+            EventLoggerImpl::Fmt(l) => l.push_pair(pair),
         }
     }
 }
