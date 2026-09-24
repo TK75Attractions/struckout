@@ -11,7 +11,7 @@ use crate::{
         data_association::associate_objects,
         triangulate::{TriangulationError, triangulate},
     },
-    types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D},
+    types::{CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D, RotateToWorld as _},
 };
 
 mod data_association;
@@ -170,15 +170,17 @@ where
         let mut assigned_tracks = Vec::new();
         let mut collisions = HashMap::new();
 
+        let camera_a = self.camera_locs.get(pair.a.camera_id.into()).unwrap();
+        let camera_b = self.camera_locs.get(pair.b.camera_id.into()).unwrap();
         for (track_id, (detection_a, detection_b)) in assignments {
             let (Some(detection_a), Some(detection_b)) = (*detection_a, *detection_b) else {
                 continue;
             };
             let Ok(triangulation) = triangulate(
-                self.camera_locs.get(pair.a.camera_id.into()).unwrap(),
-                pair.a.detections[detection_a].get_lay(),
-                self.camera_locs.get(pair.b.camera_id.into()).unwrap(),
-                pair.b.detections[detection_b].get_lay(),
+                camera_a.clone(),
+                camera_a.rotate_to_world(pair.a.detections[detection_a].get_lay()),
+                camera_b.clone(),
+                camera_b.rotate_to_world(pair.b.detections[detection_b].get_lay()),
             ) else {
                 continue;
             };
@@ -223,7 +225,11 @@ where
         .filter(|idx| !assigned_dets_b.contains(idx))
         .collect::<Vec<_>>();
 
+    let camera_a = camera_locs.get(pair.a.camera_id.into()).unwrap();
+    let camera_b = camera_locs.get(pair.b.camera_id.into()).unwrap();
     let mut diagnostics = NewTrackDiagnosticsDto {
+        camera_location_a: camera_a.clone(),
+        camera_location_b: camera_b.clone(),
         unmatched_detections_a: remaining_dets_a.len(),
         unmatched_detections_b: remaining_dets_b.len(),
         candidate_pairs: remaining_dets_a.len() * remaining_dets_b.len(),
@@ -233,8 +239,6 @@ where
         return (Vec::new(), diagnostics);
     }
 
-    let camera_a = camera_locs.get(pair.a.camera_id.into()).unwrap();
-    let camera_b = camera_locs.get(pair.b.camera_id.into()).unwrap();
     let mut costs = CostMatrix::filled(
         remaining_dets_a.len(),
         remaining_dets_b.len(),
@@ -245,9 +249,9 @@ where
         for (column, detection_b) in remaining_dets_b.iter().enumerate() {
             match triangulate(
                 camera_a.clone(),
-                pair.a.detections[*detection_a].get_lay(),
+                camera_a.rotate_to_world(pair.a.detections[*detection_a].get_lay()),
                 camera_b.clone(),
-                pair.b.detections[*detection_b].get_lay(),
+                camera_b.rotate_to_world(pair.b.detections[*detection_b].get_lay()),
             ) {
                 Ok(triangulation) => {
                     diagnostics.min_ray_distance = Some(
@@ -280,9 +284,9 @@ where
             let detection_b = remaining_dets_b[column];
             let triangulation = triangulate(
                 camera_a.clone(),
-                pair.a.detections[detection_a].get_lay(),
+                camera_a.rotate_to_world(pair.a.detections[detection_a].get_lay()),
                 camera_b.clone(),
-                pair.b.detections[detection_b].get_lay(),
+                camera_b.rotate_to_world(pair.b.detections[detection_b].get_lay()),
             )
             .ok()?;
             Some(Track::new(
@@ -394,6 +398,7 @@ mod tests {
                 x: 0.0,
                 y: 0.0,
                 z: 0.0,
+                ..Default::default()
             },
         );
         locations.insert(
@@ -402,6 +407,7 @@ mod tests {
                 x: 0.0,
                 y: 10.0,
                 z: 0.0,
+                ..Default::default()
             },
         );
         locations
@@ -470,6 +476,35 @@ mod tests {
     }
 
     #[test]
+    fn creates_track_after_rotating_device_rays_into_world_coordinates() {
+        let locations = camera_locations();
+        locations.insert(
+            CameraId::new(1),
+            CameraLocation {
+                x: 0.0,
+                y: 10.0,
+                z: 0.0,
+                rotation_z_degrees: 90.0,
+                ..Default::default()
+            },
+        );
+        let target = Vector3::new(100.0, 2.0, 0.0);
+        let camera_b_device_direction = Vector3::new(-8.0, -100.0, 0.0);
+        let frame = pair(vec![target], vec![camera_b_device_direction]);
+
+        let (tracks, diagnostics): (Vec<StubTrack>, _) =
+            create_new_tracks(&TrackIdGenerator::new(), &[], &[], &frame, locations);
+
+        assert_eq!(diagnostics.candidate_pairs, 1);
+        assert_eq!(diagnostics.behind_camera_rejections, 0);
+        assert_eq!(diagnostics.accepted_tracks, 1);
+        assert_eq!(tracks.len(), 1);
+        assert_relative_eq!(tracks[0].initial_position.x, target.x, epsilon = 1e-9);
+        assert_relative_eq!(tracks[0].initial_position.y, target.y, epsilon = 1e-9);
+        assert_relative_eq!(tracks[0].initial_position.z, target.z, epsilon = 1e-9);
+    }
+
+    #[test]
     fn creates_only_matched_tracks_when_detection_counts_differ() {
         let target = Vector3::new(100.0, 2.0, 0.0);
         let frame = pair(
@@ -525,6 +560,7 @@ mod tests {
                 x: 0.0,
                 y: 100.0,
                 z: 0.0,
+                ..Default::default()
             },
         );
         let frame = pair(

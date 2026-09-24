@@ -60,7 +60,12 @@ mod tests {
     use super::*;
 
     fn camera(x: f64, y: f64, z: f64) -> CameraLocation {
-        CameraLocation { x, y, z }
+        CameraLocation {
+            x,
+            y,
+            z,
+            ..Default::default()
+        }
     }
 
     #[test]

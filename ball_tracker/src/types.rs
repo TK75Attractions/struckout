@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use nalgebra::Vector3;
+use nalgebra::{Rotation3, Vector3};
 use serde::{Deserialize, Serialize};
 use struckout_proto::{CameraLocation, Detection};
 
@@ -73,6 +73,20 @@ impl ToVector3 for CameraLocation {
     }
 }
 
+pub trait RotateToWorld {
+    fn rotate_to_world(&self, direction: Vector3<f64>) -> Vector3<f64>;
+}
+
+impl RotateToWorld for CameraLocation {
+    fn rotate_to_world(&self, direction: Vector3<f64>) -> Vector3<f64> {
+        Rotation3::from_euler_angles(
+            self.rotation_x_degrees.to_radians(),
+            self.rotation_y_degrees.to_radians(),
+            self.rotation_z_degrees.to_radians(),
+        ) * direction
+    }
+}
+
 impl ToVector3 for Position3D {
     fn to_vector3(&self) -> Vector3<f64> {
         Vector3::new(self.x, self.y, self.z)
@@ -86,5 +100,43 @@ pub trait GetLayFromDetection {
 impl GetLayFromDetection for Detection {
     fn get_lay(&self) -> Vector3<f64> {
         Vector3::new(self.lay_x, self.lay_y, self.lay_z)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use approx::assert_relative_eq;
+
+    use super::*;
+
+    fn camera(rotation_x: f64, rotation_y: f64, rotation_z: f64) -> CameraLocation {
+        CameraLocation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            rotation_x_degrees: rotation_x,
+            rotation_y_degrees: rotation_y,
+            rotation_z_degrees: rotation_z,
+        }
+    }
+
+    #[test]
+    fn identity_pose_keeps_device_direction() {
+        let direction = Vector3::new(1.0, 2.0, 3.0);
+
+        let world_direction = camera(0.0, 0.0, 0.0).rotate_to_world(direction);
+
+        assert_relative_eq!(world_direction, direction);
+    }
+
+    #[test]
+    fn rotates_device_direction_into_world_coordinates() {
+        let direction = Vector3::new(1.0, 0.0, 0.0);
+
+        let world_direction = camera(0.0, 0.0, 90.0).rotate_to_world(direction);
+
+        assert_relative_eq!(world_direction.x, 0.0, epsilon = 1e-12);
+        assert_relative_eq!(world_direction.y, 1.0, epsilon = 1e-12);
+        assert_relative_eq!(world_direction.z, 0.0, epsilon = 1e-12);
     }
 }

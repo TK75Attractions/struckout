@@ -44,16 +44,16 @@ class WorldDirectionCalculator(val cameraMatrix: Mat, cameraRotationVector: Mat)
             dst
         }
 
-        val worldDirection = run {
+        val deviceDirection = run {
             val dst = Mat()
-            Core.gemm(cameraRotationMatrix, normalizedCameraCoordinate, 1.0, Mat(), 0.0, dst)
+            Core.gemm(cameraRotationMatrix.t(), normalizedCameraCoordinate, 1.0, Mat(), 0.0, dst)
             dst
         }
 
         return WorldDirection(
-            x = worldDirection.get(0, 0).first(),
-            y = worldDirection.get(1, 0).first(),
-            z = worldDirection.get(2, 0).first()
+            x = deviceDirection.get(0, 0).first(),
+            y = deviceDirection.get(1, 0).first(),
+            z = deviceDirection.get(2, 0).first()
         )
     }
 }

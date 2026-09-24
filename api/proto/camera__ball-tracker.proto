@@ -39,6 +39,9 @@ message CameraLocation {
   double x = 1;
   double y = 2;
   double z = 3;
+  double rotation_x_degrees = 4;
+  double rotation_y_degrees = 5;
+  double rotation_z_degrees = 6;
 }
 
 // TCPでサーバーからカメラに送られるパケット

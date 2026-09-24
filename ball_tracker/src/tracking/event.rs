@@ -6,6 +6,7 @@ use std::{
 
 use chrono::{DateTime, Duration, Local, Utc};
 use serde::{Deserialize, Serialize};
+use struckout_proto::CameraLocation;
 use tracing::trace;
 
 use crate::{
@@ -30,6 +31,8 @@ pub struct TrackingEventsDto {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct NewTrackDiagnosticsDto {
+    pub camera_location_a: CameraLocation,
+    pub camera_location_b: CameraLocation,
     pub unmatched_detections_a: usize,
     pub unmatched_detections_b: usize,
     pub candidate_pairs: usize,

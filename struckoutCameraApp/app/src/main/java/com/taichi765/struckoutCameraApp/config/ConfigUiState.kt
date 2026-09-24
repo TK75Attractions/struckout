@@ -8,6 +8,9 @@ data class ConfigUiState(
     val locationX: CharSequence,
     val locationY: CharSequence,
     val locationZ: CharSequence,
+    val rotationXDegrees: CharSequence,
+    val rotationYDegrees: CharSequence,
+    val rotationZDegrees: CharSequence,
 )
 
 /**
@@ -18,7 +21,10 @@ fun ConfigUiState(): ConfigUiState = ConfigUiState(
     detectionOutputKind = DetectionOutputKind.NONE,
     udpIsConnected = false,
     tcpIsConnected = false,
-    locationX = "dummy!",
-    locationY = "dummy!",
-    locationZ = "dummy!",
+    locationX = "0",
+    locationY = "0",
+    locationZ = "0",
+    rotationXDegrees = "0",
+    rotationYDegrees = "0",
+    rotationZDegrees = "0",
 )
