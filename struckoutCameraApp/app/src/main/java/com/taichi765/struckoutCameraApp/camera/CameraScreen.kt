@@ -79,6 +79,9 @@ private fun CameraScreen(
 
         val cameraProvider = ProcessCameraProvider.awaitInstance(context)
 
+        // TODO: taichi765のスマホは60をサポートしていないので誰かに借りる
+        //val sessionConfig =
+        //    SessionConfig.Builder(imageAnalysis).setFrameRateRange(Range(45, 60)).build()
         cameraProvider.bindToLifecycle(
             lifecycleOwner,
             CameraSelector.DEFAULT_BACK_CAMERA,
