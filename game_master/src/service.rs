@@ -4,9 +4,10 @@ use parking_lot::RwLock;
 use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
     GetGameResultRequest, GetGameResultResponse, ListenEventsRequest, ListenEventsResponse,
-    StartGameRequest, StartGameResponse,
+    StartGameRequest, StartGameResponse, ValidatePlayerNameRequest, ValidatePlayerNameResponse,
     game_master_service_server::GameMasterService,
     types::{GameId, MachineId},
+    validate_player_name_response::ValidatePlayerNameResp,
 };
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
@@ -17,7 +18,7 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{AddPlayerError, DataSource, GetGameResultError};
+use crate::{AddPlayerError, DataSource, GetGameResultError, ValidatePlayerNameError};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
@@ -289,6 +290,28 @@ where
             Err(GetGameResultError::Sqlx(e)) => Err(Status::internal(e.to_string())),
         }
     }
+
+    async fn validate_player_name(
+        &self,
+        req: Request<ValidatePlayerNameRequest>,
+    ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
+        let req = req.into_inner();
+        match self.data_source.validate_player_name(req.player_name).await {
+            Ok(_) => Ok(Response::new(ValidatePlayerNameResponse {
+                validate_player_name_resp: Some(ValidatePlayerNameResp::Ok(
+                    struckout_proto::validate_player_name_response::Ok {},
+                )),
+            })),
+            Err(ValidatePlayerNameError::AlreadyUsed(_name)) => {
+                Ok(Response::new(ValidatePlayerNameResponse {
+                    validate_player_name_resp: Some(ValidatePlayerNameResp::AlreadyUsed(
+                        struckout_proto::validate_player_name_response::AlreadyUsed {},
+                    )),
+                }))
+            }
+            Err(ValidatePlayerNameError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        }
+    }
 }
 
 /// Filters events from `event_rx` by `game_id` and pass it through the response stream.
@@ -404,6 +427,13 @@ mod tests {
             &self,
             game_id: GameId,
         ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
+            unimplemented!()
+        }
+
+        async fn validate_player_name(
+            &self,
+            name: impl Into<String>,
+        ) -> Result<(), ValidatePlayerNameError> {
             unimplemented!()
         }
     }

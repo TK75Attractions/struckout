@@ -5,7 +5,7 @@ use struckout_proto::{
 };
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource, GetGameResultError};
+use crate::{AddPlayerError, DataSource, GetGameResultError, ValidatePlayerNameError};
 
 const STATUS_FINISHED: &str = "finished";
 const STATUS_RUNNING: &str = "running";
@@ -116,6 +116,20 @@ impl DataSource for DataSourceImpl {
         let score = row.score.unwrap();
 
         Ok(GameRecord { score })
+    }
+
+    async fn validate_player_name(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> Result<(), ValidatePlayerNameError> {
+        let name = name.into();
+        let res = sqlx::query!("SELECT * FROM players WHERE name = ?", name)
+            .fetch_optional(&self.pool)
+            .await?;
+        match res {
+            Some(v) => Err(ValidatePlayerNameError::AlreadyUsed(v.name)),
+            None => Ok(()),
+        }
     }
 }
 
