@@ -392,7 +392,6 @@ mod tests {
     use std::assert_matches;
 
     use struckout_proto::event::EventData;
-    use tracing::Level;
 
     use crate::{AddPlayerError, PlayerId};
 
@@ -425,14 +424,14 @@ mod tests {
 
         async fn get_game_result(
             &self,
-            game_id: GameId,
+            _game_id: GameId,
         ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
             unimplemented!()
         }
 
         async fn validate_player_name(
             &self,
-            name: impl Into<String>,
+            _name: impl Into<String>,
         ) -> Result<(), ValidatePlayerNameError> {
             unimplemented!()
         }
@@ -542,7 +541,7 @@ mod tests {
             let EventData::GameTimeLimitNotify(notify) = ev else {
                 break ev;
             };
-            let rem = notify.remaining.unwrap();
+            let _rem = notify.remaining.unwrap();
         };
 
         // Assert: Finished
