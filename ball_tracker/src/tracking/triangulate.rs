@@ -1,5 +1,5 @@
 use nalgebra::Vector3;
-use struckout_proto::CameraLocation;
+use struckout_proto::CameraPose;
 
 use crate::types::{Position3D, ToVector3};
 
@@ -17,13 +17,13 @@ pub enum TriangulationError {
 
 #[must_use]
 pub fn triangulate(
-    camera_loc_1: CameraLocation,
+    camera_pose_1: CameraPose,
     orientation_1: Vector3<f64>,
-    camera_loc_2: CameraLocation,
+    camera_pose_2: CameraPose,
     orientation_2: Vector3<f64>,
 ) -> Result<Triangulation, TriangulationError> {
-    let p = camera_loc_1.to_vector3();
-    let q = camera_loc_2.to_vector3();
+    let p = camera_pose_1.to_vector3();
+    let q = camera_pose_2.to_vector3();
     let a = orientation_1;
     let b = orientation_2;
 
@@ -59,8 +59,8 @@ mod tests {
 
     use super::*;
 
-    fn camera(x: f64, y: f64, z: f64) -> CameraLocation {
-        CameraLocation {
+    fn camera(x: f64, y: f64, z: f64) -> CameraPose {
+        CameraPose {
             x,
             y,
             z,

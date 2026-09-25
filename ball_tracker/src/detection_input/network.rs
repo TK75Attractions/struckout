@@ -159,6 +159,8 @@ impl TcpTransport {
     pub async fn listen(&mut self) {
         let mut writers = Vec::new();
         loop {
+            let _span = trace_span!("TcpTransport_listen");
+            debug!("TcpTransport listening...");
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection for TcpTransport");
@@ -205,14 +207,14 @@ impl TcpTransport {
             let packet = res.unwrap();
 
             match packet.data {
-                Some(tcp_client_packet::Data::CameraLoc(loc_data)) => {
-                    if loc_data.camera_location.is_none() {
+                Some(tcp_client_packet::Data::UpdateCameraPose(pose_data)) => {
+                    if pose_data.camera_pose.is_none() {
                         warn!("camera_location field is missing for TcpClientPacket");
                         continue;
                     }
-                    let camera_loc = loc_data.camera_location.unwrap(); // checked above
-                    info!(id = loc_data.camera_id, value = ?camera_loc, "camera location updated");
-                    camera_locs.insert(CameraId::new(loc_data.camera_id), camera_loc);
+                    let camera_pose = pose_data.camera_pose.unwrap(); // checked above
+                    info!(id = pose_data.camera_id, value = ?camera_pose, "camera pose updated");
+                    camera_locs.insert(CameraId::new(pose_data.camera_id), camera_pose);
                 }
                 None => {
                     warn!("TcpClientPacket was empty");

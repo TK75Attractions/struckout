@@ -30,10 +30,10 @@ import javax.inject.Inject
  * 直接使うべからず
  */
 class TcpSessionImpl(
-    cameraLocationDataSource: CameraLocationDataSource
+    cameraPoseDataSource: CameraPoseDataSource
 ) : TcpSession, SessionStateProvider, Closeable {
     /**
-     * [outputActor]や[CameraLocationDataSource]のライフサイクルをApplicationやViewModelではなく
+     * [outputActor]や[CameraPoseDataSource]のライフサイクルをApplicationやViewModelではなく
      * 自前で管理したいため
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -56,7 +56,7 @@ class TcpSessionImpl(
 
 
     init {
-        combine(cameraLocationDataSource.cameraLocation, _connState) { location, connState ->
+        combine(cameraPoseDataSource.cameraPose, _connState) { location, connState ->
             if (connState !is InternalSessionState.Connected) {
                 Timber.tag(TAG)
                     .w("camera location was updated but cannot sync change to TCP server: TCP is not connected")
@@ -135,9 +135,9 @@ class TcpSessionImpl(
             check(curState is InternalSessionState.Connected)
             when (action) {
                 is OutputAction.UpdateCameraLocation -> writePacket(output, tcpClientPacket {
-                    this.cameraLoc = TcpClientPacketKt.updateCameraLocation {
+                    this.updateCameraPose = TcpClientPacketKt.updateCameraPose {
                         cameraId = curState.cameraID.toInt()
-                        cameraLocation = action.location
+                        cameraPose = action.location
                     }
                 })
             }
@@ -148,7 +148,7 @@ class TcpSessionImpl(
      * Tells [outChannel] which actions to run.
      */
     private sealed interface OutputAction {
-        data class UpdateCameraLocation(val location: CameraBallTracker.CameraLocation) :
+        data class UpdateCameraLocation(val location: CameraBallTracker.CameraPose) :
             OutputAction
     }
 
@@ -161,10 +161,10 @@ class TcpSessionImpl(
         object DisConnected : InternalSessionState
     }
 
-    class Factory @Inject constructor(private val cameraLocationDataSource: CameraLocationDataSource) :
+    class Factory @Inject constructor(private val cameraPoseDataSource: CameraPoseDataSource) :
         TcpSession.Factory {
         override fun create(): TcpSession {
-            return TcpSessionImpl(cameraLocationDataSource)
+            return TcpSessionImpl(cameraPoseDataSource)
         }
     }
 

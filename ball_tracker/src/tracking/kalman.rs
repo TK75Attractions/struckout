@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
-use struckout_proto::{CameraLocation, Detection};
+use struckout_proto::{CameraPose, Detection};
 use tracktor::{
     filters::kalman::KalmanFilter,
     models::{ConstantVelocity3D, PositionSensor3D},
@@ -118,15 +118,15 @@ impl ObjectTrack for KalmanTrack {
 /// Evaluates scores for each detections.
 pub fn evaluate_scores_for_detections<'a>(
     detections: impl Iterator<Item = &'a Detection> + Clone,
-    camera_location: CameraLocation,
+    camera_pose: CameraPose,
     estimated_coord: Vector3<f64>,
 ) -> Vec<f64> {
     // TODO: minが一定距離より遠かったらNoneにする
-    let camera_position = camera_location.to_vector3();
+    let camera_position = camera_pose.to_vector3();
     detections
         .map(move |obj| {
             // 点と直線の距離。TODO: 数式があってるか確認
-            let lay = camera_location.rotate_to_world(obj.get_lay());
+            let lay = camera_pose.rotate_to_world(obj.get_lay());
             let top = (estimated_coord - camera_position).cross(&lay).norm();
             let bottom = lay.norm();
             (top / bottom).into()
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn scores_detection_after_rotating_its_ray_into_world_coordinates() {
-        let camera_location = CameraLocation {
+        let camera_location = CameraPose {
             x: 0.0,
             y: 0.0,
             z: 0.0,

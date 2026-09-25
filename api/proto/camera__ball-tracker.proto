@@ -25,17 +25,17 @@ message Detection {
 
 // TCPでカメラからサーバに送られるパケット
 message TcpClientPacket {
-  message UpdateCameraLocation {
+  message UpdateCameraPose {
     uint32 camera_id = 1;
-    CameraLocation camera_location = 2;
+    CameraPose camera_pose = 2;
   }
 
   oneof data {
-    UpdateCameraLocation camera_loc = 1;
+    UpdateCameraPose update_camera_pose = 1;
   }
 }
 
-message CameraLocation {
+message CameraPose {
   double x = 1;
   double y = 2;
   double z = 3;

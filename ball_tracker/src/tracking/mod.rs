@@ -228,8 +228,8 @@ where
     let camera_a = camera_locs.get(pair.a.camera_id.into()).unwrap();
     let camera_b = camera_locs.get(pair.b.camera_id.into()).unwrap();
     let mut diagnostics = NewTrackDiagnosticsDto {
-        camera_location_a: camera_a.clone(),
-        camera_location_b: camera_b.clone(),
+        camera_pose_a: camera_a.clone(),
+        camera_pose_b: camera_b.clone(),
         unmatched_detections_a: remaining_dets_a.len(),
         unmatched_detections_b: remaining_dets_b.len(),
         candidate_pairs: remaining_dets_a.len() * remaining_dets_b.len(),
@@ -341,7 +341,7 @@ pub struct TrackId(usize);
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
-    use struckout_proto::{CameraLocation, DetectionsPacket};
+    use struckout_proto::{CameraPose, DetectionsPacket};
 
     use super::*;
 
@@ -394,7 +394,7 @@ mod tests {
         let locations = Arc::new(CameraLocationStore::new());
         locations.insert(
             CameraId::new(0),
-            CameraLocation {
+            CameraPose {
                 x: 0.0,
                 y: 0.0,
                 z: 0.0,
@@ -403,7 +403,7 @@ mod tests {
         );
         locations.insert(
             CameraId::new(1),
-            CameraLocation {
+            CameraPose {
                 x: 0.0,
                 y: 10.0,
                 z: 0.0,
@@ -477,10 +477,10 @@ mod tests {
 
     #[test]
     fn creates_track_after_rotating_device_rays_into_world_coordinates() {
-        let locations = camera_locations();
-        locations.insert(
+        let poses = camera_locations();
+        poses.insert(
             CameraId::new(1),
-            CameraLocation {
+            CameraPose {
                 x: 0.0,
                 y: 10.0,
                 z: 0.0,
@@ -493,7 +493,7 @@ mod tests {
         let frame = pair(vec![target], vec![camera_b_device_direction]);
 
         let (tracks, diagnostics): (Vec<StubTrack>, _) =
-            create_new_tracks(&TrackIdGenerator::new(), &[], &[], &frame, locations);
+            create_new_tracks(&TrackIdGenerator::new(), &[], &[], &frame, poses);
 
         assert_eq!(diagnostics.candidate_pairs, 1);
         assert_eq!(diagnostics.behind_camera_rejections, 0);
@@ -556,7 +556,7 @@ mod tests {
         let locations = camera_locations();
         locations.insert(
             CameraId::new(1),
-            CameraLocation {
+            CameraPose {
                 x: 0.0,
                 y: 100.0,
                 z: 0.0,

@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use nalgebra::{Rotation3, Vector3};
 use serde::{Deserialize, Serialize};
-use struckout_proto::{CameraLocation, Detection};
+use struckout_proto::{CameraPose, Detection};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FrameId(u32);
@@ -67,7 +67,7 @@ pub trait ToVector3 {
     fn to_vector3(&self) -> Vector3<f64>;
 }
 
-impl ToVector3 for CameraLocation {
+impl ToVector3 for CameraPose {
     fn to_vector3(&self) -> Vector3<f64> {
         Vector3::new(self.x, self.y, self.z)
     }
@@ -77,7 +77,7 @@ pub trait RotateToWorld {
     fn rotate_to_world(&self, direction: Vector3<f64>) -> Vector3<f64>;
 }
 
-impl RotateToWorld for CameraLocation {
+impl RotateToWorld for CameraPose {
     fn rotate_to_world(&self, direction: Vector3<f64>) -> Vector3<f64> {
         Rotation3::from_euler_angles(
             self.rotation_x_degrees.to_radians(),
@@ -109,8 +109,8 @@ mod tests {
 
     use super::*;
 
-    fn camera(rotation_x: f64, rotation_y: f64, rotation_z: f64) -> CameraLocation {
-        CameraLocation {
+    fn camera(rotation_x: f64, rotation_y: f64, rotation_z: f64) -> CameraPose {
+        CameraPose {
             x: 0.0,
             y: 0.0,
             z: 0.0,

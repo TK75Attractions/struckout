@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = tonic_prost_build::Config::new();
     config.type_attribute(".tk75attractions.struckout.v1.DetectionsPacket", SERDE_ATTR);
     config.type_attribute(".tk75attractions.struckout.v1.Detection", SERDE_ATTR);
-    config.type_attribute(".tk75attractions.struckout.v1.CameraLocation", SERDE_ATTR);
+    config.type_attribute(".tk75attractions.struckout.v1.CameraPose", SERDE_ATTR);
 
     tonic_prost_build::configure().compile_with_config(config, &proto_files, &[include])?;
     Ok(())
