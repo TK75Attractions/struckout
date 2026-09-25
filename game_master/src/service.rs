@@ -438,6 +438,28 @@ mod tests {
         }
     }
 
+    /// Waits for event matching `ev_pat`. Returns when a event from stream matches pattern, or panics when stream ends.
+    macro_rules! wait_event {
+        ($stream_var:ident, $ev_pat:pat) => {
+            loop {
+                use tokio_stream::StreamExt;
+                let Some(ev) = $stream_var.next().await else {
+                    panic!("event stream ended");
+                };
+                match ev {
+                    Ok(StartGameResponse {
+                        event:
+                            Some(::struckout_proto::Event {
+                                event_data: Some(ret @ $ev_pat),
+                                ..
+                            }),
+                    }) => break Some(ret),
+                    _ => (),
+                }
+            }
+        };
+    }
+
     #[tokio::test]
     async fn start_game_triggers_game_started_event() {
         let ds = StubDataSource {
@@ -527,9 +549,40 @@ mod tests {
         assert_matches!(finished, EventData::GameFinished(_));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn start_game_adds_to_and_removes_from_running_games() {
-        todo!()
+        let ds = StubDataSource {
+            game_id: GameId::new(20),
+            player_id: PlayerId::new(13),
+        };
+        let machine_id = MachineId::new(2);
+        let difficulty = Difficulty::Normal;
+        let service = GameMasterServiceImpl::new(ds.clone());
+
+        let req = {
+            let difficulty: i32 = difficulty.into();
+
+            Request::new(StartGameRequest {
+                machine_id: machine_id.into_inner(),
+                player_id: ds.player_id.into_inner(),
+                difficulty,
+            })
+        };
+        let stream = service.start_game(req).await.expect("should succeed");
+        let mut stream = stream.into_inner();
+
+        wait_event!(stream, EventData::GameStarted(_));
+        {
+            let guard = service.running_games.read();
+            guard.get(&ds.game_id).expect("should exist");
+        }
+
+        wait_event!(stream, EventData::GameFinished(_));
+        {
+            let guard = service.running_games.read();
+            let opt = guard.get(&ds.game_id);
+            assert!(opt.is_none());
+        }
     }
 
     #[tokio::test(start_paused = true)]
