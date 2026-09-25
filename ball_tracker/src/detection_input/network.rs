@@ -12,7 +12,7 @@ use tokio::{
     sync::mpsc,
     task::JoinHandle,
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace_span, warn};
 
 use crate::{
     CameraLocationStore,
