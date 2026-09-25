@@ -56,14 +56,14 @@ class TcpSessionImpl(
 
 
     init {
-        combine(cameraPoseDataSource.cameraPose, _connState) { location, connState ->
+        combine(cameraPoseDataSource.cameraPose, _connState) { pose, connState ->
             if (connState !is InternalSessionState.Connected) {
                 Timber.tag(TAG)
-                    .w("camera location was updated but cannot sync change to TCP server: TCP is not connected")
+                    .w("camera pose was updated but cannot sync change to TCP server: TCP is not connected")
                 return@combine
             }
-            Timber.tag(TAG).d("updating cameraLocation")
-            outChannel.send(OutputAction.UpdateCameraLocation(location))
+            Timber.tag(TAG).d("updating cameraPose")
+            outChannel.send(OutputAction.UpdateCameraPose(pose))
         }.launchIn(scope)
     }
 
@@ -134,10 +134,10 @@ class TcpSessionImpl(
             val curState = _connState.value
             check(curState is InternalSessionState.Connected)
             when (action) {
-                is OutputAction.UpdateCameraLocation -> writePacket(output, tcpClientPacket {
+                is OutputAction.UpdateCameraPose -> writePacket(output, tcpClientPacket {
                     this.updateCameraPose = TcpClientPacketKt.updateCameraPose {
                         cameraId = curState.cameraID.toInt()
-                        cameraPose = action.location
+                        cameraPose = action.pose
                     }
                 })
             }
@@ -148,7 +148,7 @@ class TcpSessionImpl(
      * Tells [outChannel] which actions to run.
      */
     private sealed interface OutputAction {
-        data class UpdateCameraLocation(val location: CameraBallTracker.CameraPose) :
+        data class UpdateCameraPose(val pose: CameraBallTracker.CameraPose) :
             OutputAction
     }
 
