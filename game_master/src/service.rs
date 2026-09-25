@@ -470,13 +470,6 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn start_game_stream_notifies_in_correct_order() {
-        tracing::subscriber::set_global_default(
-            tracing_subscriber::FmtSubscriber::builder()
-                .with_max_level(Level::TRACE)
-                .finish(),
-        )
-        .expect("failed to set default subscriber");
-
         let ds = StubDataSource {
             game_id: GameId::new(20),
             player_id: PlayerId::new(13),

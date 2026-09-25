@@ -297,4 +297,35 @@ mod tests {
         assert!(updated.score.is_some_and(|v| v == SCORE));
         assert_eq!(&updated.status, "finished");
     }
+
+    #[tokio::test]
+    async fn validate_player_name_returns_ok() {
+        let name = "テスタロウ";
+
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+
+        ds.validate_player_name(name)
+            .await
+            .expect("should return ok");
+    }
+
+    #[tokio::test]
+    async fn validate_player_name_returns_err_when_name_already_used() {
+        let name = "タロウ";
+
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+
+        sqlx::query!("INSERT INTO players (name) VALUES (?)", name)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = ds
+            .validate_player_name(name)
+            .await
+            .expect_err("should return error");
+        assert_matches!(err, ValidatePlayerNameError::AlreadyUsed(v) if v == name);
+    }
 }
