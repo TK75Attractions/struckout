@@ -89,12 +89,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v8
-      - run: |
-          ls -R ${GITHUB_WORKSPACE}
       - uses: actions/checkout@v7
         with:
           sparse-checkout: .
+      - uses: actions/download-artifact@v8
       - name: Remove old release
         # continue even when there's no previous release
         run: gh release delete nightly -y --cleanup-tag || true 
