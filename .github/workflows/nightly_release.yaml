@@ -1,10 +1,9 @@
 name: Nightly Release
 
 on:
-  # schedule:
-    # - cron: "0 18 * * *" # UTC 18:00, 03:00 in Japan
-  # workflow_dispatch:
-  workflow_call:
+  schedule:
+    - cron: "0 18 * * *" # UTC 18:00, 03:00 in Japan
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
