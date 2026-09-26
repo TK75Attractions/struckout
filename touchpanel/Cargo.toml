@@ -44,11 +44,12 @@ strum = { workspace = true, features = ["derive"] }
 enum_dispatch = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 
-i-slint-core = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
-
+i-slint-core = { workspace = true }
 slint = { workspace = true }
+
 [dev-dependencies]
-i-slint-backend-testing = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
+i-slint-backend-testing = { workspace = true }
+rstest = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }

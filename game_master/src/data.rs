@@ -5,7 +5,7 @@ use struckout_proto::{
 };
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource, GetGameResultError};
+use crate::{AddPlayerError, DataSource, GetGameResultError, ValidatePlayerNameError};
 
 const STATUS_FINISHED: &str = "finished";
 const STATUS_RUNNING: &str = "running";
@@ -116,6 +116,20 @@ impl DataSource for DataSourceImpl {
         let score = row.score.unwrap();
 
         Ok(GameRecord { score })
+    }
+
+    async fn validate_player_name(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> Result<(), ValidatePlayerNameError> {
+        let name = name.into();
+        let res = sqlx::query!("SELECT * FROM players WHERE name = ?", name)
+            .fetch_optional(&self.pool)
+            .await?;
+        match res {
+            Some(v) => Err(ValidatePlayerNameError::AlreadyUsed(v.name)),
+            None => Ok(()),
+        }
     }
 }
 
@@ -282,5 +296,36 @@ mod tests {
             .unwrap();
         assert!(updated.score.is_some_and(|v| v == SCORE));
         assert_eq!(&updated.status, "finished");
+    }
+
+    #[tokio::test]
+    async fn validate_player_name_returns_ok() {
+        let name = "テスタロウ";
+
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+
+        ds.validate_player_name(name)
+            .await
+            .expect("should return ok");
+    }
+
+    #[tokio::test]
+    async fn validate_player_name_returns_err_when_name_already_used() {
+        let name = "タロウ";
+
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+
+        sqlx::query!("INSERT INTO players (name) VALUES (?)", name)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = ds
+            .validate_player_name(name)
+            .await
+            .expect_err("should return error");
+        assert_matches!(err, ValidatePlayerNameError::AlreadyUsed(v) if v == name);
     }
 }

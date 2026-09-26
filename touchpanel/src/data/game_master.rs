@@ -4,8 +4,9 @@ use futures_util::Stream;
 use parking_lot::{RwLock, RwLockReadGuard};
 use struckout_proto::{
     AddPlayerRequest, AddPlayerResponse, Difficulty, GetGameResultRequest, GetGameResultResponse,
-    StartGameRequest, StartGameResponse, event::EventData,
-    game_master_service_client::GameMasterServiceClient, types::GameId,
+    StartGameRequest, StartGameResponse, ValidatePlayerNameRequest, ValidatePlayerNameResponse,
+    event::EventData, game_master_service_client::GameMasterServiceClient, types::GameId,
+    validate_player_name_response::ValidatePlayerNameResp,
 };
 use thiserror::Error;
 use tokio::sync::{broadcast, watch};
@@ -51,6 +52,11 @@ pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
         &mut self,
         request: impl tonic::IntoRequest<GetGameResultRequest>,
     ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>>;
+
+    fn validate_player_name(
+        &mut self,
+        request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
+    ) -> impl Future<Output = Result<Response<ValidatePlayerNameResponse>, Status>>;
 }
 
 #[derive(derive_more::Debug, Clone)]
@@ -141,6 +147,13 @@ impl InternalGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
         request: impl tonic::IntoRequest<GetGameResultRequest>,
     ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>> {
         self.get_game_result(request)
+    }
+
+    fn validate_player_name(
+        &mut self,
+        request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
+    ) -> impl Future<Output = Result<Response<ValidatePlayerNameResponse>, Status>> {
+        self.validate_player_name(request)
     }
 }
 
@@ -252,6 +265,30 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
             })
             .await
             .map(|resp| resp.into_inner().total_score)
+    }
+
+    pub async fn validate_player_name(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<ValidatePlayerNameResp, RequestError> {
+        let res = self
+            .client
+            .validate_player_name(ValidatePlayerNameRequest {
+                player_name: name.into(),
+            })
+            .await;
+        match res {
+            Ok(resp) => {
+                let resp = resp.into_inner();
+                resp.validate_player_name_resp.ok_or({
+                    RequestError::missing_field(
+                        "ValidatePlayerNameResponse",
+                        "validate_player_name_resp",
+                    )
+                })
+            }
+            Err(e) => Err(RequestError::Grpc(e)),
+        }
     }
 
     /// Returns the current session state.
@@ -492,6 +529,13 @@ mod tests {
             &mut self,
             request: impl tonic::IntoRequest<GetGameResultRequest>,
         ) -> Result<Response<GetGameResultResponse>, Status> {
+            unimplemented!()
+        }
+
+        async fn validate_player_name(
+            &mut self,
+            request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
+        ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
             unimplemented!()
         }
     }

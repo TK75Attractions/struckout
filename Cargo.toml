@@ -58,13 +58,15 @@ tonic-prost = "0.14.6"
 tonic-prost-build = "0.14.6"
 
 # slint
-slint = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
-slint-build = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
-i-slint-backend-testing = { git = "https://github.com/taichi765/slint", branch = "feat/add-compiler-config-for-attribute" }
+slint = { git = "https://github.com/taichi765/slint" }
+slint-build = { git = "https://github.com/taichi765/slint" }
+i-slint-core = { git = "https://github.com/taichi765/slint" }
+i-slint-backend-testing = { git = "https://github.com/taichi765/slint" }
 stern = { git = "https://github.com/taichi765/stern" }
 
 # dev-dependencies
 testcontainers-modules = "0.15.0"
+rstest = "0.27.0"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
@@ -74,6 +76,3 @@ opt-level = 3
 
 [profile.dev.package.slint]
 opt-level = 3
-
-#[patch."https://github.com/taichi765/slint"]
-#slint-build = { path = "../slint/api/rs/build/" }
