@@ -1,8 +1,9 @@
-name: Rust build
+name: Nightly Release
 
 on:
-  push:
-    branches: [ "main" ]
+  schedule:
+    - cron: "0 18 * * *" # UTC 18:00, 03:00 in Japan
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -68,3 +69,16 @@ jobs:
         with:
           name: touchpanel-x86_64-linux
           path: ./target/release/touchpanel
+  
+  publish-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+      - name: Remove old release
+        run: gh release delete nightly -y --cleanup-tag
+      - name: Create release
+        run: |
+          gh release create nightly --notes "nightly release" \
+            ${GITHUB_WORKSPACE}/touchpanel-x86_64-linux ${GITHUB_WORKSPACE}/ball-tracker-x86_64-linux \
+            ${GITHUB_WORKSPACE}/touchpanel-x86_64-windows ${GITHUB_WORKSPACE}/ball-tracker-x86_64-windows \
+            ${GITHUB_WORKSPACE}/touchpanel-aarch64-macos ${GITHUB_WORKSPACE}/ball-tracker-aarch64-macos
