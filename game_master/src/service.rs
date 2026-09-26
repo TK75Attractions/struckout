@@ -4,9 +4,10 @@ use parking_lot::RwLock;
 use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
     GetGameResultRequest, GetGameResultResponse, ListenEventsRequest, ListenEventsResponse,
-    StartGameRequest, StartGameResponse,
+    StartGameRequest, StartGameResponse, ValidatePlayerNameRequest, ValidatePlayerNameResponse,
     game_master_service_server::GameMasterService,
     types::{GameId, MachineId},
+    validate_player_name_response::ValidatePlayerNameResp,
 };
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
@@ -17,7 +18,7 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{AddPlayerError, DataSource, GetGameResultError};
+use crate::{AddPlayerError, DataSource, GetGameResultError, ValidatePlayerNameError};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
@@ -289,6 +290,28 @@ where
             Err(GetGameResultError::Sqlx(e)) => Err(Status::internal(e.to_string())),
         }
     }
+
+    async fn validate_player_name(
+        &self,
+        req: Request<ValidatePlayerNameRequest>,
+    ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
+        let req = req.into_inner();
+        match self.data_source.validate_player_name(req.player_name).await {
+            Ok(_) => Ok(Response::new(ValidatePlayerNameResponse {
+                validate_player_name_resp: Some(ValidatePlayerNameResp::Ok(
+                    struckout_proto::validate_player_name_response::Ok {},
+                )),
+            })),
+            Err(ValidatePlayerNameError::AlreadyUsed(_name)) => {
+                Ok(Response::new(ValidatePlayerNameResponse {
+                    validate_player_name_resp: Some(ValidatePlayerNameResp::AlreadyUsed(
+                        struckout_proto::validate_player_name_response::AlreadyUsed {},
+                    )),
+                }))
+            }
+            Err(ValidatePlayerNameError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        }
+    }
 }
 
 /// Filters events from `event_rx` by `game_id` and pass it through the response stream.
@@ -369,7 +392,6 @@ mod tests {
     use std::assert_matches;
 
     use struckout_proto::event::EventData;
-    use tracing::Level;
 
     use crate::{AddPlayerError, PlayerId};
 
@@ -402,10 +424,39 @@ mod tests {
 
         async fn get_game_result(
             &self,
-            game_id: GameId,
+            _game_id: GameId,
         ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
             unimplemented!()
         }
+
+        async fn validate_player_name(
+            &self,
+            _name: impl Into<String>,
+        ) -> Result<(), ValidatePlayerNameError> {
+            unimplemented!()
+        }
+    }
+
+    /// Waits for event matching `ev_pat`. Returns when a event from stream matches pattern, or panics when stream ends.
+    macro_rules! wait_event {
+        ($stream_var:ident, $ev_pat:pat) => {
+            loop {
+                use tokio_stream::StreamExt;
+                let Some(ev) = $stream_var.next().await else {
+                    panic!("event stream ended");
+                };
+                match ev {
+                    Ok(StartGameResponse {
+                        event:
+                            Some(::struckout_proto::Event {
+                                event_data: Some(ret @ $ev_pat),
+                                ..
+                            }),
+                    }) => break Some(ret),
+                    _ => (),
+                }
+            }
+        };
     }
 
     #[tokio::test]
@@ -440,13 +491,6 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn start_game_stream_notifies_in_correct_order() {
-        tracing::subscriber::set_global_default(
-            tracing_subscriber::FmtSubscriber::builder()
-                .with_max_level(Level::TRACE)
-                .finish(),
-        )
-        .expect("failed to set default subscriber");
-
         let ds = StubDataSource {
             game_id: GameId::new(20),
             player_id: PlayerId::new(13),
@@ -497,16 +541,47 @@ mod tests {
             let EventData::GameTimeLimitNotify(notify) = ev else {
                 break ev;
             };
-            let rem = notify.remaining.unwrap();
+            let _rem = notify.remaining.unwrap();
         };
 
         // Assert: Finished
         assert_matches!(finished, EventData::GameFinished(_));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn start_game_adds_to_and_removes_from_running_games() {
-        todo!()
+        let ds = StubDataSource {
+            game_id: GameId::new(20),
+            player_id: PlayerId::new(13),
+        };
+        let machine_id = MachineId::new(2);
+        let difficulty = Difficulty::Normal;
+        let service = GameMasterServiceImpl::new(ds.clone());
+
+        let req = {
+            let difficulty: i32 = difficulty.into();
+
+            Request::new(StartGameRequest {
+                machine_id: machine_id.into_inner(),
+                player_id: ds.player_id.into_inner(),
+                difficulty,
+            })
+        };
+        let stream = service.start_game(req).await.expect("should succeed");
+        let mut stream = stream.into_inner();
+
+        wait_event!(stream, EventData::GameStarted(_));
+        {
+            let guard = service.running_games.read();
+            guard.get(&ds.game_id).expect("should exist");
+        }
+
+        wait_event!(stream, EventData::GameFinished(_));
+        {
+            let guard = service.running_games.read();
+            let opt = guard.get(&ds.game_id);
+            assert!(opt.is_none());
+        }
     }
 
     #[tokio::test(start_paused = true)]

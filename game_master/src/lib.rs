@@ -39,6 +39,11 @@ pub trait DataSource: Clone + Send + Sync + 'static {
         &self,
         game_id: GameId,
     ) -> impl Future<Output = Result<GameRecord, GetGameResultError>> + Send;
+
+    fn validate_player_name(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> impl Future<Output = Result<(), ValidatePlayerNameError>> + Send;
 }
 
 /// Error returned from [`DataSource::add_player()`].
@@ -57,6 +62,15 @@ pub enum GetGameResultError {
     NotYetCompleted,
     #[error("game not found in the database")]
     GameNotFound,
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::validate_player_name()`].
+#[derive(Debug, Error)]
+pub enum ValidatePlayerNameError {
+    #[error("Player name {0} is already used")]
+    AlreadyUsed(String),
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }
