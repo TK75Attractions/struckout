@@ -49,6 +49,7 @@ slint = { workspace = true }
 
 [dev-dependencies]
 i-slint-backend-testing = { workspace = true }
+rstest = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }
