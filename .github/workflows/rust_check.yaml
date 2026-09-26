@@ -3,8 +3,28 @@ name: Rust check
 on: 
   push:
     branches: main
+    paths:
+      - .cargo/**
+      - .mise/**
+      - api/proto/**
+      - api/rust/**
+      - ball_tracker/**
+      - game_master/**
+      - migrations/mysql/**
+      - touchpanel/**
+      - xtask/**
   pull_request:
     branches: main
+    paths:
+      - .cargo/**
+      - .mise/**
+      - api/proto/**
+      - api/rust/**
+      - ball_tracker/**
+      - game_master/**
+      - migrations/mysql/**
+      - touchpanel/**
+      - xtask/**
 
 env:
   CARGO_TERM_COLOR: always

@@ -5,10 +5,12 @@ on:
     branches: main
     paths: 
       - struckoutCameraApp/**
+      - api/proto/**
   pull_request:
     branches: main
     paths:
       - struckoutCameraApp/**
+      - api/proto/**
   workflow_dispatch: 
 
 jobs:
