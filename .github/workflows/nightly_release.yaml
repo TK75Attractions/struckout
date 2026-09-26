@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: ${{ matrix.os == 'windows-2022' }}
         with:
-          name: ball_tracker-x86_64-windows
+          name: ball-tracker-x86_64-windows
           path: ./target/release/ball_tracker.exe
       - name: Upload touchpanel (Windows)
         uses: actions/upload-artifact@v7
@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: ${{ matrix.os == 'macos-14' }} 
         with:
-          name: ball_tracker-aarch64-macos
+          name: ball-tracker-aarch64-macos
           path: ./target/release/ball_tracker
       - name: Upload touchpanel (macOS)
         uses: actions/upload-artifact@v7
