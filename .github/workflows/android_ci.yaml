@@ -21,7 +21,11 @@ jobs:
       run:
         working-directory: struckoutCameraApp/
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            struckoutCameraApp
+            api/proto
       - uses: actions/setup-java@v4
         with:
           java-version: '17'

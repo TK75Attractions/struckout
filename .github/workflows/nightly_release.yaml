@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  rust-build:
     strategy:
       matrix:
         os: ["windows-2022", "macos-14", "ubuntu-22.04"]
@@ -19,6 +19,17 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .cargo
+            .mise
+            api/proto
+            api/rust
+            ball_tracker
+            game_master
+            migrations/mysql
+            touchpanel
+            xtask
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
       - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
         with:
@@ -73,13 +84,13 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'main' }}
-    needs: [build]
+    needs: [rust-build]
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v8
       - run: |
-          ls -R 
+          ls -R ${GITHUB_WORKSPACE}
       - uses: actions/checkout@v7
         with:
           sparse-checkout: .
