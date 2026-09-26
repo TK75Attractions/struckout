@@ -1,9 +1,10 @@
 name: Nightly Release
 
 on:
-  schedule:
-    - cron: "0 18 * * *" # UTC 18:00, 03:00 in Japan
-  workflow_dispatch:
+  # schedule:
+    # - cron: "0 18 * * *" # UTC 18:00, 03:00 in Japan
+  # workflow_dispatch:
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
@@ -100,13 +101,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Create release
         run: |
-          gh release create nightly --notes "nightly release" \
-            ${GITHUB_WORKSPACE}/touchpanel-x86_64-linux/touchpanel#touchpanel-x86_64-linux \
-            ${GITHUB_WORKSPACE}/ball-tracker-x86_64-linux/ball_tracker#ball-tracker-x86_64-linux \
-            ${GITHUB_WORKSPACE}/touchpanel-x86_64-windows/touchpanel.exe#touchpanel-x86_64-windows.exe \
-            ${GITHUB_WORKSPACE}/ball-tracker-x86_64-windows/ball_tracker.exe#ball-tracker-x86_64-windows.exe \
-            ${GITHUB_WORKSPACE}/touchpanel-aarch64-macos/touchpanel#touchpanel-aarch64-macos \
-            ${GITHUB_WORKSPACE}/ball-tracker-aarch64-macos/ball_tracker#ball-tracker-aarch64-macos \
-          ||gh release view nightly --json assets --jq '.assets[].name'
+          mkdir upload
+
+          mv touchpanel-x86_64-linux/touchpanel upload/touchpanel-x86_64-linux
+          mv ball-tracker-x86_64-linux/ball_tracker upload/ball-tracker-x86_64-linux
+          mv touchpanel-x86_64-windows/touchpanel.exe upload/touchpanel-x86_64-windows.exe
+          mv ball-tracker-x86_64-windows/ball_tracker.exe upload/ball-tracker-x86_64-windows.exe
+          mv touchpanel-aarch64-macos/touchpanel upload/touchpanel-aarch64-macos
+          mv ball-tracker-aarch64-macos/ball_tracker upload/ball-tracker-aarch64-macos
+
+          gh release create nightly --notes "nightly release" upload/*
         env:
           GH_TOKEN: ${{ github.token }}
