@@ -78,6 +78,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v8
+      - run: |
+          ls -R 
       - uses: actions/checkout@v7
         with:
           sparse-checkout: ''
