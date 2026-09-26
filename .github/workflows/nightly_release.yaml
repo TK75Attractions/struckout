@@ -25,6 +25,7 @@ jobs:
             .mise
             api/proto
             api/rust
+            api/spec
             ball_tracker
             game_master
             migrations/mysql
