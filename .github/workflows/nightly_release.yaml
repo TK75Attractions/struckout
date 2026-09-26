@@ -106,7 +106,7 @@ jobs:
             ${GITHUB_WORKSPACE}/touchpanel-x86_64-windows/touchpanel.exe#touchpanel-x86_64-windows.exe \
             ${GITHUB_WORKSPACE}/ball-tracker-x86_64-windows/ball_tracker.exe#ball-tracker-x86_64-windows.exe \
             ${GITHUB_WORKSPACE}/touchpanel-aarch64-macos/touchpanel#touchpanel-aarch64-macos \
-            ${GITHUB_WORKSPACE}/ball-tracker-aarch64-macos/ball_tracker#ball-tracker-aarch64-macos
-          gh release view nightly --json assets --jq '.assets[].name'
+            ${GITHUB_WORKSPACE}/ball-tracker-aarch64-macos/ball_tracker#ball-tracker-aarch64-macos \
+          ||gh release view nightly --json assets --jq '.assets[].name'
         env:
           GH_TOKEN: ${{ github.token }}
