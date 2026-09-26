@@ -84,7 +84,8 @@ jobs:
         with:
           sparse-checkout: .
       - name: Remove old release
-        run: gh release delete nightly -y --cleanup-tag
+        # continue even when there's no previous release
+        run: gh release delete nightly -y --cleanup-tag || true 
         env: 
           GH_TOKEN: ${{ github.token }}
       - name: Create release
