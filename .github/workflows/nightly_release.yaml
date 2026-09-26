@@ -76,6 +76,7 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/download-artifact@v8
+      - uses: actions/checkout@v7
       - name: Remove old release
         run: gh release delete nightly -y --cleanup-tag
         env: 
