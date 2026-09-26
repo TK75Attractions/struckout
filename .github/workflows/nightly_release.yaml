@@ -88,8 +88,11 @@ jobs:
       - name: Create release
         run: |
           gh release create nightly --notes "nightly release" \
-            ${GITHUB_WORKSPACE}/touchpanel-x86_64-linux ${GITHUB_WORKSPACE}/ball-tracker-x86_64-linux \
-            ${GITHUB_WORKSPACE}/touchpanel-x86_64-windows ${GITHUB_WORKSPACE}/ball-tracker-x86_64-windows \
-            ${GITHUB_WORKSPACE}/touchpanel-aarch64-macos ${GITHUB_WORKSPACE}/ball-tracker-aarch64-macos
+            ${GITHUB_WORKSPACE}/touchpanel-x86_64-linux/touchpanel-x86_64-linux \
+            ${GITHUB_WORKSPACE}/ball-tracker-x86_64-linux/ball-tracker-x86_64-linux \
+            ${GITHUB_WORKSPACE}/touchpanel-x86_64-windows/touchpanel-x86_64-windows \
+            ${GITHUB_WORKSPACE}/ball-tracker-x86_64-windows/ball-tracker-x86_64-windows \
+            ${GITHUB_WORKSPACE}/touchpanel-aarch64-macos/touchpanel-aarch64-macos \
+            ${GITHUB_WORKSPACE}/ball-tracker-aarch64-macos/ball-tracker-aarch64-macos
         env:
           GH_TOKEN: ${{ github.token }}
