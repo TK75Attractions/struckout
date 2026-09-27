@@ -39,7 +39,7 @@ impl FallbackDestination {
 }
 
 impl NavDestination<NavRoute> for FallbackDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         let NavRoute::Fallback(msg) = route else {
             panic!("matched variant should be given");
         };

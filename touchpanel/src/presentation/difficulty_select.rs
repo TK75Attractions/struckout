@@ -2,7 +2,11 @@ use slint::{ComponentHandle, Global};
 use tokio::sync::oneshot;
 
 use crate::{Application, Context, NavController};
-use stern::{GlobalExt as _, WorkerThread, nav::NavDestination};
+use stern::{
+    WorkerThread,
+    nav::NavDestination,
+    worker::{ForegroundExecutor, SlintExecutor},
+};
 use struckout_proto::types::PlayerId;
 use touchpanel_ui::{
     DifficulitySelectPropertyMappers, DifficulitySelectStates, DifficulitySelectViewModelTrait,
@@ -12,17 +16,17 @@ use tracing::{debug, trace};
 
 touchpanel_ui::define_difficulity_select_mapper! {}
 
-viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
+// viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 
 #[derive(Debug)]
-struct DifficulitySelectViewModel {
+struct DifficulitySelectViewModel<E> {
     nav_controller: NavController,
-    worker: WorkerThread<Context>,
+    worker: WorkerThread<Context, E>,
     state: DifficulitySelectStates<Mapper>,
     player_id: Option<PlayerId>,
 }
 
-impl DifficulitySelectViewModel {
+impl DifficulitySelectViewModel<SlintExecutor> {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
@@ -38,7 +42,10 @@ impl DifficulitySelectViewModel {
     }
 }
 
-impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
+impl<E> DifficulitySelectViewModelTrait for DifficulitySelectViewModel<E>
+where
+    E: ForegroundExecutor,
+{
     fn on_start_game(&mut self) {
         trace!("DifficulitySelectViewModel::on_start_game");
 
@@ -77,24 +84,23 @@ impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
 
 pub struct DifficultySelectDestination(
     #[allow(unused)] // may used when some arg is added to the route
-    DifficulitySelectViewModelRc,
+    DifficulitySelectViewModel<SlintExecutor>,
 );
 
 impl DifficultySelectDestination {
     pub fn new(application: &Application) -> Self {
-        Self(DifficulitySelectViewModelRc::new(application))
+        Self(DifficulitySelectViewModel::new(application))
     }
 }
 
 impl NavDestination<NavRoute> for DifficultySelectDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading DifficultySelectViewModel");
         let NavRoute::DifficulitySelect { player_id } = route else {
             panic!("matched variant should be given");
         };
 
-        let mut vm = self.0.borrow_mut();
-        vm.player_id = Some(*player_id);
+        self.0.player_id = Some(*player_id);
     }
 
     fn route(&self) -> NavRouteKind {

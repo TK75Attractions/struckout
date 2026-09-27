@@ -42,7 +42,7 @@ impl RankingDestination {
 }
 
 impl NavDestination<NavRoute> for RankingDestination {
-    fn load(&self, route: &touchpanel_ui::NavRoute) {
+    fn load(&mut self, route: &touchpanel_ui::NavRoute) {
         debug!("loading RankingScreen");
 
         let NavRoute::Ranking = route else {

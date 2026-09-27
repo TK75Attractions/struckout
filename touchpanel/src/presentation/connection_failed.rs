@@ -2,7 +2,11 @@ use std::sync::Arc;
 
 use crate::{Application, Config, Context, NavController, presentation::connect_to_game_master};
 use slint::{ComponentHandle, Global, ToSharedString};
-use stern::{GlobalExt, WorkerThread, nav::NavDestination};
+use stern::{
+    WorkerThread,
+    nav::NavDestination,
+    worker::{ForegroundExecutor, SlintExecutor},
+};
 use touchpanel_ui::{
     ConnectionFailedPropertyMappers, ConnectionFailedStates, ConnectionFailedViewModelTrait,
     NavRoute, NavRouteKind,
@@ -11,16 +15,16 @@ use tracing::{debug, warn};
 
 touchpanel_ui::define_connection_failed_mapper! {}
 
-viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
+// viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
 
-struct ConnectionFailedViewModel {
+struct ConnectionFailedViewModel<E> {
     nav_controller: NavController,
     config: Arc<Config>,
-    worker: WorkerThread<Context>,
+    worker: WorkerThread<Context, E>,
     state: ConnectionFailedStates<Mapper>,
 }
 
-impl ConnectionFailedViewModel {
+impl ConnectionFailedViewModel<SlintExecutor> {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
@@ -36,7 +40,10 @@ impl ConnectionFailedViewModel {
     }
 }
 
-impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
+impl<E> ConnectionFailedViewModelTrait for ConnectionFailedViewModel<E>
+where
+    E: ForegroundExecutor + Clone + 'static,
+{
     fn on_retry_connection(&mut self) {
         let nc = self.nav_controller.clone();
         let config = self.config.clone();
@@ -61,31 +68,26 @@ impl ConnectionFailedViewModelTrait for ConnectionFailedViewModel {
 }
 
 pub struct ConnectionFailedDestination {
-    viewmodel: ConnectionFailedViewModelRc,
+    viewmodel: ConnectionFailedViewModel<SlintExecutor>,
 }
 
 impl ConnectionFailedDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            viewmodel: ConnectionFailedViewModelRc::new(application),
+            viewmodel: ConnectionFailedViewModel::new(application),
         }
     }
 }
 
 impl NavDestination<NavRoute> for ConnectionFailedDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading ConnectionFailedViewModel");
 
         let NavRoute::ConnectionFailed(msg) = route else {
             panic!("matched variant should be given");
         };
 
-        self.viewmodel
-            .0
-            .borrow()
-            .state
-            .error_msg
-            .set(msg.to_shared_string());
+        self.viewmodel.state.error_msg.set(msg.to_shared_string());
     }
 
     fn route(&self) -> NavRouteKind {

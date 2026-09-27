@@ -58,7 +58,7 @@ impl StartScreenDestination {
 }
 
 impl NavDestination<NavRoute> for StartScreenDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading StartScreenViewModel");
 
         let NavRoute::Start = route else {
