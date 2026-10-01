@@ -239,10 +239,6 @@ impl NavDestination<NavRoute> for NameInputDestination {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::RequestError;
-    use rstest::rstest;
-    use slint::ToSharedString;
-
     use std::{
         cell::RefCell,
         pin::Pin,
@@ -252,15 +248,12 @@ mod tests {
             atomic::{AtomicU8, Ordering},
         },
     };
-    use stern::{WorkerThread, nav::NavController, worker::SmolExecutor};
-    use struckout_proto::{
-        types::PlayerId,
-        validate_player_name_response::{self, ValidatePlayerNameResp},
-    };
+
+    use rstest::rstest;
+    use stern::worker::SmolExecutor;
+    use struckout_proto::validate_player_name_response;
     use time::ext::NumericalDuration;
-    use tonic::Status;
-    use touchpanel_ui::{NameInputStates, NavRoute, UiNavRoute};
-    use tracing::trace;
+    use touchpanel_ui::UiNavRoute;
 
     use super::*;
 
