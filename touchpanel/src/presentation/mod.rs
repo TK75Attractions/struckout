@@ -10,7 +10,7 @@ use crate::{
         score::ScoreDestination, start::StartScreenDestination,
     },
 };
-use stern::{WorkerThread, nav::NavHost};
+use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
 use tokio::{sync::oneshot, time::timeout};
 use touchpanel_ui::NavRoute;
 use tracing::{debug, warn};
@@ -82,11 +82,14 @@ pub mod start;
 ///
 /// When succeeded, it navigates to `StartScreen` and returns connected [`GameMasterClient`].
 /// When failed, it navigates to `ConnectionFailedScreen` with error message.
-async fn connect_to_game_master(
-    worker: &WorkerThread<Context>,
+async fn connect_to_game_master<E>(
+    worker: &WorkerThread<Context, E>,
     nc: NavController,
     config: Arc<Config>,
-) -> Result<GameMasterClient, ()> {
+) -> Result<GameMasterClient, ()>
+where
+    E: ForegroundExecutor,
+{
     let (tx, rx) = oneshot::channel();
 
     worker.spawn_cx({

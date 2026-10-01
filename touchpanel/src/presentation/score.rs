@@ -1,6 +1,10 @@
 use crate::{Application, Context, NavController};
 use slint::{ComponentHandle, Global};
-use stern::{WorkerThread, nav::NavDestination};
+use stern::{
+    WorkerThread,
+    nav::NavDestination,
+    worker::{ForegroundExecutor, SlintExecutor},
+};
 use struckout_proto::types::GameId;
 use tokio::sync::oneshot;
 use touchpanel_ui::{
@@ -10,15 +14,15 @@ use tracing::debug;
 
 touchpanel_ui::define_score_mapper! {}
 
-viewmodel_rc!(ScoreViewModel<C>, ScoreAdopter);
+// viewmodel_rc!(ScoreViewModel<C>, ScoreAdopter);
 
 #[derive(Debug)]
-struct ScoreViewModel<C> {
-    worker: WorkerThread<C>,
+struct ScoreViewModel<C, E> {
+    worker: WorkerThread<C, E>,
     nav_controller: NavController,
     state: ScoreStates<Mapper>,
 }
-impl ScoreViewModel<Context> {
+impl ScoreViewModel<Context, SlintExecutor> {
     fn new(application: &Application) -> Self {
         Self {
             worker: application.worker.clone(),
@@ -33,7 +37,10 @@ impl ScoreViewModel<Context> {
     }
 }
 
-impl<C> ScoreViewModel<C> {
+impl<C, E> ScoreViewModel<C, E>
+where
+    E: ForegroundExecutor,
+{
     fn show_result(&self, game_id: GameId)
     where
         C: GameResultProvider,
@@ -67,7 +74,7 @@ impl<C> ScoreViewModel<C> {
     }
 }
 
-impl<C> ScoreViewModelTrait for ScoreViewModel<C> {
+impl<C, E> ScoreViewModelTrait for ScoreViewModel<C, E> {
     fn on_next_clicked(&mut self) {
         self.nav_controller.navigate(NavRoute::Ranking);
     }
@@ -88,27 +95,27 @@ impl GameResultProvider for Context {
 }
 
 pub struct ScoreDestination {
-    worker: WorkerThread<Context>,
-    viewmodel: ScoreViewModelRc<Context>,
+    worker: WorkerThread<Context, SlintExecutor>,
+    viewmodel: ScoreViewModel<Context, SlintExecutor>,
 }
 
 impl ScoreDestination {
     pub fn new(application: &Application) -> Self {
         Self {
             worker: application.worker.clone(),
-            viewmodel: ScoreViewModelRc::new(application),
+            viewmodel: ScoreViewModel::new(application),
         }
     }
 }
 
 impl NavDestination<NavRoute> for ScoreDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading ScoreViewModel");
         let NavRoute::Score { game_id } = route else {
             panic!("matched variant should be given");
         };
 
-        self.viewmodel.borrow().show_result(*game_id);
+        self.viewmodel.show_result(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {

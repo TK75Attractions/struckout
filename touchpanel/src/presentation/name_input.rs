@@ -1,5 +1,9 @@
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
-use stern::{WorkerThread, nav::NavDestination};
+use stern::{
+    WorkerThread,
+    nav::NavDestination,
+    worker::{ForegroundExecutor, SlintExecutor},
+};
 use struckout_proto::{types::PlayerId, validate_player_name_response::ValidatePlayerNameResp};
 use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
@@ -15,14 +19,14 @@ use touchpanel_ui::{
 
 touchpanel_ui::define_name_input_mapper! {}
 
-viewmodel_rc!(NameInputViewModel<C>, NameInputAdopter);
+// viewmodel_rc!(NameInputViewModel<C>, NameInputAdopter);
 
 // TODO: 一タイプごとにvalidateする
 
 #[derive(Debug)]
-pub struct NameInputViewModel<C> {
+pub struct NameInputViewModel<C, E> {
     pub nav_controller: NavController,
-    pub worker: WorkerThread<C>,
+    pub worker: WorkerThread<C, E>,
     pub state: NameInputStates<Mapper>,
     /// Token to cancel request to game-master.
     pub gm_cancel_tok: Option<CancellationToken>,
@@ -55,7 +59,7 @@ impl PlayerRepository for Context {
     }
 }
 
-impl NameInputViewModel<Context> {
+impl NameInputViewModel<Context, SlintExecutor> {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
@@ -70,11 +74,14 @@ impl NameInputViewModel<Context> {
         }
     }
 }
-impl<C> NameInputViewModel<C>
+
+impl<C, E> NameInputViewModel<C, E>
 where
     C: PlayerRepository,
+    E: ForegroundExecutor,
 {
-    fn validate_new_name(&mut self, name: impl Into<String>) -> slint::JoinHandle<()> {
+    /// Validates `name`. Returns the handle to the task which handles validation result.
+    fn validate_new_name(&mut self, name: impl Into<String>) -> E::SpawnedHandle {
         let name = name.into();
 
         self.cancel_previous_request();
@@ -86,21 +93,21 @@ where
             trace!(name, "validating");
             tokio::select! {
                 _ = cancel_tok.cancelled() => {
-                    trace!("cancelled");
                     tx.send(None).unwrap();
                 },
                 res = cx.validate_player_name(name) => {
-                    trace!("not cancelled");
                     tx.send(Some(res)).unwrap();
                 }
             }
         });
-        slint::spawn_local({
+        self.worker.spawn_local({
             let nc = self.nav_controller.clone();
             let msg_prop = self.state.error_msg.clone();
             async move {
                 match rx.await.unwrap() {
-                    Some(Ok(ValidatePlayerNameResp::Ok(_))) => (),
+                    Some(Ok(ValidatePlayerNameResp::Ok(_))) => {
+                        msg_prop.set("".to_shared_string());
+                    }
                     Some(Ok(ValidatePlayerNameResp::AlreadyUsed(_))) => {
                         msg_prop.set("プレイヤー名は既に使われています".to_shared_string());
                     }
@@ -108,13 +115,11 @@ where
                         nc.navigate(NavRoute::Fallback(e.to_string()));
                     }
                     // cancelled
-                    None => (),
+                    None => trace!("validation request cancelled"),
                 }
-                trace!("finished");
             }
             .in_current_span()
         })
-        .unwrap()
     }
 
     /// Cancels previous request to game-master.
@@ -125,7 +130,7 @@ where
     }
 
     #[instrument(skip(self), level = "debug")]
-    pub fn on_push_character_impl(&mut self, char: SharedString) -> slint::JoinHandle<()> {
+    pub fn on_push_character_impl(&mut self, char: SharedString) -> E::SpawnedHandle {
         trace!("NameInputViewModel::on_push_character");
 
         assert_eq!(char.chars().count(), 1, "character length must 1");
@@ -137,9 +142,10 @@ where
     }
 }
 
-impl<C> NameInputViewModelTrait for NameInputViewModel<C>
+impl<C, E> NameInputViewModelTrait for NameInputViewModel<C, E>
 where
     C: PlayerRepository,
+    E: ForegroundExecutor,
 {
     fn on_switch_keyboard_mode(&mut self) {
         trace!("NameInputViewModel::on_switch_keyboard_mode");
@@ -207,17 +213,17 @@ fn pop_player_name(old_text: impl Into<String>) -> SharedString {
 
 pub struct NameInputDestination(
     #[allow(dead_code)] // may used when some arg is added to the route
-    NameInputViewModelRc<Context>,
+    NameInputViewModel<Context, SlintExecutor>,
 );
 
 impl NameInputDestination {
     pub fn new(application: &Application) -> Self {
-        Self(NameInputViewModelRc::new(application))
+        Self(NameInputViewModel::new(application))
     }
 }
 
 impl NavDestination<NavRoute> for NameInputDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading NameInputViewModel");
         let NavRoute::NameInput(mode) = route else {
             panic!("matched variant should be given");
@@ -233,6 +239,29 @@ impl NavDestination<NavRoute> for NameInputDestination {
 
 #[cfg(test)]
 mod tests {
+    use crate::data::RequestError;
+    use rstest::rstest;
+    use slint::ToSharedString;
+
+    use std::{
+        cell::RefCell,
+        pin::Pin,
+        rc::Rc,
+        sync::{
+            Arc,
+            atomic::{AtomicU8, Ordering},
+        },
+    };
+    use stern::{WorkerThread, nav::NavController, worker::SmolExecutor};
+    use struckout_proto::{
+        types::PlayerId,
+        validate_player_name_response::{self, ValidatePlayerNameResp},
+    };
+    use time::ext::NumericalDuration;
+    use tonic::Status;
+    use touchpanel_ui::{NameInputStates, NavRoute, UiNavRoute};
+    use tracing::trace;
+
     use super::*;
 
     #[test]
@@ -247,5 +276,214 @@ mod tests {
         let old_text = "たろうう".to_shared_string();
         let new_text = pop_player_name(old_text);
         assert_eq!("たろう", new_text.as_str());
+    }
+
+    #[rstest]
+    #[case::cancelled(300.milliseconds(), 200.milliseconds(), 400.milliseconds(), "dummy!", "")]
+    #[case::not_cancelled(
+        300.milliseconds(),
+        400.milliseconds(),
+        200.milliseconds(),
+        "プレイヤー名は既に使われています",
+        "",
+    )]
+    fn push_character_validation_test(
+        // validationにかかる時間
+        #[case] first_call_dur: time::SignedDuration,
+        // 一回目の呼び出しと二回目の呼び出しの間 (i.e. ユーザーの入力間隔)
+        #[case] dur_between_two_calls: time::SignedDuration,
+        // validationにかかる時間
+        #[case] second_call_dur: time::SignedDuration,
+        #[case] error_msg_after_first_call_dur: &'static str,
+        #[case] error_msg_after_between_plus_second: &'static str,
+    ) {
+        assert!(first_call_dur.is_positive());
+        assert!(second_call_dur.is_positive());
+        assert!(dur_between_two_calls.is_positive());
+
+        let tracker = Tracker::new();
+        let test = NameInputScreenTest::new(FakePlayerRepository::new().on_validate_player_name({
+            let tracker = tracker.clone();
+            move |_| {
+                let tracker = tracker.clone();
+                Box::pin(async move {
+                    tracker.called();
+                    match tracker.count() {
+                        1 => {
+                            tokio::time::sleep(first_call_dur.unsigned_abs()).await;
+                            Ok(ValidatePlayerNameResp::AlreadyUsed(
+                                validate_player_name_response::AlreadyUsed {},
+                            ))
+                        }
+                        2 => {
+                            tokio::time::sleep(second_call_dur.unsigned_abs()).await;
+                            Ok(ValidatePlayerNameResp::Ok(
+                                validate_player_name_response::Ok {},
+                            ))
+                        }
+                        _ => unimplemented!(),
+                    }
+                })
+            }
+        }));
+        test.vm.state.error_msg.set("dummy!".to_shared_string());
+
+        let worker = test.worker.clone();
+        worker.spawn_local({
+            let NameInputScreenTest { worker, mut vm, .. } = test;
+            async move {
+                // first call
+                let first_handle = vm.on_push_character_impl("テ".to_shared_string());
+                let error_msg_prop = vm.state.error_msg.clone();
+                worker.spawn_local({
+                    let worker = worker.clone();
+                    async move {
+                        worker
+                            .foreground_executor()
+                            .after(dur_between_two_calls.unsigned_abs())
+                            .await;
+                        // second call
+                        let second_handle = vm.on_push_character_impl("ス".to_shared_string());
+                        second_handle.await;
+                        assert_eq!(
+                            vm.state.error_msg.get_ref().as_str(),
+                            error_msg_after_between_plus_second,
+                            "error_msg_after_between_plus_second"
+                        );
+                    }
+                });
+
+                // add 10ms as margin to process validation result
+                worker
+                    .foreground_executor()
+                    .after((first_call_dur + 10.milliseconds()).unsigned_abs())
+                    .await;
+                assert_eq!(
+                    error_msg_prop.get_ref().as_str(),
+                    error_msg_after_first_call_dur,
+                    "error_msg_after_first_call_dur"
+                );
+                worker.shutdown_all();
+            }
+        });
+
+        worker.foreground_executor().start();
+    }
+
+    #[derive(derive_more::Debug)]
+    pub struct FakePlayerRepository {
+        #[debug(skip)]
+        on_validate_player_name: Box<
+            dyn Fn(
+                    String,
+                ) -> Pin<
+                    Box<dyn Future<Output = Result<ValidatePlayerNameResp, RequestError>> + Send>,
+                > + Send
+                + Sync,
+        >,
+        #[debug(skip)]
+        on_add_player: Box<
+            dyn Fn(String) -> Pin<Box<dyn Future<Output = Result<PlayerId, Status>> + Send>>
+                + Send
+                + Sync,
+        >,
+    }
+
+    impl FakePlayerRepository {
+        pub fn new() -> Self {
+            Self {
+                on_validate_player_name: Box::new(|_| Box::pin(async { unimplemented!() })),
+                on_add_player: Box::new(|_| Box::pin(async { unimplemented!() })),
+            }
+        }
+
+        pub fn on_validate_player_name(
+            mut self,
+            f: impl Fn(
+                String,
+            ) -> Pin<
+                Box<dyn Future<Output = Result<ValidatePlayerNameResp, RequestError>> + Send>,
+            > + Send
+            + Sync
+            + 'static,
+        ) -> Self {
+            self.on_validate_player_name = Box::new(f);
+            self
+        }
+
+        pub fn on_add_player(
+            mut self,
+            f: impl Fn(String) -> Pin<Box<dyn Future<Output = Result<PlayerId, Status>> + Send>>
+            + Send
+            + Sync
+            + 'static,
+        ) -> Self {
+            self.on_add_player = Box::new(f);
+            self
+        }
+    }
+
+    impl PlayerRepository for FakePlayerRepository {
+        async fn validate_player_name(
+            &self,
+            name: impl Into<String> + Send,
+        ) -> Result<ValidatePlayerNameResp, RequestError> {
+            (self.on_validate_player_name)(name.into()).await
+        }
+
+        async fn add_player(&self, name: impl Into<String> + Send) -> Result<PlayerId, Status> {
+            (self.on_add_player)(name.into()).await
+        }
+    }
+
+    struct NameInputScreenTest {
+        pub route: Rc<RefCell<UiNavRoute>>,
+        pub worker: WorkerThread<FakePlayerRepository, SmolExecutor>,
+        pub vm: NameInputViewModel<FakePlayerRepository, SmolExecutor>,
+    }
+
+    impl NameInputScreenTest {
+        pub fn new(cx: FakePlayerRepository) -> Self {
+            let route = Rc::new(RefCell::new(UiNavRoute::Start));
+
+            let nav_controller = NavController::new(NavRoute::Start, {
+                let route = Rc::clone(&route);
+                move |new| {
+                    let mut guard = route.borrow_mut();
+                    *guard = new.into();
+                }
+            });
+            let worker = WorkerThread::new_smol(cx);
+            let (state, _mock) = NameInputStates::new_mocked();
+            let vm = NameInputViewModel {
+                nav_controller,
+                worker: worker.clone(),
+                state,
+                gm_cancel_tok: None,
+            };
+            Self { route, worker, vm }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct Tracker {
+        count: Arc<AtomicU8>,
+    }
+
+    impl Tracker {
+        fn new() -> Self {
+            Self {
+                count: Arc::new(AtomicU8::new(0)),
+            }
+        }
+
+        /// Increments count.
+        fn called(&self) {
+            self.count.fetch_add(1, Ordering::SeqCst);
+        }
+
+        fn count(&self) -> u8 {
+            self.count.load(Ordering::Relaxed)
+        }
     }
 }

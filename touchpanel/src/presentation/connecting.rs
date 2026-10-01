@@ -41,7 +41,7 @@ impl ConnectingDestination {
 }
 
 impl NavDestination<NavRoute> for ConnectingDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading ConnectingScreen");
 
         let NavRoute::Connecting = route else {

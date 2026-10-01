@@ -69,7 +69,7 @@ run = "cargo sqlx prepare"
 dir = "game_master/"
 description = "game-masterのクエリ検証用メタデータを生成する"
 
-[tasks."escape-patches"]
+[tasks."patches:disable"]
 run = """
     if [ -f ./patches.toml ]; then
         mv ./patches.toml ./patches.toml.bak
@@ -77,17 +77,28 @@ run = """
 """
 dir = ".cargo/"
 description = ".cargo/patches.tomlを一時的に退避する"
-hide = true
 
-[tasks."post-escape-patches"]
+[tasks."patches:enable"]
 run = """
     if [ -f ./patches.toml.bak ]; then
         mv ./patches.toml.bak ./patches.toml
     fi
 """
 dir = ".cargo/"
-description = "'escape-patches'で移動したファイルを元に戻す"
-hide = true
+description = "'patches:disable'で移動したファイルを元に戻す"
+
+[tasks."patches:status"]
+run = """
+    if [ -f ./patches.toml ]; then
+        echo "patch enabled"
+    elif [ -f ./patches.toml.bak ]; then
+        echo "patch disabled"
+    else
+        echo "no patch config"
+    fi
+"""
+dir = ".cargo/"
+description = ".cargo/patches.tomlの状態を表示する"
 
 [tasks."adb-reverse"]
 file = "scripts/adb-reverse.sh"

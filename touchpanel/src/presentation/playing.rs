@@ -4,7 +4,11 @@ use crate::{
 };
 use parking_lot::RwLockReadGuard;
 use slint::{ComponentHandle, Global, ToSharedString};
-use stern::{WorkerThread, nav::NavDestination};
+use stern::{
+    WorkerThread,
+    nav::NavDestination,
+    worker::{ForegroundExecutor, SlintExecutor},
+};
 use struckout_proto::types::GameId;
 use tokio_stream::{StreamExt as _, wrappers::WatchStream};
 use touchpanel_ui::{
@@ -12,11 +16,11 @@ use touchpanel_ui::{
 };
 use tracing::debug;
 
-viewmodel_rc!(PlayingViewModel<C>, PlayingAdopter);
+// viewmodel_rc!(PlayingViewModel<C>, PlayingAdopter);
 
-pub struct PlayingViewModel<C> {
+pub struct PlayingViewModel<C, E> {
     nav_controller: NavController,
-    worker: WorkerThread<C>,
+    worker: WorkerThread<C, E>,
     state: PlayingStates<Mapper>,
 }
 
@@ -40,7 +44,7 @@ impl SessionProvider for Context {
     }
 }
 
-impl PlayingViewModel<Context> {
+impl PlayingViewModel<Context, SlintExecutor> {
     fn new(application: &Application) -> Self {
         Self {
             nav_controller: application.nav_controller.clone(),
@@ -55,14 +59,15 @@ impl PlayingViewModel<Context> {
     }
 }
 
-impl<C> PlayingViewModel<C>
+impl<C, E> PlayingViewModel<C, E>
 where
-    C: SessionProvider + 'static,
+    C: SessionProvider + Send + Sync + 'static,
+    E: ForegroundExecutor + Clone,
 {
     /// Start listening states of the current session.
     ///
     /// Returns [`slint::JoinHandle`] which completes after cleaning all properties.
-    pub fn listen_session(&self, game_id: GameId) -> slint::JoinHandle<()> {
+    pub fn listen_session(&self, game_id: GameId) -> E::SpawnedHandle {
         let mut worker = self.worker.clone();
 
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
@@ -81,7 +86,7 @@ where
         let rem_cancel = {
             let rem_stream = WatchStream::new(rem_rx).fuse();
             let rem_prop = self.state.remaining_time.clone();
-            rem_prop.bind(rem_stream)
+            rem_prop.bind(&worker, rem_stream)
         };
 
         let score_cancel = {
@@ -89,11 +94,11 @@ where
                 .map(|v| v.try_into().expect("score overflowed"))
                 .fuse();
             let score_prop = self.state.score.clone();
-            score_prop.bind(score_stream)
+            score_prop.bind(&worker, score_stream)
         };
 
         // Handle error_rx.
-        slint::spawn_local({
+        worker.spawn_local({
             let nc = self.nav_controller.clone();
             async move {
                 loop {
@@ -107,11 +112,10 @@ where
                     }
                 }
             }
-        })
-        .unwrap();
+        });
 
         // Handle complete_rx.
-        slint::spawn_local({
+        worker.spawn_local({
             let nc = self.nav_controller.clone();
             async move {
                 complete_rx.recv().await.unwrap();
@@ -121,32 +125,31 @@ where
                 nc.navigate(NavRoute::Score { game_id });
             }
         })
-        .unwrap()
     }
 }
 
-impl<C> PlayingViewModelTrait for PlayingViewModel<C> {}
+impl<C, E> PlayingViewModelTrait for PlayingViewModel<C, E> {}
 
 pub struct PlayingDestination(
     #[allow(dead_code)] // may used when some arg is added to the route
-    PlayingViewModelRc<Context>,
+    PlayingViewModel<Context, SlintExecutor>,
 );
 
 impl PlayingDestination {
     pub fn new(application: &Application) -> Self {
-        Self(PlayingViewModelRc::new(application))
+        Self(PlayingViewModel::new(application))
     }
 }
 
 impl NavDestination<NavRoute> for PlayingDestination {
-    fn load(&self, route: &NavRoute) {
+    fn load(&mut self, route: &NavRoute) {
         debug!("loading PlayingViewModel");
 
         let NavRoute::Playing(_difficulty, game_id) = route else {
             panic!("matched variant should be given");
         };
 
-        self.0.borrow().listen_session(*game_id);
+        self.0.listen_session(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {
@@ -154,11 +157,13 @@ impl NavDestination<NavRoute> for PlayingDestination {
     }
 }
 
-pub mod test_utils {
-    use std::{cell::RefCell, rc::Rc};
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, rc::Rc, time::Duration};
 
     use parking_lot::RwLock;
     use slint::SharedString;
+    use stern::worker::SmolExecutor;
     use tokio::sync::{broadcast, watch};
 
     use touchpanel_ui::{NavRoute, UiNavRoute};
@@ -189,8 +194,8 @@ pub mod test_utils {
         pub route: Rc<RefCell<UiNavRoute>>,
         pub remaining_time: Rc<RefCell<SharedString>>,
         pub score: Rc<RefCell<i32>>,
-        pub worker: WorkerThread<FakeSessionProvider>,
-        pub vm: PlayingViewModel<FakeSessionProvider>,
+        pub worker: WorkerThread<FakeSessionProvider, SmolExecutor>,
+        pub vm: PlayingViewModel<FakeSessionProvider, SmolExecutor>,
 
         pub score_tx: watch::Sender<u32>,
         pub rem_tx: watch::Sender<DisplayableRemainingTime>,
@@ -213,7 +218,7 @@ pub mod test_utils {
             let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
             let (error_tx, error_rx) = watch::channel(None);
             let (complete_tx, complete_rx) = broadcast::channel(8);
-            let worker = WorkerThread::new(FakeSessionProvider {
+            let worker = WorkerThread::new_smol(FakeSessionProvider {
                 session: RwLock::new(Some(Session::new(
                     struckout_proto::Difficulty::Normal,
                     score_tx.clone(),
@@ -242,5 +247,68 @@ pub mod test_utils {
                 complete_tx,
             }
         }
+    }
+
+    #[test]
+    fn listen_session_does_not_panic_when_session_completes() {
+        let test = PlayingScreenTest::new();
+
+        let join = test.vm.listen_session(GameId::new(1));
+
+        // complete and drop session.
+        test.complete_tx.send(()).unwrap();
+        test.worker.spawn_cx(async move |cx| {
+            cx.drop_session();
+        });
+
+        test.worker.spawn_local({
+            let worker = test.worker.clone();
+            async move {
+                join.await;
+                worker.shutdown_all();
+            }
+        });
+
+        test.worker.foreground_executor().start();
+    }
+
+    #[test]
+    fn remaining_time_updated_when_rem_tx_sends_new_val() {
+        let test = PlayingScreenTest::new();
+
+        let join = test.vm.listen_session(GameId::new(1));
+
+        test.worker.spawn_local({
+            let rem_tx = test.rem_tx.clone();
+            let complete_tx = test.complete_tx.clone();
+            let worker = test.worker.clone();
+            async move {
+                let time = DisplayableRemainingTime { mins: 3, secs: 14 };
+                let rem_rx = rem_tx.subscribe();
+                rem_tx.send(time).unwrap();
+
+                worker
+                    .foreground_executor()
+                    .after(Duration::from_millis(100))
+                    .await;
+                assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
+
+                // complete and drop session
+                complete_tx.send(()).unwrap();
+                worker.spawn_cx(async move |cx| {
+                    cx.drop_session();
+                });
+            }
+        });
+
+        test.worker.spawn_local({
+            let worker = test.worker.clone();
+            async move {
+                join.await;
+                worker.shutdown_all();
+            }
+        });
+
+        test.worker.foreground_executor().start();
     }
 }

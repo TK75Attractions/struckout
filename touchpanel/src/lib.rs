@@ -3,7 +3,7 @@
 use clap::Parser;
 use slint::ComponentHandle;
 use std::sync::{Arc, OnceLock};
-use stern::WorkerThread;
+use stern::{WorkerThread, worker::SlintExecutor};
 use tracing::info;
 
 use touchpanel_ui::NavRoute;
@@ -28,7 +28,7 @@ pub struct Application {
     nav_controller: NavController,
     ui: touchpanel_ui::AppWindow,
     #[allow(dead_code)] // チャンネルを生存させるために必要
-    pub worker: WorkerThread<Context>,
+    pub worker: WorkerThread<Context, SlintExecutor>,
     config: Arc<Config>,
 }
 
