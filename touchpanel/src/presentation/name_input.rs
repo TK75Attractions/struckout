@@ -74,12 +74,14 @@ impl NameInputViewModel<Context, SlintExecutor> {
         }
     }
 }
+
 impl<C, E> NameInputViewModel<C, E>
 where
     C: PlayerRepository,
     E: ForegroundExecutor,
 {
-    fn validate_new_name(&mut self, name: impl Into<String>) -> slint::JoinHandle<()> {
+    /// Validates `name`. Returns the handle to the task which handles validation result.
+    fn validate_new_name(&mut self, name: impl Into<String>) -> E::SpawnedHandle {
         let name = name.into();
 
         self.cancel_previous_request();
@@ -91,21 +93,21 @@ where
             trace!(name, "validating");
             tokio::select! {
                 _ = cancel_tok.cancelled() => {
-                    trace!("cancelled");
                     tx.send(None).unwrap();
                 },
                 res = cx.validate_player_name(name) => {
-                    trace!("not cancelled");
                     tx.send(Some(res)).unwrap();
                 }
             }
         });
-        slint::spawn_local({
+        self.worker.spawn_local({
             let nc = self.nav_controller.clone();
             let msg_prop = self.state.error_msg.clone();
             async move {
                 match rx.await.unwrap() {
-                    Some(Ok(ValidatePlayerNameResp::Ok(_))) => (),
+                    Some(Ok(ValidatePlayerNameResp::Ok(_))) => {
+                        msg_prop.set("".to_shared_string());
+                    }
                     Some(Ok(ValidatePlayerNameResp::AlreadyUsed(_))) => {
                         msg_prop.set("プレイヤー名は既に使われています".to_shared_string());
                     }
@@ -113,13 +115,11 @@ where
                         nc.navigate(NavRoute::Fallback(e.to_string()));
                     }
                     // cancelled
-                    None => (),
+                    None => trace!("validation request cancelled"),
                 }
-                trace!("finished");
             }
             .in_current_span()
         })
-        .unwrap()
     }
 
     /// Cancels previous request to game-master.
@@ -130,7 +130,7 @@ where
     }
 
     #[instrument(skip(self), level = "debug")]
-    pub fn on_push_character_impl(&mut self, char: SharedString) -> slint::JoinHandle<()> {
+    pub fn on_push_character_impl(&mut self, char: SharedString) -> E::SpawnedHandle {
         trace!("NameInputViewModel::on_push_character");
 
         assert_eq!(char.chars().count(), 1, "character length must 1");
@@ -239,10 +239,7 @@ impl NavDestination<NavRoute> for NameInputDestination {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        data::RequestError,
-        presentation::name_input::{NameInputViewModel, PlayerRepository},
-    };
+    use crate::data::RequestError;
     use rstest::rstest;
     use slint::ToSharedString;
 
@@ -254,14 +251,13 @@ mod tests {
             Arc,
             atomic::{AtomicU8, Ordering},
         },
-        time::Duration,
     };
     use stern::{WorkerThread, nav::NavController, worker::SmolExecutor};
     use struckout_proto::{
         types::PlayerId,
         validate_player_name_response::{self, ValidatePlayerNameResp},
     };
-    use tokio::sync::oneshot;
+    use time::ext::NumericalDuration;
     use tonic::Status;
     use touchpanel_ui::{NameInputStates, NavRoute, UiNavRoute};
     use tracing::trace;
@@ -283,78 +279,95 @@ mod tests {
     }
 
     #[rstest]
-    #[case::cancelled(Duration::from_millis(5000), "")]
-    #[case::not_cancelled(Duration::from_millis(1000), "プレイヤー名は既に使われています")]
+    #[case::cancelled(300.milliseconds(), 200.milliseconds(), 400.milliseconds(), "dummy!", "")]
+    #[case::not_cancelled(
+        300.milliseconds(),
+        400.milliseconds(),
+        200.milliseconds(),
+        "プレイヤー名は既に使われています",
+        "",
+    )]
     fn push_character_validation_test(
-        #[case] first_call_dur: Duration,
-        #[case] error_msg: &'static str,
+        // validationにかかる時間
+        #[case] first_call_dur: time::SignedDuration,
+        // 一回目の呼び出しと二回目の呼び出しの間 (i.e. ユーザーの入力間隔)
+        #[case] dur_between_two_calls: time::SignedDuration,
+        // validationにかかる時間
+        #[case] second_call_dur: time::SignedDuration,
+        #[case] error_msg_after_first_call_dur: &'static str,
+        #[case] error_msg_after_between_plus_second: &'static str,
     ) {
-        let sub = tracing_subscriber::FmtSubscriber::builder()
-            .with_max_level(tracing::Level::TRACE)
-            .with_test_writer()
-            .finish();
-        // Subscriber is already set by another test case,
-        tracing::subscriber::set_global_default(sub).ok();
-
-        i_slint_backend_testing::init_integration_test_with_system_time();
-
-        slint::invoke_from_event_loop(|| {
-            println!("Hello!");
-        })
-        .unwrap();
-        slint::spawn_local(async {}).expect("event loop should exist");
+        assert!(first_call_dur.is_positive());
+        assert!(second_call_dur.is_positive());
+        assert!(dur_between_two_calls.is_positive());
 
         let tracker = Tracker::new();
-        let mut test =
-            NameInputScreenTest::new(FakePlayerRepository::new().on_validate_player_name({
+        let test = NameInputScreenTest::new(FakePlayerRepository::new().on_validate_player_name({
+            let tracker = tracker.clone();
+            move |_| {
                 let tracker = tracker.clone();
-                move |_| {
-                    let tracker = tracker.clone();
-                    Box::pin(async move {
-                        tracker.called();
-                        trace!(?tracker, "called tracker");
-                        match tracker.count() {
-                            1 => {
-                                tokio::time::sleep(first_call_dur).await;
-                                Ok(ValidatePlayerNameResp::AlreadyUsed(
-                                    validate_player_name_response::AlreadyUsed {},
-                                ))
-                            }
-                            2 => Ok(ValidatePlayerNameResp::Ok(
-                                validate_player_name_response::Ok {},
-                            )),
-                            _ => unimplemented!(),
+                Box::pin(async move {
+                    tracker.called();
+                    match tracker.count() {
+                        1 => {
+                            tokio::time::sleep(first_call_dur.unsigned_abs()).await;
+                            Ok(ValidatePlayerNameResp::AlreadyUsed(
+                                validate_player_name_response::AlreadyUsed {},
+                            ))
                         }
-                    })
-                }
-            }));
+                        2 => {
+                            tokio::time::sleep(second_call_dur.unsigned_abs()).await;
+                            Ok(ValidatePlayerNameResp::Ok(
+                                validate_player_name_response::Ok {},
+                            ))
+                        }
+                        _ => unimplemented!(),
+                    }
+                })
+            }
+        }));
+        test.vm.state.error_msg.set("dummy!".to_shared_string());
 
-        let join = test.vm.on_push_character_impl("テ".to_shared_string());
+        let worker = test.worker.clone();
+        worker.spawn_local({
+            let NameInputScreenTest { worker, mut vm, .. } = test;
+            async move {
+                // first call
+                let first_handle = vm.on_push_character_impl("テ".to_shared_string());
+                let error_msg_prop = vm.state.error_msg.clone();
+                worker.spawn_local({
+                    let worker = worker.clone();
+                    async move {
+                        worker
+                            .foreground_executor()
+                            .after(dur_between_two_calls.unsigned_abs())
+                            .await;
+                        // second call
+                        let second_handle = vm.on_push_character_impl("ス".to_shared_string());
+                        second_handle.await;
+                        assert_eq!(
+                            vm.state.error_msg.get_ref().as_str(),
+                            error_msg_after_between_plus_second,
+                            "error_msg_after_between_plus_second"
+                        );
+                    }
+                });
 
-        let (tx, rx) = oneshot::channel();
-        test.worker.spawn_cx(async move |_| {
-            tokio::time::sleep(Duration::from_millis(4000)).await;
-            tx.send(()).unwrap();
+                // add 10ms as margin to process validation result
+                worker
+                    .foreground_executor()
+                    .after((first_call_dur + 10.milliseconds()).unsigned_abs())
+                    .await;
+                assert_eq!(
+                    error_msg_prop.get_ref().as_str(),
+                    error_msg_after_first_call_dur,
+                    "error_msg_after_first_call_dur"
+                );
+                worker.shutdown_all();
+            }
         });
-        slint::spawn_local(async move {
-            rx.await.unwrap();
-            trace!("calling next push");
-            test.vm.on_push_character_impl("ス".to_shared_string());
-            assert_eq!(test.vm.state.error_msg.get_ref().as_str(), error_msg);
-            trace!(?tracker, "tracker status");
-            // i_slint_backend_testing::mock_elapsed_time(Duration::from_millis(200));
-        })
-        .unwrap();
 
-        slint::spawn_local(async move {
-            join.await;
-            slint::quit_event_loop().unwrap();
-            test.worker.shutdown();
-        })
-        .unwrap();
-
-        println!("running event loop...");
-        slint::run_event_loop().unwrap();
+        worker.foreground_executor().start();
     }
 
     #[derive(derive_more::Debug)]

@@ -61,13 +61,13 @@ impl PlayingViewModel<Context, SlintExecutor> {
 
 impl<C, E> PlayingViewModel<C, E>
 where
-    C: SessionProvider + 'static,
+    C: SessionProvider + Send + Sync + 'static,
     E: ForegroundExecutor + Clone,
 {
     /// Start listening states of the current session.
     ///
     /// Returns [`slint::JoinHandle`] which completes after cleaning all properties.
-    pub fn listen_session(&self, game_id: GameId) -> slint::JoinHandle<()> {
+    pub fn listen_session(&self, game_id: GameId) -> E::SpawnedHandle {
         let mut worker = self.worker.clone();
 
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
@@ -86,7 +86,7 @@ where
         let rem_cancel = {
             let rem_stream = WatchStream::new(rem_rx).fuse();
             let rem_prop = self.state.remaining_time.clone();
-            rem_prop.bind(rem_stream)
+            rem_prop.bind(&worker, rem_stream)
         };
 
         let score_cancel = {
@@ -94,11 +94,11 @@ where
                 .map(|v| v.try_into().expect("score overflowed"))
                 .fuse();
             let score_prop = self.state.score.clone();
-            score_prop.bind(score_stream)
+            score_prop.bind(&worker, score_stream)
         };
 
         // Handle error_rx.
-        slint::spawn_local({
+        worker.spawn_local({
             let nc = self.nav_controller.clone();
             async move {
                 loop {
@@ -112,11 +112,10 @@ where
                     }
                 }
             }
-        })
-        .unwrap();
+        });
 
         // Handle complete_rx.
-        slint::spawn_local({
+        worker.spawn_local({
             let nc = self.nav_controller.clone();
             async move {
                 complete_rx.recv().await.unwrap();
@@ -126,7 +125,6 @@ where
                 nc.navigate(NavRoute::Score { game_id });
             }
         })
-        .unwrap()
     }
 }
 
@@ -253,8 +251,6 @@ mod tests {
 
     #[test]
     fn listen_session_does_not_panic_when_session_completes() {
-        i_slint_backend_testing::init_integration_test_with_system_time();
-
         let test = PlayingScreenTest::new();
 
         let join = test.vm.listen_session(GameId::new(1));
@@ -265,14 +261,15 @@ mod tests {
             cx.drop_session();
         });
 
-        slint::spawn_local(async move {
-            join.await;
-            slint::quit_event_loop().unwrap();
-            test.worker.shutdown();
-        })
-        .unwrap();
+        test.worker.spawn_local({
+            let worker = test.worker.clone();
+            async move {
+                join.await;
+                worker.shutdown_all();
+            }
+        });
 
-        slint::run_event_loop().unwrap();
+        test.worker.foreground_executor().start();
     }
 
     #[test]
@@ -290,9 +287,11 @@ mod tests {
                 let rem_rx = rem_tx.subscribe();
                 rem_tx.send(time).unwrap();
 
-                slint::Timer::single_shot(Duration::from_millis(100), move || {
-                    assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
-                });
+                worker
+                    .foreground_executor()
+                    .after(Duration::from_millis(100))
+                    .await;
+                assert_eq!(*test.remaining_time.borrow(), time.to_string().as_str());
 
                 // complete and drop session
                 complete_tx.send(()).unwrap();
@@ -302,12 +301,13 @@ mod tests {
             }
         });
 
-        slint::spawn_local(async move {
-            join.await;
-            test.worker.shutdown();
-            test.worker.foreground_executor().stop();
-        })
-        .unwrap();
+        test.worker.spawn_local({
+            let worker = test.worker.clone();
+            async move {
+                join.await;
+                worker.shutdown_all();
+            }
+        });
 
         test.worker.foreground_executor().start();
     }
