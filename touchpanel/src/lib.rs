@@ -15,8 +15,8 @@ use crate::{
 
 pub mod data;
 pub mod presentation;
-mod state_ext;
 
+// provided by build.rs
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
 type NavController = stern::nav::NavController<NavRoute>;
