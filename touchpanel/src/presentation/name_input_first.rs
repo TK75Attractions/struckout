@@ -13,11 +13,11 @@ use tracing::{Instrument, debug, instrument, trace};
 use crate::{Application, Context, NavController, data::RequestError};
 
 use touchpanel_ui::{
-    KeyBoardMode, NameInputPropertyMappers, NameInputStates, NameInputViewModelTrait, NavRoute,
-    NavRouteKind,
+    KeyBoardMode, NameInputFirstPropertyMappers, NameInputFirstStates,
+    NameInputFirstViewModelTrait, NavRoute, NavRouteKind,
 };
 
-touchpanel_ui::define_name_input_mapper! {}
+touchpanel_ui::define_name_input_first_mapper! {}
 
 // viewmodel_rc!(NameInputViewModel<C>, NameInputAdopter);
 
@@ -27,7 +27,7 @@ touchpanel_ui::define_name_input_mapper! {}
 pub struct NameInputViewModel<C, E> {
     pub nav_controller: NavController,
     pub worker: WorkerThread<C, E>,
-    pub state: NameInputStates<Mapper>,
+    pub state: NameInputFirstStates<Mapper>,
     /// Token to cancel request to game-master.
     pub gm_cancel_tok: Option<CancellationToken>,
 }
@@ -64,10 +64,10 @@ impl NameInputViewModel<Context, SlintExecutor> {
         Self {
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
-            state: NameInputStates::<Mapper>::new(
+            state: NameInputFirstStates::<Mapper>::new(
                 application
                     .ui
-                    .global::<touchpanel_ui::NameInputAdopter>()
+                    .global::<touchpanel_ui::NameInputFirstAdopter>()
                     .as_weak(),
             ),
             gm_cancel_tok: None,
@@ -142,7 +142,7 @@ where
     }
 }
 
-impl<C, E> NameInputViewModelTrait for NameInputViewModel<C, E>
+impl<C, E> NameInputFirstViewModelTrait for NameInputViewModel<C, E>
 where
     C: PlayerRepository,
     E: ForegroundExecutor,
@@ -211,21 +211,21 @@ fn pop_player_name(old_text: impl Into<String>) -> SharedString {
     text.to_shared_string()
 }
 
-pub struct NameInputDestination(
+pub struct NameInputFirstDestination(
     #[allow(dead_code)] // may used when some arg is added to the route
     NameInputViewModel<Context, SlintExecutor>,
 );
 
-impl NameInputDestination {
+impl NameInputFirstDestination {
     pub fn new(application: &Application) -> Self {
         Self(NameInputViewModel::new(application))
     }
 }
 
-impl NavDestination<NavRoute> for NameInputDestination {
+impl NavDestination<NavRoute> for NameInputFirstDestination {
     fn load(&mut self, route: &NavRoute) {
         debug!("loading NameInputViewModel");
-        let NavRoute::NameInput(mode) = route else {
+        let NavRoute::NameInputFirst = route else {
             panic!("matched variant should be given");
         };
 
@@ -233,7 +233,7 @@ impl NavDestination<NavRoute> for NameInputDestination {
     }
 
     fn route(&self) -> NavRouteKind {
-        NavRouteKind::NameInput
+        NavRouteKind::NameInputFirst
     }
 }
 
@@ -447,7 +447,7 @@ mod tests {
                 }
             });
             let worker = WorkerThread::new_smol(cx);
-            let (state, _mock) = NameInputStates::new_mocked();
+            let (state, _mock) = NameInputFirstStates::new_mocked();
             let vm = NameInputViewModel {
                 nav_controller,
                 worker: worker.clone(),

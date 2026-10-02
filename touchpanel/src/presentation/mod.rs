@@ -6,8 +6,8 @@ use crate::{
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulty_select::DifficultySelectDestination, fallback::FallbackDestination,
-        name_input::NameInputDestination, playing::PlayingDestination, ranking::RankingDestination,
-        score::ScoreDestination, start::StartScreenDestination,
+        name_input_first::NameInputFirstDestination, playing::PlayingDestination,
+        ranking::RankingDestination, score::ScoreDestination, start::StartScreenDestination,
     },
 };
 use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
@@ -72,7 +72,7 @@ pub mod connecting;
 pub mod connection_failed;
 pub mod difficulty_select;
 pub mod fallback;
-pub mod name_input;
+pub mod name_input_first;
 pub mod playing;
 pub mod ranking;
 pub mod score;
@@ -156,7 +156,7 @@ pub fn init_worker_context(application: &Application) {
 pub fn attach_navhost(application: &Application) {
     NavHost::builder(application.nav_controller.clone())
         .register(StartScreenDestination::new(&application))
-        .register(NameInputDestination::new(&application))
+        .register(NameInputFirstDestination::new(&application))
         .register(DifficultySelectDestination::new(&application))
         .register(FallbackDestination::new(&application))
         .register(ConnectionFailedDestination::new(&application))

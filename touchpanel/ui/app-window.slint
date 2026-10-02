@@ -2,8 +2,8 @@ import { AboutSlint, VerticalBox } from "std-widgets.slint";
 import { TopBar } from "top-bar.slint";
 import { StartScreen } from "./screens/start-screen.slint";
 import {
-    NameInputScreen,
-} from "./screens/name-input-screen.slint";
+    NameInputFirstScreen,
+} from "./screens/name-input-first-screen.slint";
 import {
     DifficulitySelectScreen,
 } from "./screens/difficulity-select-screen.slint";
@@ -20,8 +20,8 @@ export {
     StartAdopter,
 }from "./screens/start-screen.slint";
 export {
-    NameInputAdopter,
-}from "./screens/name-input-screen.slint";
+    NameInputFirstAdopter,
+}from "./screens/name-input-first-screen.slint";
 export {
     DifficulitySelectAdopter,
 }from "./screens/difficulity-select-screen.slint";
@@ -37,7 +37,7 @@ export { ConnectingAdopter }from "./screens/connecting-screen.slint";
 
 enum UiNavRoute {
     Start,
-    NameInput,
+    NameInputFirst,
     DifficulitySelect,
     Playing,
     Score,
@@ -56,7 +56,7 @@ export component AppWindow inherits Window {
         top-bar := TopBar { }
 
         if nav-route == UiNavRoute.Start: StartScreen { }
-        if nav-route == UiNavRoute.NameInput: NameInputScreen { }
+        if nav-route == UiNavRoute.NameInputFirst: NameInputFirstScreen { }
         if nav-route == UiNavRoute.DifficulitySelect:DifficulitySelectScreen { }
         if nav-route == UiNavRoute.Playing: PlayingScreen { }
         if nav-route == UiNavRoute.Score: ScoreScreen { }

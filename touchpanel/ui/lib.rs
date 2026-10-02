@@ -5,7 +5,7 @@ mod ui {
     #[derive(Debug, Clone)]
     pub enum NavRoute {
         Start,
-        NameInput(self::NameInputMode),
+        NameInputFirst,
         DifficulitySelect {
             player_id: struckout_proto::types::PlayerId,
         },

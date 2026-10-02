@@ -5,7 +5,7 @@ use tracing::{debug, trace};
 use crate::{Application, NavController};
 
 use touchpanel_ui::{
-    NameInputMode, NavRoute, NavRouteKind, StartPropertyMappers, StartStates, StartViewModelTrait,
+    NavRoute, NavRouteKind, StartPropertyMappers, StartStates, StartViewModelTrait,
 };
 
 viewmodel_rc!(StartViewModel, StartAdopter);
@@ -35,14 +35,14 @@ impl StartViewModel {
 impl StartViewModelTrait for StartViewModel {
     fn on_click_first_play(&mut self) {
         trace!("StartScreen::on_click()");
-        self.nav_controller
-            .navigate(NavRoute::NameInput(NameInputMode::FirstPlay));
+        self.nav_controller.navigate(NavRoute::NameInputFirst);
     }
 
     fn on_click_non_first_play(&mut self) {
         trace!("StartScreen::on_click_non_first_play()");
-        self.nav_controller
-            .navigate(NavRoute::NameInput(NameInputMode::NonFirstPlay));
+        todo!()
+        // self.nav_controller
+        // .navigate(NavRoute::NameInputNonFirst);
     }
 }
 
