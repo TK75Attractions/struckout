@@ -13,6 +13,7 @@ protoc = "35.1"
 buf = "1.72.0"
 
 "cargo:slint-viewer" = "latest"
+"cargo:slint-lsp" = "latest"
 "cargo:sqlx-cli" = "latest"
 tokei = "latest"
 grpcurl = "latest"
