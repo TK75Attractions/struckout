@@ -6,7 +6,8 @@ use crate::{
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulty_select::DifficultySelectDestination, fallback::FallbackDestination,
-        name_input_first::NameInputFirstDestination, playing::PlayingDestination,
+        name_input_first::NameInputFirstDestination,
+        name_input_non_first::NameInputNonFirstDestination, playing::PlayingDestination,
         ranking::RankingDestination, score::ScoreDestination, start::StartScreenDestination,
     },
 };
@@ -73,6 +74,7 @@ pub mod connection_failed;
 pub mod difficulty_select;
 pub mod fallback;
 pub mod name_input_first;
+pub mod name_input_non_first;
 pub mod playing;
 pub mod ranking;
 pub mod score;
@@ -165,6 +167,7 @@ pub fn attach_navhost(application: &Application) {
         .register(ScoreDestination::new(&application))
         .register(ConnectingDestination::new(&application))
         .register(RankingDestination::new(&application))
+        .register(NameInputNonFirstDestination::new(&application))
         //@xtask-register
         .finish()
         .expect("failed to build NavHost");
