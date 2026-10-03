@@ -17,8 +17,7 @@ mod ui {
         Fallback(String),
         ConnectionFailed(String),
         Connecting,
-		NameInputNonFirst
-        //@xtask-route
+        NameInputNonFirst, //@xtask-route
     }
 }
 

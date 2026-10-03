@@ -1,5 +1,8 @@
-use touchpanel_ui::{NameInputNonFirstStates, NameInputNonFirstViewModelTrait, NameInputNonFirstPropertyMappers, NavRoute, NavRouteKind};
 use stern::nav::NavDestination;
+use touchpanel_ui::{
+    NameInputNonFirstPropertyMappers, NameInputNonFirstStates, NameInputNonFirstViewModelTrait,
+    NavRoute, NavRouteKind,
+};
 
 use crate::Application;
 
@@ -14,8 +17,11 @@ impl NameInputNonFirstViewModel {
         use slint::{ComponentHandle, Global};
         Self {
             state: NameInputNonFirstStates::<Mapper>::new(
-                application.ui.global::<touchpanel_ui::NameInputNonFirstAdopter>().as_weak(),
-            )
+                application
+                    .ui
+                    .global::<touchpanel_ui::NameInputNonFirstAdopter>()
+                    .as_weak(),
+            ),
         }
     }
 }
