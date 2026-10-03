@@ -42,6 +42,7 @@ jobs:
             .mise
             api/proto
             api/rust
+            api/yaml
             ball_tracker
             game_master
             migrations/mysql
