@@ -15,6 +15,7 @@ import {
     ConnectionFailedScreen,
 } from "./screens/connection-failed-screen.slint";
 import { ConnectingScreen } from "./screens/connecting-screen.slint";
+//@xtask-import
 
 export {
     StartAdopter,
@@ -33,7 +34,7 @@ export { PlayingAdopter }from "./screens/playing-screen.slint";
 export { ScoreAdopter }from "./screens/score-screen.slint";
 export { RankingAdopter }from "./screens/ranking-screen.slint";
 export { ConnectingAdopter }from "./screens/connecting-screen.slint";
-
+//@xtask-export
 
 enum UiNavRoute {
     Start,
@@ -45,6 +46,7 @@ enum UiNavRoute {
     Fallback,
     ConnectionFailed,
     Connecting,
+    //@xtask-enum
 }
 
 export component AppWindow inherits Window {
@@ -64,5 +66,6 @@ export component AppWindow inherits Window {
         if nav-route == UiNavRoute.Fallback: FallbackScreen { }
         if nav-route == UiNavRoute.ConnectionFailed: ConnectionFailedScreen { }
         if nav-route == UiNavRoute.Connecting: ConnectingScreen { }
+        //@xtask-screen
     }
 }

@@ -49,6 +49,7 @@ pastey = "0.2.3"
 strum = "0.28.0"
 enum_dispatch = "0.3.13"
 toml = "1.1.5"
+heck = "0.5.0"
 
 prost = "0.14.3"
 prost-types = "0.14.4"
@@ -62,6 +63,7 @@ slint = { git = "https://github.com/taichi765/slint" }
 slint-build = { git = "https://github.com/taichi765/slint" }
 i-slint-core = { git = "https://github.com/taichi765/slint" }
 i-slint-backend-testing = { git = "https://github.com/taichi765/slint" }
+i-slint-compiler = { git = "https://github.com/taichi765/slint" }
 stern = { git = "https://github.com/taichi765/stern" }
 
 # dev-dependencies

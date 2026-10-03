@@ -77,6 +77,7 @@ pub mod playing;
 pub mod ranking;
 pub mod score;
 pub mod start;
+//@xtask-pub-mod
 
 /// Connects to game-master's gRPC server. **Must be called within tokio context**.
 ///
@@ -164,6 +165,7 @@ pub fn attach_navhost(application: &Application) {
         .register(ScoreDestination::new(&application))
         .register(ConnectingDestination::new(&application))
         .register(RankingDestination::new(&application))
+        //@xtask-register
         .finish()
         .expect("failed to build NavHost");
 }

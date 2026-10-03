@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use xtask::SyncArgs;
 
 #[derive(Parser)]
 struct Cli {
@@ -9,17 +8,27 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Sync(SyncArgs),
+    #[cfg(feature = "sqlite")]
+    Sync(xtask::SyncArgs),
+    #[command(about = "Create new screen in touchpanel")]
+    New(xtask::NewArgs),
 }
 
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
     match cli.command {
+        #[cfg(feature = "sqlite")]
         Commands::Sync(sync) => {
             if sync.run().await {
                 std::process::exit(1);
             };
+        }
+        Commands::New(new) => {
+            if let Err(e) = new.run() {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
         }
     }
 }
