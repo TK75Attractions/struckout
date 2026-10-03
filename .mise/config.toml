@@ -75,6 +75,13 @@ run = "find -name '*.slint' | xargs slint-lsp format --inline"
 dir = "touchpanel/ui/"
 description = "touchpanelのslintファイルを整形する"
 
+[tasks."touchpanel:new"]
+run = '''
+cargo xtask --verbose new
+'''
+dir = "touchpanel/"
+description = "Create new screen in touchpanel"
+
 [tasks."patches:disable"]
 run = """
     if [ -f ./patches.toml ]; then
