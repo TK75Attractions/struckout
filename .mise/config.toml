@@ -23,6 +23,9 @@ grpcurl = "latest"
 # しておくと、実行ファイルの拡張子 (.exe) を buf.gen.*.yaml に書かずに済む。
 _.path = [".tools/bin"]
 
+[task_config]
+includes = [".mise/game_master.toml"]
+
 [tasks."proto:plugin"]
 # Windows でも Git Bash で動かす。mise の既定シェルではシェルスクリプトを
 # 直接は起動できない。
@@ -42,33 +45,6 @@ description = "Generate the committed C# from api/proto"
 depends = ["proto"]
 run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
 description = "Check the committed C# matches api/proto (regenerates in place)"
-
-[tasks."game-master:dev"]
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up"
-dir = "game_master/"
-description = "Start a dev server of game-master using docker-compose"
-
-[tasks."game-master:prod"]
-run = "docker compose --env-file .env.prod -f compose.yaml -f compose.prod.yaml up"
-dir = "game_master/"
-description = "Start a production server of game-master using docker-compose"
-
-[tasks."game-master:db"]
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up db"
-dir = "game_master/"
-description = "Start a MySQL service for game-master."
-
-[tasks."game-master:build"]
-depends = ["escape-patches", "game-master:prepare"]
-depends_post = "post-escape-patches"
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml build"
-dir = "game_master/"
-description = "game-masterをビルドする"
-
-[tasks."game-master:prepare"]
-run = "cargo sqlx prepare"
-dir = "game_master/"
-description = "game-masterのクエリ検証用メタデータを生成する"
 
 [tasks."touchpanel:fmt-slint"]
 run = "find -name '*.slint' | xargs slint-lsp format --inline"
