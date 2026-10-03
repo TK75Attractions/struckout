@@ -12,6 +12,7 @@ on:
       - .mise/config.toml
       - .github/workflows/proto_ci.yml
   pull_request:
+    branches: main
     paths:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
@@ -23,29 +24,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  generated-csharp-is-up-to-date:
-    name: Generated C# is up to date
+  proto:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-
-      # buf と protoc のバージョンは .mise/config.toml が唯一の定義。
-      # 生成される C# は Google.Protobuf ランタイムと対なので、
-      # ここで別途ピン留めすると二重管理になる。
-      #
-      # このジョブが要るのは buf と protoc だけ。install_args で絞らないと
-      # rust や dotnet、cargo からビルドする slint-viewer まで入ってしまい、
-      # 数分かけたうえに落ちる。
-      - uses: jdx/mise-action@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
         with:
           install_args: buf protoc
-
-      # proto:check は生成しなおしてから git diff を見る。
-      # 生成物がコミット済みのものとずれていれば差分が出て落ちる。
-      #
-      # mise はタスク実行時にも未導入のツールを入れようとするので、
-      # 上で絞ったぶんがここで元に戻らないように切っておく。
-      - name: Check generated code against api/proto
+      - name: Generate C# from *.proto
+        run: mise run proto
         env:
           MISE_TASK_RUN_AUTO_INSTALL: "0"
-        run: mise run proto:check
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(projector): Re-generate code from *.proto" || exit 0
+          git push
