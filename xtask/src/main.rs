@@ -4,6 +4,8 @@ use clap::{Parser, Subcommand};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+    #[arg(short, long, default_value_t = false, help = "Show verbose logs")]
+    verbose: bool,
 }
 
 #[derive(Subcommand)]
@@ -25,8 +27,8 @@ async fn main() {
             };
         }
         Commands::New(new) => {
-            if let Err(e) = new.run() {
-                eprintln!("{}", e);
+            if let Err(e) = new.run(cli.verbose) {
+                eprintln!("{:#}", e);
                 std::process::exit(1);
             }
         }

@@ -17,6 +17,7 @@ mod ui {
         Fallback(String),
         ConnectionFailed(String),
         Connecting,
+        //@xtask-route
     }
 }
 
