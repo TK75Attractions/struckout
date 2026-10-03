@@ -123,6 +123,8 @@ impl Context {
 
         let upper = self.args.name.to_upper_camel_case();
         let kebab = self.args.name.to_kebab_case();
+        let (mut found_import, mut found_export, mut found_enum, mut found_screen) =
+            (false, false, false, false);
         for line in reader.lines() {
             let line = line.with_context(|| "reading ui/app-window.slint: failed to read line")?;
             match line.as_str().trim() {
@@ -132,23 +134,34 @@ impl Context {
                         "import {{ {upper}Screen }} from \"./screens/{kebab}-screen.slint\";",
                     )
                     .with_context(|| "writing tempfile")?;
+                    found_import = true;
                 }
                 "//@xtask-export" => {
                     writeln!(
                         out,
                         "export {{ {upper}Adopter }}from \"./screens/{kebab}-screen.slint\";",
                     )?;
+                    found_export = true;
                 }
                 "//@xtask-enum" => {
                     writeln!(out, "\t{upper}")?;
+                    found_enum = true;
                 }
-                "//@xtask-screen" => writeln!(
-                    out,
-                    "\t\tif nav-route == UiNavRoute.{upper}: {upper}Screen {{ }}",
-                )?,
+                "//@xtask-screen" => {
+                    writeln!(
+                        out,
+                        "\t\tif nav-route == UiNavRoute.{upper}: {upper}Screen {{ }}",
+                    )?;
+                    found_screen = true;
+                }
                 _ => (),
             }
             writeln!(out, "{}", line)?;
+        }
+        if !found_import || !found_export || !found_enum || !found_screen {
+            bail!(
+                "can't find some of '//@xtask-import', '//@xtask-export', '//@xtask-enum' and '//@xtask-screen' in 'ui/app-window.slint'"
+            );
         }
         std::fs::rename(out.path(), "ui/app-window.slint")
             .with_context(|| "failed to move tempfile")?;
@@ -161,11 +174,13 @@ impl Context {
             .with_context(|| "failed to open 'src/presentation/mod.rs'")?;
         let reader = BufReader::new(file);
         let mut out = self.tempfile()?;
+        let (mut found_pub_mod, mut found_register) = (false, false);
         for line in reader.lines() {
             let line = line?;
             match line.as_str().trim() {
                 "//@xtask-pub-mod" => {
                     writeln!(out, "pub mod {};", self.args.name.to_snake_case())?;
+                    found_pub_mod = true;
                 }
                 "//@xtask-register" => {
                     writeln!(
@@ -173,10 +188,16 @@ impl Context {
                         "\t\t.register({}Destination::new(&application))",
                         self.args.name.to_upper_camel_case()
                     )?;
+                    found_register = true;
                 }
                 _ => (),
             }
             writeln!(out, "{}", line)?;
+        }
+        if !found_pub_mod || !found_register {
+            bail!(
+                "can't find one or both of '//@xtask-pub-mod' and '//@xtask-register' in 'src/presentation/mod.rs'"
+            );
         }
         std::fs::rename(out.path(), "src/presentation/mod.rs")
             .with_context(|| "failed to move tempfile")?;
@@ -189,14 +210,20 @@ impl Context {
         let reader = BufReader::new(file);
 
         let mut out = self.tempfile()?;
-
+        let mut found_route = false;
         for line in reader.lines() {
             let line = line.with_context(|| "reading ui/lib.rs: failed to read line")?;
             match line.as_str().trim() {
-                "//@xtask-route" => writeln!(out, "\t\t{}", self.args.name.to_upper_camel_case())?,
+                "//@xtask-route" => {
+                    writeln!(out, "\t\t{}", self.args.name.to_upper_camel_case())?;
+                    found_route = true;
+                }
                 _ => (),
             }
             writeln!(out, "{}", line)?;
+        }
+        if !found_route {
+            bail!("can't find '//@xtask-route' in 'ui/lib.rs'");
         }
         std::fs::rename(out.path(), "ui/lib.rs").with_context(|| "failed to move tempfile")?;
         Ok(())
@@ -308,7 +335,7 @@ fn process_screen_slint(name: &str) -> anyhow::Result<()> {
     write!(
         file,
         "
-global Adopter {{  }}
+global Adopter {{ }}
 
 export component {}Screen {{
     Text {{
