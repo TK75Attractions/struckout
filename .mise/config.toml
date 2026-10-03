@@ -70,6 +70,11 @@ run = "cargo sqlx prepare"
 dir = "game_master/"
 description = "game-masterのクエリ検証用メタデータを生成する"
 
+[tasks."touchpanel:fmt-slint"]
+run = "find -name '*.slint' | xargs slint-lsp format --inline"
+dir = "touchpanel/ui/"
+description = "touchpanelのslintファイルを整形する"
+
 [tasks."patches:disable"]
 run = """
     if [ -f ./patches.toml ]; then
