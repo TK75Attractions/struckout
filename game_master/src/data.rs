@@ -5,7 +5,9 @@ use struckout_proto::{
 };
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource, GetGameResultError, ValidatePlayerNameError};
+use crate::{
+    AddPlayerError, DataSource, GetGameResultError, GetPlayerError, ValidatePlayerNameError,
+};
 
 const STATUS_FINISHED: &str = "finished";
 const STATUS_RUNNING: &str = "running";
@@ -131,10 +133,31 @@ impl DataSource for DataSourceImpl {
             None => Ok(()),
         }
     }
+
+    async fn get_player(&self, name: impl Into<String> + Send) -> Result<Player, GetPlayerError> {
+        let name = name.into();
+        let res = sqlx::query!("SELECT * FROM players WHERE name = ?", &name)
+            .fetch_optional(&self.pool)
+            .await?;
+        match res {
+            Some(r) => Ok(Player {
+                player_id: r.id.into(),
+                name,
+            }),
+            None => Err(GetPlayerError::NotExist(name)),
+        }
+    }
 }
 
+#[derive(Debug, Clone)]
 pub struct GameRecord {
     pub score: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct Player {
+    pub player_id: PlayerId,
+    pub name: String,
 }
 
 /// The type implementing this trait can be converted from/into MySQL's enum column.

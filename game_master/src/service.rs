@@ -3,8 +3,9 @@ use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 use parking_lot::RwLock;
 use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
-    GetGameResultRequest, GetGameResultResponse, ListenEventsRequest, ListenEventsResponse,
-    StartGameRequest, StartGameResponse, ValidatePlayerNameRequest, ValidatePlayerNameResponse,
+    GetGameResultRequest, GetGameResultResponse, GetPlayerRequest, GetPlayerResponse,
+    ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
+    ValidatePlayerNameRequest, ValidatePlayerNameResponse,
     game_master_service_server::GameMasterService,
     types::{GameId, MachineId},
     validate_player_name_response::ValidatePlayerNameResp,
@@ -18,7 +19,10 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{AddPlayerError, DataSource, GetGameResultError, ValidatePlayerNameError};
+use crate::{
+    AddPlayerError, DataSource, GetGameResultError, GetPlayerError, ValidatePlayerNameError,
+    data::Player,
+};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
@@ -315,6 +319,24 @@ where
             Err(ValidatePlayerNameError::Sqlx(e)) => Err(Status::internal(e.to_string())),
         }
     }
+
+    async fn get_player(
+        &self,
+        req: Request<GetPlayerRequest>,
+    ) -> Result<Response<GetPlayerResponse>, Status> {
+        let req = req.into_inner();
+        match self.data_source.get_player(req.name).await {
+            Ok(Player { player_id, name }) => Ok(Response::new(GetPlayerResponse {
+                player_id: player_id.into_inner(),
+                player_name: name,
+            })),
+            Err(GetPlayerError::NotExist(name)) => Err(Status::not_found(format!(
+                "player with name '{}' does not exist",
+                name
+            ))),
+            Err(GetPlayerError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        }
+    }
 }
 
 /// Filters events from `event_rx` by `game_id` and pass it through the response stream.
@@ -436,6 +458,13 @@ mod tests {
             &self,
             _name: impl Into<String>,
         ) -> Result<(), ValidatePlayerNameError> {
+            unimplemented!()
+        }
+
+        async fn get_player(
+            &self,
+            _name: impl Into<String> + Send,
+        ) -> Result<Player, GetPlayerError> {
             unimplemented!()
         }
     }
