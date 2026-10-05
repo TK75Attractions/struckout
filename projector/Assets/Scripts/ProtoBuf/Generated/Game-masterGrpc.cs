@@ -72,6 +72,10 @@ namespace Tk75Attractions.Struckout.V1 {
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.ValidatePlayerNameRequest> __Marshaller_tk75attractions_struckout_v1_ValidatePlayerNameRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.ValidatePlayerNameRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.ValidatePlayerNameResponse> __Marshaller_tk75attractions_struckout_v1_ValidatePlayerNameResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.ValidatePlayerNameResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.GetPlayerRequest> __Marshaller_tk75attractions_struckout_v1_GetPlayerRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.GetPlayerRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.V1.GetPlayerResponse> __Marshaller_tk75attractions_struckout_v1_GetPlayerResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.V1.GetPlayerResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.AddPlayerRequest, global::Tk75Attractions.Struckout.V1.AddPlayerResponse> __Method_AddPlayer = new grpc::Method<global::Tk75Attractions.Struckout.V1.AddPlayerRequest, global::Tk75Attractions.Struckout.V1.AddPlayerResponse>(
@@ -120,6 +124,14 @@ namespace Tk75Attractions.Struckout.V1 {
         "ValidatePlayerName",
         __Marshaller_tk75attractions_struckout_v1_ValidatePlayerNameRequest,
         __Marshaller_tk75attractions_struckout_v1_ValidatePlayerNameResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Tk75Attractions.Struckout.V1.GetPlayerRequest, global::Tk75Attractions.Struckout.V1.GetPlayerResponse> __Method_GetPlayer = new grpc::Method<global::Tk75Attractions.Struckout.V1.GetPlayerRequest, global::Tk75Attractions.Struckout.V1.GetPlayerResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetPlayer",
+        __Marshaller_tk75attractions_struckout_v1_GetPlayerRequest,
+        __Marshaller_tk75attractions_struckout_v1_GetPlayerResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -196,6 +208,18 @@ namespace Tk75Attractions.Struckout.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.V1.ValidatePlayerNameResponse> ValidatePlayerName(global::Tk75Attractions.Struckout.V1.ValidatePlayerNameRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Get player.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.V1.GetPlayerResponse> GetPlayer(global::Tk75Attractions.Struckout.V1.GetPlayerRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -443,6 +467,54 @@ namespace Tk75Attractions.Struckout.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_ValidatePlayerName, null, options, request);
       }
+      /// <summary>
+      /// Get player.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.V1.GetPlayerResponse GetPlayer(global::Tk75Attractions.Struckout.V1.GetPlayerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetPlayer(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Get player.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.V1.GetPlayerResponse GetPlayer(global::Tk75Attractions.Struckout.V1.GetPlayerRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetPlayer, null, options, request);
+      }
+      /// <summary>
+      /// Get player.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.V1.GetPlayerResponse> GetPlayerAsync(global::Tk75Attractions.Struckout.V1.GetPlayerRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetPlayerAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Get player.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.V1.GetPlayerResponse> GetPlayerAsync(global::Tk75Attractions.Struckout.V1.GetPlayerRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetPlayer, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override GameMasterServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -462,7 +534,8 @@ namespace Tk75Attractions.Struckout.V1 {
           .AddMethod(__Method_ListenEvents, serviceImpl.ListenEvents)
           .AddMethod(__Method_AddScore, serviceImpl.AddScore)
           .AddMethod(__Method_GetGameResult, serviceImpl.GetGameResult)
-          .AddMethod(__Method_ValidatePlayerName, serviceImpl.ValidatePlayerName).Build();
+          .AddMethod(__Method_ValidatePlayerName, serviceImpl.ValidatePlayerName)
+          .AddMethod(__Method_GetPlayer, serviceImpl.GetPlayer).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -478,6 +551,7 @@ namespace Tk75Attractions.Struckout.V1 {
       serviceBinder.AddMethod(__Method_AddScore, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.V1.AddScoreRequest, global::Tk75Attractions.Struckout.V1.AddScoreResponse>(serviceImpl.AddScore));
       serviceBinder.AddMethod(__Method_GetGameResult, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.V1.GetGameResultRequest, global::Tk75Attractions.Struckout.V1.GetGameResultResponse>(serviceImpl.GetGameResult));
       serviceBinder.AddMethod(__Method_ValidatePlayerName, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.V1.ValidatePlayerNameRequest, global::Tk75Attractions.Struckout.V1.ValidatePlayerNameResponse>(serviceImpl.ValidatePlayerName));
+      serviceBinder.AddMethod(__Method_GetPlayer, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.V1.GetPlayerRequest, global::Tk75Attractions.Struckout.V1.GetPlayerResponse>(serviceImpl.GetPlayer));
     }
 
   }
