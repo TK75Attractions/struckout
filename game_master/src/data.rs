@@ -216,6 +216,7 @@ mod tests {
     /// Creates MySQL container, connects to it, and run migration scripts.
     ///
     /// Returned [`ContainerAsync`] must not be dropped while you use it, or you will encounter a [`sqlx::Error::PoolTimedOut`] error.
+    #[must_use = "`ContainerAsync` must be kept alive while you use it"]
     async fn init_mysql() -> (
         ContainerAsync<testcontainers_modules::mysql::Mysql>,
         sqlx::Pool<MySql>,
@@ -350,5 +351,30 @@ mod tests {
             .await
             .expect_err("should return error");
         assert_matches!(err, ValidatePlayerNameError::AlreadyUsed(v) if v == name);
+    }
+
+    #[tokio::test]
+    async fn get_plater_returns_err_when_player_not_exist() {
+        let (_container, pool) = init_mysql().await;
+
+        let ds = DataSourceImpl::new(pool.clone());
+
+        let res = ds.get_player("アムロ").await;
+        assert_matches!(res, Err(GetPlayerError::NotExist(_)));
+    }
+
+    #[tokio::test]
+    async fn get_player_returns_ok_when_player_exist() {
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+        let name = "カミーユ";
+
+        sqlx::query!("INSERT INTO players (id, name) VALUES (?, ?)", 1, name)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let res = ds.get_player(name).await;
+        assert_matches!(res, Ok(Player { player_id:pid_got, name:name_got }) if pid_got == PlayerId::new(1) && name_got == name);
     }
 }
