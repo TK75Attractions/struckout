@@ -4,8 +4,9 @@ use futures_util::Stream;
 use parking_lot::{RwLock, RwLockReadGuard};
 use struckout_proto::{
     AddPlayerRequest, AddPlayerResponse, Difficulty, GetGameResultRequest, GetGameResultResponse,
-    StartGameRequest, StartGameResponse, ValidatePlayerNameRequest, ValidatePlayerNameResponse,
-    event::EventData, game_master_service_client::GameMasterServiceClient, types::GameId,
+    GetPlayerRequest, GetPlayerResponse, StartGameRequest, StartGameResponse,
+    ValidatePlayerNameRequest, ValidatePlayerNameResponse, event::EventData,
+    game_master_service_client::GameMasterServiceClient, types::GameId,
     validate_player_name_response::ValidatePlayerNameResp,
 };
 use thiserror::Error;
@@ -57,6 +58,11 @@ pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
         &mut self,
         request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
     ) -> impl Future<Output = Result<Response<ValidatePlayerNameResponse>, Status>>;
+
+    fn get_player(
+        &mut self,
+        request: impl tonic::IntoRequest<GetPlayerRequest>,
+    ) -> impl Future<Output = Result<Response<GetPlayerResponse>, Status>>;
 }
 
 #[derive(derive_more::Debug, Clone)]
@@ -154,6 +160,13 @@ impl InternalGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
         request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
     ) -> impl Future<Output = Result<Response<ValidatePlayerNameResponse>, Status>> {
         self.validate_player_name(request)
+    }
+
+    fn get_player(
+        &mut self,
+        request: impl tonic::IntoRequest<GetPlayerRequest>,
+    ) -> impl Future<Output = Result<Response<GetPlayerResponse>, Status>> {
+        self.get_player(request)
     }
 }
 
@@ -288,6 +301,30 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
                 })
             }
             Err(e) => Err(RequestError::Grpc(e)),
+        }
+    }
+
+    /// Gets player info from game-master.
+    ///
+    /// Returns `Ok(Some(_))` when the player exists, `Ok(None)` when the player does not exist,
+    /// `Err(_)` when an unknown error occured.
+    pub async fn get_player(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<Option<PlayerId>, RequestError> {
+        match self
+            .client
+            .get_player(GetPlayerRequest { name: name.into() })
+            .await
+        {
+            Ok(res) => {
+                let res = res.into_inner();
+                Ok(Some(res.player_id.into()))
+            }
+            Err(e) => match e.code() {
+                tonic::Code::NotFound => Ok(None),
+                _ => Err(RequestError::Grpc(e)),
+            },
         }
     }
 
@@ -536,6 +573,13 @@ mod tests {
             &mut self,
             request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
         ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
+            unimplemented!()
+        }
+
+        async fn get_player(
+            &mut self,
+            _request: impl tonic::IntoRequest<GetPlayerRequest>,
+        ) -> Result<Response<GetPlayerResponse>, Status> {
             unimplemented!()
         }
     }

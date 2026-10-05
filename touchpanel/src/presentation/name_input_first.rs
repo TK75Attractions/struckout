@@ -10,6 +10,7 @@ use tokio_util::sync::CancellationToken;
 use tonic::Status;
 use tracing::{Instrument, debug, instrument, trace};
 
+use super::pop_player_name;
 use crate::{Application, Context, NavController, data::RequestError};
 
 use touchpanel_ui::{
@@ -204,13 +205,6 @@ where
     }
 }
 
-/// 最後の文字を消した値を返す
-fn pop_player_name(old_text: impl Into<String>) -> SharedString {
-    let mut text = old_text.into();
-    let _last = text.pop();
-    text.to_shared_string()
-}
-
 pub struct NameInputFirstDestination(
     #[allow(dead_code)] // may used when some arg is added to the route
     NameInputViewModel<Context, SlintExecutor>,
@@ -256,20 +250,6 @@ mod tests {
     use touchpanel_ui::UiNavRoute;
 
     use super::*;
-
-    #[test]
-    fn pop_player_name_works() {
-        let old_text = "bobb".to_shared_string();
-        let new_text = pop_player_name(old_text);
-        assert_eq!("bob", new_text.as_str());
-    }
-
-    #[test]
-    fn pop_player_name_works_with_multi_byte_characters() {
-        let old_text = "たろうう".to_shared_string();
-        let new_text = pop_player_name(old_text);
-        assert_eq!("たろう", new_text.as_str());
-    }
 
     #[rstest]
     #[case::cancelled(300.milliseconds(), 200.milliseconds(), 400.milliseconds(), "dummy!", "")]

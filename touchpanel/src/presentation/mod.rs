@@ -11,6 +11,7 @@ use crate::{
         ranking::RankingDestination, score::ScoreDestination, start::StartScreenDestination,
     },
 };
+use slint::{SharedString, ToSharedString as _};
 use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
 use tokio::{sync::oneshot, time::timeout};
 use touchpanel_ui::NavRoute;
@@ -173,5 +174,28 @@ pub fn attach_navhost(application: &Application) {
         .expect("failed to build NavHost");
 }
 
+/// 最後の文字を消した値を返す
+fn pop_player_name(old_text: impl Into<String>) -> SharedString {
+    let mut text = old_text.into();
+    let _last = text.pop();
+    text.to_shared_string()
+}
+
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pop_player_name_works() {
+        let old_text = "bobb".to_shared_string();
+        let new_text = pop_player_name(old_text);
+        assert_eq!("bob", new_text.as_str());
+    }
+
+    #[test]
+    fn pop_player_name_works_with_multi_byte_characters() {
+        let old_text = "たろうう".to_shared_string();
+        let new_text = pop_player_name(old_text);
+        assert_eq!("たろう", new_text.as_str());
+    }
+}
