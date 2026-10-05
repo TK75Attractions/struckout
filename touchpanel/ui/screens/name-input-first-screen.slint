@@ -4,6 +4,7 @@ import {
     KeyBoardMode,
     KeyboardBottomBar,
 } from "../components/keyboard.slint";
+import { BackButton } from "../components/back-button.slint";
 
 global Adopter {
     in property <string> player-name-text;
@@ -13,12 +14,19 @@ global Adopter {
     callback push-character(char: string);
     callback remove-character();
     callback submit-name();
+    callback move-back();
 }
 
 export component NameInputFirstScreen inherits Rectangle {
 
     VerticalLayout {
         alignment: LayoutAlignment.stretch;
+
+        BackButton {
+            on-click => {
+                Adopter.move-back();
+            }
+        }
 
         Rectangle {
             border-color: black;

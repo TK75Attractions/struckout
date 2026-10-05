@@ -22,9 +22,10 @@ touchpanel_ui::define_name_input_first_mapper! {}
 
 viewmodel_rc!(NameInputViewModel<Context, SlintExecutor>, NameInputFirstAdopter);
 
-#[derive(Debug)]
+#[derive(derive_more::Debug)]
 pub struct NameInputViewModel<C, E> {
     pub nav_controller: NavController,
+    #[debug(skip)]
     pub worker: WorkerThread<C, E>,
     pub state: NameInputFirstStates<Mapper>,
     /// Token to cancel request to game-master.
@@ -200,6 +201,11 @@ where
             }
         })
         .unwrap();
+    }
+
+    #[instrument]
+    fn on_move_back(&mut self) {
+        self.nav_controller.navigate(NavRoute::Start);
     }
 }
 
