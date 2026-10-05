@@ -24,13 +24,18 @@ const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
 #[derive(Debug)]
 pub struct Game {
-    game_id: GameId,
     score: u32,
 }
 
 impl Game {
-    pub fn new(game_id: GameId) -> Self {
-        Self { game_id, score: 0 }
+    pub fn new() -> Self {
+        Self { score: 0 }
+    }
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -175,9 +180,7 @@ where
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        self.running_games
-            .write()
-            .insert(game_id, Game::new(game_id));
+        self.running_games.write().insert(game_id, Game::new());
 
         // subscribe on events before sending `GameStarted`.
         let event_rx = self.event_tx.subscribe();
