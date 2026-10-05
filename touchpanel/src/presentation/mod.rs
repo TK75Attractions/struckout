@@ -191,6 +191,7 @@ mod tests {
 
     #[test]
     fn attach_navhost_registers_all_screen() {
+        i_slint_backend_testing::init_no_event_loop();
         let ui = touchpanel_ui::AppWindow::new().unwrap();
 
         let nav_controller = NavController::new(NavRoute::Connecting, {
