@@ -14,8 +14,8 @@ dir = "game_master/"
 description = "Start a MySQL service for game-master."
 
 ["game-master:build"]
-depends = ["escape-patches", "game-master:prepare"]
-depends_post = "post-escape-patches"
+depends = ["patches:disable", "game-master:prepare"]
+depends_post = "patches:enable"
 run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml build"
 dir = "game_master/"
 description = "game-masterをビルドする"
