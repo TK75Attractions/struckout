@@ -14,7 +14,7 @@ use tracing::debug;
 
 touchpanel_ui::define_score_mapper! {}
 
-// viewmodel_rc!(ScoreViewModel<C>, ScoreAdopter);
+viewmodel_rc!(ScoreViewModel<Context, SlintExecutor>, ScoreAdopter);
 
 #[derive(Debug)]
 struct ScoreViewModel<C, E> {
@@ -96,14 +96,14 @@ impl GameResultProvider for Context {
 
 pub struct ScoreDestination {
     worker: WorkerThread<Context, SlintExecutor>,
-    viewmodel: ScoreViewModel<Context, SlintExecutor>,
+    viewmodel: ScoreViewModelRc,
 }
 
 impl ScoreDestination {
     pub fn new(application: &Application) -> Self {
         Self {
             worker: application.worker.clone(),
-            viewmodel: ScoreViewModel::new(application),
+            viewmodel: ScoreViewModelRc::new(application),
         }
     }
 }
@@ -115,7 +115,7 @@ impl NavDestination<NavRoute> for ScoreDestination {
             panic!("matched variant should be given");
         };
 
-        self.viewmodel.show_result(*game_id);
+        self.viewmodel.borrow().show_result(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {

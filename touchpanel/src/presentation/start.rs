@@ -40,9 +40,7 @@ impl StartViewModelTrait for StartViewModel {
 
     fn on_click_non_first_play(&mut self) {
         trace!("StartScreen::on_click_non_first_play()");
-        todo!()
-        // self.nav_controller
-        // .navigate(NavRoute::NameInputNonFirst);
+        self.nav_controller.navigate(NavRoute::NameInputNonFirst);
     }
 }
 

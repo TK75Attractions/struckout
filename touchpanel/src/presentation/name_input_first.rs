@@ -20,9 +20,7 @@ use touchpanel_ui::{
 
 touchpanel_ui::define_name_input_first_mapper! {}
 
-// viewmodel_rc!(NameInputViewModel<C>, NameInputAdopter);
-
-// TODO: 一タイプごとにvalidateする
+viewmodel_rc!(NameInputViewModel<Context, SlintExecutor>, NameInputFirstAdopter);
 
 #[derive(Debug)]
 pub struct NameInputViewModel<C, E> {
@@ -207,12 +205,12 @@ where
 
 pub struct NameInputFirstDestination(
     #[allow(dead_code)] // may used when some arg is added to the route
-    NameInputViewModel<Context, SlintExecutor>,
+    NameInputViewModelRc,
 );
 
 impl NameInputFirstDestination {
     pub fn new(application: &Application) -> Self {
-        Self(NameInputViewModel::new(application))
+        Self(NameInputViewModelRc::new(application))
     }
 }
 

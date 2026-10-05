@@ -23,42 +23,27 @@ use tracing::{debug, warn};
 /// by calling [`stern::GlobalExt::register_viewmodel()`]).
 ///
 /// `vm` is the name of viewmodel type (e.g. XxxViewModel).
+///
+/// # Example
+/// ```ignore
+/// # use crate::Context;
+/// # use stern::worker::SlintExecutor;
+/// use touchpanel_ui::{StartViewModel, StartAdopter};
+///
+/// viewmodel_rc!(StartViewModel<Context,SlintExecutor,>, StartAdopter);
+/// ```
 macro_rules! viewmodel_rc {
-    ($vm:ident, $adopter:ty) => {
+    ($vm:ident$(<$type_param1:ty$(,$type_param2:ty)*>)?, $adopter:ty) => {
         pastey::paste! {
-            #[allow(unused_imports)]
-            use slint::ComponentHandle as _;
-            #[allow(unused_imports)]
-            use stern::GlobalExt as _;
-
             #[derive(derive_more::Deref)]
-            struct [<$vm Rc>](std::rc::Rc<std::cell::RefCell<$vm>>);
+            struct [<$vm Rc>](std::rc::Rc<std::cell::RefCell<$vm$(<$type_param1$(,$type_param2)*>)?>>);
 
             impl [<$vm Rc>] {
                 #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
                 fn new(application: &Application) -> Self {
-                    let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
-                    application.ui.global::<touchpanel_ui::$adopter>()
-                        .register_viewmodel(std::rc::Rc::clone(&this));
+                    use slint::ComponentHandle as _;
+                    use stern::GlobalExt as _;
 
-                    Self(this)
-                }
-            }
-        }
-    };
-    ($vm:ident<$generics:ident>, $adopter:ty) => {
-        pastey::paste! {
-            #[allow(unused_imports)]
-            use slint::ComponentHandle as _;
-            #[allow(unused_imports)]
-            use stern::GlobalExt as _;
-
-            #[derive(derive_more::Deref)]
-            struct [<$vm Rc>]<$generics>(std::rc::Rc<std::cell::RefCell<$vm<$generics>>>);
-
-            impl [<$vm Rc>]<crate::Context> {
-                #[doc = concat!("Creates [`", stringify!($vm), "`] and registers it to the adapter by calling [`stern::GlobalExt::register_viewmodel()`].")]
-                fn new(application: &Application) -> Self {
                     let this = std::rc::Rc::new(std::cell::RefCell::new($vm::new(application)));
                     application.ui.global::<touchpanel_ui::$adopter>()
                         .register_viewmodel(std::rc::Rc::clone(&this));

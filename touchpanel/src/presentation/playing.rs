@@ -16,7 +16,7 @@ use touchpanel_ui::{
 };
 use tracing::debug;
 
-// viewmodel_rc!(PlayingViewModel<C>, PlayingAdopter);
+viewmodel_rc!(PlayingViewModel<Context, SlintExecutor>, PlayingAdopter);
 
 pub struct PlayingViewModel<C, E> {
     nav_controller: NavController,
@@ -132,12 +132,12 @@ impl<C, E> PlayingViewModelTrait for PlayingViewModel<C, E> {}
 
 pub struct PlayingDestination(
     #[allow(dead_code)] // may used when some arg is added to the route
-    PlayingViewModel<Context, SlintExecutor>,
+    PlayingViewModelRc,
 );
 
 impl PlayingDestination {
     pub fn new(application: &Application) -> Self {
-        Self(PlayingViewModel::new(application))
+        Self(PlayingViewModelRc::new(application))
     }
 }
 
@@ -149,7 +149,7 @@ impl NavDestination<NavRoute> for PlayingDestination {
             panic!("matched variant should be given");
         };
 
-        self.0.listen_session(*game_id);
+        self.0.borrow().listen_session(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {
