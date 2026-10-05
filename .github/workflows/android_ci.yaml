@@ -2,12 +2,12 @@ name: Android CI
 
 on:
   push: 
-    branches: main
+    branches: master
     paths: 
       - struckoutCameraApp/**
       - api/proto/**
   pull_request:
-    branches: main
+    branches: master
     paths:
       - struckoutCameraApp/**
       - api/proto/**

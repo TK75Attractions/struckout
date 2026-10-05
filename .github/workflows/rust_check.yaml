@@ -2,7 +2,7 @@ name: Rust check
 
 on: 
   push:
-    branches: main
+    branches: master
     paths:
       - .cargo/**
       - .mise/**
@@ -15,7 +15,7 @@ on:
       - touchpanel/**
       - xtask/**
   pull_request:
-    branches: main
+    branches: master
     paths:
       - .cargo/**
       - .mise/**

@@ -2,7 +2,7 @@ name: Proto CI
 
 on:
   push:
-    branches: main
+    branches: master
     paths:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
@@ -12,7 +12,7 @@ on:
       - .mise/config.toml
       - .github/workflows/proto_ci.yml
   pull_request:
-    branches: main
+    branches: master
     paths:
       - api/proto/**
       - projector/Assets/Scripts/ProtoBuf/Generated/**
