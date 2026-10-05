@@ -21,6 +21,6 @@ dir = "game_master/"
 description = "game-masterをビルドする"
 
 ["game-master:prepare"]
-run = "cargo sqlx prepare"
+run = "cargo sqlx prepare -- --all-targets"
 dir = "game_master/"
 description = "game-masterのクエリ検証用メタデータを生成する"
