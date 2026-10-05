@@ -168,6 +168,11 @@ fn pop_player_name(old_text: impl Into<String>) -> SharedString {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use slint::ComponentHandle as _;
+    use stern::nav::NavController;
+
     use super::*;
 
     #[test]
@@ -182,5 +187,34 @@ mod tests {
         let old_text = "たろうう".to_shared_string();
         let new_text = pop_player_name(old_text);
         assert_eq!("たろう", new_text.as_str());
+    }
+
+    #[test]
+    fn attach_navhost_registers_all_screen() {
+        let ui = touchpanel_ui::AppWindow::new().unwrap();
+
+        let nav_controller = NavController::new(NavRoute::Connecting, {
+            let ui = ui.as_weak();
+
+            move |route| {
+                let ui = ui.unwrap();
+                ui.set_nav_route(route.into());
+            }
+        });
+
+        let cx = Context::new_empty();
+        let worker = WorkerThread::new(cx);
+
+        let application = Application {
+            nav_controller,
+            ui,
+            worker,
+            config: Arc::new(Config {
+                server_addr: "127.0.0.1".to_string(),
+                machine_id: 1,
+            }),
+        };
+
+        attach_navhost(&application);
     }
 }
