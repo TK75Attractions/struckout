@@ -6,11 +6,13 @@ on:
     paths: 
       - struckoutCameraApp/**
       - api/proto/**
+      - .github/workflows/android_ci.yaml
   pull_request:
     branches: master
     paths:
       - struckoutCameraApp/**
       - api/proto/**
+      - .github/workflows/android_ci.yaml
   workflow_dispatch: 
 
 jobs:
