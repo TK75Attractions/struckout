@@ -18,6 +18,7 @@ use super::pop_player_name;
 use crate::{Application, Context, NavController, data::RequestError};
 
 touchpanel_ui::define_name_input_non_first_mapper! {}
+viewmodel_rc!(NameInputNonFirstViewModel<Context,SlintExecutor>, NameInputNonFirstAdopter);
 
 #[derive(derive_more::Debug)]
 struct NameInputNonFirstViewModel<C, E> {
@@ -122,11 +123,11 @@ where
     }
 }
 
-pub struct NameInputNonFirstDestination(NameInputNonFirstViewModel<Context, SlintExecutor>);
+pub struct NameInputNonFirstDestination(NameInputNonFirstViewModelRc);
 
 impl NameInputNonFirstDestination {
     pub fn new(application: &Application) -> Self {
-        Self(NameInputNonFirstViewModel::new(application))
+        Self(NameInputNonFirstViewModelRc::new(application))
     }
 }
 
@@ -135,8 +136,6 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
         let NavRoute::NameInputNonFirst = route else {
             panic!("given NavRoute has invalid variant value");
         };
-
-        todo!()
     }
 
     fn route(&self) -> NavRouteKind {

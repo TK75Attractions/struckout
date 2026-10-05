@@ -16,7 +16,10 @@ use tracing::{debug, trace};
 
 touchpanel_ui::define_difficulity_select_mapper! {}
 
-// viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
+viewmodel_rc!(
+    DifficulitySelectViewModel<SlintExecutor>,
+    DifficulitySelectAdopter
+);
 
 #[derive(Debug)]
 struct DifficulitySelectViewModel<E> {
@@ -84,12 +87,12 @@ where
 
 pub struct DifficultySelectDestination(
     #[allow(unused)] // may used when some arg is added to the route
-    DifficulitySelectViewModel<SlintExecutor>,
+    DifficulitySelectViewModelRc,
 );
 
 impl DifficultySelectDestination {
     pub fn new(application: &Application) -> Self {
-        Self(DifficulitySelectViewModel::new(application))
+        Self(DifficulitySelectViewModelRc::new(application))
     }
 }
 
@@ -100,7 +103,7 @@ impl NavDestination<NavRoute> for DifficultySelectDestination {
             panic!("matched variant should be given");
         };
 
-        self.0.player_id = Some(*player_id);
+        self.0.borrow_mut().player_id = Some(*player_id);
     }
 
     fn route(&self) -> NavRouteKind {

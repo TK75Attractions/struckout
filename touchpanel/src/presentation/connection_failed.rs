@@ -15,7 +15,10 @@ use tracing::{debug, warn};
 
 touchpanel_ui::define_connection_failed_mapper! {}
 
-// viewmodel_rc!(ConnectionFailedViewModel, ConnectionFailedAdopter);
+viewmodel_rc!(
+    ConnectionFailedViewModel<SlintExecutor>,
+    ConnectionFailedAdopter
+);
 
 struct ConnectionFailedViewModel<E> {
     nav_controller: NavController,
@@ -68,13 +71,13 @@ where
 }
 
 pub struct ConnectionFailedDestination {
-    viewmodel: ConnectionFailedViewModel<SlintExecutor>,
+    viewmodel: ConnectionFailedViewModelRc,
 }
 
 impl ConnectionFailedDestination {
     pub fn new(application: &Application) -> Self {
         Self {
-            viewmodel: ConnectionFailedViewModel::new(application),
+            viewmodel: ConnectionFailedViewModelRc::new(application),
         }
     }
 }
@@ -87,7 +90,11 @@ impl NavDestination<NavRoute> for ConnectionFailedDestination {
             panic!("matched variant should be given");
         };
 
-        self.viewmodel.state.error_msg.set(msg.to_shared_string());
+        self.viewmodel
+            .borrow()
+            .state
+            .error_msg
+            .set(msg.to_shared_string());
     }
 
     fn route(&self) -> NavRouteKind {

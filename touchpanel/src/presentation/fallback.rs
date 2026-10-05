@@ -1,7 +1,7 @@
 use slint::{ComponentHandle, Global, ToSharedString};
 
 use crate::Application;
-use stern::{GlobalExt, nav::NavDestination};
+use stern::nav::NavDestination;
 use touchpanel_ui::{
     FallbackPropertyMappers, FallbackStates, FallbackViewModelTrait, NavRoute, NavRouteKind,
 };
