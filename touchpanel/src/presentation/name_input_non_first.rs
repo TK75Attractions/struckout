@@ -121,6 +121,11 @@ where
         };
         self.state.keyboard_mode.set(new_mode);
     }
+
+    #[instrument]
+    fn on_back(&mut self) {
+        self.nav_controller.navigate(NavRoute::Start);
+    }
 }
 
 pub struct NameInputNonFirstDestination(NameInputNonFirstViewModelRc);
