@@ -44,48 +44,80 @@ jobs:
         run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
       
       - name: Upload ball-tracker (Windows)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.os == 'windows-2022' }}
         with:
           name: ball-tracker-x86_64-windows
           path: ./target/release/ball_tracker.exe
       - name: Upload touchpanel (Windows)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.os == 'windows-2022' }}
         with:
           name: touchpanel-x86_64-windows
           path: ./target/release/touchpanel.exe
           
       - name: Upload ball-tracker (macOS)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.os == 'macos-14' }} 
         with:
           name: ball-tracker-aarch64-macos
           path: ./target/release/ball_tracker
       - name: Upload touchpanel (macOS)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.os == 'macos-14' }}
         with:
           name: touchpanel-aarch64-macos
           path: ./target/release/touchpanel
 
       - name: Upload ball-tracker (Linux)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.os == 'ubuntu-22.04' }}
         with:
           name: ball-tracker-x86_64-linux
           path: ./target/release/ball_tracker
       - name: Upload touchpanel (Linux)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ matrix.os == 'ubuntu-22.04' }}
         with:
           name: touchpanel-x86_64-linux
           path: ./target/release/touchpanel
+
+  unity-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target-platform:
+          - StandalonwWindows64
+          - StandaloneLinux64
+          - StandaloneOSX
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            projector
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+      - uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.target-platform }}
+          projectPath: projector
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: projector-${{ matrix.target-platform }}
+          path: ./build/
   
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'master' }}
-    needs: [rust-build]
+    needs: [rust-build, unity-build]
     permissions:
       contents: write
     steps:
@@ -108,7 +140,7 @@ jobs:
           mv ball-tracker-x86_64-windows/ball_tracker.exe upload/ball-tracker-x86_64-windows.exe
           mv touchpanel-aarch64-macos/touchpanel upload/touchpanel-aarch64-macos
           mv ball-tracker-aarch64-macos/ball_tracker upload/ball-tracker-aarch64-macos
-
+          
           gh release create nightly --notes "nightly release" upload/*
         env:
           GH_TOKEN: ${{ github.token }}
