@@ -6,6 +6,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import com.taichi765.struckoutCameraApp.camera.types.WorldDirection
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.opencv.calib3d.Calib3d
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
@@ -51,22 +52,52 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
      */
     private val sensorIntrinsics: CameraIntrinsics = run {
         val calibration = characteristics.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION)
-            ?: throw IllegalStateException(
-                "This device does not support LENS_INTRINSIC_CALIBRATION." +
+        if (calibration != null && calibration[0] > 0f && calibration[1] > 0f) {
+            return@run CameraIntrinsics(
+                fx = calibration[0].toDouble(),
+                fy = calibration[1].toDouble(),
+                cx = calibration[2].toDouble(),
+                cy = calibration[3].toDouble()
+            )
+        }
+
+        Timber.tag(TAG)
+            .w("LENS_INTRINSIC_CALIBRATION is not available. Estimating intrinsics from the focal length and the sensor size.")
+        val focalLength =
+            characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                ?.firstOrNull()
+        val physicalSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+        val pixelArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+        if (focalLength == null || physicalSize == null || pixelArraySize == null) {
+            throw IllegalStateException(
+                "This device supports neither LENS_INTRINSIC_CALIBRATION nor the sensor info to estimate it." +
                         "You may need to manually measure intrinsics."
             )
-        CameraIntrinsics(
-            fx = calibration[0].toDouble(),
-            fy = calibration[1].toDouble(),
-            cx = calibration[2].toDouble(),
-            cy = calibration[3].toDouble()
+        }
+        CameraIntrinsics.fromSensorInfo(
+            focalLengthMm = focalLength,
+            physicalWidthMm = physicalSize.width,
+            physicalHeightMm = physicalSize.height,
+            pixelArrayWidth = pixelArraySize.width,
+            pixelArrayHeight = pixelArraySize.height,
+            activeArrayWidth = activeArraySize.width(),
+            activeArrayHeight = activeArraySize.height()
         )
     }
 
     private val cameraRotation: Mat = run {
         val rotation = characteristics.get(CameraCharacteristics.LENS_POSE_ROTATION)
             ?.map { it.toDouble() }
-            ?: throw IllegalStateException("This device does not support LENS_POSE_ROTATION.")
+        if (rotation == null) {
+            val sensorOrientation =
+                characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+            Timber.tag(TAG)
+                .w("LENS_POSE_ROTATION is not available. Assuming the default pose of a back camera (sensor orientation: $sensorOrientation).")
+            val rotationMatrix = Mat(3, 3, CvType.CV_64F).apply {
+                put(0, 0, *defaultBackCameraRotation(sensorOrientation))
+            }
+            return@run Mat().also { Calib3d.Rodrigues(rotationMatrix, it) }
+        }
 
         val x = rotation[0]
         val y = rotation[1]
