@@ -17,53 +17,56 @@ import kotlin.math.sin
 class CameraRepository @Inject constructor(@ApplicationContext context: Context) {
     val tracker = ObjectTracker(0.5, 15.0, 80.0)
 
-    fun calc(rect: Rect): WorldDirection {
-        return calculator.calc(rect)
+    /**
+     * @param imageWidth,imageHeight [rect] を検出した解析画像 (回転前) の大きさ
+     */
+    fun calc(rect: Rect, imageWidth: Int, imageHeight: Int): WorldDirection {
+        return calculatorFor(imageWidth, imageHeight).calc(rect)
     }
 
     private val cameraManager =
         context.getSystemService(CAMERA_SERVICE) as CameraManager
 
-
+    // CameraScreen は DEFAULT_BACK_CAMERA で撮るので、同じく最初の背面カメラを見る。
     private val characteristics = run {
-        cameraManager.cameraIdList.map { id -> cameraManager.getCameraCharacteristics(id) }
-            .filter { ch -> ch.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+        val backCameras =
+            cameraManager.cameraIdList.map { id -> cameraManager.getCameraCharacteristics(id) }
+                .filter { ch -> ch.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK }
+        if (backCameras.count() > 1) {
+            Timber.tag(TAG).d("There were multiple back camera. selecting first one.")
+        }
+        backCameras.firstOrNull()
+            ?: throw IllegalStateException("This device does not have a back camera.")
     }
 
-
-    private val cameraMatrix: Mat = run {
-        val intrinsic =
-            characteristics.mapNotNull { it.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION) }
-                .map { CameraIntrinsics(it[0], it[1], it[2], it[3], it[4]) }.let {
-                    if (it.count() > 1) {
-                        Timber.tag(TAG).d("There were multiple back camera. selecting first one.")
-                    }
-                    if (it.count() == 0) {
-                        throw IllegalStateException(
-                            "This device does not support LENS_INTRINSIC_CALIBRATION." +
-                                    "You may need to manually measure intrinsics."
-                        )
-                    }
-                    it[0]
-                }
-
-        Mat.eye(3, 3, CvType.CV_64F).apply {
-            put(0, 0, intrinsic.fx.toDouble())
-            put(1, 1, intrinsic.fy.toDouble())
-            put(0, 2, intrinsic.cx.toDouble())
-            put(1, 2, intrinsic.cy.toDouble())
-        }
+    // LENS_INTRINSIC_CALIBRATION は pre-correction active array の座標系で表される。
+    private val activeArraySize = run {
+        characteristics.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)
+            ?: characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+            ?: throw IllegalStateException("This device does not report the active array size.")
     }
 
-    private val cameraRotation = run {
-        val rotations = characteristics
-            .mapNotNull { it.get(CameraCharacteristics.LENS_POSE_ROTATION) }
+    /**
+     * Intrinsics in the coordinate system of [activeArraySize].
+     */
+    private val sensorIntrinsics: CameraIntrinsics = run {
+        val calibration = characteristics.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION)
+            ?: throw IllegalStateException(
+                "This device does not support LENS_INTRINSIC_CALIBRATION." +
+                        "You may need to manually measure intrinsics."
+            )
+        CameraIntrinsics(
+            fx = calibration[0].toDouble(),
+            fy = calibration[1].toDouble(),
+            cx = calibration[2].toDouble(),
+            cy = calibration[3].toDouble()
+        )
+    }
 
-        if (rotations.count() > 1) {
-            Timber.tag(TAG).i("There were multiple back camera. selecting first one.")
-        }
-
-        val rotation = rotations.single().map { it.toDouble() }
+    private val cameraRotation: Mat = run {
+        val rotation = characteristics.get(CameraCharacteristics.LENS_POSE_ROTATION)
+            ?.map { it.toDouble() }
+            ?: throw IllegalStateException("This device does not support LENS_POSE_ROTATION.")
 
         val x = rotation[0]
         val y = rotation[1]
@@ -83,14 +86,40 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
         }
     }
 
-    private val calculator = WorldDirectionCalculator(cameraMatrix, cameraRotation)
+    private var calculator: SizedCalculator? = null
 
-    private data class CameraIntrinsics(
-        val fx: Float,
-        val fy: Float,
-        val cx: Float,
-        val cy: Float,
-        val s: Float
+    /**
+     * 検出座標は解析画像のピクセルなので、カメラ行列もその解像度に合わせて作る。
+     * 解像度は端末が決めるため、最初のフレームが来るまで分からない。
+     */
+    @Synchronized
+    private fun calculatorFor(imageWidth: Int, imageHeight: Int): WorldDirectionCalculator {
+        calculator?.let {
+            if (it.imageWidth == imageWidth && it.imageHeight == imageHeight) return it.calculator
+        }
+
+        val intrinsics = sensorIntrinsics.scaledToImage(
+            activeArrayWidth = activeArraySize.width(),
+            activeArrayHeight = activeArraySize.height(),
+            imageWidth = imageWidth,
+            imageHeight = imageHeight
+        )
+        Timber.tag(TAG).i("camera intrinsics for ${imageWidth}x$imageHeight: $intrinsics")
+        val cameraMatrix = Mat.eye(3, 3, CvType.CV_64F).apply {
+            put(0, 0, intrinsics.fx)
+            put(1, 1, intrinsics.fy)
+            put(0, 2, intrinsics.cx)
+            put(1, 2, intrinsics.cy)
+        }
+        return WorldDirectionCalculator(cameraMatrix, cameraRotation).also {
+            calculator = SizedCalculator(imageWidth, imageHeight, it)
+        }
+    }
+
+    private data class SizedCalculator(
+        val imageWidth: Int,
+        val imageHeight: Int,
+        val calculator: WorldDirectionCalculator
     )
 
     companion object {

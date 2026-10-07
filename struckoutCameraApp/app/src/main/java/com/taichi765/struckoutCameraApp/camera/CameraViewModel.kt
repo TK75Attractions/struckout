@@ -59,7 +59,8 @@ class CameraViewModel @Inject constructor(
             timestamp = getTimestamp(result.imageTimestampMillis),
             frameId = curFrameID,
             detections = result.bboxes.map { bbox ->
-                val worldDirection = cameraRepository.calc(bbox)
+                val worldDirection =
+                    cameraRepository.calc(bbox, result.imageWidth, result.imageHeight)
                 detection {
                     layX = worldDirection.x
                     layY = worldDirection.y

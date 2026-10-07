@@ -37,7 +37,9 @@ class MyAnalyzer(
                 AnalyzeResult(
                     mat = rotated,
                     imageTimestampMillis = timestampMillis,
-                    bboxes = rects
+                    bboxes = rects,
+                    imageWidth = mat.cols(),
+                    imageHeight = mat.rows()
                 )
             )
         }
@@ -62,10 +64,17 @@ class MyAnalyzer(
         return mat
     }
 
+    /**
+     * @param mat プレビュー用に回転させた画像
+     * @param bboxes 回転前の画像での検出位置
+     * @param imageWidth,imageHeight 回転前の画像の大きさ
+     */
     data class AnalyzeResult(
         val mat: Mat,
         val imageTimestampMillis: Long,
-        val bboxes: List<Rect>
+        val bboxes: List<Rect>,
+        val imageWidth: Int,
+        val imageHeight: Int
     )
 
 
