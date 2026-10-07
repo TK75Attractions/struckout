@@ -15,6 +15,8 @@ on:
       - touchpanel/**
       - xtask/**
       - .github/workflows/rust_check.yaml
+      - Cargo.toml
+      - Cargo.lock
   pull_request:
     branches: master
     paths:
@@ -29,6 +31,8 @@ on:
       - touchpanel/**
       - xtask/**
       - .github/workflows/rust_check.yaml
+      - Cargo.toml
+      - Cargo.lock
 
 env:
   CARGO_TERM_COLOR: always
