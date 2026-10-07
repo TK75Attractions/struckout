@@ -35,7 +35,23 @@ $
 d_w = R x_c
 $
 
-### 4. 参考
+### 4. 解析画像への換算と、較正値を返さない端末
+
+`LENS_INTRINSIC_CALIBRATION` はセンサーの有効画素領域 (active array) の座標系で表される。
+一方、検出位置は解析画像 (`ImageAnalysis` が渡す 640x480 程度の画像) のピクセルなので、
+カメラ行列は解析画像の解像度に換算してから使う (`CameraIntrinsics.scaledToImage`)。
+出力ストリームは active array の中央を縦横比に合わせて切り出したもの、という前提を置いている。
+
+`LENS_INTRINSIC_CALIBRATION` や `LENS_POSE_ROTATION` を返さない端末 (例: KYV45) では次で代用する。
+
+- 内部パラメータ: 焦点距離 (`LENS_INFO_AVAILABLE_FOCAL_LENGTHS`) とセンサー寸法
+  (`SENSOR_INFO_PHYSICAL_SIZE`、`SENSOR_INFO_PIXEL_ARRAY_SIZE`) から見積もる。
+  光学中心は画像の中央とし、歪みは考えない
+- レンズの向き: 端末の真後ろを向いた背面カメラの標準的な向きを `SENSOR_ORIENTATION` から決める
+
+どちらも近似なので、実測の較正値がある端末より精度は落ちる。代用したときは logcat に警告が出る。
+
+### 5. 参考
 
 - [OpenCV: Camera Calibration and 3D Reconstruction](https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html) ：
   公式。最も情報量が多く信頼できる
