@@ -92,3 +92,6 @@ description = ".cargo/patches.tomlの状態を表示する"
 [tasks."adb-reverse"]
 file = "scripts/adb-reverse.sh"
 description = "接続されたそれぞれのデバイスに対し'adb reverse'を実行する"
+
+[settings]
+lockfile = true
