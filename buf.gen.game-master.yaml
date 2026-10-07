@@ -6,8 +6,13 @@
 # testTcpCLI には渡さない。偽 ball_tracker としてしか使わないうえ、
 # gRPC スタブは Grpc.Core.Api を参照していないぶんビルドを壊す。
 #
-# grpc_csharp_plugin は .tools/bin から PATH 経由で拾う。
-# scripts/fetch-grpc-csharp-plugin.sh が用意する (mise の proto タスクが依存)。
+# grpc_csharp_plugin は BSR の remote plugin を使う。ローカルに入れる必要は無い。
+# 生成のたびに buf.build へ proto を送って結果を受け取るので、ネットワークが要る。
+#
+# 版は projector/Assets/packages.config の Grpc.* (2.61.0) と揃えること。
+# BSR の v1.61.0 は grpc/grpc の v1.61.0 タグからビルドされたもので、
+# Grpc.Tools 2.61.0 に同梱されているプラグインと出どころが同じ。
+# Unity 側の Grpc.* を上げるときは、ここも同じ系列に上げる。
 version: v2
 inputs:
   - directory: api/proto
@@ -16,5 +21,5 @@ inputs:
 plugins:
   - protoc_builtin: csharp
     out: projector/Assets/Scripts/ProtoBuf/Generated
-  - local: grpc_csharp_plugin
+  - remote: buf.build/grpc/csharp:v1.61.0
     out: projector/Assets/Scripts/ProtoBuf/Generated
