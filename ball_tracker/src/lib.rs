@@ -10,7 +10,7 @@ use crate::{
     tracking::{ObjectTrack, TrackRunner},
     types::CameraId,
 };
-use struckout_proto::CameraLocation;
+use struckout_proto::CameraPose;
 
 pub mod collision_output;
 pub mod detection_input;
@@ -72,9 +72,8 @@ where
     }
 }
 
-/// Holds application states.
-
-pub struct CameraLocationStore(RwLock<HashMap<CameraId, CameraLocation>>);
+#[derive(Debug)]
+pub struct CameraLocationStore(RwLock<HashMap<CameraId, CameraPose>>);
 
 impl CameraLocationStore {
     pub fn new() -> Self {
@@ -83,12 +82,12 @@ impl CameraLocationStore {
 }
 
 impl CameraLocationStore {
-    fn get(&self, id: CameraId) -> Option<CameraLocation> {
+    fn get(&self, id: CameraId) -> Option<CameraPose> {
         self.0.read().get(&id).cloned()
     }
 
-    fn insert(&self, id: CameraId, loc: CameraLocation) {
-        self.0.write().insert(id, loc);
+    fn insert(&self, id: CameraId, pose: CameraPose) {
+        self.0.write().insert(id, pose);
     }
 
     fn next(&self) -> usize {

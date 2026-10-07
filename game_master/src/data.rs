@@ -1,8 +1,16 @@
 use sqlx::{MySql, Pool};
-use struckout_proto::Difficulty;
+use struckout_proto::{
+    Difficulty,
+    types::{GameId, MachineId, PlayerId},
+};
 use time::{PlainDateTime, UtcDateTime};
 
-use crate::{AddPlayerError, DataSource, GameId, MachineId, PlayerId};
+use crate::{
+    AddPlayerError, DataSource, GetGameResultError, GetPlayerError, ValidatePlayerNameError,
+};
+
+const STATUS_FINISHED: &str = "finished";
+const STATUS_RUNNING: &str = "running";
 
 #[derive(Clone)]
 pub struct DataSourceImpl {
@@ -64,11 +72,12 @@ impl DataSource for DataSourceImpl {
                 started_at ,
                 difficulty,
                 status
-            ) VALUES (?, ?, ?, ?, 'running')",
+            ) VALUES (?, ?, ?, ?, ?)",
             machine_id,
             player_id,
             started_at,
-            difficulty.to_mysql_enum()
+            difficulty.to_mysql_enum(),
+            STATUS_RUNNING,
         )
         .execute(&self.pool)
         .await?;
@@ -88,6 +97,67 @@ impl DataSource for DataSourceImpl {
         .await?;
         Ok(())
     }
+
+    /// Gets the result of a completed game.
+    async fn get_game_result(&self, game_id: GameId) -> Result<GameRecord, GetGameResultError> {
+        let row = sqlx::query!(
+            "SELECT score, status FROM games WHERE game_id = ?",
+            game_id.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => GetGameResultError::GameNotFound,
+            _ => e.into(),
+        })?;
+
+        if row.status != STATUS_FINISHED {
+            return Err(GetGameResultError::NotYetCompleted);
+        }
+        // guaranteed by CHECK constraint
+        let score = row.score.unwrap();
+
+        Ok(GameRecord { score })
+    }
+
+    async fn validate_player_name(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> Result<(), ValidatePlayerNameError> {
+        let name = name.into();
+        let res = sqlx::query!("SELECT * FROM players WHERE name = ?", name)
+            .fetch_optional(&self.pool)
+            .await?;
+        match res {
+            Some(v) => Err(ValidatePlayerNameError::AlreadyUsed(v.name)),
+            None => Ok(()),
+        }
+    }
+
+    async fn get_player(&self, name: impl Into<String> + Send) -> Result<Player, GetPlayerError> {
+        let name = name.into();
+        let res = sqlx::query!("SELECT * FROM players WHERE name = ?", &name)
+            .fetch_optional(&self.pool)
+            .await?;
+        match res {
+            Some(r) => Ok(Player {
+                player_id: r.id.into(),
+                name,
+            }),
+            None => Err(GetPlayerError::NotExist(name)),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GameRecord {
+    pub score: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct Player {
+    pub player_id: PlayerId,
+    pub name: String,
 }
 
 /// The type implementing this trait can be converted from/into MySQL's enum column.
@@ -146,6 +216,7 @@ mod tests {
     /// Creates MySQL container, connects to it, and run migration scripts.
     ///
     /// Returned [`ContainerAsync`] must not be dropped while you use it, or you will encounter a [`sqlx::Error::PoolTimedOut`] error.
+    #[must_use = "`ContainerAsync` must be kept alive while you use it"]
     async fn init_mysql() -> (
         ContainerAsync<testcontainers_modules::mysql::Mysql>,
         sqlx::Pool<MySql>,
@@ -175,7 +246,7 @@ mod tests {
 
         let player_id = ds.add_player("Bob").await.expect("should succeed");
 
-        assert_eq!(player_id, PlayerId(1));
+        assert_eq!(player_id, PlayerId::new(1));
     }
 
     #[tokio::test]
@@ -202,7 +273,7 @@ mod tests {
 
         let game_id = ds
             .insert_game(
-                MachineId(0),
+                MachineId::new(0),
                 player_id,
                 time::UtcDateTime::new(
                     Date::from_calendar_date(2026, Month::September, 6).unwrap(),
@@ -213,7 +284,7 @@ mod tests {
             .await
             .expect("should succeed");
 
-        assert_eq!(game_id, GameId(1));
+        assert_eq!(game_id, GameId::new(1));
     }
 
     #[tokio::test]
@@ -225,7 +296,7 @@ mod tests {
 
         let game_id = ds
             .insert_game(
-                MachineId(0),
+                MachineId::new(0),
                 player_id,
                 time::UtcDateTime::new(
                     Date::from_calendar_date(2026, Month::September, 6).unwrap(),
@@ -249,5 +320,61 @@ mod tests {
             .unwrap();
         assert!(updated.score.is_some_and(|v| v == SCORE));
         assert_eq!(&updated.status, "finished");
+    }
+
+    #[tokio::test]
+    async fn validate_player_name_returns_ok() {
+        let name = "テスタロウ";
+
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+
+        ds.validate_player_name(name)
+            .await
+            .expect("should return ok");
+    }
+
+    #[tokio::test]
+    async fn validate_player_name_returns_err_when_name_already_used() {
+        let name = "タロウ";
+
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+
+        sqlx::query!("INSERT INTO players (name) VALUES (?)", name)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = ds
+            .validate_player_name(name)
+            .await
+            .expect_err("should return error");
+        assert_matches!(err, ValidatePlayerNameError::AlreadyUsed(v) if v == name);
+    }
+
+    #[tokio::test]
+    async fn get_plater_returns_err_when_player_not_exist() {
+        let (_container, pool) = init_mysql().await;
+
+        let ds = DataSourceImpl::new(pool.clone());
+
+        let res = ds.get_player("アムロ").await;
+        assert_matches!(res, Err(GetPlayerError::NotExist(_)));
+    }
+
+    #[tokio::test]
+    async fn get_player_returns_ok_when_player_exist() {
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool.clone());
+        let name = "カミーユ";
+
+        sqlx::query!("INSERT INTO players (id, name) VALUES (?, ?)", 1, name)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let res = ds.get_player(name).await;
+        assert_matches!(res, Ok(Player { player_id:pid_got, name:name_got }) if pid_got == PlayerId::new(1) && name_got == name);
     }
 }

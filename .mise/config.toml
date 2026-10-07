@@ -13,6 +13,7 @@ protoc = "35.1"
 buf = "1.72.0"
 
 "cargo:slint-viewer" = "latest"
+"cargo:slint-lsp" = "latest"
 "cargo:sqlx-cli" = "latest"
 tokei = "latest"
 grpcurl = "latest"
@@ -31,22 +32,52 @@ depends = ["proto"]
 run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
 description = "Check the committed C# matches api/proto (regenerates in place)"
 
-[tasks."game-master:dev"]
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up"
-dir = "game_master/"
-description = "Start a dev server of game-master using docker-compose"
+[tasks."touchpanel:fmt-slint"]
+run = "find -name '*.slint' | xargs slint-lsp format --inline"
+dir = "touchpanel/ui/"
+description = "touchpanelのslintファイルを整形する"
 
-[tasks."game-master:prod"]
-run = "docker compose --env-file .env.prod -f compose.yaml -f compose.prod.yaml up"
-dir = "game_master/"
-description = "Start a production server of game-master using docker-compose"
+[tasks."touchpanel:new"]
+run = '''
+cargo xtask --verbose new
+'''
+dir = "touchpanel/"
+description = "Create new screen in touchpanel"
 
-[tasks."game-master:db"]
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up db"
-dir = "game_master/"
-description = "Start a MySQL service for game-master."
+[tasks."patches:disable"]
+run = """
+    if [ -f ./patches.toml ]; then
+        mv ./patches.toml ./patches.toml.bak
+    fi
+"""
+dir = ".cargo/"
+description = ".cargo/patches.tomlを一時的に退避する"
 
-[tasks."tokei"]
-run = "tokei"
-dir = "./"
-description = "Count our code quickly, using tokei"
+[tasks."patches:enable"]
+run = """
+    if [ -f ./patches.toml.bak ]; then
+        mv ./patches.toml.bak ./patches.toml
+    fi
+"""
+dir = ".cargo/"
+description = "'patches:disable'で移動したファイルを元に戻す"
+
+[tasks."patches:status"]
+run = """
+    if [ -f ./patches.toml ]; then
+        echo "patch enabled"
+    elif [ -f ./patches.toml.bak ]; then
+        echo "patch disabled"
+    else
+        echo "no patch config"
+    fi
+"""
+dir = ".cargo/"
+description = ".cargo/patches.tomlの状態を表示する"
+
+[tasks."adb-reverse"]
+file = "scripts/adb-reverse.sh"
+description = "接続されたそれぞれのデバイスに対し'adb reverse'を実行する"
+
+[settings]
+lockfile = true

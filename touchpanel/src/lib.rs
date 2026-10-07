@@ -1,40 +1,22 @@
+#![allow(dead_code, unused_variables)]
+
 use clap::Parser;
 use slint::ComponentHandle;
-use std::rc::Rc;
-use std::sync::OnceLock;
-use stern::WorkerThread;
+use std::sync::{Arc, OnceLock};
+use stern::{WorkerThread, worker::SlintExecutor};
 use tracing::info;
+
+use touchpanel_ui::NavRoute;
 
 use crate::{
     data::GameMasterClient,
     presentation::{attach_navhost, init_worker_context},
-    ui::NavRoute,
 };
 
-mod ui {
-    use crate::data::PlayerId;
+pub mod data;
+pub mod presentation;
 
-    slint::include_modules!();
-
-    #[stern::route]
-    #[derive(Debug, Clone)]
-    pub enum NavRoute {
-        Start,
-        NameInput,
-        DifficulitySelect { player_id: PlayerId },
-        Playing(self::Difficulity),
-        Score,
-        Ranking,
-        Fallback(String),
-        ConnectionFailed(String),
-        Connecting,
-    }
-}
-
-mod data;
-mod presentation;
-mod state_ext;
-
+// provided by build.rs
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
 type NavController = stern::nav::NavController<NavRoute>;
@@ -42,17 +24,17 @@ type NavHost = stern::nav::NavHost<NavRoute>;
 type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;
 type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 
-struct Application {
+pub struct Application {
     nav_controller: NavController,
-    ui: ui::AppWindow,
+    ui: touchpanel_ui::AppWindow,
     #[allow(dead_code)] // チャンネルを生存させるために必要
-    pub worker: WorkerThread<Context>,
-    config: Rc<Config>,
+    pub worker: WorkerThread<Context, SlintExecutor>,
+    config: Arc<Config>,
 }
 
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
 #[derive(Debug)]
-struct Context {
+pub struct Context {
     game_master: OnceLock<GameMasterClient>,
 }
 
@@ -74,7 +56,7 @@ struct Cli {
         help = "the address of game-master's gRPC server"
     )]
     server_addr: String,
-    #[arg(short = 'm', help = "the id of this machine")]
+    #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
     machine_id: u32,
 }
 
@@ -102,11 +84,11 @@ impl Config {
 
 pub fn run_main() {
     let cli = Cli::parse();
-    let config = Rc::new(Config::from_cli(cli));
+    let config = Arc::new(Config::from_cli(cli));
 
-    let ui = ui::AppWindow::new().unwrap();
+    let ui = touchpanel_ui::AppWindow::new().unwrap();
 
-    let nav_controller = NavController::new(ui::NavRoute::Connecting, {
+    let nav_controller = NavController::new(NavRoute::Connecting, {
         let ui = ui.as_weak();
 
         move |route| {

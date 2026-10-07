@@ -6,48 +6,43 @@ import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.Point
 import org.opencv.core.Rect
+import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
-import org.opencv.imgproc.Imgproc.COLOR_BGR2GRAY
+import org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY
 
 class ObjectTracker(
     val accumulateWeight: Double,
     val binaryThreshold: Double,
-    val minContourArea: Double
+    val minContourArea: Double,
+    val foregroundPersistenceFrames: Int = 15
 ) {
-    private lateinit var prev: Mat
+    private lateinit var background: Mat
+    private lateinit var foregroundAge: Mat
+
+    init {
+        require(foregroundPersistenceFrames > 0)
+    }
 
     fun nextFrame(frame: Mat): List<Rect> {
-        if (!::prev.isInitialized) {
-            val gray32 = Mat()
-            Imgproc.cvtColor(frame, gray32, COLOR_BGR2GRAY)
-            gray32.convertTo(gray32, CvType.CV_32F)
-            prev = gray32
-        }
-
-        // CV_32FC1
-        if (prev.depth() != 5) {
-            prev.convertTo(prev, CvType.CV_32F)
-        }
-
-        // CV_8UC1
         val gray = Mat()
-        Imgproc.cvtColor(frame, gray, COLOR_BGR2GRAY)
+        Imgproc.cvtColor(frame, gray, COLOR_RGB2GRAY)
 
-        Imgproc.accumulateWeighted(gray, prev, accumulateWeight)
+        if (!::background.isInitialized) {
+            background = Mat()
+            gray.convertTo(background, CvType.CV_32F)
+            foregroundAge = Mat.zeros(gray.size(), CvType.CV_16UC1)
+            return emptyList()
+        }
 
-        // CV_32FC1 -> CV_8UC1
-        val prev8 = Mat()
-        Core.convertScaleAbs(prev, prev8)
+        val background8 = Mat()
+        Core.convertScaleAbs(background, background8)
 
-        // src: CV_8UC1, dst: CV_8UC1
         val frameDelta = Mat()
-        Core.absdiff(gray, prev8, frameDelta)
+        Core.absdiff(gray, background8, frameDelta)
 
-        // CV_8UC1
         val threshold = Mat()
         Imgproc.threshold(frameDelta, threshold, binaryThreshold, 255.0, Imgproc.THRESH_BINARY)
-
 
         val kernel =
             Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(5.0, 5.0), Point(-1.0, -1.0))
@@ -57,7 +52,9 @@ class ObjectTracker(
             thresholdOpen,
             Imgproc.MORPH_OPEN,
             kernel,
-            Point(-1.0, -1.0), 1, Core.BORDER_CONSTANT
+            Point(-1.0, -1.0),
+            1,
+            Core.BORDER_CONSTANT
         )
         val thresholdClean = Mat()
         Imgproc.morphologyEx(
@@ -66,8 +63,31 @@ class ObjectTracker(
             Imgproc.MORPH_CLOSE,
             kernel,
             Point(-1.0, -1.0),
-            2, Core.BORDER_CONSTANT
+            2,
+            Core.BORDER_CONSTANT
         )
+
+        val backgroundMask = Mat()
+        Core.bitwise_not(thresholdClean, backgroundMask)
+        foregroundAge.setTo(Scalar(0.0), backgroundMask)
+        Core.add(
+            foregroundAge,
+            Scalar(1.0),
+            foregroundAge,
+            thresholdClean,
+            CvType.CV_16UC1
+        )
+
+        val persistentForegroundMask = Mat()
+        Core.compare(
+            foregroundAge,
+            Scalar(foregroundPersistenceFrames.toDouble()),
+            persistentForegroundMask,
+            Core.CMP_GE
+        )
+        val backgroundUpdateMask = Mat()
+        Core.bitwise_or(backgroundMask, persistentForegroundMask, backgroundUpdateMask)
+        Imgproc.accumulateWeighted(gray, background, accumulateWeight, backgroundUpdateMask)
 
         val contours = mutableListOf<MatOfPoint>()
         Imgproc.findContours(

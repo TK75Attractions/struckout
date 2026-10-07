@@ -1,0 +1,12 @@
+import { Button } from "std-widgets.slint";
+import { Icons } from "../icons.slint";
+export component BackButton inherits Rectangle{
+    callback on-click();
+
+    Button {
+        icon: Icons.arrow-back;
+        clicked => {
+            root.on-click();
+        }
+    }
+}

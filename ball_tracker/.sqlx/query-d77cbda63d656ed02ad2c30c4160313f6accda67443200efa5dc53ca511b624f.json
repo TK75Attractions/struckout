@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO frames (timestamp, session_id, data) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "d77cbda63d656ed02ad2c30c4160313f6accda67443200efa5dc53ca511b624f"
+}

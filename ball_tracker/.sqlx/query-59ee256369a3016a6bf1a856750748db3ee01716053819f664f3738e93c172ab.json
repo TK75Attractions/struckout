@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT * FROM frames f1\n            WHERE EXISTS (\n                SELECT 1 FROM frames f2\n                WHERE f2.timestamp BETWEEN f1.timestamp - 5 AND f1.timestamp + 5\n                AND f2.session_id <> f1.session_id\n            )\n            ORDER BY timestamp\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "timestamp",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "frames",
+            "name": "timestamp"
+          }
+        }
+      },
+      {
+        "name": "session_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "frames",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "name": "data",
+        "ordinal": 2,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "frames",
+            "name": "data"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "59ee256369a3016a6bf1a856750748db3ee01716053819f664f3738e93c172ab"
+}

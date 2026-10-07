@@ -1,0 +1,18 @@
+[package]
+name = "touchpanel-ui"
+version = "0.1.0"
+edition.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+slint = { workspace = true }
+stern = { workspace = true }
+struckout-proto = { workspace = true }
+
+strum = { workspace = true }
+derive_more = { workspace = true }
+
+[build-dependencies]
+slint-build = { workspace = true }

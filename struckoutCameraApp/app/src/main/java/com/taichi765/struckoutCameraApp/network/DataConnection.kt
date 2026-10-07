@@ -1,7 +1,7 @@
 package com.taichi765.struckoutCameraApp.network
 
 import androidx.annotation.CheckResult
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import kotlinx.coroutines.flow.StateFlow
 import java.io.IOException
 
@@ -13,7 +13,7 @@ interface DataConnection {
      */
     @CheckResult
     suspend fun connect(): DataConnectionError?
-    suspend fun sendPacket(packet: Struckout.DetectionsPacket)
+    suspend fun sendPacket(packet: CameraBallTracker.DetectionsPacket)
 
     interface Factory {
         fun create(): DataConnection

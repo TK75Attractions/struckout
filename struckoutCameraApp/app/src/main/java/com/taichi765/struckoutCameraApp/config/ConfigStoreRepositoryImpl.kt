@@ -9,8 +9,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository.Companion.ENABLE_RECORDING_MODE_DEFAULT
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
-import com.taichi765.struckoutCameraApp.proto.Struckout
-import com.taichi765.struckoutCameraApp.proto.cameraLocation
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
+import com.taichi765.struckoutCameraApp.proto.cameraPose
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,19 +35,25 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         initialValue = ENABLE_RECORDING_MODE_DEFAULT
     )// アプリケーション全体で共有される状態なのでRepository内でstateInしても不自然ではない
 
-    override val cameraLocation = context.dataStore.data.map { preferences ->
-        cameraLocation {
+    override val cameraPose = context.dataStore.data.map { preferences ->
+        cameraPose {
             x = preferences[CAMERA_LOCATION_X] ?: 0.0
             y = preferences[CAMERA_LOCATION_Y] ?: 0.0
             z = preferences[CAMERA_LOCATION_Z] ?: 0.0
+            rotationXDegrees = preferences[CAMERA_ROTATION_X_DEGREES] ?: 0.0
+            rotationYDegrees = preferences[CAMERA_ROTATION_Y_DEGREES] ?: 0.0
+            rotationZDegrees = preferences[CAMERA_ROTATION_Z_DEGREES] ?: 0.0
         }
     }.stateIn(
         scope = scope,
         started = SharingStarted.Eagerly,
-        initialValue = cameraLocation {
+        initialValue = cameraPose {
             x = 0.0
             y = 0.0
             z = 0.0
+            rotationXDegrees = 0.0
+            rotationYDegrees = 0.0
+            rotationZDegrees = 0.0
         }
     )
 
@@ -79,12 +85,15 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateCameraLocation(location: Struckout.CameraLocation) {
+    override suspend fun updateCameraPose(pose: CameraBallTracker.CameraPose) {
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
-                preferences[CAMERA_LOCATION_Y] = location.x
-                preferences[CAMERA_LOCATION_Y] = location.y
-                preferences[CAMERA_LOCATION_Z] = location.z
+                preferences[CAMERA_LOCATION_X] = pose.x
+                preferences[CAMERA_LOCATION_Y] = pose.y
+                preferences[CAMERA_LOCATION_Z] = pose.z
+                preferences[CAMERA_ROTATION_X_DEGREES] = pose.rotationXDegrees
+                preferences[CAMERA_ROTATION_Y_DEGREES] = pose.rotationYDegrees
+                preferences[CAMERA_ROTATION_Z_DEGREES] = pose.rotationZDegrees
             }
         }
     }
@@ -96,6 +105,9 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         private val CAMERA_LOCATION_X = doublePreferencesKey("camera_location_x")
         private val CAMERA_LOCATION_Y = doublePreferencesKey("camera_location_y")
         private val CAMERA_LOCATION_Z = doublePreferencesKey("camera_location_z")
+        private val CAMERA_ROTATION_X_DEGREES = doublePreferencesKey("camera_rotation_x_degrees")
+        private val CAMERA_ROTATION_Y_DEGREES = doublePreferencesKey("camera_rotation_y_degrees")
+        private val CAMERA_ROTATION_Z_DEGREES = doublePreferencesKey("camera_rotation_z_degrees")
         private val DETECTION_OUTPUT_KIND = stringPreferencesKey("detection_output_kind")
     }
 }

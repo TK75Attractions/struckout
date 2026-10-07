@@ -5,7 +5,7 @@ use std::fmt::Display;
 use thiserror::Error;
 use time::ext::NumericalDuration as _;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DisplayableRemainingTime {
     pub mins: usize,
     pub secs: usize,
@@ -13,7 +13,7 @@ pub struct DisplayableRemainingTime {
 
 impl Display for DisplayableRemainingTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.mins, self.secs)
+        write!(f, "{:02}:{:02}", self.mins, self.secs)
     }
 }
 
@@ -37,6 +37,12 @@ impl TryFrom<prost_types::Duration> for DisplayableRemainingTime {
             mins: mins.try_into().unwrap(),
             secs: secs.try_into().unwrap(),
         })
+    }
+}
+
+impl Default for DisplayableRemainingTime {
+    fn default() -> Self {
+        Self::ZERO
     }
 }
 

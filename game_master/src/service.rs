@@ -3,8 +3,12 @@ use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 use parking_lot::RwLock;
 use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
+    GetGameResultRequest, GetGameResultResponse, GetPlayerRequest, GetPlayerResponse,
     ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
+    ValidatePlayerNameRequest, ValidatePlayerNameResponse,
     game_master_service_server::GameMasterService,
+    types::{GameId, MachineId},
+    validate_player_name_response::ValidatePlayerNameResp,
 };
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
@@ -15,19 +19,27 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{AddPlayerError, DataSource, GameId, MachineId};
+use crate::{
+    AddPlayerError, DataSource, GetGameResultError, GetPlayerError, ValidatePlayerNameError,
+    data::Player,
+};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
 
 #[derive(Debug)]
 pub struct Game {
-    game_id: GameId,
     score: u32,
 }
 
 impl Game {
-    pub fn new(game_id: GameId) -> Self {
-        Self { game_id, score: 0 }
+    pub fn new() -> Self {
+        Self { score: 0 }
+    }
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -49,19 +61,25 @@ pub enum SuccessfulEvent {
     GameStarted { difficulty: Difficulty },
     /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
+    /// [`struckout_proto::event::GameScoreChanged`]
+    GameScoreChanged { total_score: u32 },
     /// [`struckout_proto::event::GameFinished`]
     GameFinished,
 }
 
 impl From<SuccessfulEvent> for struckout_proto::event::EventData {
     fn from(ev: SuccessfulEvent) -> Self {
-        use struckout_proto::event::{EventData, GameFinished, GameStarted, GameTimeLimitNotify};
+        use struckout_proto::event::{
+            EventData, GameFinished, GameScoreChanged, GameStarted, GameTimeLimitNotify,
+        };
 
         match ev {
             SuccessfulEvent::GameStarted { difficulty } => EventData::GameStarted(GameStarted {
                 difficulty: difficulty.into(),
             }),
-
+            SuccessfulEvent::GameScoreChanged { total_score } => {
+                EventData::GameScoreChanged(GameScoreChanged { total_score })
+            }
             SuccessfulEvent::GameTimeLimitNotify { remaining } => {
                 EventData::GameTimeLimitNotify(GameTimeLimitNotify {
                     remaining: Some(prost_types::Duration {
@@ -166,9 +184,7 @@ where
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        self.running_games
-            .write()
-            .insert(game_id, Game::new(game_id));
+        self.running_games.write().insert(game_id, Game::new());
 
         // subscribe on events before sending `GameStarted`.
         let event_rx = self.event_tx.subscribe();
@@ -230,7 +246,8 @@ where
     ) -> Result<Response<AddScoreResponse>, Status> {
         let req = req.into_inner();
         let game_id = req.game_id.into();
-        {
+        let machine_id = req.machine_id.into();
+        let total_score = {
             let mut guard = self.running_games.write();
             let Some(game) = guard.get_mut(&game_id) else {
                 return Err(Status::not_found(format!(
@@ -239,7 +256,15 @@ where
                 )));
             };
             game.score += req.score_to_add;
-        }
+            game.score
+        };
+        self.event_tx
+            .send(Event {
+                game_id,
+                machine_id,
+                data: Ok(SuccessfulEvent::GameScoreChanged { total_score }),
+            })
+            .unwrap();
         Ok(Response::new(AddScoreResponse {}))
     }
 
@@ -254,6 +279,62 @@ where
             })),
             Err(e @ AddPlayerError::NameAlreadyUsed) => Err(Status::already_exists(e.to_string())),
             Err(AddPlayerError::Sqlx(e)) => Err(Status::unavailable(e.to_string())),
+        }
+    }
+
+    async fn get_game_result(
+        &self,
+        req: Request<GetGameResultRequest>,
+    ) -> Result<Response<GetGameResultResponse>, Status> {
+        let req = req.into_inner();
+        let game_id = req.game_id.into();
+        match self.data_source.get_game_result(game_id).await {
+            Ok(record) => Ok(Response::new(GetGameResultResponse {
+                total_score: record.score,
+            })),
+            Err(e @ GetGameResultError::GameNotFound) => Err(Status::not_found(e.to_string())),
+            Err(e @ GetGameResultError::NotYetCompleted) => Err(Status::aborted(e.to_string())),
+            Err(GetGameResultError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        }
+    }
+
+    async fn validate_player_name(
+        &self,
+        req: Request<ValidatePlayerNameRequest>,
+    ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
+        let req = req.into_inner();
+        match self.data_source.validate_player_name(req.player_name).await {
+            Ok(_) => Ok(Response::new(ValidatePlayerNameResponse {
+                validate_player_name_resp: Some(ValidatePlayerNameResp::Ok(
+                    struckout_proto::validate_player_name_response::Ok {},
+                )),
+            })),
+            Err(ValidatePlayerNameError::AlreadyUsed(_name)) => {
+                Ok(Response::new(ValidatePlayerNameResponse {
+                    validate_player_name_resp: Some(ValidatePlayerNameResp::AlreadyUsed(
+                        struckout_proto::validate_player_name_response::AlreadyUsed {},
+                    )),
+                }))
+            }
+            Err(ValidatePlayerNameError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        }
+    }
+
+    async fn get_player(
+        &self,
+        req: Request<GetPlayerRequest>,
+    ) -> Result<Response<GetPlayerResponse>, Status> {
+        let req = req.into_inner();
+        match self.data_source.get_player(req.name).await {
+            Ok(Player { player_id, name }) => Ok(Response::new(GetPlayerResponse {
+                player_id: player_id.into_inner(),
+                player_name: name,
+            })),
+            Err(GetPlayerError::NotExist(name)) => Err(Status::not_found(format!(
+                "player with name '{}' does not exist",
+                name
+            ))),
+            Err(GetPlayerError::Sqlx(e)) => Err(Status::internal(e.to_string())),
         }
     }
 }
@@ -335,9 +416,9 @@ async fn game_timer(
 mod tests {
     use std::assert_matches;
 
-    use tracing::Level;
+    use struckout_proto::event::EventData;
 
-    use crate::{AddPlayerError, PlayerId, proto::event::EventData};
+    use crate::{AddPlayerError, PlayerId};
 
     use super::*;
 
@@ -365,15 +446,58 @@ mod tests {
         async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
             Ok(self.player_id)
         }
+
+        async fn get_game_result(
+            &self,
+            _game_id: GameId,
+        ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
+            unimplemented!()
+        }
+
+        async fn validate_player_name(
+            &self,
+            _name: impl Into<String>,
+        ) -> Result<(), ValidatePlayerNameError> {
+            unimplemented!()
+        }
+
+        async fn get_player(
+            &self,
+            _name: impl Into<String> + Send,
+        ) -> Result<Player, GetPlayerError> {
+            unimplemented!()
+        }
+    }
+
+    /// Waits for event matching `ev_pat`. Returns when a event from stream matches pattern, or panics when stream ends.
+    macro_rules! wait_event {
+        ($stream_var:ident, $ev_pat:pat) => {
+            loop {
+                use tokio_stream::StreamExt;
+                let Some(ev) = $stream_var.next().await else {
+                    panic!("event stream ended");
+                };
+                match ev {
+                    Ok(StartGameResponse {
+                        event:
+                            Some(::struckout_proto::Event {
+                                event_data: Some(ret @ $ev_pat),
+                                ..
+                            }),
+                    }) => break Some(ret),
+                    _ => (),
+                }
+            }
+        };
     }
 
     #[tokio::test]
     async fn start_game_triggers_game_started_event() {
         let ds = StubDataSource {
-            game_id: GameId(14),
-            player_id: PlayerId(334),
+            game_id: GameId::new(14),
+            player_id: PlayerId::new(334),
         };
-        let machine_id = MachineId(1);
+        let machine_id = MachineId::new(1);
         let difficulty = Difficulty::Normal;
         let service = GameMasterServiceImpl::new(ds.clone());
         let mut rx = service.event_tx.subscribe();
@@ -399,18 +523,11 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn start_game_stream_notifies_in_correct_order() {
-        tracing::subscriber::set_global_default(
-            tracing_subscriber::FmtSubscriber::builder()
-                .with_max_level(Level::TRACE)
-                .finish(),
-        )
-        .expect("failed to set default subscriber");
-
         let ds = StubDataSource {
-            game_id: GameId(20),
-            player_id: PlayerId(13),
+            game_id: GameId::new(20),
+            player_id: PlayerId::new(13),
         };
-        let machine_id = MachineId(2);
+        let machine_id = MachineId::new(2);
         let difficulty = Difficulty::Normal;
         let service = GameMasterServiceImpl::new(ds.clone());
 
@@ -430,7 +547,7 @@ mod tests {
         let Some(Ok(started)) = stream.next().await else {
             panic!("stream shouldn't finish nor have error");
         };
-        let Some(proto::Event {
+        let Some(struckout_proto::Event {
             game_id: ev_game_id,
             machine_id: ev_machine_id,
             event_data: Some(EventData::GameStarted(started)),
@@ -456,26 +573,57 @@ mod tests {
             let EventData::GameTimeLimitNotify(notify) = ev else {
                 break ev;
             };
-            let rem = notify.remaining.unwrap();
+            let _rem = notify.remaining.unwrap();
         };
 
         // Assert: Finished
         assert_matches!(finished, EventData::GameFinished(_));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn start_game_adds_to_and_removes_from_running_games() {
-        todo!()
+        let ds = StubDataSource {
+            game_id: GameId::new(20),
+            player_id: PlayerId::new(13),
+        };
+        let machine_id = MachineId::new(2);
+        let difficulty = Difficulty::Normal;
+        let service = GameMasterServiceImpl::new(ds.clone());
+
+        let req = {
+            let difficulty: i32 = difficulty.into();
+
+            Request::new(StartGameRequest {
+                machine_id: machine_id.into_inner(),
+                player_id: ds.player_id.into_inner(),
+                difficulty,
+            })
+        };
+        let stream = service.start_game(req).await.expect("should succeed");
+        let mut stream = stream.into_inner();
+
+        wait_event!(stream, EventData::GameStarted(_));
+        {
+            let guard = service.running_games.read();
+            guard.get(&ds.game_id).expect("should exist");
+        }
+
+        wait_event!(stream, EventData::GameFinished(_));
+        {
+            let guard = service.running_games.read();
+            let opt = guard.get(&ds.game_id);
+            assert!(opt.is_none());
+        }
     }
 
     #[tokio::test(start_paused = true)]
     async fn listen_events_filters_events_by_machine_id() {
         let ds = StubDataSource {
-            game_id: GameId(14),
-            player_id: PlayerId(334),
+            game_id: GameId::new(14),
+            player_id: PlayerId::new(334),
         };
-        let machine_id_to_listen = MachineId(1);
-        let machine_id_to_ignore = MachineId(2);
+        let machine_id_to_listen = MachineId::new(1);
+        let machine_id_to_ignore = MachineId::new(2);
         let difficulty = Difficulty::Normal;
         let service = GameMasterServiceImpl::new(ds.clone());
 

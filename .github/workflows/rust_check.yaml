@@ -1,0 +1,66 @@
+name: Rust check
+
+on: 
+  push:
+    branches: master
+    paths:
+      - .cargo/**
+      - .mise/**
+      - api/proto/**
+      - api/rust/**
+      - api/spec/**
+      - ball_tracker/**
+      - game_master/**
+      - migrations/mysql/**
+      - touchpanel/**
+      - xtask/**
+      - .github/workflows/rust_check.yaml
+  pull_request:
+    branches: master
+    paths:
+      - .cargo/**
+      - .mise/**
+      - api/proto/**
+      - api/rust/**
+      - api/spec/**
+      - ball_tracker/**
+      - game_master/**
+      - migrations/mysql/**
+      - touchpanel/**
+      - xtask/**
+      - .github/workflows/rust_check.yaml
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:  
+          sparse-checkout: |
+            .cargo
+            .mise
+            api/proto
+            api/rust
+            api/spec
+            ball_tracker
+            game_master
+            migrations/mysql
+            touchpanel
+            xtask
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+      - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
+        with:
+          install_args: protoc
+      - name: Install fontconfig
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev
+      - name: Run check 
+        run: |
+          SQLX_OFFLINE=true mise exec protoc -- cargo check --all-targets -p touchpanel -p ball_tracker -p game_master
+      - name: Run tests
+        run: |
+          SQLX_OFFLINE=true mise exec protoc -- cargo test -p touchpanel -p ball_tracker -p game_master

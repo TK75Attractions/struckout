@@ -1,0 +1,72 @@
+import { Icons } from "../icons.slint";
+import {
+    KeyboardBody,
+    KeyBoardMode,
+    KeyboardBottomBar,
+} from "../components/keyboard.slint";
+import { BackButton } from "../components/back-button.slint";
+
+global Adopter {
+    in property <string> player-name-text;
+    in property <KeyBoardMode> keyboard-mode;
+    in property <string> error-msg;
+    callback switch-keyboard-mode();
+    callback push-character(char: string);
+    callback remove-character();
+    callback submit-name();
+    callback move-back();
+}
+
+export component NameInputFirstScreen inherits Rectangle {
+
+    VerticalLayout {
+        alignment: LayoutAlignment.stretch;
+
+        BackButton {
+            on-click => {
+                Adopter.move-back();
+            }
+        }
+
+        Rectangle {
+            border-color: black;
+            border-width: 4px;
+
+            Text {
+                text: Adopter.player-name-text;
+            }
+        }
+
+        if Adopter.error-msg != "": Rectangle {
+            Text {
+                text: Adopter.error-msg;
+                color: red;
+            }
+        }
+
+        KeyboardBody {
+            spacing: 4px;
+            mode: Adopter.keyboard-mode;
+
+            text-added(text) => {
+                Adopter.push-character(text);
+            }
+        }
+
+        KeyboardBottomBar {
+            switch-keyboard-mode => {
+                Adopter.switch-keyboard-mode();
+            }
+
+            click-backspace => {
+                Adopter.remove-character();
+            }
+
+            submit-name => {
+                Adopter.submit-name();
+            }
+        }
+    }
+}
+
+export { Adopter as NameInputFirstAdopter }

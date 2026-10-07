@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -54,9 +53,15 @@ fun ConfigScreenRoute(
 
     val radioOptions = listOf("Network", "Local", "None")
     val (selectedOption, setSelectedOption) = remember { mutableStateOf(radioOptions[0]) }
-    val x = rememberTextFieldState(savedState.locationX.toString())
-    val y = rememberTextFieldState(savedState.locationY.toString())
-    val z = rememberTextFieldState(savedState.locationZ.toString())
+    val x = remember(savedState.locationX) { TextFieldState(savedState.locationX.toString()) }
+    val y = remember(savedState.locationY) { TextFieldState(savedState.locationY.toString()) }
+    val z = remember(savedState.locationZ) { TextFieldState(savedState.locationZ.toString()) }
+    val rotationX =
+        remember(savedState.rotationXDegrees) { TextFieldState(savedState.rotationXDegrees.toString()) }
+    val rotationY =
+        remember(savedState.rotationYDegrees) { TextFieldState(savedState.rotationYDegrees.toString()) }
+    val rotationZ =
+        remember(savedState.rotationZDegrees) { TextFieldState(savedState.rotationZDegrees.toString()) }
 
     var showDiscardDialog by remember { mutableStateOf(false) }
 
@@ -67,6 +72,9 @@ fun ConfigScreenRoute(
         x = x,
         y = y,
         z = z,
+        rotationX = rotationX,
+        rotationY = rotationY,
+        rotationZ = rotationZ,
         onToggleRecordingMode = {
             editingState =
                 editingState.copy(recodingModeEnabled = !editingState.recodingModeEnabled)
@@ -90,7 +98,10 @@ fun ConfigScreenRoute(
                 .copy(
                     locationX = x.text,
                     locationY = y.text,
-                    locationZ = z.text
+                    locationZ = z.text,
+                    rotationXDegrees = rotationX.text,
+                    rotationYDegrees = rotationY.text,
+                    rotationZDegrees = rotationZ.text
                 )
             viewModel.applyChanges(editingState)
             onNavigateToCameraScreen()
@@ -126,6 +137,9 @@ private fun ConfigScreen(
     x: TextFieldState,
     y: TextFieldState,
     z: TextFieldState,
+    rotationX: TextFieldState,
+    rotationY: TextFieldState,
+    rotationZ: TextFieldState,
     onToggleRecordingMode: () -> Unit,
     onRetryConnection: () -> Unit,
     onSetDetectionOutput: (DetectionOutputKind) -> Unit,
@@ -154,10 +168,13 @@ private fun ConfigScreen(
                 onToggleRecordingMode = onToggleRecordingMode,
             )
 
-            CameraLocationInput(
+            CameraPoseInput(
                 x,
                 y,
                 z,
+                rotationX,
+                rotationY,
+                rotationZ,
             )
 
             ConfirmButton(onClick = onApplyChanges)
@@ -276,10 +293,13 @@ private fun SwitchField(text: String, checked: Boolean, onCheckedChange: (Boolea
 }
 
 @Composable
-private fun CameraLocationInput(
+private fun CameraPoseInput(
     x: TextFieldState,
     y: TextFieldState,
     z: TextFieldState,
+    rotationX: TextFieldState,
+    rotationY: TextFieldState,
+    rotationZ: TextFieldState,
 ) {
     Card(
         modifier = Modifier
@@ -290,14 +310,20 @@ private fun CameraLocationInput(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Camera Location", fontSize = 24.sp)
+            Text("Camera Pose", fontSize = 24.sp)
+            Text("Location")
             PositionField("x", x)
             PositionField("y", y)
             PositionField("z", z)
+            Text("Rotation (degrees)")
+            PositionField("roll (x)", rotationX)
+            PositionField("pitch (y)", rotationY)
+            PositionField("yaw (z)", rotationZ)
         }
     }
 }
 
+private val DECIMAL_PATTERN = Regex("-?[0-9]*([.][0-9]*)?")
 
 @Composable
 private fun PositionField(text: String, textState: TextFieldState) {
@@ -305,11 +331,11 @@ private fun PositionField(text: String, textState: TextFieldState) {
         textState,
         label = { Text(text) },
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
+            keyboardType = KeyboardType.Decimal,
             imeAction = ImeAction.Next
         ),
         inputTransformation = InputTransformation {
-            if (asCharSequence().any { !it.isDigit() }) {
+            if (!DECIMAL_PATTERN.matches(asCharSequence())) {
                 revertAllChanges()
             }
         }
@@ -389,7 +415,10 @@ private fun DummyConfigScreen(
     selectedOption: String = "Network",
     x: TextFieldState = TextFieldState(),
     y: TextFieldState = TextFieldState(),
-    z: TextFieldState = TextFieldState()
+    z: TextFieldState = TextFieldState(),
+    rotationX: TextFieldState = TextFieldState(),
+    rotationY: TextFieldState = TextFieldState(),
+    rotationZ: TextFieldState = TextFieldState()
 ) {
     ConfigScreen(
         recordingModeEnabled = recordingModeEnabled,
@@ -400,6 +429,9 @@ private fun DummyConfigScreen(
         x = x,
         y = y,
         z = z,
+        rotationX = rotationX,
+        rotationY = rotationY,
+        rotationZ = rotationZ,
         onToggleRecordingMode = {},
         onRetryConnection = {},
         onSetDetectionOutput = {},

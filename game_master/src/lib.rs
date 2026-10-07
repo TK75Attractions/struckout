@@ -3,33 +3,17 @@ use std::future::Future;
 use thiserror::Error;
 use time::UtcDateTime;
 
-use struckout_proto::Difficulty;
+use struckout_proto::{
+    Difficulty,
+    types::{GameId, MachineId, PlayerId},
+};
 
 mod data;
 pub use data::DataSourceImpl;
 mod service;
 pub use service::GameMasterServiceImpl;
 
-/// Defines a new-type for id.
-macro_rules! id_new_type {
-    ($new_type:ident($inner_type:ty)) => {
-        #[derive(Debug, Clone, Copy, derive_more::Into, derive_more::From, PartialEq, Eq, Hash)]
-        pub struct $new_type($inner_type);
-
-        impl $new_type {
-            /// Returns inner value of self.
-            pub fn into_inner(self) -> $inner_type {
-                <$new_type as Into<$inner_type>>::into(self)
-            }
-        }
-    };
-}
-
-id_new_type!(GameId(u32));
-
-id_new_type!(MachineId(u32));
-
-id_new_type!(PlayerId(u32));
+use crate::data::{GameRecord, Player};
 
 pub trait DataSource: Clone + Send + Sync + 'static {
     fn insert_game(
@@ -50,6 +34,21 @@ pub trait DataSource: Clone + Send + Sync + 'static {
         &self,
         name: impl Into<String> + Send,
     ) -> impl Future<Output = Result<PlayerId, AddPlayerError>> + Send;
+
+    fn get_game_result(
+        &self,
+        game_id: GameId,
+    ) -> impl Future<Output = Result<GameRecord, GetGameResultError>> + Send;
+
+    fn validate_player_name(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> impl Future<Output = Result<(), ValidatePlayerNameError>> + Send;
+
+    fn get_player(
+        &self,
+        name: impl Into<String> + Send,
+    ) -> impl Future<Output = Result<Player, GetPlayerError>> + Send;
 }
 
 /// Error returned from [`DataSource::add_player()`].
@@ -57,6 +56,35 @@ pub trait DataSource: Clone + Send + Sync + 'static {
 pub enum AddPlayerError {
     #[error("player name is already used")]
     NameAlreadyUsed,
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::get_game_result()`].
+#[derive(Debug, Error)]
+pub enum GetGameResultError {
+    #[error("game is not yet completed")]
+    NotYetCompleted,
+    #[error("game not found in the database")]
+    GameNotFound,
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::validate_player_name()`].
+#[derive(Debug, Error)]
+pub enum ValidatePlayerNameError {
+    #[error("Player name {0} is already used")]
+    AlreadyUsed(String),
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::get_player()`].
+#[derive(Debug, Error)]
+pub enum GetPlayerError {
+    #[error("Player with name '{0}' does not exist")]
+    NotExist(String),
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }

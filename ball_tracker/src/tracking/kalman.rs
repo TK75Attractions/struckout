@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use chrono::{DateTime, Utc};
 use nalgebra::Vector3;
-use struckout_proto::Detection;
+use struckout_proto::{CameraPose, Detection};
 use tracktor::{
     filters::kalman::KalmanFilter,
     models::{ConstantVelocity3D, PositionSensor3D},
@@ -13,7 +13,10 @@ use tracktor::{
 use crate::{
     CameraLocationStore,
     tracking::{ObjectTrack, TrackId},
-    types::{CameraId, CollisionPoint3D, Position3D, ToVector3},
+    types::{
+        CameraId, CollisionPoint3D, GetLayFromDetection as _, Position3D, RotateToWorld as _,
+        ToVector3,
+    },
 };
 
 const GRAVITY_ACCELERATION: f32 = 9.80665;
@@ -88,11 +91,8 @@ impl ObjectTrack for KalmanTrack {
             state.mean.get(2).unwrap().to_owned(),
         ]);
         self.kalman_state = state;
-        evaluate_scores_for_detections(
-            detections,
-            self.camera_locs.get(camera_id.into()).unwrap().to_vector3(),
-            estimated_coord,
-        )
+        let camera_location = self.camera_locs.get(camera_id.into()).unwrap();
+        evaluate_scores_for_detections(detections, camera_location, estimated_coord)
     }
 
     fn update_and_check_collision(&mut self, new_pos: Position3D) -> Option<CollisionPoint3D> {
@@ -101,7 +101,7 @@ impl ObjectTrack for KalmanTrack {
             .filter
             .update(&self.kalman_state, &measurement)
             .unwrap(); // FIXME: たぶんunwrapしないほうがいい
-        if estimate.mean.get(0).copied().unwrap() <= 0. {
+        let collision = if estimate.mean.get(0).copied().unwrap() <= 0. {
             Some(CollisionPoint3D {
                 x: 0., // FIXME: ちゃんと計算する
                 y: estimate.mean.get(1).copied().unwrap(),
@@ -109,22 +109,25 @@ impl ObjectTrack for KalmanTrack {
             })
         } else {
             None
-        }
+        };
+        self.kalman_state = estimate;
+        collision
     }
 }
 
 /// Evaluates scores for each detections.
 pub fn evaluate_scores_for_detections<'a>(
     detections: impl Iterator<Item = &'a Detection> + Clone,
-    camera_loc: Vector3<f64>,
+    camera_pose: CameraPose,
     estimated_coord: Vector3<f64>,
 ) -> Vec<f64> {
     // TODO: minが一定距離より遠かったらNoneにする
+    let camera_position = camera_pose.to_vector3();
     detections
         .map(move |obj| {
             // 点と直線の距離。TODO: 数式があってるか確認
-            let lay = Vector3::new(obj.lay_x.into(), obj.lay_y.into(), obj.lay_z.into());
-            let top = (estimated_coord - camera_loc).cross(&lay).norm();
+            let lay = camera_pose.rotate_to_world(obj.get_lay());
+            let top = (estimated_coord - camera_position).cross(&lay).norm();
             let bottom = lay.norm();
             (top / bottom).into()
         })
@@ -139,4 +142,35 @@ fn zip_scores(score_a: f32, score_b: f32) -> f32 {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use approx::assert_relative_eq;
+
+    use super::*;
+
+    #[test]
+    fn scores_detection_after_rotating_its_ray_into_world_coordinates() {
+        let camera_location = CameraPose {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            rotation_x_degrees: 0.0,
+            rotation_y_degrees: 0.0,
+            rotation_z_degrees: 90.0,
+        };
+        let detection = Detection {
+            bbox_width: 10,
+            bbox_height: 10,
+            lay_x: 1.0,
+            lay_y: 0.0,
+            lay_z: 0.0,
+        };
+
+        let scores = evaluate_scores_for_detections(
+            std::iter::once(&detection),
+            camera_location,
+            Vector3::new(0.0, 100.0, 0.0),
+        );
+
+        assert_relative_eq!(scores[0], 0.0, epsilon = 1e-12);
+    }
+}

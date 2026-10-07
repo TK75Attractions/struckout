@@ -1,7 +1,7 @@
 use std::{io, sync::Arc};
 
 use anyhow::Context;
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use struckout_proto::{
     DetectionsPacket, ReadPacketError, TcpClientPacket, TcpServerPacket, read_packet,
     tcp_client_packet, tcp_server_packet, write_packet,
@@ -12,7 +12,7 @@ use tokio::{
     sync::mpsc,
     task::JoinHandle,
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace_span, warn};
 
 use crate::{
     CameraLocationStore,
@@ -54,13 +54,12 @@ impl DetectionInput for NetworkDetectionInput {
         tokio::spawn(async move { self.data_transport.listen(packet_tx).await });
         tokio::spawn(async move {
             loop {
-                let packet = packet_rx
+                let (received_at, packet) = packet_rx
                     .recv()
                     .await
                     .with_context(|| "packet channel has been unexpectedly closed")
                     .unwrap();
-                let time = DateTime::from_timestamp(packet.timestamp, 0).unwrap();
-                let pair = self.matcher.pair_frame(time, packet);
+                let pair = self.matcher.pair_frame(received_at, packet);
                 if let Some(pair) = pair {
                     pair_tx
                         .send(pair)
@@ -104,7 +103,7 @@ impl DataTransport {
         })
     }
 
-    pub async fn listen(&mut self, packet_tx: mpsc::Sender<DetectionsPacket>) {
+    pub async fn listen(&mut self, packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>) {
         let mut writers = Vec::new();
         loop {
             match self.listener.accept().await {
@@ -124,13 +123,13 @@ impl DataTransport {
     }
 
     pub async fn handle_input(
-        packet_tx: mpsc::Sender<DetectionsPacket>,
+        packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
         mut reader: tcp::OwnedReadHalf,
     ) -> Result<(), ReadPacketError> {
         loop {
             let packet: DetectionsPacket = read_packet(&mut reader).await?;
 
-            packet_tx.send(packet).await.unwrap();
+            packet_tx.send((Utc::now(), packet)).await.unwrap();
         }
     }
 }
@@ -160,6 +159,8 @@ impl TcpTransport {
     pub async fn listen(&mut self) {
         let mut writers = Vec::new();
         loop {
+            let _span = trace_span!("TcpTransport_listen");
+            debug!("TcpTransport listening...");
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection for TcpTransport");
@@ -206,14 +207,14 @@ impl TcpTransport {
             let packet = res.unwrap();
 
             match packet.data {
-                Some(tcp_client_packet::Data::CameraLoc(loc_data)) => {
-                    if loc_data.camera_location.is_none() {
+                Some(tcp_client_packet::Data::UpdateCameraPose(pose_data)) => {
+                    if pose_data.camera_pose.is_none() {
                         warn!("camera_location field is missing for TcpClientPacket");
                         continue;
                     }
-                    let camera_loc = loc_data.camera_location.unwrap(); // checked above
-                    info!(id = loc_data.camera_id, value = ?camera_loc, "camera location updated");
-                    camera_locs.insert(CameraId::new(loc_data.camera_id), camera_loc);
+                    let camera_pose = pose_data.camera_pose.unwrap(); // checked above
+                    info!(id = pose_data.camera_id, value = ?camera_pose, "camera pose updated");
+                    camera_locs.insert(CameraId::new(pose_data.camera_id), camera_pose);
                 }
                 None => {
                     warn!("TcpClientPacket was empty");

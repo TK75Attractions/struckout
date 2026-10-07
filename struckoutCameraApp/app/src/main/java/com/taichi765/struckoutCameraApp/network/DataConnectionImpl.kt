@@ -1,6 +1,6 @@
 package com.taichi765.struckoutCameraApp.network
 
-import com.taichi765.struckoutCameraApp.proto.Struckout
+import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,7 +59,7 @@ class DataConnectionImpl : DataConnection {
         }
     }
 
-    override suspend fun sendPacket(packet: Struckout.DetectionsPacket) {
+    override suspend fun sendPacket(packet: CameraBallTracker.DetectionsPacket) {
         val curState = _connState.value
         check(curState is ConnectionState.Connected) {
             "TCP must be connected before sending packet"
