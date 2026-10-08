@@ -16,7 +16,7 @@ import kotlin.math.acos
 import kotlin.math.sin
 
 class CameraRepository @Inject constructor(@ApplicationContext context: Context) {
-    val tracker = ObjectTracker(0.5, 15.0, 80.0)
+    val tracker = ObjectTracker(0.5, 15.0, 80.0, minSaturation = MIN_BALL_SATURATION)
 
     /**
      * @param imageWidth,imageHeight [rect] を検出した解析画像 (回転前) の大きさ
@@ -155,5 +155,10 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
 
     companion object {
         const val TAG = "CameraController"
+
+        // 色つきのボールを残し、影や筐体の揺れを捨てるための下限。
+        // 実写では、はっきり写ったボールが 0.85 前後、ブレて筋になったボールが 0.26 から 0.67、
+        // 着弾の揺れによる誤検出の大半が 0.25 未満だった。白や灰色のボールは検出できなくなる。
+        const val MIN_BALL_SATURATION = 0.25
     }
 }
