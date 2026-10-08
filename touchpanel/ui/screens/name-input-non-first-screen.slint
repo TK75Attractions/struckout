@@ -1,4 +1,8 @@
-import { KeyBoardMode, KeyboardBottomBar, KeyboardBody } from "../components/keyboard.slint";
+import {
+    KeyBoardMode,
+    KeyboardBottomBar,
+    KeyboardBody,
+} from "../components/keyboard.slint";
 import { BackButton } from "../components/back-button.slint";
 
 global Adopter {
@@ -13,54 +17,54 @@ global Adopter {
 }
 
 export component NameInputNonFirstScreen inherits Rectangle {
-VerticalLayout {
-    alignment: LayoutAlignment.stretch;
+    VerticalLayout {
+        alignment: LayoutAlignment.stretch;
 
-    BackButton {
-        on-click => {
-            Adopter.back();
+        BackButton {
+            on-click => {
+                Adopter.back();
+            }
+        }
+
+        Rectangle {
+            border-color: black;
+            border-width: 4px;
+
+            Text {
+                text: Adopter.player-name-text;
+            }
+        }
+
+        if Adopter.error-msg != "": Rectangle {
+            Text {
+                text: Adopter.error-msg;
+                color: red;
+            }
+        }
+
+        KeyboardBody {
+            spacing: 4px;
+            mode: Adopter.keyboard-mode;
+
+            text-added(text) => {
+                Adopter.push-character(text);
+            }
+        }
+
+        KeyboardBottomBar {
+            switch-keyboard-mode => {
+                Adopter.switch-keyboard-mode();
+            }
+
+            click-backspace => {
+                Adopter.remove-character();
+            }
+
+            submit-name => {
+                Adopter.submit-name();
+            }
         }
     }
-
-    Rectangle {
-        border-color: black;
-        border-width: 4px;
-
-        Text {
-            text: Adopter.player-name-text;
-        }
-    }
-
-    if Adopter.error-msg != "": Rectangle {
-        Text {
-            text: Adopter.error-msg;
-            color: red;
-        }
-    }
-
-    KeyboardBody {
-        spacing: 4px;
-        mode: Adopter.keyboard-mode;
-
-        text-added(text) => {
-            Adopter.push-character(text);
-        }
-    }
-
-    KeyboardBottomBar {
-        switch-keyboard-mode => {
-            Adopter.switch-keyboard-mode();
-        }
-
-        click-backspace => {
-            Adopter.remove-character();
-        }
-
-        submit-name => {
-            Adopter.submit-name();
-        }
-    }
-}
 }
 
 export { Adopter as NameInputNonFirstAdopter }
