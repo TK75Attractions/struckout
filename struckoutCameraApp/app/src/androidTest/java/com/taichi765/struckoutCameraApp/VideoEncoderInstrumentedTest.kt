@@ -25,7 +25,7 @@ import kotlin.io.path.outputStream
 class VideoEncoderInstrumentedTest {
 
     @Test
-    fun `VideoEncoder encodes properly`() = runTest {
+    fun videoEncoder_encodesProperly() = runTest {
         Timber.plant(Timber.DebugTree())
         OpenCVLoader.initLocal()
         val inst = InstrumentationRegistry.getInstrumentation()
