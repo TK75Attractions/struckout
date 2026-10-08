@@ -88,9 +88,9 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: projector/Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-${{ matrix.target-platform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            Library-
+            Library-${{ matrix.target-platform }}-
       - uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -99,7 +99,8 @@ jobs:
         with:
           targetPlatform: ${{ matrix.target-platform }}
           projectPath: projector
-      - id: triple
+      - name: Determine file suffix
+        id: triple
         run: |
           case ${{ matrix.target-platform }} in
             "StandaloneWindows64")
@@ -126,11 +127,13 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: .
-      - uses: actions/download-artifact@v8
+      - name: Download projector artifacts
+        uses: actions/download-artifact@v8
         with:
           pattern: projector-*
           skip-decompress: true # zipファイルのまま
-      - uses: actions/download-artifact@v8
+      - name: Download rust artifacts
+        uses: actions/download-artifact@v8
         with:
           pattern: rust-*
       - name: Remove old release
@@ -142,6 +145,8 @@ jobs:
         run: |
           gh release create nightly --notes "nightly release" \
             rust-x86_64-windows/* rust-x86_64-linux/* rust-aarch64-macos/* \
-            projector-*
+            projector-aarch64-macos/projector-aarch64-macos.zip \
+            projector-x86_64-windows/projector-x86_64-windows.zip \
+            projector-x86_64-linux/projector-x86_64-linux.zip
         env:
           GH_TOKEN: ${{ github.token }}
