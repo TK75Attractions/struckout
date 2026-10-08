@@ -40,7 +40,7 @@ class CameraViewModel @Inject constructor(
 
     // 以下は解析スレッドからのみ触る
     private var frameId = FrameID(0u)
-    private val gray = Mat()
+    private val rgb = Mat()
     private var lastPreviewNanos = 0L
 
     fun startCamera() {
@@ -59,8 +59,9 @@ class CameraViewModel @Inject constructor(
      * @param rgba センサーの向きのままの画像。この呼び出しの間だけ有効
      */
     private fun onFrame(rgba: Mat, timestampNanos: Long) {
-        Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY)
-        val bboxes = cameraRepository.tracker.nextGrayFrame(gray)
+        // 背景の更新 (accumulateWeighted) が 4 チャンネルを扱えないので、アルファを落として渡す。
+        Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)
+        val bboxes = cameraRepository.tracker.nextFrame(rgb)
 
         updatePreview(rgba, bboxes)
         if (bboxes.isEmpty()) {
@@ -102,7 +103,7 @@ class CameraViewModel @Inject constructor(
         }
         lastPreviewNanos = now
 
-        // 検出はグレースケール側で済んでいるので、ここで描き込んでも結果には影響しない。
+        // 検出は RGB に写した側で済んでいるので、ここで描き込んでも結果には影響しない。
         bboxes.forEach {
             Imgproc.rectangle(rgba, it, Scalar(255.0, 0.0, 0.0, 255.0))
         }

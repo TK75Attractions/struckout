@@ -104,6 +104,56 @@ class ObjectTrackerInstrumentedTest {
         assertTrue(detections.isEmpty())
     }
 
+    @Test
+    fun detectsColoredObjectWithTheSameBrightnessAsBackground() {
+        OpenCVLoader.initLocal()
+        val tracker = ObjectTracker(0.5, 15.0, 80.0)
+        val background = Mat(120, 160, CvType.CV_8UC3, Scalar(100.0, 100.0, 100.0))
+
+        assertTrue(tracker.nextFrame(background).isEmpty())
+
+        // 白黒に直すと背景と同じ明るさ (約 100) になる青
+        val withBall = background.clone()
+        Imgproc.rectangle(
+            withBall,
+            Point(20.0, 40.0),
+            Point(40.0, 60.0),
+            Scalar(60.0, 90.0, 255.0),
+            Imgproc.FILLED
+        )
+
+        assertEquals(1, tracker.nextFrame(withBall).size)
+    }
+
+    @Test
+    fun minSaturationRejectsColorlessObjects() {
+        OpenCVLoader.initLocal()
+        val tracker = ObjectTracker(0.5, 15.0, 80.0, minSaturation = 0.25)
+        val background = Mat.zeros(120, 160, CvType.CV_8UC3)
+
+        assertTrue(tracker.nextFrame(background).isEmpty())
+
+        val frame = background.clone()
+        Imgproc.rectangle(
+            frame,
+            Point(20.0, 40.0),
+            Point(40.0, 60.0),
+            Scalar(255.0, 255.0, 255.0),
+            Imgproc.FILLED
+        )
+        Imgproc.rectangle(
+            frame,
+            Point(90.0, 40.0),
+            Point(110.0, 60.0),
+            Scalar(0.0, 0.0, 255.0),
+            Imgproc.FILLED
+        )
+        val detections = tracker.nextFrame(frame)
+
+        assertEquals(1, detections.size)
+        assertTrue(detections.single().x >= 85)
+    }
+
     companion object {
         const val TAG = "ObjectTrackerTest"
         const val FILENAME = "sample.mp4"

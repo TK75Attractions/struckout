@@ -21,7 +21,8 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
     // フレーム数は fps に比例させる (30fps で 15 フレーム)。
     val tracker = ObjectTracker(
         0.5, 15.0, 80.0,
-        foregroundPersistenceFrames = HighSpeedCamera.TARGET_FPS / 2
+        foregroundPersistenceFrames = HighSpeedCamera.TARGET_FPS / 2,
+        minSaturation = MIN_BALL_SATURATION
     )
 
     /**
@@ -161,5 +162,10 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
 
     companion object {
         const val TAG = "CameraController"
+
+        // 色つきのボールを残し、影や筐体の揺れを捨てるための下限。
+        // 実写では、はっきり写ったボールが 0.85 前後、ブレて筋になったボールが 0.26 から 0.67、
+        // 着弾の揺れによる誤検出の大半が 0.25 未満だった。白や灰色のボールは検出できなくなる。
+        const val MIN_BALL_SATURATION = 0.25
     }
 }
