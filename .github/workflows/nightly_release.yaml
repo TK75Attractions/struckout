@@ -43,49 +43,29 @@ jobs:
       - name: Build
         run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
       
-      - name: Upload ball-tracker (Windows)
+      - id: triple
+        run: |
+          case ${{ matrix.os }} in
+            "windows-2022")
+              echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT";;
+            "macos-14")
+              echo "triple=aarch64-macos" >> "$GITHUB_OUTPUT";;
+            "ubuntu-22.04")
+              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT";;
+            *)
+              exit 1;;
+          esac
+      - name: Upload ball-tracker
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ matrix.os == 'windows-2022' }}
         with:
-          name: ball-tracker-x86_64-windows
-          path: ./target/release/ball_tracker.exe
+          name: ball-tracker-${{ steps.triple.outputs.triple }}
+          path: ./target/release/ball_tracker${{ matrix.os == 'windows-2022' && '.exe' || '' }}
           archive: false
-      - name: Upload touchpanel (Windows)
+      - name: Upload touchpanel
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ matrix.os == 'windows-2022' }}
         with:
-          name: touchpanel-x86_64-windows
-          path: ./target/release/touchpanel.exe
-          archive: false
-          
-      - name: Upload ball-tracker (macOS)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ matrix.os == 'macos-14' }} 
-        with:
-          name: ball-tracker-aarch64-macos
-          path: ./target/release/ball_tracker
-          archive: false
-      - name: Upload touchpanel (macOS)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ matrix.os == 'macos-14' }}
-        with:
-          name: touchpanel-aarch64-macos
-          path: ./target/release/touchpanel
-          archive: false
-
-      - name: Upload ball-tracker (Linux)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
-        with:
-          name: ball-tracker-x86_64-linux
-          path: ./target/release/ball_tracker
-          archive: false
-      - name: Upload touchpanel (Linux)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
-        with:
-          name: touchpanel-x86_64-linux
-          path: ./target/release/touchpanel
+          name: touchpanel-${{ steps.triple.outputs.triple }}
+          path: ./target/release/touchpanel${{ matrix.os == 'windows-2022' && '.exe' || '' }}
           archive: false
 
   unity-build:
@@ -115,9 +95,21 @@ jobs:
         with:
           targetPlatform: ${{ matrix.target-platform }}
           projectPath: projector
+      - id: triple
+        run: |
+          case ${{ matrix.target-platform }} in
+            "StandaloneWindows64")
+              echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT";;
+            "StandaloneOSX")
+              echo "triple=aarch64-macos" >> "$GITHUB_OUTPUT";;
+            "StandaloneLinux64")
+              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT";;
+            *)
+              exit 1;;
+          esac
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: projector-${{ matrix.target-platform }}
+          name: projector-${{ steps.triple.outputs.triple }}
           path: ./build/
   
   publish-release:
@@ -140,19 +132,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Create release
         run: |
-          mkdir upload
-
-          mv touchpanel-x86_64-linux/touchpanel upload/touchpanel-x86_64-linux
-          mv ball-tracker-x86_64-linux/ball_tracker upload/ball-tracker-x86_64-linux
-          mv touchpanel-x86_64-windows/touchpanel.exe upload/touchpanel-x86_64-windows.exe
-          mv ball-tracker-x86_64-windows/ball_tracker.exe upload/ball-tracker-x86_64-windows.exe
-          mv touchpanel-aarch64-macos/touchpanel upload/touchpanel-aarch64-macos
-          mv ball-tracker-aarch64-macos/ball_tracker upload/ball-tracker-aarch64-macos
-
-          mv projector-StandaloneWindows64.zip upload/projector-x86_64-windows.zip
-          mv projector-StandaloneOSX.zip upload/projector-aarch64-macos.zip
-          mv projector-StandaloneLinux64.zip upload/projector-x86_64-linux.zip
-          
-          gh release create nightly --notes "nightly release" upload/*
+          gh release create nightly --notes "nightly release" \
+            ball-tracker-* touchpanel-* projector-*
         env:
           GH_TOKEN: ${{ github.token }}
