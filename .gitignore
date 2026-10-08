@@ -43,3 +43,6 @@ sandbox/fake_game_master/
 
 # ローカル限定で依存関係をオーバーライドしたいときに使う (Cargo.tomlをいじってコミットする前に戻す、とかをしなくて済む)。
 .cargo/patches.toml*
+
+# 検証用に撮影した動画。サイズが大きいので追跡しない。
+recordings/
