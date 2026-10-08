@@ -92,3 +92,12 @@ description = "接続されたそれぞれのデバイスに対し'adb reverse'�
 
 [settings]
 lockfile = true
+
+[hooks]
+enter = [
+    "mise completion --install bash",
+    "mise run game-master:db -- --detach"
+]
+
+[task_config]
+includes = [".mise/game_master.toml"]
