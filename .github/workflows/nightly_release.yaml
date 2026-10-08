@@ -87,7 +87,7 @@ jobs:
     strategy:
       matrix:
         target-platform:
-          - StandalonwWindows64
+          - StandaloneWindows64
           - StandaloneLinux64
           - StandaloneOSX
     steps:
