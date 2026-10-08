@@ -143,7 +143,7 @@ jobs:
 
           mv projector-StandaloneWindows64/ upload/projector-x86_64-windows/
           mv projector-StandaloneOSX/ upload/projector-aarch64-macos/
-          mv projector-StandaloneLinux/ upload/projector-x86_64-linux/
+          mv projector-StandaloneLinux64/ upload/projector-x86_64-linux/
           
           gh release create nightly --notes "nightly release" upload/*
         env:
