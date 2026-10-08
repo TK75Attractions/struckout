@@ -4,6 +4,8 @@ target/
 # Repository-local development toolchains
 .tools/
 
+.states/
+
 # Personal mise overrides. mise.toml itself is committed.
 mise.local.toml
 

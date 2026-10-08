@@ -44,6 +44,17 @@ cargo xtask --verbose new
 dir = "touchpanel/"
 description = "Create new screen in touchpanel"
 
+[tasks."touchpanel:view"]
+run = [
+    "echo '{\"nav-route\":\"UiNavRoute.{{ usage.screen_name }}\"}' > ../.states/data.json",
+    "slint-viewer --style 'material' --load-data ../.states/data.json ui/app-window.slint"
+]
+usage = '''
+    arg "<screen-name>" help="Name of screen to show"
+'''
+dir = "touchpanel/"
+description = "touchpanelの画面を表示する"
+
 [tasks."patches:disable"]
 run = """
     if [ -f ./patches.toml ]; then
