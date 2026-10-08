@@ -1,0 +1,45 @@
+package com.taichi765.struckoutCameraApp
+
+import android.app.Application
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import com.taichi765.struckoutCameraApp.network.NetworkManager
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.HiltAndroidApp
+import org.opencv.android.OpenCVLoader
+import timber.log.Timber
+import javax.inject.Inject
+
+@HiltAndroidApp
+class MainApplication : Application()
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var networkManager: NetworkManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        if (BuildConfig.ENABLE_NATS_LOG) {
+            TODO("Sentryに置き換え")
+        } else {
+            Timber.plant(Timber.DebugTree())
+        }
+
+        OpenCVLoader.initLocal()
+
+        networkManager.start()
+
+        setContent {
+            AppTheme {
+                App()
+            }
+        }
+    }
+}
+
+
