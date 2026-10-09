@@ -1123,16 +1123,35 @@ dependencies = [
 [[package]]
 name = "const-field-offset"
 version = "0.2.1"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
- "const-field-offset-macro",
+ "const-field-offset-macro 0.2.1 (git+https://github.com/taichi765/slint)",
+ "field-offset",
+]
+
+[[package]]
+name = "const-field-offset"
+version = "0.2.1"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "const-field-offset-macro 0.2.1 (git+https://github.com/Tk75Attractions/slint)",
  "field-offset",
 ]
 
 [[package]]
 name = "const-field-offset-macro"
 version = "0.2.1"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.5",
+]
+
+[[package]]
+name = "const-field-offset-macro"
+version = "0.2.1"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2770,7 +2789,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-linuxkms"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "bytemuck",
  "calloop 0.14.4",
@@ -2778,10 +2797,33 @@ dependencies = [
  "drm",
  "gbm",
  "glutin",
- "i-slint-common",
- "i-slint-core",
- "i-slint-renderer-femtovg",
- "i-slint-renderer-software",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/taichi765/slint)",
+ "input",
+ "libseat",
+ "memmap2",
+ "nix",
+ "raw-window-handle",
+ "xkbcommon",
+]
+
+[[package]]
+name = "i-slint-backend-linuxkms"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "bytemuck",
+ "calloop 0.14.4",
+ "cfg_aliases",
+ "drm",
+ "gbm",
+ "glutin",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "input",
  "libseat",
  "memmap2",
@@ -2793,34 +2835,61 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-selector"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "cfg_aliases",
- "i-slint-backend-linuxkms",
- "i-slint-backend-testing",
- "i-slint-backend-winit",
- "i-slint-common",
- "i-slint-core",
- "i-slint-core-macros",
- "i-slint-renderer-femtovg",
+ "i-slint-backend-linuxkms 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-backend-testing 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-backend-winit 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/taichi765/slint)",
+]
+
+[[package]]
+name = "i-slint-backend-selector"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "cfg_aliases",
+ "i-slint-backend-linuxkms 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-backend-testing 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-backend-winit 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
 ]
 
 [[package]]
 name = "i-slint-backend-testing"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "cfg_aliases",
- "i-slint-common",
- "i-slint-core",
- "i-slint-renderer-software",
- "vtable",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/taichi765/slint)",
+ "vtable 0.5.0 (git+https://github.com/taichi765/slint)",
+]
+
+[[package]]
+name = "i-slint-backend-testing"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "cfg_aliases",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "vtable 0.5.0 (git+https://github.com/Tk75Attractions/slint)",
 ]
 
 [[package]]
 name = "i-slint-backend-winit"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -2831,12 +2900,12 @@ dependencies = [
  "futures",
  "glutin",
  "glutin-winit",
- "i-slint-common",
- "i-slint-core",
- "i-slint-core-macros",
- "i-slint-renderer-femtovg",
- "i-slint-renderer-skia",
- "i-slint-renderer-software",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-skia 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/taichi765/slint)",
  "imgref",
  "lyon_path",
  "muda",
@@ -2852,7 +2921,51 @@ dependencies = [
  "scopeguard",
  "softbuffer",
  "strum",
- "vtable",
+ "vtable 0.5.0 (git+https://github.com/taichi765/slint)",
+ "wasm-bindgen",
+ "web-sys",
+ "webbrowser",
+ "windows",
+ "winit",
+ "zbus",
+]
+
+[[package]]
+name = "i-slint-backend-winit"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "accesskit",
+ "accesskit_winit",
+ "arboard",
+ "block2 0.6.2",
+ "bytemuck",
+ "cfg_aliases",
+ "futures",
+ "glutin",
+ "glutin-winit",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-skia 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "imgref",
+ "lyon_path",
+ "muda",
+ "objc2 0.6.4",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "objc2-quartz-core 0.3.2",
+ "objc2-ui-kit 0.3.2",
+ "pin-weak",
+ "raw-window-handle",
+ "rgb",
+ "scoped-tls-hkt",
+ "scopeguard",
+ "softbuffer",
+ "strum",
+ "vtable 0.5.0 (git+https://github.com/Tk75Attractions/slint)",
  "wasm-bindgen",
  "web-sys",
  "webbrowser",
@@ -2864,7 +2977,7 @@ dependencies = [
 [[package]]
 name = "i-slint-common"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "derive_more",
  "fontique",
@@ -2872,6 +2985,24 @@ dependencies = [
  "icu_decimal",
  "icu_locale_core",
  "icu_provider",
+ "objc2 0.6.4",
+ "pulldown-cmark",
+ "resvg",
+ "skrifa",
+]
+
+[[package]]
+name = "i-slint-common"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "derive_more",
+ "fontique",
+ "htmlparser",
+ "icu_decimal",
+ "icu_locale_core",
+ "icu_provider",
+ "objc2 0.6.4",
  "pulldown-cmark",
  "resvg",
  "skrifa",
@@ -2880,13 +3011,41 @@ dependencies = [
 [[package]]
 name = "i-slint-compiler"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "annotate-snippets",
  "by_address",
  "data-url",
  "derive_more",
- "i-slint-common",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "icu_normalizer",
+ "icu_properties",
+ "indexmap 2.14.2",
+ "itertools 0.15.0",
+ "lyon_extra",
+ "lyon_path",
+ "num_enum",
+ "proc-macro2",
+ "quote",
+ "rowan",
+ "smol_str 0.3.6",
+ "strum",
+ "syn 3.0.5",
+ "typed-index-collections",
+ "unicode-segmentation",
+ "url",
+]
+
+[[package]]
+name = "i-slint-compiler"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "annotate-snippets",
+ "by_address",
+ "data-url",
+ "derive_more",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "icu_normalizer",
  "icu_properties",
  "image",
@@ -2905,6 +3064,7 @@ dependencies = [
  "smol_str 0.3.6",
  "strum",
  "swash",
+ "syn 3.0.5",
  "typed-index-collections",
  "unicode-segmentation",
  "url",
@@ -2913,7 +3073,7 @@ dependencies = [
 [[package]]
 name = "i-slint-core"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "accesskit",
  "async-channel",
@@ -2921,11 +3081,11 @@ dependencies = [
  "bytemuck",
  "chrono",
  "clru",
- "const-field-offset",
+ "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint)",
  "derive_more",
  "euclid",
- "i-slint-common",
- "i-slint-core-macros",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/taichi765/slint)",
  "icu_normalizer",
  "image",
  "js-sys",
@@ -2956,7 +3116,61 @@ dependencies = [
  "unicode-linebreak",
  "unicode-script",
  "unicode-segmentation",
- "vtable",
+ "vtable 0.5.0 (git+https://github.com/taichi765/slint)",
+ "wasm-bindgen",
+ "web-sys",
+ "web-time",
+ "wgpu",
+ "windows",
+]
+
+[[package]]
+name = "i-slint-core"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "accesskit",
+ "async-channel",
+ "bitflags 2.13.2",
+ "bytemuck",
+ "chrono",
+ "clru",
+ "const-field-offset 0.2.1 (git+https://github.com/Tk75Attractions/slint)",
+ "derive_more",
+ "euclid",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "icu_normalizer",
+ "image",
+ "js-sys",
+ "ksni",
+ "lyon_algorithms",
+ "lyon_extra",
+ "lyon_geom",
+ "lyon_path",
+ "num-traits",
+ "objc2 0.6.4",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "once_cell",
+ "parley",
+ "pin-project",
+ "pin-weak",
+ "portable-atomic",
+ "raw-window-handle",
+ "resvg",
+ "rgb",
+ "scopeguard",
+ "skrifa",
+ "slab",
+ "strum",
+ "swash",
+ "sys-locale",
+ "taffy",
+ "unicode-linebreak",
+ "unicode-script",
+ "unicode-segmentation",
+ "vtable 0.5.0 (git+https://github.com/Tk75Attractions/slint)",
  "wasm-bindgen",
  "web-sys",
  "web-time",
@@ -2967,7 +3181,17 @@ dependencies = [
 [[package]]
 name = "i-slint-core-macros"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
+dependencies = [
+ "quote",
+ "serde_json",
+ "syn 3.0.5",
+]
+
+[[package]]
+name = "i-slint-core-macros"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
 dependencies = [
  "quote",
  "serde_json",
@@ -2977,14 +3201,33 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-femtovg"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
- "const-field-offset",
+ "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint)",
  "femtovg",
  "glow",
- "i-slint-common",
- "i-slint-core",
- "i-slint-core-macros",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/taichi765/slint)",
+ "imgref",
+ "lyon_path",
+ "pin-weak",
+ "rgb",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "i-slint-renderer-femtovg"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "const-field-offset 0.2.1 (git+https://github.com/Tk75Attractions/slint)",
+ "femtovg",
+ "glow",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "imgref",
  "lyon_path",
  "pin-weak",
@@ -2996,17 +3239,17 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-skia"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "bytemuck",
  "cfg_aliases",
  "clru",
- "const-field-offset",
+ "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint)",
  "glow",
  "glutin",
- "i-slint-common",
- "i-slint-core",
- "i-slint-core-macros",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/taichi765/slint)",
  "lyon_path",
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
@@ -3022,7 +3265,44 @@ dependencies = [
  "softbuffer",
  "spin_on",
  "unicode-segmentation",
- "vtable",
+ "vtable 0.5.0 (git+https://github.com/taichi765/slint)",
+ "wgpu",
+ "wgpu-hal",
+ "windows",
+ "windows-core",
+ "write-fonts",
+]
+
+[[package]]
+name = "i-slint-renderer-skia"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "bytemuck",
+ "cfg_aliases",
+ "clru",
+ "const-field-offset 0.2.1 (git+https://github.com/Tk75Attractions/slint)",
+ "glow",
+ "glutin",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "lyon_path",
+ "objc2 0.6.4",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.2",
+ "objc2-metal 0.3.2",
+ "objc2-quartz-core 0.3.2",
+ "pin-weak",
+ "raw-window-handle",
+ "read-fonts",
+ "scoped-tls-hkt",
+ "skia-safe",
+ "softbuffer",
+ "spin_on",
+ "unicode-segmentation",
+ "vtable 0.5.0 (git+https://github.com/Tk75Attractions/slint)",
  "wgpu",
  "wgpu-hal",
  "windows",
@@ -3033,14 +3313,32 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-software"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
  "bytemuck",
  "clru",
  "derive_more",
  "euclid",
- "i-slint-common",
- "i-slint-core",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "lyon_path",
+ "num-traits",
+ "skrifa",
+ "swash",
+ "zeno",
+]
+
+[[package]]
+name = "i-slint-renderer-software"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "bytemuck",
+ "clru",
+ "derive_more",
+ "euclid",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "lyon_path",
  "num-traits",
  "skrifa",
@@ -3533,13 +3831,12 @@ dependencies = [
 
 [[package]]
 name = "keyboard-types"
-version = "0.7.0"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b750dcadc39a09dbadd74e118f6dd6598df77fa01df0cfcdc52c28dece74528a"
+checksum = "0fbe853b403ae61a04233030ae8a79d94975281ed9770a1f9e246732b534b28d"
 dependencies = [
  "bitflags 2.13.2",
  "serde",
- "unicode-segmentation",
 ]
 
 [[package]]
@@ -3880,9 +4177,9 @@ dependencies = [
 
 [[package]]
 name = "muda"
-version = "0.19.3"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dd04e60bc0b07438a6771710ee1698f98f6ebbc7f89b61264af1563b8aeb878"
+checksum = "4340e89c178916e62879c5c36b7f699019369be413e496178a6983ce91b8bc03"
 dependencies = [
  "crossbeam-channel",
  "dpi",
@@ -3891,10 +4188,9 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
- "once_cell",
  "png",
  "thiserror 2.0.21",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5881,32 +6177,53 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 [[package]]
 name = "slint"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
- "const-field-offset",
- "i-slint-backend-linuxkms",
- "i-slint-backend-selector",
- "i-slint-common",
- "i-slint-core",
- "i-slint-core-macros",
- "i-slint-renderer-femtovg",
- "i-slint-renderer-software",
+ "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint)",
+ "i-slint-backend-linuxkms 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-backend-selector 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-common 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/taichi765/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/taichi765/slint)",
  "num-traits",
  "once_cell",
  "pin-weak",
- "slint-macros",
+ "slint-macros 1.19.0 (git+https://github.com/taichi765/slint)",
  "unicode-segmentation",
- "vtable",
+ "vtable 0.5.0 (git+https://github.com/taichi765/slint)",
+]
+
+[[package]]
+name = "slint"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "const-field-offset 0.2.1 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-backend-linuxkms 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-backend-selector 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-common 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-femtovg 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-renderer-software 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "num-traits",
+ "once_cell",
+ "pin-weak",
+ "slint-macros 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "unicode-segmentation",
+ "vtable 0.5.0 (git+https://github.com/Tk75Attractions/slint)",
 ]
 
 [[package]]
 name = "slint-build"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
 dependencies = [
  "derive_more",
  "fontique",
- "i-slint-compiler",
+ "i-slint-compiler 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "spin_on",
  "toml_edit 0.25.15+spec-1.1.0",
 ]
@@ -5914,9 +6231,20 @@ dependencies = [
 [[package]]
 name = "slint-macros"
 version = "1.19.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
- "i-slint-compiler",
+ "i-slint-compiler 1.19.0 (git+https://github.com/taichi765/slint)",
+ "proc-macro2",
+ "quote",
+ "spin_on",
+]
+
+[[package]]
+name = "slint-macros"
+version = "1.19.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "i-slint-compiler 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "proc-macro2",
  "quote",
  "spin_on",
@@ -6274,7 +6602,7 @@ dependencies = [
  "derive_more",
  "futures-util",
  "parking_lot",
- "slint",
+ "slint 1.19.0 (git+https://github.com/taichi765/slint)",
  "stern-macros",
  "strum",
  "thiserror 2.0.21",
@@ -6954,8 +7282,8 @@ dependencies = [
  "derive_more",
  "enum_dispatch",
  "futures-util",
- "i-slint-backend-testing",
- "i-slint-core",
+ "i-slint-backend-testing 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
+ "i-slint-core 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "itertools 0.15.0",
  "parking_lot",
  "pastey",
@@ -6964,7 +7292,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "slint",
+ "slint 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "slint-build",
  "stern",
  "struckout-proto",
@@ -6988,7 +7316,7 @@ name = "touchpanel-ui"
 version = "0.1.0"
 dependencies = [
  "derive_more",
- "slint",
+ "slint 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "slint-build",
  "stern",
  "struckout-proto",
@@ -7369,18 +7697,39 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vtable"
 version = "0.5.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
 dependencies = [
- "const-field-offset",
+ "const-field-offset 0.2.1 (git+https://github.com/taichi765/slint)",
  "portable-atomic",
  "stable_deref_trait",
- "vtable-macro",
+ "vtable-macro 0.5.0 (git+https://github.com/taichi765/slint)",
+]
+
+[[package]]
+name = "vtable"
+version = "0.5.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
+dependencies = [
+ "const-field-offset 0.2.1 (git+https://github.com/Tk75Attractions/slint)",
+ "portable-atomic",
+ "stable_deref_trait",
+ "vtable-macro 0.5.0 (git+https://github.com/Tk75Attractions/slint)",
 ]
 
 [[package]]
 name = "vtable-macro"
 version = "0.5.0"
-source = "git+https://github.com/taichi765/slint#4e7a27e0db17a5aa53f596988aa09e889fb8d5c6"
+source = "git+https://github.com/taichi765/slint#de4fc60ebdd630bf0c0c0a804b5c5d4dfee5368a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.5",
+]
+
+[[package]]
+name = "vtable-macro"
+version = "0.5.0"
+source = "git+https://github.com/Tk75Attractions/slint#a5e0d636228f1f77bed978a66f8685cebcd2a621"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8383,7 +8732,7 @@ dependencies = [
  "dirs",
  "git2",
  "heck",
- "i-slint-compiler",
+ "i-slint-compiler 1.19.0 (git+https://github.com/Tk75Attractions/slint)",
  "prost",
  "prost-build",
  "serde",
