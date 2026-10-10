@@ -59,6 +59,7 @@ description = "touchpanelの画面を表示する"
 run = """
     if [ -f ./patches.toml ]; then
         mv ./patches.toml ./patches.toml.bak
+        echo "1" > ../.states/will_enable_patch
     fi
 """
 dir = ".cargo/"
@@ -72,6 +73,16 @@ run = """
 """
 dir = ".cargo/"
 description = "'patches:disable'で移動したファイルを元に戻す"
+
+[tasks."patches:restore"]
+run = """
+    if [ -f .states/will_enable_patch ] && [ $(cat .states/will_enable_patch) = "1" ]; then
+        mise run patches:enable
+        echo "0" > .states/will_enable_patch
+    fi
+"""
+dir = "."
+description = "'.states/will_enable_patch'が1の場合'patches:enable'を実行する"
 
 [tasks."patches:status"]
 run = """
