@@ -1,3 +1,4 @@
+name: game-master-dev
 services:
   app:
     environment:
@@ -7,4 +8,5 @@ services:
     environment:
       - MYSQL_DATABASE=main_dev
     ports:
-      - 3306:3306
+      # raとかcargo checkを動かすために公開する
+      - 127.0.0.1:3306:3306
