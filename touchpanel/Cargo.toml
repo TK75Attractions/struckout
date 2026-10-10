@@ -3,6 +3,9 @@ name = "touchpanel"
 version = "0.1.0"
 edition = { workspace = true }
 
+[features]
+sentry = ["dep:sentry"]
+
 [dependencies]
 struckout-proto = { workspace = true }
 stern = { workspace = true }
@@ -29,7 +32,7 @@ prost = { workspace = true }
 prost-types = { workspace = true }
 tonic = { workspace = true }
 tonic-prost = { workspace = true }
-sentry = { workspace = true }
+sentry = { workspace = true, optional = true }
 
 thiserror = { workspace = true }
 anyhow = { workspace = true }
