@@ -17,3 +17,11 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+  - package-ecosystem: docker
+    directory: "/game_master"
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directory: "/game_master"
+    schedule:
+      interval: weekly
