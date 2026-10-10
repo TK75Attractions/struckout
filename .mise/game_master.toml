@@ -1,17 +1,24 @@
 ["game-master:dev"]
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up"
+shell = "bash -c"
+run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up"
 dir = "game_master/"
 description = "Start a dev server of game-master using docker-compose"
+env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
+raw = true
 
 ["game-master:prod"]
-run = "docker compose --env-file .env.prod -f compose.yaml -f compose.prod.yaml up"
+run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_PROD docker compose -f compose.yaml -f compose.prod.yaml up"
 dir = "game_master/"
 description = "Start a production server of game-master using docker-compose"
+env.MYSQL_ROOT_PASSWORD_PROD = { required = true, redact = true }
+raw = true
 
 ["game-master:db"]
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up db"
+run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up db"
 dir = "game_master/"
 description = "Start a MySQL service for game-master."
+env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
+raw = true
 
 ["game-master:build"]
 depends = ["patches:disable", "game-master:prepare"]
@@ -19,14 +26,18 @@ depends_post = "patches:restore"
 run = '''
   FLAGS=""
   if [ ${usage_release:-false} = "true" ]; then
-    FLAGS="--build-arg RELEASE_MODE=true"
+    FLAGS="${FLAGS} --build-arg RELEASE_MODE=true";
+    FLAGS="${FLAGS} --build-arg SENTRY_DSN=${SENTRY_DSN}";
+  elif [ ${usage_sentry:-false} = "true" ]; then
+    FLAGS="${FLAGS} --build-arg SENTRY_DSN=${SENTRY_DSN}";
   fi
-  docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml build ${FLAGS}
+  docker compose -f compose.yaml -f compose.dev.yaml build ${FLAGS}
 '''
 dir = "game_master/"
-description = "game-masterをビルドする"
+description = "game-masterのDockerイメージをビルドする"
 usage = '''
   flag "--release" help="releaseプロファイルでビルドする"
+  flag "--sentry" help="sentryを有効にする (--releaseがついている場合既定で有効)"
 '''
 
 ["game-master:prepare"]

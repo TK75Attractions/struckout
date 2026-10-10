@@ -18,6 +18,11 @@ buf = "1.72.0"
 tokei = "latest"
 grpcurl = "latest"
 
+[env]
+# game-masterが使うDBのURL (sqlx用)
+DATABASE_URL = { default = "", redact = true }
+SENTRY_DSN = { default = "", redact = true }
+
 [tasks.proto]
 # grpc_csharp_plugin は buf.gen.game-master.yaml が BSR の remote plugin を使うので、
 # ローカルに用意するものは buf と protoc だけ。
