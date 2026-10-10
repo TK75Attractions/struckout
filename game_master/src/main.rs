@@ -1,7 +1,6 @@
 use std::ffi::OsStr;
 
 use game_master::{DataSourceImpl, GameMasterServiceImpl};
-use sentry::SentryFutureExt;
 use struckout_proto::game_master_service_server::GameMasterServiceServer;
 
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
@@ -15,26 +14,39 @@ const ENV_MYSQL_ROOT_PASSWORD: &str = "MYSQL_ROOT_PASSWORD";
 const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
 
 const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
+#[cfg(feature = "sentry")]
+const SENTRY_DSN: &str = env!("SENTRY_DSN");
 
 fn main() -> std::process::ExitCode {
-    // Initialize Sentry
+    #[cfg(feature = "sentry")]
     let _guard = sentry::init(
-            sentry::ClientOptions::new()
-                .dsn("https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360")
-                .maybe_release(sentry::release_name!())
-                .traces_sample_rate(1.0)
-        );
-    // Register the Sentry tracing layer
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .with(sentry::integrations::tracing::layer())
-        .init();
+        sentry::ClientOptions::new()
+            .dsn(SENTRY_DSN)
+            .maybe_release(sentry::release_name!())
+            .traces_sample_rate(1.0),
+    );
+
+    let reg = tracing_subscriber::registry().with(tracing_subscriber::fmt::layer());
+    #[cfg(feature = "sentry")]
+    let reg = reg.with(sentry::integrations::tracing::layer());
+    reg.init();
+
+    #[cfg(feature = "sentry")]
+    info!("initialized tracing with sentry layer");
 
     let code = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async { run_main().bind_hub(sentry::Hub::current()).await });
+        .block_on(async {
+            let fut = run_main();
+            #[cfg(feature = "sentry")]
+            let fut = {
+                use sentry::SentryFutureExt;
+                fut.bind_hub(sentry::Hub::current())
+            };
+            fut.await
+        });
     std::process::ExitCode::from(code)
 }
 

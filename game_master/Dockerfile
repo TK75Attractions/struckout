@@ -1,6 +1,7 @@
 FROM rust:latest AS builder
 
 ARG RELEASE_MODE=false
+ARG SENTRY_DSN
 
 ENV CARGO_HOME="/home/builder/.cargo/"
 ENV PATH="/home/builder/.local/bin/:${PATH}"
@@ -27,13 +28,21 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
     --mount=type=cache,uid=1000,gid=1000,id=cargo-git,target=/home/builder/.cargo/git \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-target,target=/build/target \
     if [ "$RELEASE_MODE" = "true" ]; then \
-        RELEASE_FLAG="--release"; \
+        if [ "${SENTRY_DSN}" = "" ]; then \
+            echo "RELEASE_MODE is set to true, but SENTRY_DSN is not supplied"; \
+            exit 1; \
+        fi &&\
+        FLAGS="--release --features=sentry"; \
         TARGET_DIR="release"; \
     else \
-        RELEASE_FLAG=""; \
+        if [ "${SENTRY_DSN}" != "" ]; then \
+            FLAGS="--features=sentry"; \
+        else \
+            FLAGS=""; \
+        fi &&\
         TARGET_DIR="debug"; \
     fi &&\
-    SQLX_OFFLINE=true mise exec protoc -- cargo build ${RELEASE_FLAG} -p game_master \
+    SQLX_OFFLINE=true mise exec protoc -- cargo build ${FLAGS} -p game_master \
     && mkdir -p /build/bin/ \
     && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 

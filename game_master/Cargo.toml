@@ -3,6 +3,9 @@ name = "game_master"
 version = "0.1.0"
 edition.workspace = true
 
+[features]
+sentry = ["dep:sentry"]
+
 [dependencies]
 struckout-proto = { workspace = true }
 
@@ -17,7 +20,7 @@ thiserror = { workspace = true }
 derive_more = { workspace = true, features = ["from","into"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-sentry = { workspace = true }
+sentry = { workspace = true, optional = true }
 serde = { workspace = true }
 time = { workspace = true }
 parking_lot = { workspace = true }
