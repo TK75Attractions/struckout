@@ -17,6 +17,7 @@ WORKDIR /build/
 
 # mise.tomlの変更頻度は低いので先にコピーしてインストールしておく
 COPY .mise/config.toml .mise/config.toml
+COPY .mise/mise.lock .mise/mise.lock
 RUN mise install protoc
 
 COPY ./ ./
