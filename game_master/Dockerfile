@@ -1,4 +1,4 @@
-FROM rust:latest AS builder
+FROM rust@sha256:6ff07edce8775d0f64be7aba9197229407301bddf2054d62c27b541a6238a181 AS builder
 
 ARG RELEASE_MODE=false
 ARG SENTRY_DSN
@@ -13,8 +13,7 @@ RUN groupadd --system builder --gid 1000 \
     && useradd --system --create-home -g builder --uid 1000 builder
 USER builder
 
-# install protoc via mise
-RUN curl https://mise.run|sh
+COPY --from=ghcr.io/jdx/mise@sha256:1e0a39bc5a3b089b9b9305b6cd53e5d32ed5327e6241db5ec412fc2eabd44b02 /usr/local/bin/mise /usr/bin/mise
 
 WORKDIR /build/
 
@@ -46,7 +45,7 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
     && mkdir -p /build/bin/ \
     && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 
-FROM debian:latest
+FROM debian@sha256:913f6706df59a68922d1dd08f78c2476560a8d367897200a6005b00e5f67c2d5
 
 RUN apt update && apt install -y ca-certificates && \
     update-ca-certificates && \
