@@ -3,20 +3,25 @@ name = "game_master"
 version = "0.1.0"
 edition.workspace = true
 
+[features]
+sentry = ["dep:sentry"]
+
 [dependencies]
 struckout-proto = { workspace = true }
 
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread","macros", "test-util"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util", "signal"] }
 tokio-stream = { workspace = true, features = ["sync"] }
+backon = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 derive_more = { workspace = true, features = ["from","into"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+sentry = { workspace = true, optional = true }
 serde = { workspace = true }
 time = { workspace = true }
 parking_lot = { workspace = true }

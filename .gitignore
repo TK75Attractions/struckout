@@ -7,7 +7,7 @@ target/
 .states/
 
 # Personal mise overrides. mise.toml itself is committed.
-mise.local.toml
+.mise/config.local.toml
 
 # Unity generated state
 projector/[Ll]ibrary/

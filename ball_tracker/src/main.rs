@@ -16,7 +16,10 @@ use chrono::Local;
 use clap::{Parser, ValueEnum};
 use tokio::sync::mpsc;
 use tracing::Level;
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{FmtSubscriber, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+
+#[cfg(feature = "sentry")]
+const SENTRY_DSN: &str = env!("SENTRY_DSN");
 
 #[derive(Parser)]
 struct Cli {
@@ -161,8 +164,39 @@ fn json_log_output_dir() -> PathBuf {
     ret
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    #[cfg(feature = "sentry")]
+    let _guard = sentry::init(
+        sentry::ClientOptions::new()
+            .dsn(SENTRY_DSN)
+            .maybe_release(sentry::release_name!())
+            .traces_sample_rate(1.0),
+    );
+
+    let reg = tracing_subscriber::registry().with(tracing_subscriber::fmt::layer());
+    #[cfg(feature = "sentry")]
+    let reg = reg.with(sentry::integrations::tracing::layer());
+    reg.init();
+
+    #[cfg(feature = "sentry")]
+    tracing::info!("initialized tracing with sentry layer");
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            let fut = run_main();
+            #[cfg(feature = "sentry")]
+            let fut = {
+                use sentry::SentryFutureExt;
+                fut.bind_hub(sentry::Hub::current())
+            };
+            fut.await
+        });
+}
+
+async fn run_main() {
     let cli = Cli::parse();
 
     let subscriber = FmtSubscriber::builder()

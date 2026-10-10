@@ -18,6 +18,11 @@ buf = "1.72.0"
 tokei = "latest"
 grpcurl = "latest"
 
+[env]
+# game-masterが使うDBのURL (sqlx用)
+DATABASE_URL = { default = "", redact = true }
+SENTRY_DSN = { default = "", redact = true }
+
 [tasks.proto]
 # grpc_csharp_plugin は buf.gen.game-master.yaml が BSR の remote plugin を使うので、
 # ローカルに用意するものは buf と protoc だけ。
@@ -59,6 +64,7 @@ description = "touchpanelの画面を表示する"
 run = """
     if [ -f ./patches.toml ]; then
         mv ./patches.toml ./patches.toml.bak
+        echo "1" > ../.states/will_enable_patch
     fi
 """
 dir = ".cargo/"
@@ -72,6 +78,16 @@ run = """
 """
 dir = ".cargo/"
 description = "'patches:disable'で移動したファイルを元に戻す"
+
+[tasks."patches:restore"]
+run = """
+    if [ -f .states/will_enable_patch ] && [ $(cat .states/will_enable_patch) = "1" ]; then
+        mise run patches:enable
+        echo "0" > .states/will_enable_patch
+    fi
+"""
+dir = "."
+description = "'.states/will_enable_patch'が1の場合'patches:enable'を実行する"
 
 [tasks."patches:status"]
 run = """

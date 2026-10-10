@@ -1,3 +1,4 @@
+name: game-master-prod
 services:
   app:
     environment:
