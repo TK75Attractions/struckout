@@ -64,7 +64,7 @@ slint-build = { git = "https://github.com/Tk75Attractions/slint" }
 i-slint-core = { git = "https://github.com/Tk75Attractions/slint" }
 i-slint-backend-testing = { git = "https://github.com/Tk75Attractions/slint" }
 i-slint-compiler = { git = "https://github.com/Tk75Attractions/slint" }
-stern = { git = "https://github.com/taichi765/stern" }
+stern = { git = "https://github.com/Tk75Attractions/stern" }
 
 # dev-dependencies
 testcontainers-modules = "0.15.0"
