@@ -1,10 +1,13 @@
-# This file is for Rust-based images.
+# game-master用
+
+# Secrets
 **/.env
+**/*.local.toml
+
 .git
 
 # build results
 target
-stern/target
 
 # Non-Rust directoris
 projector
@@ -20,3 +23,5 @@ mcu
 
 # local dependency overrides
 .cargo/patches.toml
+
+.states
