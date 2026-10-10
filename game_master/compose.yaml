@@ -1,7 +1,8 @@
 services:
   app:
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     build:
       context: ../
       dockerfile: ./game_master/Dockerfile
@@ -16,6 +17,12 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
 
 volumes:
   mysql_data:

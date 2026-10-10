@@ -1,5 +1,6 @@
 use std::ffi::OsStr;
 
+use backon::{ExponentialBuilder, Retryable as _};
 use game_master::{DataSourceImpl, GameMasterServiceImpl};
 use struckout_proto::game_master_service_server::GameMasterServiceServer;
 
@@ -7,7 +8,7 @@ use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
 use tokio::signal::unix::{self, SignalKind};
 use tonic::transport::Server;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 const ENV_MYSQL_ROOT_PASSWORD: &str = "MYSQL_ROOT_PASSWORD";
@@ -107,8 +108,12 @@ pub enum PoolCreationError {
 async fn new_pool() -> Result<Pool<MySql>, PoolCreationError> {
     let password = env_var(ENV_MYSQL_ROOT_PASSWORD)?;
     let db_name = env_var(ENV_MYSQL_DB_NAME)?;
-    let pool = MySqlPoolOptions::new()
-        .connect(format!("mysql://root:{}@db:3306/{}", password, db_name).as_str())
+
+    let opt = MySqlPoolOptions::new();
+    let url = format!("mysql://root:{}@db:3306/{}", password, db_name);
+    let pool = (|| opt.clone().connect(&url))
+        .retry(ExponentialBuilder::default())
+        .notify(|err, dur| debug!(?err, ?dur, "retrying connetion"))
         .await?;
     Ok(pool)
 }
