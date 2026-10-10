@@ -1,32 +1,50 @@
 use std::ffi::OsStr;
 
 use game_master::{DataSourceImpl, GameMasterServiceImpl};
+use sentry::SentryFutureExt;
 use struckout_proto::game_master_service_server::GameMasterServiceServer;
 
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
 use tonic::transport::Server;
-use tracing::{Level, error, info};
-use tracing_subscriber::FmtSubscriber;
+use tracing::{error, info};
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 const ENV_MYSQL_ROOT_PASSWORD: &str = "MYSQL_ROOT_PASSWORD";
 const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
 
 const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 
-#[tokio::main]
-async fn main() {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("failed to set default suvscriber");
+fn main() -> std::process::ExitCode {
+    // Initialize Sentry
+    let _guard = sentry::init(
+            sentry::ClientOptions::new()
+                .dsn("https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360")
+                .maybe_release(sentry::release_name!())
+                .traces_sample_rate(1.0)
+        );
+    // Register the Sentry tracing layer
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(sentry::integrations::tracing::layer())
+        .init();
 
+    let code = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async { run_main().bind_hub(sentry::Hub::current()).await });
+    std::process::ExitCode::from(code)
+}
+
+/// Returns exit code.
+async fn run_main() -> u8 {
     info!("creating MySQL pool");
     let pool = match new_pool().await {
         Ok(p) => p,
         Err(err) => {
             error!(?err, "failed to create MySQL pool");
-            std::process::exit(1);
+            return 1;
         }
     };
     info!("succeed to create MySQL pool");
@@ -45,9 +63,10 @@ async fn main() {
         Ok(_) => (),
         Err(err) => {
             error!(?err, "an error occured");
-            std::process::exit(1);
+            return 1;
         }
     };
+    return 0;
 }
 
 #[derive(Debug, Error)]
