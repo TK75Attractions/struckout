@@ -1,5 +1,7 @@
 FROM rust:latest AS builder
 
+ARG RELEASE_MODE=false
+
 ENV CARGO_HOME="/home/builder/.cargo/"
 ENV PATH="/home/builder/.local/bin/:${PATH}"
 
@@ -24,9 +26,16 @@ COPY ./ ./
 RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/.cargo/registry \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-git,target=/home/builder/.cargo/git \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-target,target=/build/target \
-    SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p game_master \
+    if [ "$RELEASE_MODE" = "true" ]; then \
+        RELEASE_FLAG="--release"; \
+        TARGET_DIR="release"; \
+    else \
+        RELEASE_FLAG=""; \
+        TARGET_DIR="debug"; \
+    fi &&\
+    SQLX_OFFLINE=true mise exec protoc -- cargo build ${RELEASE_FLAG} -p game_master \
     && mkdir -p /build/bin/ \
-    && cp /build/target/release/game_master /build/bin/game_master
+    && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 
 FROM debian:latest
 

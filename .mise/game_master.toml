@@ -16,9 +16,18 @@ description = "Start a MySQL service for game-master."
 ["game-master:build"]
 depends = ["patches:disable", "game-master:prepare"]
 depends_post = "patches:restore"
-run = "docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml build"
+run = '''
+  FLAGS=""
+  if [ ${usage_release:-false} = "true" ]; then
+    FLAGS="--build-arg RELEASE_MODE=true"
+  fi
+  docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml build ${FLAGS}
+'''
 dir = "game_master/"
 description = "game-masterをビルドする"
+usage = '''
+  flag "--release" help="releaseプロファイルでビルドする"
+'''
 
 ["game-master:prepare"]
 run = "cargo sqlx prepare -- --all-targets"
