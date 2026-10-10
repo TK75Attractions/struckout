@@ -6,6 +6,7 @@ use struckout_proto::game_master_service_server::GameMasterServiceServer;
 
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
+use tokio::signal::unix::{self, SignalKind};
 use tonic::transport::Server;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -55,9 +56,18 @@ async fn run_main() -> u8 {
     let addr = format!("0.0.0.0:{}", GRPC_PORT)
         .parse()
         .expect("address format should be correct");
+
+    let sig = async {
+        let term = unix::signal(SignalKind::terminate());
+        let mut term = term.unwrap();
+        tokio::select! {
+            v = tokio::signal::ctrl_c() => v.unwrap(),
+            _ = term.recv() => (),
+        }
+    };
     match Server::builder()
         .add_service(GameMasterServiceServer::new(game_master))
-        .serve(addr)
+        .serve_with_shutdown(addr, sig)
         .await
     {
         Ok(_) => (),

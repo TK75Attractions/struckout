@@ -9,7 +9,7 @@ struckout-proto = { workspace = true }
 tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread","macros", "test-util"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util", "signal"] }
 tokio-stream = { workspace = true, features = ["sync"] }
 
 anyhow = { workspace = true }
