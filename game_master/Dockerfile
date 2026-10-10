@@ -39,6 +39,10 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
 
 FROM debian:latest
 
+RUN apt update && apt install -y ca-certificates && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /build/bin/game_master /app/game_master
 
 ENTRYPOINT [ "/app/game_master" ]
