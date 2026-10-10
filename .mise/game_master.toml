@@ -44,3 +44,9 @@ usage = '''
 run = "cargo sqlx prepare -- --all-targets"
 dir = "game_master/"
 description = "game-masterのクエリ検証用メタデータを生成する"
+
+["game-master"]
+run = "docker compose -f compose.yaml -f compose.dev.yaml"
+dir = "game_master/"
+description = "game-master-devのサービスを操作する"
+raw = true
