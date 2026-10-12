@@ -1,4 +1,6 @@
-import { AboutSlint, VerticalBox } from "std-widgets.slint";
+import "./assets/fonts/Oxanium-VariableFont_wght.ttf";
+
+import { VerticalBox } from "std-widgets.slint";
 import { TopBar } from "top-bar.slint";
 import { StartScreen } from "./screens/start-screen.slint";
 import {
@@ -58,6 +60,7 @@ enum UiNavRoute {
 
 export component AppWindow inherits Window {
         full-screen: false;
+        default-font-family: "Oxanium,Noto Sans JP";
 
         in property <UiNavRoute> nav-route;
 
