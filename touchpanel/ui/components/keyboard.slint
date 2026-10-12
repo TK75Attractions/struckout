@@ -1,4 +1,5 @@
 import { Icons } from "../icons.slint";
+import { Button } from "std-widgets.slint";
 
 export enum KeyBoardMode {
     Hiragana,
@@ -394,39 +395,27 @@ export component KeyboardBottomBar inherits Rectangle {
     callback submit-name();
 
     HorizontalLayout {
-        Rectangle {
-            Text {
-                text: "あア";
-            }
+        spacing: 16px;
+        alignment: LayoutAlignment.space-around;
 
-            touch1 := TouchArea {
-                clicked => {
-                    root.switch-keyboard-mode();
-                }
+        Button {
+            text: "あア";
+            clicked => {
+                root.switch-keyboard-mode();
             }
         }
 
-        Rectangle {
-            Image {
-                source: Icons.backspace;
-            }
-
-            touch2 := TouchArea {
-                clicked => {
-                    root.click-backspace();
-                }
+        Button {
+            icon: Icons.backspace;
+            clicked => {
+                root.click-backspace();
             }
         }
 
-        Rectangle {
-            Image {
-                source: Icons.arrow-forward;
-            }
-
-            touch3 := TouchArea {
-                clicked => {
-                    root.submit-name();
-                }
+        Button {
+            icon: Icons.arrow-forward;
+            clicked => {
+                root.submit-name();
             }
         }
     }
