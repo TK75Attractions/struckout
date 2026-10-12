@@ -82,3 +82,4 @@ Packages/packages-lock.json
 
 # Sentry secrets
 Assets/Plugins/Sentry/SentryCliOptions.asset*
+Assets/Plugins/Sentry.meta
