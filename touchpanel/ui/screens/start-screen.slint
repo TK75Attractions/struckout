@@ -1,29 +1,34 @@
-import { Button } from "std-widgets.slint";
+import { TwoColorOutlinedButton } from "../components/button.slint";
+
 global Adopter {
     callback click-first-play();
     callback click-non-first-play();
 }
 
 export component StartScreen {
-    HorizontalLayout {
+    VerticalLayout {
         alignment: LayoutAlignment.center;
+        cross-axis-alignment: CrossAxisAlignment.center;
+        padding: 32px;
+        spacing: 16px;
 
-        VerticalLayout {
-            alignment: LayoutAlignment.center;
-            spacing: 16px;
+        Image {
+            source: @image-url("../assets/struckout_logo_cyan_magenta.png");
+        }
 
-            Button {
-                text: "プレイ(初回)";
-                clicked => {
-                    Adopter.click-first-play();
-                }
+        btn1 := TwoColorOutlinedButton {
+            text: "プレイ(初回)";
+            width: max(btn1.preferred-width, btn2.preferred-width);
+            clicked => {
+                Adopter.click-first-play();
             }
+        }
 
-            Button {
-                text: "プレイ(2回目以降)";
-                clicked => {
-                    Adopter.click-non-first-play();
-                }
+        btn2 := TwoColorOutlinedButton {
+            text: "プレイ(2回目以降)";
+            width: max(btn1.preferred-width, btn2.preferred-width);
+            clicked => {
+                Adopter.click-non-first-play();
             }
         }
     }

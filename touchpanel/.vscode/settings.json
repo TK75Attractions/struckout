@@ -1,3 +1,8 @@
 {
     "rust-analyzer.cargo.targetDir": null,
+    "slint.lspBinaryPath": "/home/taichi765/.local/bin/slint-lsp",
+    "slint.lsp-args": [
+        "--style",
+        "struckout"
+    ]
 }
