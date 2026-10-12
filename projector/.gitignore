@@ -79,3 +79,6 @@ Packages/packages-lock.json
 *.aab
 *.unitypackage
 *.slnx
+
+# Sentry secrets
+Assets/Plugins/Sentry/SentryCliOptions.asset*
