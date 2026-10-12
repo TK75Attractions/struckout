@@ -185,7 +185,7 @@ impl Context {
                 "//@xtask-register" => {
                     writeln!(
                         out,
-                        "\t\t.register({}Destination::new(&application))",
+                        "\t\t.register({}Destination::new(application))",
                         self.args.name.to_upper_camel_case()
                     )?;
                     found_register = true;

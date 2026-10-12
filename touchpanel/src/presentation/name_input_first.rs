@@ -359,7 +359,7 @@ mod tests {
                 let route = Rc::clone(&route);
                 move |new| {
                     let mut guard = route.borrow_mut();
-                    *guard = new.into();
+                    *guard = new;
                 }
             });
             let worker = WorkerThread::new_smol(cx);
