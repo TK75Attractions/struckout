@@ -7,14 +7,14 @@ on:
       - api/proto/**
       - .mise/**
       - projector/**
-      - .github/workflows/unity_build.yaml
+      - .github/workflows/unity_ci.yaml
   pull_request:
     branches: master
     paths:
       - api/proto/**
       - .mise/**
       - projector/**
-      - .github/workflows/unity_build.yaml
+      - .github/workflows/unity_ci.yaml
 
 jobs:
   build:
