@@ -1,5 +1,9 @@
 package com.taichi765.struckoutCameraApp.camera
 
+import android.hardware.camera2.CameraCaptureSession
+import androidx.annotation.OptIn
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -33,18 +37,26 @@ fun CameraScreenRoute(
 ) {
     val viewModel = hiltViewModel<CameraViewModel>()
     val image by viewModel.contoursImage.collectAsState()
+    val savedFrame by viewModel.savedFrame.collectAsState()
 
     CameraScreen(
         image,
+        savedFrame,
         viewModel.analyzer,
+        viewModel.captureCallback,
+        viewModel::requestSaveFrame,
         viewModel::flashVideo
     )
 }
 
+@OptIn(ExperimentalCamera2Interop::class)
 @Composable
 private fun CameraScreen(
     image: ImageBitmap?,
+    savedFrame: String?,
     analyzer: MyAnalyzer,
+    captureCallback: CameraCaptureSession.CaptureCallback,
+    onSaveFrame: () -> Unit,
     onFlashVideo: () -> Unit
 ) {
     val context = LocalContext.current
@@ -65,6 +77,12 @@ private fun CameraScreen(
                 .weight(1f)
         )
 
+        // カメラの位置と向きを PC で求めるための画像を保存する。
+        Button(onClick = onSaveFrame) {
+            Text("Save frame")
+        }
+        savedFrame?.let { Text(it) }
+
         Button(onClick = onFlashVideo) {
             Text("Stop recording")
         }
@@ -72,7 +90,9 @@ private fun CameraScreen(
 
     LaunchedEffect(Unit) {
         val imageAnalysis =
-            ImageAnalysis.Builder().build().apply {
+            ImageAnalysis.Builder().also {
+                Camera2Interop.Extender(it).setSessionCaptureCallback(captureCallback)
+            }.build().apply {
                 val executor = Executors.newSingleThreadExecutor()
                 setAnalyzer(executor, analyzer)
             }

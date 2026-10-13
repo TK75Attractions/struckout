@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository.Companion.ENABLE_RECORDING_MODE_DEFAULT
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
@@ -68,6 +69,32 @@ class ConfigStoreRepositoryImpl @Inject constructor(
             initialValue = DetectionOutputKind.LOCAL
         )
 
+    override val detectionArea: StateFlow<DetectionArea> =
+        context.dataStore.data.map { preferences ->
+            val left = preferences[DETECTION_AREA_LEFT_PERCENT] ?: 0.0
+            val top = preferences[DETECTION_AREA_TOP_PERCENT] ?: 0.0
+            val right = preferences[DETECTION_AREA_RIGHT_PERCENT] ?: 0.0
+            val bottom = preferences[DETECTION_AREA_BOTTOM_PERCENT] ?: 0.0
+            if (DetectionArea.isValid(left, top, right, bottom)) {
+                DetectionArea(left, top, right, bottom)
+            } else {
+                DetectionArea()
+            }
+        }.stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = DetectionArea()
+        )
+
+    override val focalLengthRatio: StateFlow<Double> =
+        context.dataStore.data.map { preferences ->
+            (preferences[CAMERA_FOCAL_LENGTH_RATIO] ?: 0.0).coerceAtLeast(0.0)
+        }.stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = 0.0
+        )
+
     override suspend fun setDetectionOutputKind(kind: DetectionOutputKind) {
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
@@ -98,6 +125,25 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateDetectionArea(area: DetectionArea) {
+        context.dataStore.updateData {
+            it.toMutablePreferences().also { preferences ->
+                preferences[DETECTION_AREA_LEFT_PERCENT] = area.leftPercent
+                preferences[DETECTION_AREA_TOP_PERCENT] = area.topPercent
+                preferences[DETECTION_AREA_RIGHT_PERCENT] = area.rightPercent
+                preferences[DETECTION_AREA_BOTTOM_PERCENT] = area.bottomPercent
+            }
+        }
+    }
+
+    override suspend fun updateFocalLengthRatio(ratio: Double) {
+        context.dataStore.updateData {
+            it.toMutablePreferences().also { preferences ->
+                preferences[CAMERA_FOCAL_LENGTH_RATIO] = ratio
+            }
+        }
+    }
+
     companion object {
         const val TAG = "ConfigStoreRepository"
 
@@ -108,6 +154,13 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         private val CAMERA_ROTATION_X_DEGREES = doublePreferencesKey("camera_rotation_x_degrees")
         private val CAMERA_ROTATION_Y_DEGREES = doublePreferencesKey("camera_rotation_y_degrees")
         private val CAMERA_ROTATION_Z_DEGREES = doublePreferencesKey("camera_rotation_z_degrees")
+        private val CAMERA_FOCAL_LENGTH_RATIO = doublePreferencesKey("camera_focal_length_ratio")
         private val DETECTION_OUTPUT_KIND = stringPreferencesKey("detection_output_kind")
+        private val DETECTION_AREA_LEFT_PERCENT = doublePreferencesKey("detection_area_left_percent")
+        private val DETECTION_AREA_TOP_PERCENT = doublePreferencesKey("detection_area_top_percent")
+        private val DETECTION_AREA_RIGHT_PERCENT =
+            doublePreferencesKey("detection_area_right_percent")
+        private val DETECTION_AREA_BOTTOM_PERCENT =
+            doublePreferencesKey("detection_area_bottom_percent")
     }
 }

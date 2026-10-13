@@ -24,11 +24,14 @@ fun CameraScreenRoute(
     val image by viewModel.contoursImage.collectAsState()
     val cameraState by viewModel.cameraState.collectAsState()
     val cameraStats by viewModel.cameraStats.collectAsState()
+    val savedFrame by viewModel.savedFrame.collectAsState()
 
     CameraScreen(
         image,
+        savedFrame,
         cameraState,
         cameraStats,
+        viewModel::requestSaveFrame,
         viewModel::flashVideo
     )
 
@@ -44,8 +47,10 @@ fun CameraScreenRoute(
 @Composable
 private fun CameraScreen(
     image: ImageBitmap?,
+    savedFrame: String?,
     cameraState: HighSpeedCamera.State,
     cameraStats: HighSpeedCamera.Stats?,
+    onSaveFrame: () -> Unit,
     onFlashVideo: () -> Unit
 ) {
     Column(
@@ -62,6 +67,12 @@ private fun CameraScreen(
                 .fillMaxWidth()
                 .weight(1f)
         )
+
+        // カメラの位置と向きを PC で求めるための画像を保存する。
+        Button(onClick = onSaveFrame) {
+            Text("Save frame")
+        }
+        savedFrame?.let { Text(it) }
 
         Button(onClick = onFlashVideo) {
             Text("Stop recording")

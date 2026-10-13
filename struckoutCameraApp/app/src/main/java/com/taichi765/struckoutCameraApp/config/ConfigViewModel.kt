@@ -3,6 +3,7 @@ package com.taichi765.struckoutCameraApp.config
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taichi765.struckoutCameraApp.CaptureSession
+import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.types.tcpIsConnected
 import com.taichi765.struckoutCameraApp.network.types.udpIsConnected
@@ -27,7 +28,11 @@ class ConfigViewModel @Inject constructor(
         configRepository.detectionOutputKind,
         networkManager.state,
         configRepository.cameraPose,
-    ) { recodingModeEnabled, detectionOutputKind, connectionState, cameraPose ->
+        // combine が型つきで受け取れるのは 5 本までなので、2 つをまとめる。
+        configRepository.detectionArea.combine(configRepository.focalLengthRatio) { area, ratio ->
+            area to ratio
+        },
+    ) { recodingModeEnabled, detectionOutputKind, connectionState, cameraPose, (detectionArea, focalLengthRatio) ->
         ConfigUiState(
             recodingModeEnabled,
             detectionOutputKind = detectionOutputKind,
@@ -39,6 +44,11 @@ class ConfigViewModel @Inject constructor(
             rotationXDegrees = cameraPose.rotationXDegrees.toString(),
             rotationYDegrees = cameraPose.rotationYDegrees.toString(),
             rotationZDegrees = cameraPose.rotationZDegrees.toString(),
+            focalLengthRatio = focalLengthRatio.toString(),
+            ignoredLeftPercent = detectionArea.leftPercent.toString(),
+            ignoredTopPercent = detectionArea.topPercent.toString(),
+            ignoredRightPercent = detectionArea.rightPercent.toString(),
+            ignoredBottomPercent = detectionArea.bottomPercent.toString(),
         )
     }.stateIn(
         viewModelScope,
@@ -80,6 +90,26 @@ class ConfigViewModel @Inject constructor(
                 configRepository.updateCameraPose(newLocation)
             }
         }
+
+        val newRatio = newState.focalLengthRatio.toString().toDoubleOrNull()
+        if (newRatio == null || newRatio < 0.0) {
+            // 入力が数でない、または負のとき。前の設定のままにする。
+            Timber.tag(TAG).w("ignoring an invalid focal length ratio")
+        } else if (newRatio != oldState.focalLengthRatio.toString().toDoubleOrNull()) {
+            viewModelScope.launch {
+                configRepository.updateFocalLengthRatio(newRatio)
+            }
+        }
+
+        val newArea = convertCharsToDetectionArea(newState)
+        if (newArea == null) {
+            // 入力が数でない、または検出を受け付ける場所が残らないとき。前の設定のままにする。
+            Timber.tag(TAG).w("ignoring an invalid detection area")
+        } else if (newArea != convertCharsToDetectionArea(oldState)) {
+            viewModelScope.launch {
+                configRepository.updateDetectionArea(newArea)
+            }
+        }
     }
 
     fun setDetectionOutputKind(kind: DetectionOutputKind) {
@@ -117,4 +147,14 @@ private fun convertCharsToCameraLocation(newState: ConfigUiState): CameraBallTra
     }
 }
 
-
+/**
+ * @return `null` if [CharSequence]s are not numbers, or the margins leave nothing of the image.
+ */
+private fun convertCharsToDetectionArea(state: ConfigUiState): DetectionArea? {
+    val left = state.ignoredLeftPercent.toString().toDoubleOrNull() ?: return null
+    val top = state.ignoredTopPercent.toString().toDoubleOrNull() ?: return null
+    val right = state.ignoredRightPercent.toString().toDoubleOrNull() ?: return null
+    val bottom = state.ignoredBottomPercent.toString().toDoubleOrNull() ?: return null
+    if (!DetectionArea.isValid(left, top, right, bottom)) return null
+    return DetectionArea(left, top, right, bottom)
+}

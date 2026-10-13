@@ -63,6 +63,18 @@ fun ConfigScreenRoute(
     val rotationZ =
         remember(savedState.rotationZDegrees) { TextFieldState(savedState.rotationZDegrees.toString()) }
 
+    val focalLengthRatio =
+        remember(savedState.focalLengthRatio) { TextFieldState(savedState.focalLengthRatio.toString()) }
+
+    val ignoredLeft =
+        remember(savedState.ignoredLeftPercent) { TextFieldState(savedState.ignoredLeftPercent.toString()) }
+    val ignoredTop =
+        remember(savedState.ignoredTopPercent) { TextFieldState(savedState.ignoredTopPercent.toString()) }
+    val ignoredRight =
+        remember(savedState.ignoredRightPercent) { TextFieldState(savedState.ignoredRightPercent.toString()) }
+    val ignoredBottom =
+        remember(savedState.ignoredBottomPercent) { TextFieldState(savedState.ignoredBottomPercent.toString()) }
+
     var showDiscardDialog by remember { mutableStateOf(false) }
 
 
@@ -75,6 +87,11 @@ fun ConfigScreenRoute(
         rotationX = rotationX,
         rotationY = rotationY,
         rotationZ = rotationZ,
+        focalLengthRatio = focalLengthRatio,
+        ignoredLeft = ignoredLeft,
+        ignoredTop = ignoredTop,
+        ignoredRight = ignoredRight,
+        ignoredBottom = ignoredBottom,
         onToggleRecordingMode = {
             editingState =
                 editingState.copy(recodingModeEnabled = !editingState.recodingModeEnabled)
@@ -101,7 +118,12 @@ fun ConfigScreenRoute(
                     locationZ = z.text,
                     rotationXDegrees = rotationX.text,
                     rotationYDegrees = rotationY.text,
-                    rotationZDegrees = rotationZ.text
+                    rotationZDegrees = rotationZ.text,
+                    focalLengthRatio = focalLengthRatio.text,
+                    ignoredLeftPercent = ignoredLeft.text,
+                    ignoredTopPercent = ignoredTop.text,
+                    ignoredRightPercent = ignoredRight.text,
+                    ignoredBottomPercent = ignoredBottom.text
                 )
             viewModel.applyChanges(editingState)
             onNavigateToCameraScreen()
@@ -140,6 +162,11 @@ private fun ConfigScreen(
     rotationX: TextFieldState,
     rotationY: TextFieldState,
     rotationZ: TextFieldState,
+    focalLengthRatio: TextFieldState,
+    ignoredLeft: TextFieldState,
+    ignoredTop: TextFieldState,
+    ignoredRight: TextFieldState,
+    ignoredBottom: TextFieldState,
     onToggleRecordingMode: () -> Unit,
     onRetryConnection: () -> Unit,
     onSetDetectionOutput: (DetectionOutputKind) -> Unit,
@@ -175,7 +202,10 @@ private fun ConfigScreen(
                 rotationX,
                 rotationY,
                 rotationZ,
+                focalLengthRatio,
             )
+
+            DetectionAreaInput(ignoredLeft, ignoredTop, ignoredRight, ignoredBottom)
 
             ConfirmButton(onClick = onApplyChanges)
         }
@@ -300,6 +330,7 @@ private fun CameraPoseInput(
     rotationX: TextFieldState,
     rotationY: TextFieldState,
     rotationZ: TextFieldState,
+    focalLengthRatio: TextFieldState,
 ) {
     Card(
         modifier = Modifier
@@ -319,6 +350,37 @@ private fun CameraPoseInput(
             PositionField("roll (x)", rotationX)
             PositionField("pitch (y)", rotationY)
             PositionField("yaw (z)", rotationZ)
+            Text("Focal length / image width (0: auto)")
+            PositionField("focal length ratio", focalLengthRatio)
+        }
+    }
+}
+
+/**
+ * カメラ画面のプレビューの各辺から、検出を無視する幅を入力する。
+ */
+@Composable
+private fun DetectionAreaInput(
+    left: TextFieldState,
+    top: TextFieldState,
+    right: TextFieldState,
+    bottom: TextFieldState,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Detection Area", fontSize = 24.sp)
+            Text("Ignored width from each edge of the preview (%)")
+            PositionField("left", left)
+            PositionField("top", top)
+            PositionField("right", right)
+            PositionField("bottom", bottom)
         }
     }
 }
@@ -418,7 +480,12 @@ private fun DummyConfigScreen(
     z: TextFieldState = TextFieldState(),
     rotationX: TextFieldState = TextFieldState(),
     rotationY: TextFieldState = TextFieldState(),
-    rotationZ: TextFieldState = TextFieldState()
+    rotationZ: TextFieldState = TextFieldState(),
+    focalLengthRatio: TextFieldState = TextFieldState(),
+    ignoredLeft: TextFieldState = TextFieldState(),
+    ignoredTop: TextFieldState = TextFieldState(),
+    ignoredRight: TextFieldState = TextFieldState(),
+    ignoredBottom: TextFieldState = TextFieldState()
 ) {
     ConfigScreen(
         recordingModeEnabled = recordingModeEnabled,
@@ -432,6 +499,11 @@ private fun DummyConfigScreen(
         rotationX = rotationX,
         rotationY = rotationY,
         rotationZ = rotationZ,
+        focalLengthRatio = focalLengthRatio,
+        ignoredLeft = ignoredLeft,
+        ignoredTop = ignoredTop,
+        ignoredRight = ignoredRight,
+        ignoredBottom = ignoredBottom,
         onToggleRecordingMode = {},
         onRetryConnection = {},
         onSetDetectionOutput = {},

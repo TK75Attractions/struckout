@@ -126,9 +126,9 @@ class ObjectTrackerInstrumentedTest {
     }
 
     @Test
-    fun minSaturationRejectsColorlessObjects() {
+    fun minColorShiftRejectsColorlessObjects() {
         OpenCVLoader.initLocal()
-        val tracker = ObjectTracker(0.5, 15.0, 80.0, minSaturation = 0.25)
+        val tracker = ObjectTracker(0.5, 15.0, 80.0, minColorShift = 10.0)
         val background = Mat.zeros(120, 160, CvType.CV_8UC3)
 
         assertTrue(tracker.nextFrame(background).isEmpty())

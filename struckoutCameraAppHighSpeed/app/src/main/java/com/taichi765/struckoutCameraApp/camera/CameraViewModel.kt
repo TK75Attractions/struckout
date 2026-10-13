@@ -10,30 +10,74 @@ import com.taichi765.struckoutCameraApp.camera.highspeed.HighSpeedCamera
 import com.taichi765.struckoutCameraApp.camera.types.FrameID
 import com.taichi765.struckoutCameraApp.camera.types.increment
 import com.taichi765.struckoutCameraApp.camera.types.toULong
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.PushFrameUseCase
 import com.taichi765.struckoutCameraApp.network.types.DetectionData
 import com.taichi765.struckoutCameraApp.proto.detection
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.Mat
+import org.opencv.core.Point
 import org.opencv.core.Rect
 import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
     private val pushFrame: PushFrameUseCase,
     private val cameraRepository: CameraRepository,
+    private val configRepository: ConfigStoreRepository,
     private val camera: HighSpeedCamera,
+    private val clockInfo: CameraClockInfoHolder,
+    private val frameSaver: CalibrationFrameSaver,
 ) : ViewModel() {
     private val _contoursImage = MutableStateFlow<ImageBitmap?>(null)
     val contoursImage = _contoursImage.asStateFlow()
+
+    init {
+        clockInfo.update {
+            it.copy(appVariant = "highspeed", frameRate = HighSpeedCamera.TARGET_FPS.toDouble())
+        }
+    }
+
+    private val saveFrameRequested = AtomicBoolean(false)
+    private val _savedFrame = MutableStateFlow<String?>(null)
+
+    /**
+     * 最後に保存した較正用の画像の場所 (または失敗の理由)。
+     */
+    val savedFrame = _savedFrame.asStateFlow()
+
+    /**
+     * 次のフレームを、較正用の画像として保存する。
+     */
+    fun requestSaveFrame() {
+        saveFrameRequested.set(true)
+    }
+
+    /**
+     * @param rgb 検出の枠を描き込む前の解析画像。この呼び出しの間だけ有効
+     */
+    private fun saveFrameIfRequested(rgb: Mat) {
+        if (!saveFrameRequested.compareAndSet(true, false)) {
+            return
+        }
+        val copy = rgb.clone()
+        val intrinsics = cameraRepository.intrinsicsFor(copy.cols(), copy.rows())
+        viewModelScope.launch(Dispatchers.IO) {
+            _savedFrame.value =
+                frameSaver.save(copy, intrinsics, cameraRepository.sensorOrientation)
+            copy.release()
+        }
+    }
 
     val cameraState = camera.state
     val cameraStats = camera.stats
@@ -61,9 +105,14 @@ class CameraViewModel @Inject constructor(
     private fun onFrame(rgba: Mat, timestampNanos: Long) {
         // 背景の更新 (accumulateWeighted) が 4 チャンネルを扱えないので、アルファを落として渡す。
         Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)
-        val bboxes = cameraRepository.tracker.nextFrame(rgb)
+        // 設定の変更がすぐ反映されるよう、範囲はフレームごとに読む。
+        val area = configRepository.detectionArea.value
+        val (bboxes, ignored) = cameraRepository.tracker.nextFrame(rgb).partition {
+            area.contains(it.x + it.width / 2.0, it.y + it.height / 2.0, rgb.cols(), rgb.rows())
+        }
 
-        updatePreview(rgba, bboxes)
+        saveFrameIfRequested(rgb)
+        updatePreview(rgba, bboxes, ignored, area)
         if (bboxes.isEmpty()) {
             return
         }
@@ -74,6 +123,7 @@ class CameraViewModel @Inject constructor(
         val curFrameID = frameId.toULong()
         val data = DetectionData(
             timestamp = getTimestamp(TimeUnit.NANOSECONDS.toMillis(timestampNanos)),
+            sensorTimestampNanos = timestampNanos,
             frameId = curFrameID,
             detections = bboxes.map { bbox ->
                 val worldDirection =
@@ -84,6 +134,9 @@ class CameraViewModel @Inject constructor(
                     layZ = worldDirection.z
                     bboxWidth = bbox.width
                     bboxHeight = bbox.height
+                    // 行ごとの露光の時刻差を補正するのに、画像のどの行に写ったかが要る。
+                    imageX = (bbox.x + bbox.width / 2f) / rgba.cols()
+                    imageY = (bbox.y + bbox.height / 2f) / rgba.rows()
                 }
             })
         viewModelScope.launch {
@@ -95,15 +148,34 @@ class CameraViewModel @Inject constructor(
      * 画面表示用の画像を更新する。毎フレーム作ると解析が 120fps に追いつかないので間引く。
      * 検出があったフレームを優先し、検出がなくてもカメラの向きを合わせられるよう時々更新する。
      */
-    private fun updatePreview(rgba: Mat, bboxes: List<Rect>) {
+    private fun updatePreview(
+        rgba: Mat,
+        bboxes: List<Rect>,
+        ignored: List<Rect>,
+        area: DetectionArea
+    ) {
         val now = System.nanoTime()
-        val interval = if (bboxes.isEmpty()) IDLE_PREVIEW_INTERVAL_NANOS else PREVIEW_INTERVAL_NANOS
+        val interval =
+            if (bboxes.isEmpty() && ignored.isEmpty()) IDLE_PREVIEW_INTERVAL_NANOS else PREVIEW_INTERVAL_NANOS
         if (now - lastPreviewNanos < interval) {
             return
         }
         lastPreviewNanos = now
 
         // 検出は RGB に写した側で済んでいるので、ここで描き込んでも結果には影響しない。
+        // 範囲を合わせやすいよう、範囲の枠と、範囲の外で捨てた検出も描く。
+        if (!area.coversWholeImage) {
+            val bounds = area.inAnalysisImage(rgba.cols(), rgba.rows())
+            Imgproc.rectangle(
+                rgba,
+                Point(bounds.left, bounds.top),
+                Point(bounds.right, bounds.bottom),
+                Scalar(0.0, 255.0, 0.0, 255.0)
+            )
+        }
+        ignored.forEach {
+            Imgproc.rectangle(rgba, it, Scalar(128.0, 128.0, 128.0, 255.0))
+        }
         bboxes.forEach {
             Imgproc.rectangle(rgba, it, Scalar(255.0, 0.0, 0.0, 255.0))
         }

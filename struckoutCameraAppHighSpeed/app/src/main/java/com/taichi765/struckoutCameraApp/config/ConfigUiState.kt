@@ -11,6 +11,11 @@ data class ConfigUiState(
     val rotationXDegrees: CharSequence,
     val rotationYDegrees: CharSequence,
     val rotationZDegrees: CharSequence,
+    val focalLengthRatio: CharSequence,
+    val ignoredLeftPercent: CharSequence,
+    val ignoredTopPercent: CharSequence,
+    val ignoredRightPercent: CharSequence,
+    val ignoredBottomPercent: CharSequence,
 )
 
 /**
@@ -27,4 +32,9 @@ fun ConfigUiState(): ConfigUiState = ConfigUiState(
     rotationXDegrees = "0",
     rotationYDegrees = "0",
     rotationZDegrees = "0",
+    focalLengthRatio = "0",
+    ignoredLeftPercent = "0",
+    ignoredTopPercent = "0",
+    ignoredRightPercent = "0",
+    ignoredBottomPercent = "0",
 )

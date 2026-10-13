@@ -1,5 +1,6 @@
 package com.taichi765.struckoutCameraApp
 
+import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
 import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
@@ -21,6 +22,12 @@ class FakeConfigStoreRepository(
     private val _detectionOutputKind = MutableStateFlow(initialDetectionOutput)
     override val detectionOutputKind = _detectionOutputKind.asStateFlow()
 
+    private val _detectionArea = MutableStateFlow(DetectionArea())
+    override val detectionArea = _detectionArea.asStateFlow()
+
+    private val _focalLengthRatio = MutableStateFlow(0.0)
+    override val focalLengthRatio = _focalLengthRatio.asStateFlow()
+
     override suspend fun toggleRecordingMode() {
         _recordingModeEnabled.update { !it }
     }
@@ -31,5 +38,13 @@ class FakeConfigStoreRepository(
 
     override suspend fun updateCameraPose(pose: CameraBallTracker.CameraPose) {
         throw NotImplementedError("stub!")
+    }
+
+    override suspend fun updateDetectionArea(area: DetectionArea) {
+        _detectionArea.value = area
+    }
+
+    override suspend fun updateFocalLengthRatio(ratio: Double) {
+        _focalLengthRatio.value = ratio
     }
 }

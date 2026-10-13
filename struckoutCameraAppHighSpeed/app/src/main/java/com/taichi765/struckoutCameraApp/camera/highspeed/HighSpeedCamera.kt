@@ -9,6 +9,7 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.os.Handler
@@ -17,6 +18,7 @@ import android.os.SystemClock
 import android.util.Range
 import android.util.Size
 import android.view.Surface
+import com.taichi765.struckoutCameraApp.camera.CameraClockInfoHolder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,7 +47,10 @@ import kotlin.math.roundToInt
  *
  * 解析が追いつかないときは、読み出しを飛ばしてフレームを捨てる (カメラは止めない)。
  */
-class HighSpeedCamera @Inject constructor(@ApplicationContext private val context: Context) {
+class HighSpeedCamera @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val clockInfo: CameraClockInfoHolder,
+) {
     fun interface FrameListener {
         /**
          * 解析スレッドで呼ばれる。
@@ -269,7 +274,18 @@ class HighSpeedCamera @Inject constructor(@ApplicationContext private val contex
                             )
                         }.build()
                         highSpeed.setRepeatingBurst(
-                            highSpeed.createHighSpeedRequestList(request), null, cameraHandler
+                            highSpeed.createHighSpeedRequestList(request),
+                            // 行ごとの露光の時刻差と露光時間は、撮影結果からしか分からない。
+                            object : CameraCaptureSession.CaptureCallback() {
+                                override fun onCaptureCompleted(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    result: TotalCaptureResult
+                                ) {
+                                    clockInfo.onCaptureResult(result)
+                                }
+                            },
+                            cameraHandler
                         )
                         Timber.tag(TAG)
                             .i("high speed session started: stream=${mode.size} fps=${mode.fpsRange} analysis=$analysisSize")

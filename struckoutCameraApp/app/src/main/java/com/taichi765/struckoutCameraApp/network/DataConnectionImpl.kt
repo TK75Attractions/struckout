@@ -48,6 +48,8 @@ class DataConnectionImpl : DataConnection {
             Timber.tag(TAG).i("connecting to ball_tracker")
             try {
                 val socket = Socket(REMOTE_ADDRESS, REMOTE_PORT)
+                // 検出結果は小さなパケットなので、ためずにすぐ送る。
+                socket.tcpNoDelay = true
                 Timber.tag(TAG).i("TCP connection has been established successfully")
                 _connState.value =
                     ConnectionState.Connected(socket = socket, output = socket.getOutputStream())

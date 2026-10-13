@@ -5,6 +5,7 @@ import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import com.taichi765.struckoutCameraApp.camera.types.WorldDirection
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.opencv.calib3d.Calib3d
 import org.opencv.core.CvType
@@ -15,8 +16,12 @@ import javax.inject.Inject
 import kotlin.math.acos
 import kotlin.math.sin
 
-class CameraRepository @Inject constructor(@ApplicationContext context: Context) {
-    val tracker = ObjectTracker(0.5, 15.0, 80.0, minSaturation = MIN_BALL_SATURATION)
+class CameraRepository @Inject constructor(
+    @ApplicationContext context: Context,
+    private val clockInfo: CameraClockInfoHolder,
+    private val configRepository: ConfigStoreRepository,
+) {
+    val tracker = ObjectTracker(0.5, 15.0, 80.0, minColorShift = MIN_BALL_COLOR_SHIFT)
 
     /**
      * @param imageWidth,imageHeight [rect] を検出した解析画像 (回転前) の大きさ
@@ -38,6 +43,20 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
         }
         backCameras.firstOrNull()
             ?: throw IllegalStateException("This device does not have a back camera.")
+    }
+
+    /**
+     * センサーの向き。解析画像は、この角度だけ時計回りに回すと端末を縦に持ったときの向きになる。
+     */
+    val sensorOrientation: Int =
+        characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+
+    init {
+        // ball_tracker がフレームの時刻を PC の時計に直すときに、センサー時刻の時計の種類が要る。
+        val source = characteristics.get(CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE)
+        clockInfo.update {
+            it.copy(timestampSourceRealtime = source == CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME)
+        }
     }
 
     // LENS_INTRINSIC_CALIBRATION は pre-correction active array の座標系で表される。
@@ -125,40 +144,80 @@ class CameraRepository @Inject constructor(@ApplicationContext context: Context)
      */
     @Synchronized
     private fun calculatorFor(imageWidth: Int, imageHeight: Int): WorldDirectionCalculator {
+        return sizedCalculatorFor(imageWidth, imageHeight).calculator
+    }
+
+    /**
+     * 解析画像での内部パラメータ。較正用の画像に添える。
+     */
+    @Synchronized
+    fun intrinsicsFor(imageWidth: Int, imageHeight: Int): CameraIntrinsics {
+        return sizedCalculatorFor(imageWidth, imageHeight).intrinsics
+    }
+
+    private fun sizedCalculatorFor(imageWidth: Int, imageHeight: Int): SizedCalculator {
+        // 設定の変更がすぐ反映されるよう、焦点距離の指定は毎回読む。
+        val focalLengthRatio = configRepository.focalLengthRatio.value
         calculator?.let {
-            if (it.imageWidth == imageWidth && it.imageHeight == imageHeight) return it.calculator
+            if (it.imageWidth == imageWidth && it.imageHeight == imageHeight && it.focalLengthRatio == focalLengthRatio) {
+                return it
+            }
         }
 
-        val intrinsics = sensorIntrinsics.scaledToImage(
-            activeArrayWidth = activeArraySize.width(),
-            activeArrayHeight = activeArraySize.height(),
-            imageWidth = imageWidth,
-            imageHeight = imageHeight
-        )
+        val intrinsics = if (focalLengthRatio > 0.0) {
+            // 設定で指定された焦点距離を使う。光学中心は画像の中央とする (中央からのずれは、
+            // カメラの向きを画像から求めるときにほぼ吸収される)。
+            CameraIntrinsics(
+                fx = focalLengthRatio * imageWidth,
+                fy = focalLengthRatio * imageWidth,
+                cx = imageWidth / 2.0,
+                cy = imageHeight / 2.0
+            )
+        } else {
+            sensorIntrinsics.scaledToImage(
+                activeArrayWidth = activeArraySize.width(),
+                activeArrayHeight = activeArraySize.height(),
+                imageWidth = imageWidth,
+                imageHeight = imageHeight
+            )
+        }
         Timber.tag(TAG).i("camera intrinsics for ${imageWidth}x$imageHeight: $intrinsics")
+        clockInfo.update {
+            it.copy(imageWidth = imageWidth, imageHeight = imageHeight, focalLengthPx = intrinsics.fx)
+        }
         val cameraMatrix = Mat.eye(3, 3, CvType.CV_64F).apply {
             put(0, 0, intrinsics.fx)
             put(1, 1, intrinsics.fy)
             put(0, 2, intrinsics.cx)
             put(1, 2, intrinsics.cy)
         }
-        return WorldDirectionCalculator(cameraMatrix, cameraRotation).also {
-            calculator = SizedCalculator(imageWidth, imageHeight, it)
-        }
+        return SizedCalculator(
+            imageWidth,
+            imageHeight,
+            focalLengthRatio,
+            intrinsics,
+            WorldDirectionCalculator(cameraMatrix, cameraRotation)
+        ).also { calculator = it }
     }
 
     private data class SizedCalculator(
         val imageWidth: Int,
         val imageHeight: Int,
+        val focalLengthRatio: Double,
+        val intrinsics: CameraIntrinsics,
         val calculator: WorldDirectionCalculator
     )
 
     companion object {
         const val TAG = "CameraController"
 
-        // 色つきのボールを残し、影や筐体の揺れを捨てるための下限。
-        // 実写では、はっきり写ったボールが 0.85 前後、ブレて筋になったボールが 0.26 から 0.67、
-        // 着弾の揺れによる誤検出の大半が 0.25 未満だった。白や灰色のボールは検出できなくなる。
-        const val MIN_BALL_SATURATION = 0.25
+        // 色つきのボールを残し、影や明るさだけの変化を捨てるための下限 (8 ビットの階調)。
+        // 録画した動画 (60fps と 30fps、640×360 に縮めたもの) では、ボールが 14.0 以上
+        // (画像の端で切れた 1 コマだけ 7.4)、色のついた箱に落ちたボールの影が 5.5 から 7.4 だった。
+        // 10 ならボールの最小値に対して 1.4 倍の余裕がある。12 に上げるとボール以外の検出が
+        // さらに 2 割ほど減るが、余裕は 1.2 倍になる。アプリが実際に受け取る解析画像では、
+        // まだ確かめていない。背景と色みが同じボール (背景の色を明るく・暗くしただけの色や、
+        // 色のない背景の前の白・灰色) は検出できなくなる。
+        const val MIN_BALL_COLOR_SHIFT = 10.0
     }
 }

@@ -1,5 +1,9 @@
 package com.taichi765.struckoutCameraApp.network
 
+import android.os.Build
+import android.os.SystemClock
+import com.taichi765.struckoutCameraApp.camera.CameraClockInfo
+import com.taichi765.struckoutCameraApp.camera.CameraClockInfoHolder
 import com.taichi765.struckoutCameraApp.network.TcpSession.ConnectionError
 import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
@@ -15,12 +19,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.Closeable
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 import javax.inject.Inject
@@ -30,7 +38,8 @@ import javax.inject.Inject
  * 直接使うべからず
  */
 class TcpSessionImpl(
-    cameraPoseDataSource: CameraPoseDataSource
+    cameraPoseDataSource: CameraPoseDataSource,
+    cameraClockInfo: CameraClockInfoHolder,
 ) : TcpSession, SessionStateProvider, Closeable {
     /**
      * [outputActor]や[CameraPoseDataSource]のライフサイクルをApplicationやViewModelではなく
@@ -54,6 +63,16 @@ class TcpSessionImpl(
     private val outChannel =
         Channel<OutputAction>(capacity = 4, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
+    /**
+     * サーバーに知らせるカメラの設定。最新のものだけ送れば足りる。
+     */
+    private val cameraInfoChannel = Channel<CameraClockInfo>(Channel.CONFLATED)
+
+    /**
+     * 送信は 3 か所 ([outputActor]、[cameraInfoActor]、[inputActor]) から行うので、パケットが混ざらないようにする。
+     */
+    private val writeMutex = Mutex()
+
 
     init {
         combine(cameraPoseDataSource.cameraPose, _connState) { location, connState ->
@@ -65,6 +84,7 @@ class TcpSessionImpl(
             Timber.tag(TAG).d("updating cameraLocation")
             outChannel.send(OutputAction.UpdateCameraLocation(location))
         }.launchIn(scope)
+        cameraClockInfo.info.onEach { cameraInfoChannel.send(it) }.launchIn(scope)
     }
 
     override suspend fun connect(): ConnectionError? {
@@ -72,6 +92,8 @@ class TcpSessionImpl(
             Timber.tag(TAG).i("connecting to ball_tracker")
             val socket = try {
                 val ret = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
+                // 時刻合わせは往復時間で精度が決まるので、返事をためずにすぐ送る。
+                ret.tcpNoDelay = true
                 Timber.tag(TAG).i("TCP connection has been established successfully")
                 ret
             } catch (e: IOException) {
@@ -102,7 +124,7 @@ class TcpSessionImpl(
                     Timber.tag(TAG).i("successfully initialized connection states")
                 }
 
-                CameraBallTracker.TcpServerPacket.DataCase.DATA_NOT_SET -> {
+                else -> {
                     Timber.tag(TAG)
                         .w("received invalid TCP packet from server")
                     return@withContext ConnectionError.InitializationFailed(ConnectionError.InitializationError.InvalidPacket)
@@ -111,6 +133,12 @@ class TcpSessionImpl(
 
             scope.launch {
                 outputActor(socket.getOutputStream())
+            }
+            scope.launch {
+                cameraInfoActor(socket.getOutputStream())
+            }
+            scope.launch {
+                inputActor(socket.getInputStream(), socket.getOutputStream())
             }
             return@withContext null
         }
@@ -134,13 +162,82 @@ class TcpSessionImpl(
             val curState = _connState.value
             check(curState is InternalSessionState.Connected)
             when (action) {
-                is OutputAction.UpdateCameraLocation -> writePacket(output, tcpClientPacket {
-                    this.updateCameraPose = TcpClientPacketKt.updateCameraPose {
-                        cameraId = curState.cameraID.toInt()
-                        cameraPose = action.location
-                    }
-                })
+                is OutputAction.UpdateCameraLocation -> writeMutex.withLock {
+                    writePacket(output, tcpClientPacket {
+                        this.updateCameraPose = TcpClientPacketKt.updateCameraPose {
+                            cameraId = curState.cameraID.toInt()
+                            cameraPose = action.location
+                        }
+                    })
+                }
             }
+        }
+    }
+
+    /**
+     * カメラの設定を、接続した直後と変わるたびにサーバーに知らせる。
+     */
+    private suspend fun cameraInfoActor(output: OutputStream) {
+        try {
+            for (info in cameraInfoChannel) {
+                val curState = _connState.value
+                if (curState !is InternalSessionState.Connected) continue
+                writeMutex.withLock {
+                    writePacket(output, tcpClientPacket {
+                        this.cameraInfo = TcpClientPacketKt.cameraInfo {
+                            cameraId = curState.cameraID.toInt()
+                            deviceModel = Build.MODEL
+                            appVariant = info.appVariant
+                            timestampSource = when (info.timestampSourceRealtime) {
+                                true -> CameraBallTracker.TimestampSource.TIMESTAMP_SOURCE_REALTIME
+                                false -> CameraBallTracker.TimestampSource.TIMESTAMP_SOURCE_UNKNOWN
+                                null -> CameraBallTracker.TimestampSource.TIMESTAMP_SOURCE_UNSPECIFIED
+                            }
+                            rollingShutterSkewNs = info.rollingShutterSkewNanos
+                            exposureTimeNs = info.exposureTimeNanos
+                            imageWidth = info.imageWidth
+                            imageHeight = info.imageHeight
+                            focalLengthPx = info.focalLengthPx
+                            frameRate = info.frameRate
+                        }
+                    })
+                }
+            }
+        } catch (e: IOException) {
+            Timber.tag(TAG).w("failed to send camera info: $e")
+        }
+    }
+
+    /**
+     * サーバーからの時刻合わせの要求に答える。
+     *
+     * サーバーは、要求を送ってから返事が届くまでの往復時間と、ここで返す端末の時刻から、端末の時計と
+     * サーバーの時計の差を求める。時刻は端末を再起動するまで単調に進む時計で返す
+     * (壁時計は時刻の修正で飛ぶ)。時刻合わせに対応していないサーバーは要求を送ってこないので、
+     * そのときは何もしない。
+     */
+    private suspend fun inputActor(input: InputStream, output: OutputStream) {
+        try {
+            while (true) {
+                val packet = readPacket(input, CameraBallTracker.TcpServerPacket::parseFrom)
+                val receivedAt = SystemClock.elapsedRealtimeNanos()
+                if (packet.dataCase != CameraBallTracker.TcpServerPacket.DataCase.TIME_SYNC_REQUEST) {
+                    continue
+                }
+                writeMutex.withLock {
+                    // 送る直前の時刻を入れたいので、ロックを取ってから読む。
+                    writePacket(output, tcpClientPacket {
+                        this.timeSyncResponse = TcpClientPacketKt.timeSyncResponse {
+                            sequence = packet.timeSyncRequest.sequence
+                            receiveElapsedRealtimeNs = receivedAt
+                            sendElapsedRealtimeNs = SystemClock.elapsedRealtimeNanos()
+                            sendUptimeNs = System.nanoTime()
+                        }
+                    })
+                }
+            }
+        } catch (e: IOException) {
+            Timber.tag(TAG).i("stopped reading from TCP server: $e")
         }
     }
 
@@ -161,10 +258,12 @@ class TcpSessionImpl(
         object DisConnected : InternalSessionState
     }
 
-    class Factory @Inject constructor(private val cameraPoseDataSource: CameraPoseDataSource) :
-        TcpSession.Factory {
+    class Factory @Inject constructor(
+        private val cameraPoseDataSource: CameraPoseDataSource,
+        private val cameraClockInfo: CameraClockInfoHolder,
+    ) : TcpSession.Factory {
         override fun create(): TcpSession {
-            return TcpSessionImpl(cameraPoseDataSource)
+            return TcpSessionImpl(cameraPoseDataSource, cameraClockInfo)
         }
     }
 

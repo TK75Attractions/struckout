@@ -9,6 +9,8 @@ import org.opencv.core.Rect
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * 背景との差分で動く物体を見つける。
@@ -16,18 +18,25 @@ import org.opencv.imgproc.Imgproc
  * 差分は色ごとに取り、最も大きく変わったチャンネルで判定する。白黒に直してから比べると、
  * 背景と明るさが近い色つきのボール (暗い板の前の青いボールなど) を見落とすため。
  *
+ * 見つけた領域は、平均色が背景の同じ場所の平均色から色みをどれだけ変えたかで絞り込む。
+ * 飛んでいるボールは露光中に動いてぶれ、平均色に透けた背景が混ざって色が薄まる。
+ * 平均色の鮮やかさだけを見ると、明るい背景の前のボールより、色のついた面に落ちた影のほうが
+ * 鮮やかになってしまう。背景と比べれば、影は明るさが変わるだけで色みは変わらず、
+ * 薄まったボールでも色みはずれる。
+ *
  * 毎秒 120 フレームで呼ばれるので、作業用の [Mat] はフレームごとに作らず使い回す。
  * そのため同時に複数のスレッドから呼んではいけない。
  *
- * @param minSaturation 検出した領域の平均色に求める彩度の下限 (0 から 1)。影や揺れのような
- * 色のない変化を捨てるのに使う。0 のときは彩度で絞り込まない
+ * @param minColorShift 検出した領域の平均色が、背景の同じ場所の平均色から色みを変えた量の下限
+ * (8 ビットの階調)。影や照明のような明るさだけの変化を捨てるのに使う。0 のときは色みで
+ * 絞り込まない
  */
 class ObjectTracker(
     val accumulateWeight: Double,
     val binaryThreshold: Double,
     val minContourArea: Double,
     val foregroundPersistenceFrames: Int = 15,
-    val minSaturation: Double = 0.0
+    val minColorShift: Double = 0.0
 ) {
     private var initialized = false
     private val background = Mat()
@@ -50,7 +59,7 @@ class ObjectTracker(
 
     init {
         require(foregroundPersistenceFrames > 0)
-        require(minSaturation in 0.0..1.0)
+        require(minColorShift >= 0.0)
     }
 
     /**
@@ -121,7 +130,8 @@ class ObjectTracker(
         val rects = contours.filter { Imgproc.contourArea(it) >= minContourArea }
             .map { it to Imgproc.boundingRect(it) }
             .filter { (contour, bbox) ->
-                minSaturation <= 0.0 || saturation(frame, contour, bbox) >= minSaturation
+                minColorShift <= 0.0 ||
+                        colorShift(frame, background8, contour, bbox) >= minColorShift
             }
             .map { (_, bbox) -> bbox }
         contours.forEach { it.release() }
@@ -137,9 +147,19 @@ class ObjectTracker(
     }
 
     /**
-     * 輪郭の内側の平均色の彩度 (HSV の S と同じ定義) を 0 から 1 で返す。
+     * 輪郭の内側の平均色が、背景の同じ場所の平均色から色みをどれだけ変えたかを返す
+     * (8 ビットの階調)。
+     *
+     * 次の 2 つの残りの小さいほう。残りの大きさは、各チャンネルをベクトルとみたときの長さ。
+     * 1. 明るさだけが何倍かになったとみなしたときの残り。影や照明の変化では、面の色に
+     *    関係なく小さい。ただし 0 にはならず、録画では変化の大きさの 1〜3 割が残った
+     *    (既知の影で 5.5〜7.4)。下限を下げるときは、影が通らないかを確かめること
+     * 2. 全チャンネルが同じ量だけ増減したとみなしたときの残り。黒い背景に白い物体のような、
+     *    色のないものどうしの変化ではほぼ 0
+     *
+     * @param background8 このフレームの差分に使った背景 (更新する前のものを 8 ビットにした画像)
      */
-    private fun saturation(frame: Mat, contour: MatOfPoint, bbox: Rect): Double {
+    private fun colorShift(frame: Mat, background8: Mat, contour: MatOfPoint, bbox: Rect): Double {
         val mask = Mat.zeros(bbox.size(), CvType.CV_8UC1)
         Imgproc.drawContours(
             mask,
@@ -153,11 +173,21 @@ class ObjectTracker(
             Point(-bbox.x.toDouble(), -bbox.y.toDouble())
         )
         val region = frame.submat(bbox)
-        val mean = Core.mean(region, mask).`val`.take(frame.channels())
+        val now = Core.mean(region, mask).`val`.take(frame.channels())
         region.release()
+        val backgroundRegion = background8.submat(bbox)
+        val before = Core.mean(backgroundRegion, mask).`val`.take(frame.channels())
+        backgroundRegion.release()
         mask.release()
-        val max = mean.max()
-        return if (max <= 0.0) 0.0 else (max - mean.min()) / max
+
+        val dot = now.zip(before) { n, b -> n * b }.sum()
+        val denominator = before.sumOf { it * it }
+        val k = if (denominator > 0.0) dot / denominator else 0.0
+        val scaleResidual = sqrt(now.zip(before) { n, b -> (n - k * b) * (n - k * b) }.sum())
+        val delta = now.zip(before) { n, b -> n - b }
+        val deltaMean = delta.average()
+        val offsetResidual = sqrt(delta.sumOf { (it - deltaMean) * (it - deltaMean) })
+        return min(scaleResidual, offsetResidual)
     }
 
     companion object {

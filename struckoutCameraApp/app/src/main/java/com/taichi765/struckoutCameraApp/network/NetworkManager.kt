@@ -220,6 +220,7 @@ class NetworkManager @Inject constructor(
             cameraId = sessionState.cameraID.toInt()
             sessionId = sessionID.toString()
             timestamp = data.timestamp
+            sensorTimestampNs = data.sensorTimestampNanos
             frameId = data.frameId.toLong()
             data.detections.forEach {
                 detections += it
