@@ -1,31 +1,142 @@
-import { Button } from "std-widgets.slint";
+import { Button, StyleMetrics } from "std-widgets.slint";
 import { Icons } from "icons.slint";
-import { StruckoutPalette } from "styling.slint";
+import { StruckoutPalette, FontSettings } from "styling.slint";
+import { PrimarySquareButton } from "components/button.slint";
+
+component RightArrow inherits Path {
+    MoveTo {
+        x: 0;
+        y: 0;
+    }
+
+    LineTo {
+        x: 0;
+        y: root.height / 1px;
+    }
+
+    LineTo {
+        x: root.width / 1px;
+        y: (root.height / 1px) / 2;
+    }
+
+    LineTo {
+        x: 0;
+        y: 0;
+    }
+
+    Close { }
+}
+
+component ArrowRest inherits Path {
+    // 上半分
+    MoveTo {
+        x: 0;
+        y: 0;
+    }
+
+    LineTo {
+        x: root.width / 1px;
+        y: 0;
+    }
+
+    LineTo {
+        x: root.width / 1px;
+        y: (root.height / 1px) / 2;
+    }
+
+    LineTo {
+        x: 0;
+        y: 0;
+    }
+
+    // 下半分
+    MoveTo {
+        x: 0;
+        y: root.height / 1px;
+    }
+
+    LineTo {
+        x: root.width / 1px;
+        y: root.height / 1px;
+    }
+
+    LineTo {
+        x: root.width / 1px;
+        y: (root.height / 1px) / 2;
+    }
+
+    LineTo {
+        x: 0;
+        y: root.height / 1px;
+    }
+
+    Close { }
+}
+
+component TopBarItem {
+    in property <bool> enphasize;
+    in property <string> text;
+
+    private property <brush> comp_container: StruckoutPalette.ref_grey_30;
+    private property <brush> comp_on_container: StruckoutPalette.ref_primary_80;
+    private property <length> comp_arrow_width: 28px;
+    private property <int> comp_font_weight: FontSettings.label-large.font-weight;
+    private property <relative-font-size> comp_font_size: FontSettings.label-large.font-size;
+
+    HorizontalLayout {
+        ArrowRest {
+            fill: root.enphasize ? StruckoutPalette.primary : comp_container;
+            width: comp_arrow_width;
+            height: 100%;
+        }
+
+        Rectangle {
+            background: root.enphasize ? StruckoutPalette.primary : comp_container;
+            height: 100%;
+
+            Text {
+                text: root.text;
+                color: root.enphasize ? StruckoutPalette.on-primary : comp_on_container;
+                font-weight: comp_font_weight;
+                font-size: comp_font_size;
+            }
+        }
+
+        RightArrow {
+            fill: root.enphasize ? StruckoutPalette.primary : comp_container;
+            width: comp_arrow_width;
+            height: 100%;
+        }
+    }
+}
+
 export component TopBar {
     in property <bool> show-backbutton;
     callback click-backbutton();
 
-    max-height: 48px;
+    max-height: 44px;
 
     HorizontalLayout {
         alignment: LayoutAlignment.space-between;
 
-        if show-backbutton: Rectangle {
-            Button {
-                icon: Icons.arrow-back;
-                accessible-label: "root_back-button";
-                clicked => {
-                    click-backbutton();
-                }
+        if show-backbutton: PrimarySquareButton {
+            icon: Icons.arrow-back;
+            accessible-id: "topbar__back-button";
+            clicked => {
+                click-backbutton();
             }
         }
 
         HorizontalLayout {
-            Rectangle {
-                background: StruckoutPalette.ref_grey_30;
-
-                Text {
+            HorizontalLayout {
+                TopBarItem {
+                    enphasize: true;
                     text: "プレイヤー名入力";
+                }
+
+                TopBarItem {
+                    enphasize: false;
+                    text: "難易度選択";
                 }
             }
         }
