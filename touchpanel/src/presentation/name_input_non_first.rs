@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use slint::{SharedString, ToSharedString};
 use stern::{
-    WorkerThread,
+    PropertyHandle, WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -26,6 +26,10 @@ struct NameInputNonFirstViewModel<C, E> {
     nav_controller: NavController,
     #[debug(skip)]
     worker: WorkerThread<C, E>,
+    show_topbar_prop: PropertyHandle<bool>,
+    show_backbutton_prop: PropertyHandle<bool>,
+    #[debug(skip)]
+    callback_setter: Box<dyn Fn(Box<dyn FnMut()>)>,
 }
 
 impl NameInputNonFirstViewModel<Context, SlintExecutor> {
@@ -40,6 +44,9 @@ impl NameInputNonFirstViewModel<Context, SlintExecutor> {
             ),
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
+            show_topbar_prop: application.show_topbar_prop(),
+            show_backbutton_prop: application.show_backbutton_prop(),
+            callback_setter: Box::new(application.click_backbutton_callback_setter()),
         }
     }
 }
@@ -121,11 +128,6 @@ where
         };
         self.state.keyboard_mode.set(new_mode);
     }
-
-    #[instrument]
-    fn on_back(&mut self) {
-        self.nav_controller.navigate(NavRoute::Start);
-    }
 }
 
 pub struct NameInputNonFirstDestination(NameInputNonFirstViewModelRc);
@@ -139,8 +141,15 @@ impl NameInputNonFirstDestination {
 impl NavDestination<NavRoute> for NameInputNonFirstDestination {
     fn load(&mut self, route: &NavRoute) {
         let NavRoute::NameInputNonFirst = route else {
-            panic!("given NavRoute has invalid variant value");
+            unreachable!();
         };
+
+        let vm = self.0.borrow();
+        vm.show_topbar_prop.set(true);
+        vm.show_backbutton_prop.set(true);
+
+        let nc = vm.nav_controller.clone();
+        (vm.callback_setter)(Box::new(move || nc.navigate(NavRoute::Start)));
     }
 
     fn route(&self) -> NavRouteKind {
@@ -149,4 +158,62 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use std::{assert_matches, sync::Arc};
+
+    use i_slint_backend_testing::ElementRoot as _;
+    use slint::ComponentHandle as _;
+
+    use super::*;
+    use crate::{Config, attach_navhost};
+
+    #[test]
+    fn backbutton_is_shown_and_moves_back_to_start_when_clicked() {
+        i_slint_backend_testing::init_no_event_loop();
+
+        // Arrange
+        let ui = touchpanel_ui::AppWindow::new().unwrap();
+
+        let nav_controller = NavController::new(NavRoute::Connecting, {
+            let ui = ui.as_weak();
+
+            move |route| {
+                let ui = ui.unwrap();
+                ui.set_nav_route(route);
+            }
+        });
+
+        let cx = Context::new_empty();
+        let worker = WorkerThread::new(cx);
+
+        let application = Application {
+            nav_controller,
+            ui,
+            worker,
+            config: Arc::new(Config {
+                server_addr: "127.0.0.1".to_string(),
+                machine_id: 1,
+            }),
+        };
+        attach_navhost(&application);
+
+        // Act
+        application
+            .nav_controller
+            .navigate(NavRoute::NameInputFirst);
+        let root = application.ui.root_element();
+
+        let btn = root
+            .query_descendants()
+            .match_predicate(|el| {
+                el.accessible_id()
+                    .is_some_and(|id| id == "topbar__back-button")
+            })
+            .find_first()
+            .expect("top-bar and back-button should be set visible");
+        btn.invoke_accessible_default_action();
+        application.nav_controller.with_current(|r| {
+            assert_matches!(r, NavRoute::Start);
+        });
+    }
+}

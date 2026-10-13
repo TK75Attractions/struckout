@@ -24,12 +24,12 @@ viewmodel_rc!(NameInputViewModel<Context, SlintExecutor>, NameInputFirstAdopter)
 
 #[derive(derive_more::Debug)]
 pub struct NameInputViewModel<C, E> {
-    pub nav_controller: NavController,
+    nav_controller: NavController,
     #[debug(skip)]
-    pub worker: WorkerThread<C, E>,
-    pub state: NameInputFirstStates<Mapper>,
+    worker: WorkerThread<C, E>,
+    state: NameInputFirstStates<Mapper>,
     /// Token to cancel request to game-master.
-    pub gm_cancel_tok: Option<CancellationToken>,
+    gm_cancel_tok: Option<CancellationToken>,
     show_topbar_prop: PropertyHandle<bool>,
     show_backbutton_prop: PropertyHandle<bool>,
     #[debug(skip)]
@@ -248,7 +248,7 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
 
 #[cfg(test)]
 mod tests {
-    use std::{assert_matches, cell::RefCell, ops::ControlFlow, rc::Rc, sync::Arc};
+    use std::{assert_matches, cell::RefCell, rc::Rc, sync::Arc};
 
     use i_slint_backend_testing::ElementRoot;
     use rstest::rstest;
@@ -357,6 +357,8 @@ mod tests {
 
     #[test]
     fn backbutton_is_shown_and_moves_back_to_start_when_clicked() {
+        i_slint_backend_testing::init_no_event_loop();
+
         // Arrange
         let ui = touchpanel_ui::AppWindow::new().unwrap();
 
@@ -391,7 +393,10 @@ mod tests {
 
         let btn = root
             .query_descendants()
-            .match_accessible_label("root_back-button")
+            .match_predicate(|el| {
+                el.accessible_id()
+                    .is_some_and(|id| id == "topbar__back-button")
+            })
             .find_first()
             .expect("top-bar and back-button should be set visible");
         btn.invoke_accessible_default_action();
