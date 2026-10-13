@@ -1,5 +1,6 @@
 import { Icons } from "../icons.slint";
 import { Button } from "std-widgets.slint";
+import { StruckoutPalette, Outline } from "../styling.slint";
 
 export enum KeyBoardMode {
     Hiragana,
@@ -8,11 +9,12 @@ export enum KeyBoardMode {
 
 component KeyButton {
     in property <string> text;
+    private property <brush> comp_outline: StruckoutPalette.ref_grey_50;
     callback clicked();
 
     Rectangle {
-        border-color: black;
-        border-width: 4px;
+        border-color: comp_outline;
+        border-width: Outline.level1;
 
         Text {
             text: text;

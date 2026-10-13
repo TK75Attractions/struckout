@@ -1,7 +1,12 @@
 // The file is originally copy & pasted from button.slint and components.slint in Slint's material std-widgets,
 // but is heavily modified.
 
-import { FontSettings, Elevation } from "../styling.slint";
+import {
+    FontSettings,
+    Elevation,
+    StruckoutPalette,
+    Outline,
+} from "../styling.slint";
 import { Palette } from "std-widgets.slint";
 
 
@@ -169,11 +174,12 @@ export component TwoColorOutlinedButton {
     in property <bool> checkable;
     in property <image> icon <=> base.icon;
     in property <length> icon-size <=> base.icon-size;
-    in property <bool> primary;
     in property <bool> colorize-icon <=> base.colorize-icon;
     out property <bool> has-focus: base.has-focus;
     out property <bool> pressed: self.enabled && base.pressed;
     in-out property <bool> checked;
+    private property <brush> comp_outline: @conic-gradient(StruckoutPalette.ref_secondary_60 0deg, StruckoutPalette.ref_secondary_60 60deg, StruckoutPalette.ref_primary_60 60deg, StruckoutPalette.ref_primary_60 240deg, StruckoutPalette.ref_secondary_60 240deg,);
+    private property <brush> comp_text: StruckoutPalette.ref_grey_80;
 
     callback clicked;
 
@@ -208,8 +214,8 @@ export component TwoColorOutlinedButton {
         width: 100%;
         height: 100%;
         border-radius: 20px;
-        border-color: @conic-gradient(#ff00ff 0deg, #ff00ff 60deg, #00ffff 60deg, #00ffff 240deg, #ff00ff 240deg,);
-        border-width: 2px;
+        border-color: comp_outline;
+        border-width: Outline.level2;
         background: transparent;
         drop-shadow-color: transparent;
         drop-shadow-blur: Elevation.level0;
@@ -221,7 +227,7 @@ export component TwoColorOutlinedButton {
             layout-padding-left: 24px;
             layout-padding-right: 24px;
             border-radius: background.border-radius;
-            text-color: root.primary ? Palette.accent-foreground : Palette.control-foreground;
+            text-color: comp_text;
             text-opacity: 1.0;
 
             clicked => {
