@@ -37,7 +37,7 @@
 | **K** | Unity ライセンスを CI に置くか | Secrets 管理、ライセンス種別 | 組織 |
 | **L** | `bin`/`obj` の追跡を外すか | 同僚のコミット領域に触れる | チーム |
 | **M** | 未使用になった API を残すか | `AddCollisionTargetAction` など | 自分 |
-| **N** | `CollisionPoint` の `(x, z)` を確定させる | 縦に使う軸 | ball_tracker 担当 |
+| **N** | ~~`CollisionPoint` の `(x, z)` を確定させる~~ 解決済み: 横が世界座標の y、縦が z | 縦に使う軸 | ball_tracker 担当 |
 
 **F が全体の律速。** G・H は F が決まらないと形にならず、
 セッション状態まわりは F 待ちになる。先に F を詰めるのが早い。
@@ -260,6 +260,6 @@ Rust 側の担当者に相談する話。
 | 内容 | 場所 |
 |---|---|
 | `sandbox/testTcpCLI/bin`・`obj` が `.gitignore` に入っているのに追跡されたまま。ビルドのたびに差分が出る | `git rm --cached` で外す。同僚のコミットにも含まれる領域なので要相談 |
-| ball_tracker が `CollisionPoint` に `(x, z)` を詰めている箇所の `// FIXME: これあってる?` | 軸が違った場合は `Swap Axes` で暫定回避できるが、本来は ball_tracker 側で決着させる |
+| ~~ball_tracker が `CollisionPoint` に `(x, z)` を詰めている箇所の `// FIXME: これあってる?`~~ | 解決済み。世界座標の `(y, z)` を送るように直した。`Collision Transform` の係数は盤面の位置に合わせて決め直すこと |
 | `AddCollisionTargetAction` / `RemoveCollisionTargetAction` / `GameRuntimeState.RemoveTarget` が未使用 | 的を消さなくなったため。拡張点として残してあるが、使わないなら整理する |
 | `FakeSensorProvider` が未登録 | 前任者のテストダブルとして意図的に残している |

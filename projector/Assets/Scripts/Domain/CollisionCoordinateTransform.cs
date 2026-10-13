@@ -34,8 +34,8 @@ namespace Struckout.Domain
 
         /// <summary>
         /// 縦横が入れ替わっていたとき用。
-        /// ball_tracker は CollisionPoint に (x, z) を詰めているが、
-        /// そこに「これあってる?」の FIXME が残っているため逃げ道を用意してある。
+        /// ball_tracker は CollisionPoint に、的の面に沿った横方向 (世界座標の y) と
+        /// 高さ (世界座標の z) を詰めるので、通常は使わない。
         /// </summary>
         public bool SwapAxes = false;
 

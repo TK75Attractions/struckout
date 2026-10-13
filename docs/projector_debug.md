@@ -29,8 +29,9 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 
 ## 座標系と得点の約束事
 
-- `CollisionPoint` は**物理座標 (m)**。ball_tracker は三角測量の結果をそのまま送る
-  (`ball_tracker/src/collision_output/network.rs`: `x = coll.x, y = coll.z`)。
+- `CollisionPoint` は**物理座標 (m)**。ball_tracker は的の面の上での着弾位置を送る。
+  `x` が面に沿った横方向 (世界座標の y)、`y` が高さ (世界座標の z)
+  (`ball_tracker/src/collision_output/network.rs`: `x = coll.y, y = coll.z`)。
 - **得点は差分**。game_master (`game_master/src/service.rs`) が `game.score += score_to_add`
   としているので、projector は累計ではなく的に当たったぶんだけを送る。
 - `AddScore` には `game_id` が要る。projector は `GameStarted` を受け取ったときに
@@ -58,9 +59,8 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 盤面座標からワールド座標への変換はさらに後段で、
 `docs/projector_rendering.md` に書いてある。
 
-> **未解決**: ball_tracker は `CollisionPoint` に `(x, z)` を詰めているが、そこに
-> `// FIXME: これあってる?` が残っている。縦に使う軸が違っていた場合は
-> `Swap Axes` で暫定的に逃げられるが、本来は ball_tracker 側で決着させるべき。
+> ball_tracker は以前 `CollisionPoint` に世界座標の `(x, z)` を詰めていた。的の面は x = 0 なので
+> 横方向がつねに 0 になっていたが、`(y, z)` を送るように直してある。`Swap Axes` は不要になった。
 
 ## 1. 対向なしで起動する (Fake モード)
 

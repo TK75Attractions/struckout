@@ -13,7 +13,7 @@ using Tk75Attractions.Struckout.V1;
 const int DefaultSensorPort = 5000;
 
 // CollisionPoint は物理座標 (m)。ball_tracker は三角測量の結果をそのまま送る
-// (ball_tracker/src/collision_output/network.rs: x = coll.x, y = coll.z)。
+// (ball_tracker/src/collision_output/network.rs: x = coll.y, y = coll.z)。
 // ランダム送信で使う範囲の想定値で、盤面の実寸が決まったら直すこと。
 const double FieldMinX = -1.0;
 const double FieldMaxX = 1.0;

@@ -34,9 +34,11 @@ impl CollisionOutput for NetworkCollisionOutput {
                 }
             };
             let packet = ProjectorPacket {
+                // projector には的の面の上での位置を送る。的の面は世界座標の x = 0 なので、
+                // 面に沿った横方向が y、高さが z になる。
                 payload: Some(projector_packet::Payload::Point(CollisionPoint {
-                    x: coll.x,
-                    y: coll.z, // FIXME: これあってる?
+                    x: coll.y,
+                    y: coll.z,
                 })),
             };
             write_packet(packet, &mut self.stream).await.unwrap();
