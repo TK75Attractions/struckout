@@ -6309,7 +6309,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8050abb251097357e24aff63ba2c52a6309ecb7d23a5474023df960a02694d8"
 dependencies = [
  "annotate-snippets",
- "base64 0.23.1",
+ "base64 0.22.1",
  "encoding_rs_io",
  "granit-parser",
  "nohash-hasher",
@@ -6972,7 +6972,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stern"
 version = "0.1.0"
-source = "git+https://github.com/Tk75Attractions/stern#def6fbb33097c7c72e2ecbba6610ac6c16d2fda9"
+source = "git+https://github.com/Tk75Attractions/stern#517a044fbb3dab6d1c5b8cb3f700dfc121e2ed9b"
 dependencies = [
  "async-executor",
  "async-io",
@@ -6992,7 +6992,7 @@ dependencies = [
 [[package]]
 name = "stern-macros"
 version = "0.1.0"
-source = "git+https://github.com/Tk75Attractions/stern#def6fbb33097c7c72e2ecbba6610ac6c16d2fda9"
+source = "git+https://github.com/Tk75Attractions/stern#517a044fbb3dab6d1c5b8cb3f700dfc121e2ed9b"
 dependencies = [
  "heck",
  "proc-macro2",

@@ -1,6 +1,6 @@
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use stern::{
-    WorkerThread,
+    PropertyHandle, WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -30,6 +30,10 @@ pub struct NameInputViewModel<C, E> {
     pub state: NameInputFirstStates<Mapper>,
     /// Token to cancel request to game-master.
     pub gm_cancel_tok: Option<CancellationToken>,
+    show_topbar_prop: PropertyHandle<bool>,
+    show_backbutton_prop: PropertyHandle<bool>,
+    #[debug(skip)]
+    callback_setter: Box<dyn Fn(Box<dyn FnMut()>)>,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -75,6 +79,9 @@ impl NameInputViewModel<Context, SlintExecutor> {
                     .as_weak(),
             ),
             gm_cancel_tok: None,
+            show_topbar_prop: application.show_topbar_prop(),
+            show_backbutton_prop: application.show_backbutton_prop(),
+            callback_setter: Box::new(application.click_backbutton_callback_setter()),
         }
     }
 }
@@ -206,11 +213,6 @@ where
         })
         .unwrap();
     }
-
-    #[instrument]
-    fn on_move_back(&mut self) {
-        self.nav_controller.navigate(NavRoute::Start);
-    }
 }
 
 pub struct NameInputFirstDestination(
@@ -231,7 +233,12 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
             panic!("matched variant should be given");
         };
 
-        // do nothing because the route doesn't have any arguments
+        let vm = self.0.borrow();
+        vm.show_topbar_prop.set(true);
+        vm.show_backbutton_prop.set(true);
+
+        let nc = vm.nav_controller.clone();
+        (vm.callback_setter)(Box::new(move || nc.navigate(NavRoute::Start)));
     }
 
     fn route(&self) -> NavRouteKind {
@@ -241,13 +248,16 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc};
+    use std::{assert_matches, cell::RefCell, ops::ControlFlow, rc::Rc, sync::Arc};
 
+    use i_slint_backend_testing::ElementRoot;
     use rstest::rstest;
     use stern::worker::SmolExecutor;
     use struckout_proto::validate_player_name_response;
     use time::ext::NumericalDuration;
     use touchpanel_ui::UiNavRoute;
+
+    use crate::{Config, presentation::attach_navhost};
 
     use super::*;
 
@@ -345,6 +355,51 @@ mod tests {
         worker.foreground_executor().start();
     }
 
+    #[test]
+    fn backbutton_is_shown_and_moves_back_to_start_when_clicked() {
+        // Arrange
+        let ui = touchpanel_ui::AppWindow::new().unwrap();
+
+        let nav_controller = NavController::new(NavRoute::Connecting, {
+            let ui = ui.as_weak();
+
+            move |route| {
+                let ui = ui.unwrap();
+                ui.set_nav_route(route);
+            }
+        });
+
+        let cx = Context::new_empty();
+        let worker = WorkerThread::new(cx);
+
+        let application = Application {
+            nav_controller,
+            ui,
+            worker,
+            config: Arc::new(Config {
+                server_addr: "127.0.0.1".to_string(),
+                machine_id: 1,
+            }),
+        };
+        attach_navhost(&application);
+
+        // Act
+        application
+            .nav_controller
+            .navigate(NavRoute::NameInputFirst);
+        let root = application.ui.root_element();
+
+        let btn = root
+            .query_descendants()
+            .match_accessible_label("root_back-button")
+            .find_first()
+            .expect("top-bar and back-button should be set visible");
+        btn.invoke_accessible_default_action();
+        application.nav_controller.with_current(|r| {
+            assert_matches!(r, NavRoute::Start);
+        });
+    }
+
     struct NameInputScreenTest {
         pub route: Rc<RefCell<UiNavRoute>>,
         pub worker: WorkerThread<MockPlayerRepository, SmolExecutor>,
@@ -354,6 +409,8 @@ mod tests {
     impl NameInputScreenTest {
         pub fn new(cx: MockPlayerRepository) -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
+            let show_topbar = Rc::new(RefCell::new(false));
+            let show_backbutton = Rc::new(RefCell::new(false));
 
             let nav_controller = NavController::new(NavRoute::Start, {
                 let route = Rc::clone(&route);
@@ -369,6 +426,15 @@ mod tests {
                 worker: worker.clone(),
                 state,
                 gm_cancel_tok: None,
+                show_topbar_prop: PropertyHandle::new(move |new| {
+                    let mut guard = show_topbar.borrow_mut();
+                    *guard = new;
+                }),
+                show_backbutton_prop: PropertyHandle::new(move |new| {
+                    let mut guard = show_backbutton.borrow_mut();
+                    *guard = new;
+                }),
+                callback_setter: Box::new(|_| unimplemented!()),
             };
             Self { route, worker, vm }
         }

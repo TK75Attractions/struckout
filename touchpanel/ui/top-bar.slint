@@ -1,9 +1,33 @@
+import { Button } from "std-widgets.slint";
+import { Icons } from "icons.slint";
+import { StruckoutPalette } from "styling.slint";
 export component TopBar {
+    in property <bool> show-backbutton;
+    callback click-backbutton();
+
+    max-height: 48px;
+
     HorizontalLayout {
         alignment: LayoutAlignment.space-between;
 
-        Text {
-            text: "投擲ゲーム";
+        if show-backbutton: Rectangle {
+            Button {
+                icon: Icons.arrow-back;
+                accessible-label: "root_back-button";
+                clicked => {
+                    click-backbutton();
+                }
+            }
+        }
+
+        HorizontalLayout {
+            Rectangle {
+                background: StruckoutPalette.ref_grey_30;
+
+                Text {
+                    text: "プレイヤー名入力";
+                }
+            }
         }
     }
 }

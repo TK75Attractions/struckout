@@ -65,9 +65,17 @@ export component AppWindow inherits Window {
         height: 400px;
 
         in property <UiNavRoute> nav-route;
+        in property <bool> show-topbar;
+        in property <bool> show-backbutton;
+        callback click-backbutton();
 
         VerticalLayout {
-            top-bar := TopBar { }
+            if show-topbar: topbar := TopBar {
+                show-backbutton: root.show-backbutton;
+                click-backbutton => {
+                    root.click-backbutton();
+                }
+            }
 
             if nav-route == UiNavRoute.Start: StartScreen { }
             if nav-route == UiNavRoute.NameInputFirst: NameInputFirstScreen { }
