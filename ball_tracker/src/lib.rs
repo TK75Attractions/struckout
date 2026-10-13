@@ -7,11 +7,12 @@ use tokio::sync::mpsc;
 use crate::{
     collision_output::CollisionOutput,
     detection_input::DetectionInput,
-    tracking::{ObjectTrack, TrackRunner},
+    tracking::TrackRunner,
     types::CameraId,
 };
 use struckout_proto::CameraPose;
 
+pub mod clock_sync;
 pub mod collision_output;
 pub mod detection_input;
 pub mod tracking;
@@ -20,16 +21,15 @@ pub mod types;
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
 
-pub struct Application<T, DI, CO, EL> {
+pub struct Application<DI, CO, EL> {
     detection_input: DI,
     collision_output: CO,
-    track_runner: TrackRunner<T, EL>,
+    track_runner: TrackRunner<EL>,
     camera_locs: Arc<CameraLocationStore>,
 }
 
-impl<T, DI, CO, EL> Application<T, DI, CO, EL>
+impl<DI, CO, EL> Application<DI, CO, EL>
 where
-    T: ObjectTrack + Send + 'static,
     DI: DetectionInput + Send + 'static,
     CO: CollisionOutput + Send + 'static,
     EL: tracking::EventLogger + Send + 'static,
@@ -50,15 +50,15 @@ where
     }
 
     pub async fn run(self) -> anyhow::Result<()> {
-        let (pair_tx, pair_rx) = mpsc::channel(FRAME_CHANNEL_BUF);
+        let (frame_tx, frame_rx) = mpsc::channel(FRAME_CHANNEL_BUF);
         let (collision_tx, collision_rx) = mpsc::channel(COLLISION_CHANNEL_BUF);
 
         let join1 = tokio::spawn(async move {
-            self.detection_input.start(pair_tx).await.unwrap();
+            self.detection_input.start(frame_tx).await.unwrap();
         });
         let join2 = tokio::spawn(async move {
             self.track_runner
-                .start(pair_rx, collision_tx)
+                .start(frame_rx, collision_tx)
                 .await
                 .unwrap();
         });
@@ -90,7 +90,16 @@ impl CameraLocationStore {
         self.0.write().insert(id, pose);
     }
 
-    fn next(&self) -> usize {
-        self.0.read().len()
+    /// 登録された位置の y が最も大きいカメラ。プレイヤーから見て右のカメラにあたる。
+    /// 2 台そろうまでは決まらない。
+    fn rightmost(&self) -> Option<CameraId> {
+        let poses = self.0.read();
+        if poses.len() < 2 {
+            return None;
+        }
+        poses
+            .iter()
+            .max_by(|a, b| a.1.y.total_cmp(&b.1.y))
+            .map(|(id, _)| *id)
     }
 }

@@ -8,10 +8,12 @@ option java_package = "com.taichi765.struckoutCameraApp.proto";
 message DetectionsPacket {
   uint32 camera_id = 1;
   string session_id = 2;
-  // UNIX epochからの経過時間
+  // UNIX epochからの経過時間 (ms)。端末の時計で付けた値
   int64 timestamp = 3;
   uint64 frame_id = 4;
   repeated Detection detections = 5;
+  // フレームのセンサー時刻 (ns)。端末が付けた値を変換せずに入れる。0 は未対応の送信元
+  int64 sensor_timestamp_ns = 6;
 }
 
 message Detection {
@@ -21,6 +23,18 @@ message Detection {
   double lay_y = 4;
   double lay_z = 5;
   // TODO: 特徴量
+  // 検出の中心の、解析画像 (センサーの向き) での位置。左上が (0, 0)、右下が (1, 1)。送らない送信元では 0
+  float image_x = 6;
+  float image_y = 7;
+}
+
+// センサー時刻がどの時計で付けられているか (Android の SENSOR_INFO_TIMESTAMP_SOURCE)
+enum TimestampSource {
+  TIMESTAMP_SOURCE_UNSPECIFIED = 0;
+  // 単調に増えるが、ほかの時計とは正確には比べられない。おおよそ System.nanoTime() と同じ時計
+  TIMESTAMP_SOURCE_UNKNOWN = 1;
+  // SystemClock.elapsedRealtimeNanos() と同じ時計
+  TIMESTAMP_SOURCE_REALTIME = 2;
 }
 
 // TCPでカメラからサーバに送られるパケット
@@ -30,8 +44,40 @@ message TcpClientPacket {
     CameraPose camera_pose = 2;
   }
 
+  // TimeSyncRequest への返事。時刻はどれも端末の時計 (ns)
+  message TimeSyncResponse {
+    uint64 sequence = 1;
+    // 要求を受け取ったときの SystemClock.elapsedRealtimeNanos()
+    int64 receive_elapsed_realtime_ns = 2;
+    // 返事を送る直前の SystemClock.elapsedRealtimeNanos()
+    int64 send_elapsed_realtime_ns = 3;
+    // 上と同じ瞬間の System.nanoTime()
+    int64 send_uptime_ns = 4;
+  }
+
+  // カメラの設定。接続した直後と、撮影の設定が分かった・変わったときに送る
+  message CameraInfo {
+    uint32 camera_id = 1;
+    string device_model = 2;
+    // "camerax" / "highspeed"
+    string app_variant = 3;
+    TimestampSource timestamp_source = 4;
+    // 画像の最初の行と最後の行の露光開始の時刻の差 (ns)。取れないときは 0
+    int64 rolling_shutter_skew_ns = 5;
+    // 最後に見た露光時間 (ns)。取れないときは 0
+    int64 exposure_time_ns = 6;
+    // 解析画像の大きさ
+    uint32 image_width = 7;
+    uint32 image_height = 8;
+    // アプリが視線の計算に使っている焦点距離 (解析画像の px)
+    double focal_length_px = 9;
+    double frame_rate = 10;
+  }
+
   oneof data {
     UpdateCameraPose update_camera_pose = 1;
+    TimeSyncResponse time_sync_response = 2;
+    CameraInfo camera_info = 3;
   }
 }
 
@@ -46,8 +92,14 @@ message CameraPose {
 
 // TCPでサーバーからカメラに送られるパケット
 message TcpServerPacket {
+  // 端末の時計とサーバーの時計の差を測るための要求。端末は TimeSyncResponse を返す
+  message TimeSyncRequest {
+    uint64 sequence = 1;
+  }
+
   oneof data {
     // assign a camera id to client.
     uint32 camera_id = 1;
+    TimeSyncRequest time_sync_request = 2;
   }
 }
