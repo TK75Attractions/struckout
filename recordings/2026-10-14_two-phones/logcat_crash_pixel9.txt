@@ -1,0 +1,233 @@
+--------- beginning of crash
+10-12 07:54:29.266  1152  1152 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 1152 (init), pid 1152 (init)
+10-12 07:54:29.329  1152  1152 F libc    : Crash due to signal: crash_dump helper failed to exec, or was killed
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: FATAL EXCEPTION: main
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp, PID: 19326
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: java.lang.IllegalStateException: TcpSession must be initialized before sending detection via network
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.NetworkManager.pushDetection(NetworkManager.kt:208)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.config.PushFrameUseCase.invoke(PushFrameUseCase.kt:20)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.camera.CameraViewModel$analyzer$1$1.invokeSuspend(CameraViewModel.kt:72)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:1082)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at android.os.Handler.dispatchMessageImpl(Handler.java:135)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:126)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:295)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:398)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:9569)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:918)
+10-14 11:32:38.006 19326 19326 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@9eb92a9, Dispatchers.Main.immediate]
+10-14 11:56:43.250  1017  2064 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 2064 (WatchDog), pid 1017 (camera.provider)
+10-14 11:56:44.475 32625 32625 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 11:56:44.476 32625 32625 F DEBUG   : Build fingerprint: 'google/tokay/tokay:17/CP3A.260905.009/16091614:user/release-keys'
+10-14 11:56:44.476 32625 32625 F DEBUG   : Kernel Release: '6.1.162-android14-11-g2ec90535fa34-ab15810641'
+10-14 11:56:44.476 32625 32625 F DEBUG   : Revision: 'MP1.0'
+10-14 11:56:44.476 32625 32625 F DEBUG   : ABI: 'arm64'
+10-14 11:56:44.476 32625 32625 F DEBUG   : Timestamp: 2026-10-14 11:56:43.569126311+0900
+10-14 11:56:44.476 32625 32625 F DEBUG   : Process uptime: 0s
+10-14 11:56:44.476 32625 32625 F DEBUG   : Executable: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 11:56:44.476 32625 32625 F DEBUG   : Cmdline: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 11:56:44.476 32625 32625 F DEBUG   : pid: 1017, ppid: 1, tid: 2064, name: WatchDog  >>> /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google <<<
+10-14 11:56:44.476 32625 32625 F DEBUG   : uid: 1000
+10-14 11:56:44.476 32625 32625 F DEBUG   : tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+10-14 11:56:44.476 32625 32625 F DEBUG   : pac_enabled_keys: 000000000000000f (PR_PAC_APIAKEY, PR_PAC_APIBKEY, PR_PAC_APDAKEY, PR_PAC_APDBKEY)
+10-14 11:56:44.476 32625 32625 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 11:56:44.476 32625 32625 F DEBUG   : Abort message: 'GraphRunner watchdog fired; Not ready nodes (total: 0): None; Queue: empty; Running: None; Connectors with unsignaled frames: NoneNodeInputGroupHolders with unsignaled sequencing fences: None'
+10-14 11:56:44.476 32625 32625 F DEBUG   : 
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x0  0000000000000000  x1  0000000000000810  x2  0000000000000006  x3  00000079055076d0
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x4  646d6d74715e676f  x5  646d6d74715e676f  x6  646d6d74715e676f  x7  7f7f7f7f7f7f7f7f
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x8  00000000000000f0  x9  2cafee0a553541d8  x10 0000000000000001  x11 0000007bfb3629b0
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x12 000000006aceef6b  x13 000000007fffffff  x14 0000000002e6ac9c  x15 00000430667693b7
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x16 0000007bfb3cc650  x17 0000007bfb3b2900  x18 00000079054cbb40  x19 00000000000003f9
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x20 0000000000000810  x21 00000000ffffffff  x22 0000007905507790  x23 0000007905508100
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x24 0000000000000004  x25 0000000000000001  x26 b400007b876e1eb8  x27 000000010000a11c
+10-14 11:56:44.476 32625 32625 F DEBUG   :     x28 000000000007dde6  x29 0000007905507750
+10-14 11:56:44.476 32625 32625 F DEBUG   :     lr  0000007bfb348d9c  sp  00000079055076d0  pc  0000007bfb348dc0  pst 0000000000001000
+10-14 11:56:44.476 32625 32625 F DEBUG   :     esr 0000000000000000  vg  0000000000000002
+10-14 11:56:44.476 32625 32625 F DEBUG   : 
+10-14 11:56:44.476 32625 32625 F DEBUG   : 9 total frames
+10-14 11:56:44.476 32625 32625 F DEBUG   : backtrace:
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #00 pc 000000000007fdc0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #01 pc 000000000000bed0  /system/lib64/liblog.so (__android_log_default_aborter+16) (BuildId: a10a4407731814d241cade49d92b0d7e)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #02 pc 0000000000016278  /apex/com.google.pixel.camera.hal/lib64/libbase.so (android::base::LogMessage::~LogMessage()+552) (BuildId: 1508c3478af8bafd646ba65a25375d94)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #03 pc 00000000013a6958  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #04 pc 0000000000793fdc  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #05 pc 00000000007922e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #06 pc 00000000007920e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #07 pc 0000000000094314  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*) (.__uniq.67847048707805468364044055584648682506)+180) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 11:56:44.476 32625 32625 F DEBUG   :       #08 pc 0000000000083a14  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+68) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 11:56:44.476 32625 32625 F DEBUG   : 
+10-14 11:56:44.476 32625 32625 F DEBUG   : Note: To display stack pointer information, use the pbtombstone tool:
+10-14 11:56:44.476 32625 32625 F DEBUG   :         pbtombstone --display-sp tombstone_XX.pb
+10-14 12:16:04.417 32633  1543 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 1543 (WatchDog), pid 32633 (camera.provider)
+10-14 12:16:05.020  5969  5969 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 12:16:05.020  5969  5969 F DEBUG   : Build fingerprint: 'google/tokay/tokay:17/CP3A.260905.009/16091614:user/release-keys'
+10-14 12:16:05.020  5969  5969 F DEBUG   : Kernel Release: '6.1.162-android14-11-g2ec90535fa34-ab15810641'
+10-14 12:16:05.020  5969  5969 F DEBUG   : Revision: 'MP1.0'
+10-14 12:16:05.020  5969  5969 F DEBUG   : ABI: 'arm64'
+10-14 12:16:05.020  5969  5969 F DEBUG   : Timestamp: 2026-10-14 12:16:04.703596279+0900
+10-14 12:16:05.020  5969  5969 F DEBUG   : Process uptime: 0s
+10-14 12:16:05.020  5969  5969 F DEBUG   : Executable: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 12:16:05.020  5969  5969 F DEBUG   : Cmdline: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 12:16:05.020  5969  5969 F DEBUG   : pid: 32633, ppid: 1, tid: 1543, name: WatchDog  >>> /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google <<<
+10-14 12:16:05.020  5969  5969 F DEBUG   : uid: 1000
+10-14 12:16:05.020  5969  5969 F DEBUG   : tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+10-14 12:16:05.020  5969  5969 F DEBUG   : pac_enabled_keys: 000000000000000f (PR_PAC_APIAKEY, PR_PAC_APIBKEY, PR_PAC_APDAKEY, PR_PAC_APDBKEY)
+10-14 12:16:05.020  5969  5969 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 12:16:05.020  5969  5969 F DEBUG   : Abort message: 'GraphRunner watchdog fired; Not ready nodes (total: 0): None; Queue: empty; Running: None; Connectors with unsignaled frames: NoneNodeInputGroupHolders with unsignaled sequencing fences: None'
+10-14 12:16:05.020  5969  5969 F DEBUG   : 
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x0  0000000000000000  x1  0000000000000607  x2  0000000000000006  x3  00000078881066d0
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x4  646d6d74715e676f  x5  646d6d74715e676f  x6  646d6d74715e676f  x7  7f7f7f7f7f7f7f7f
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x8  00000000000000f0  x9  61d4080bc4f1fbc2  x10 0000000000000001  x11 0000007b6d6bc9b0
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x12 000000006acef3f4  x13 000000007fffffff  x14 0000000002ef2f8a  x15 000004370b640674
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x16 0000007b6d726650  x17 0000007b6d70c900  x18 000000787f4f8000  x19 0000000000007f79
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x20 0000000000000607  x21 00000000ffffffff  x22 0000007888106790  x23 0000007888107100
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x24 0000000000000004  x25 0000000000000001  x26 b400007a8bd5c768  x27 0000000100003734
+10-14 12:16:05.020  5969  5969 F DEBUG   :     x28 000000000002b211  x29 0000007888106750
+10-14 12:16:05.020  5969  5969 F DEBUG   :     lr  0000007b6d6a2d9c  sp  00000078881066d0  pc  0000007b6d6a2dc0  pst 0000000000001000
+10-14 12:16:05.020  5969  5969 F DEBUG   :     esr 0000000000000000  vg  0000000000000002
+10-14 12:16:05.020  5969  5969 F DEBUG   : 
+10-14 12:16:05.020  5969  5969 F DEBUG   : 9 total frames
+10-14 12:16:05.020  5969  5969 F DEBUG   : backtrace:
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #00 pc 000000000007fdc0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #01 pc 000000000000bed0  /system/lib64/liblog.so (__android_log_default_aborter+16) (BuildId: a10a4407731814d241cade49d92b0d7e)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #02 pc 0000000000016278  /apex/com.google.pixel.camera.hal/lib64/libbase.so (android::base::LogMessage::~LogMessage()+552) (BuildId: 1508c3478af8bafd646ba65a25375d94)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #03 pc 00000000013a6958  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #04 pc 0000000000793fdc  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #05 pc 00000000007922e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #06 pc 00000000007920e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #07 pc 0000000000094314  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*) (.__uniq.67847048707805468364044055584648682506)+180) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:16:05.020  5969  5969 F DEBUG   :       #08 pc 0000000000083a14  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+68) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:16:05.020  5969  5969 F DEBUG   : 
+10-14 12:16:05.020  5969  5969 F DEBUG   : Note: To display stack pointer information, use the pbtombstone tool:
+10-14 12:16:05.020  5969  5969 F DEBUG   :         pbtombstone --display-sp tombstone_XX.pb
+10-14 12:18:03.485  5980  6058 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 6058 (WatchDog), pid 5980 (camera.provider)
+10-14 12:18:03.781  6276  6276 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 12:18:03.781  6276  6276 F DEBUG   : Build fingerprint: 'google/tokay/tokay:17/CP3A.260905.009/16091614:user/release-keys'
+10-14 12:18:03.781  6276  6276 F DEBUG   : Kernel Release: '6.1.162-android14-11-g2ec90535fa34-ab15810641'
+10-14 12:18:03.781  6276  6276 F DEBUG   : Revision: 'MP1.0'
+10-14 12:18:03.781  6276  6276 F DEBUG   : ABI: 'arm64'
+10-14 12:18:03.781  6276  6276 F DEBUG   : Timestamp: 2026-10-14 12:18:03.699362735+0900
+10-14 12:18:03.781  6276  6276 F DEBUG   : Process uptime: 0s
+10-14 12:18:03.781  6276  6276 F DEBUG   : Executable: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 12:18:03.781  6276  6276 F DEBUG   : Cmdline: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 12:18:03.781  6276  6276 F DEBUG   : pid: 5980, ppid: 1, tid: 6058, name: WatchDog  >>> /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google <<<
+10-14 12:18:03.781  6276  6276 F DEBUG   : uid: 1000
+10-14 12:18:03.781  6276  6276 F DEBUG   : tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+10-14 12:18:03.781  6276  6276 F DEBUG   : pac_enabled_keys: 000000000000000f (PR_PAC_APIAKEY, PR_PAC_APIBKEY, PR_PAC_APDAKEY, PR_PAC_APDBKEY)
+10-14 12:18:03.781  6276  6276 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 12:18:03.781  6276  6276 F DEBUG   : Abort message: 'GraphRunner watchdog fired; Not ready nodes (total: 0): None; Queue: empty; Running: None; Connectors with unsignaled frames: NoneNodeInputGroupHolders with unsignaled sequencing fences: None'
+10-14 12:18:03.781  6276  6276 F DEBUG   : 
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x0  0000000000000000  x1  00000000000017aa  x2  0000000000000006  x3  00000076cc8b56d0
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x4  646d6d74715e676f  x5  646d6d74715e676f  x6  646d6d74715e676f  x7  7f7f7f7f7f7f7f7f
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x8  00000000000000f0  x9  4819d9fedf1b5502  x10 0000000000000001  x11 00000079d531f9b0
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x12 000000006acef46b  x13 000000007fffffff  x14 0000000002f016fa  x15 00000437b9ce8de9
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x16 00000079d5389650  x17 00000079d536f900  x18 00000076c5550000  x19 000000000000175c
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x20 00000000000017aa  x21 00000000ffffffff  x22 00000076cc8b5790  x23 00000076cc8b6100
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x24 0000000000000004  x25 0000000000000001  x26 b4000077a13ba598  x27 0000000100000bfc
+10-14 12:18:03.781  6276  6276 F DEBUG   :     x28 00000000000095d5  x29 00000076cc8b5750
+10-14 12:18:03.781  6276  6276 F DEBUG   :     lr  00000079d5305d9c  sp  00000076cc8b56d0  pc  00000079d5305dc0  pst 0000000000001000
+10-14 12:18:03.781  6276  6276 F DEBUG   :     esr 0000000000000000  vg  0000000000000002
+10-14 12:18:03.781  6276  6276 F DEBUG   : 
+10-14 12:18:03.781  6276  6276 F DEBUG   : 9 total frames
+10-14 12:18:03.781  6276  6276 F DEBUG   : backtrace:
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #00 pc 000000000007fdc0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #01 pc 000000000000bed0  /system/lib64/liblog.so (__android_log_default_aborter+16) (BuildId: a10a4407731814d241cade49d92b0d7e)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #02 pc 0000000000016278  /apex/com.google.pixel.camera.hal/lib64/libbase.so (android::base::LogMessage::~LogMessage()+552) (BuildId: 1508c3478af8bafd646ba65a25375d94)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #03 pc 00000000013a6958  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #04 pc 0000000000793fdc  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #05 pc 00000000007922e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #06 pc 00000000007920e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #07 pc 0000000000094314  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*) (.__uniq.67847048707805468364044055584648682506)+180) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:18:03.781  6276  6276 F DEBUG   :       #08 pc 0000000000083a14  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+68) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:18:03.781  6276  6276 F DEBUG   : 
+10-14 12:18:03.781  6276  6276 F DEBUG   : Note: To display stack pointer information, use the pbtombstone tool:
+10-14 12:18:03.781  6276  6276 F DEBUG   :         pbtombstone --display-sp tombstone_XX.pb
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-6
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 5635
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: java.lang.IllegalArgumentException: the size of bytes must be 4 in order to convert to Int. Actual size was: 0
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt.bytesToInt(PacketHeader.kt:29)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invokeSuspend(PacketHeader.kt:18)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(PacketHeader.kt:8)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(PacketHeader.kt:4)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:42)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:164)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt.withContext(dex-id-3fd491a5d64539f0b888a3f937482f07d0511bba:1)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.inputActor(TcpSessionImpl.kt:312)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.access$inputActor(TcpSessionImpl.kt:40)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl$inputActor$1.invokeSuspend(TcpSessionImpl.kt:15)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:113)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:589)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:823)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:720)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:707)
+10-14 12:21:00.365  5635  5668 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@f8c7008, Dispatchers.IO]
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-1
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 7580
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: java.lang.IllegalArgumentException: the size of bytes must be 4 in order to convert to Int. Actual size was: 0
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt.bytesToInt(PacketHeader.kt:29)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invokeSuspend(PacketHeader.kt:18)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(PacketHeader.kt:8)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(PacketHeader.kt:4)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:42)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:164)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt.withContext(dex-id-3fd491a5d64539f0b888a3f937482f07d0511bba:1)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.inputActor(TcpSessionImpl.kt:312)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.access$inputActor(TcpSessionImpl.kt:40)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl$inputActor$1.invokeSuspend(TcpSessionImpl.kt:15)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:113)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:589)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:823)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:720)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:707)
+10-14 12:35:23.415  7580  7623 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@e920fe3, Dispatchers.IO]
+10-14 12:35:26.533  6283  6358 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 6358 (WatchDog), pid 6283 (camera.provider)
+10-14 12:35:27.267  8924  8924 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 12:35:27.268  8924  8924 F DEBUG   : Build fingerprint: 'google/tokay/tokay:17/CP3A.260905.009/16091614:user/release-keys'
+10-14 12:35:27.268  8924  8924 F DEBUG   : Kernel Release: '6.1.162-android14-11-g2ec90535fa34-ab15810641'
+10-14 12:35:27.268  8924  8924 F DEBUG   : Revision: 'MP1.0'
+10-14 12:35:27.268  8924  8924 F DEBUG   : ABI: 'arm64'
+10-14 12:35:27.268  8924  8924 F DEBUG   : Timestamp: 2026-10-14 12:35:26.771924687+0900
+10-14 12:35:27.268  8924  8924 F DEBUG   : Process uptime: 0s
+10-14 12:35:27.268  8924  8924 F DEBUG   : Executable: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 12:35:27.268  8924  8924 F DEBUG   : Cmdline: /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google
+10-14 12:35:27.268  8924  8924 F DEBUG   : pid: 6283, ppid: 1, tid: 6358, name: WatchDog  >>> /apex/com.google.pixel.camera.hal/bin/hw/android.hardware.camera.provider@2.7-service-google <<<
+10-14 12:35:27.268  8924  8924 F DEBUG   : uid: 1000
+10-14 12:35:27.268  8924  8924 F DEBUG   : tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+10-14 12:35:27.268  8924  8924 F DEBUG   : pac_enabled_keys: 000000000000000f (PR_PAC_APIAKEY, PR_PAC_APIBKEY, PR_PAC_APDAKEY, PR_PAC_APDBKEY)
+10-14 12:35:27.268  8924  8924 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 12:35:27.268  8924  8924 F DEBUG   : Abort message: 'GraphRunner watchdog fired; Not ready nodes (total: 0): None; Queue: empty; Running: None; Connectors with unsignaled frames: NoneNodeInputGroupHolders with unsignaled sequencing fences: None'
+10-14 12:35:27.268  8924  8924 F DEBUG   : 
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x0  0000000000000000  x1  00000000000018d6  x2  0000000000000006  x3  00000072dcf0a6d0
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x4  646d6d74715e676f  x5  646d6d74715e676f  x6  646d6d74715e676f  x7  7f7f7f7f7f7f7f7f
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x8  00000000000000f0  x9  456bc4de469d579d  x10 0000000000000001  x11 00000075b30e89b0
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x12 000000006acef87e  x13 000000007fffffff  x14 0000000002f80586  x15 0000043db1b55ded
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x16 00000075b3152650  x17 00000075b3138900  x18 00000072d33c8000  x19 000000000000188b
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x20 00000000000018d6  x21 00000000ffffffff  x22 00000072dcf0a790  x23 00000072dcf0b100
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x24 0000000000000004  x25 0000000000000001  x26 b40000743b3e03b8  x27 0000000100013e20
+10-14 12:35:27.268  8924  8924 F DEBUG   :     x28 00000000000f889a  x29 00000072dcf0a750
+10-14 12:35:27.268  8924  8924 F DEBUG   :     lr  00000075b30ced9c  sp  00000072dcf0a6d0  pc  00000075b30cedc0  pst 0000000000001000
+10-14 12:35:27.268  8924  8924 F DEBUG   :     esr 0000000000000000  vg  0000000000000002
+10-14 12:35:27.268  8924  8924 F DEBUG   : 
+10-14 12:35:27.268  8924  8924 F DEBUG   : 9 total frames
+10-14 12:35:27.268  8924  8924 F DEBUG   : backtrace:
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #00 pc 000000000007fdc0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #01 pc 000000000000bed0  /system/lib64/liblog.so (__android_log_default_aborter+16) (BuildId: a10a4407731814d241cade49d92b0d7e)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #02 pc 0000000000016278  /apex/com.google.pixel.camera.hal/lib64/libbase.so (android::base::LogMessage::~LogMessage()+552) (BuildId: 1508c3478af8bafd646ba65a25375d94)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #03 pc 00000000013a6958  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #04 pc 0000000000793fdc  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #05 pc 00000000007922e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #06 pc 00000000007920e4  /apex/com.google.pixel.camera.hal/lib64/liblyric_hwl.so (BuildId: 1b9d7395215addb6c73a7860f8d02d08)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #07 pc 0000000000094314  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*) (.__uniq.67847048707805468364044055584648682506)+180) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:35:27.268  8924  8924 F DEBUG   :       #08 pc 0000000000083a14  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+68) (BuildId: f4fb08a93372e239e4aab3ef1865ae74)
+10-14 12:35:27.268  8924  8924 F DEBUG   : 
+10-14 12:35:27.268  8924  8924 F DEBUG   : Note: To display stack pointer information, use the pbtombstone tool:
+10-14 12:35:27.268  8924  8924 F DEBUG   :         pbtombstone --display-sp tombstone_XX.pb
