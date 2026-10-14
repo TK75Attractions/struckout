@@ -1,0 +1,397 @@
+﻿10-14 15:48:04.173  2903  2903 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 2903 (init), pid 2903 (init)
+10-14 15:48:04.274  2903  2903 F libc    : crash_dump helper failed to exec
+10-14 15:54:44.979  1252  1435 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 1435 (hvdcp_opti), pid 1252 (hvdcp_opti)
+10-14 15:54:45.046 11045 11045 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:54:45.046 11045 11045 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:54:45.046 11045 11045 F DEBUG   : Revision: '0'
+10-14 15:54:45.046 11045 11045 F DEBUG   : ABI: 'arm64'
+10-14 15:54:45.070 11045 11045 F DEBUG   : Timestamp: 2026-10-14 15:54:45+0900
+10-14 15:54:45.070 11045 11045 F DEBUG   : pid: 1252, tid: 1435, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:54:45.070 11045 11045 F DEBUG   : uid: 0
+10-14 15:54:45.070 11045 11045 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:54:45.070 11045 11045 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:54:45.070 11045 11045 F DEBUG   :     x0  0000000000000000  x1  000000000000059b  x2  0000000000000006  x3  0000007284108920
+10-14 15:54:45.070 11045 11045 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:54:45.070 11045 11045 F DEBUG   :     x8  00000000000000f0  x9  0eaf0ba8e0d88a21  x10 0000000000000001  x11 0000000000000000
+10-14 15:54:45.070 11045 11045 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:54:45.070 11045 11045 F DEBUG   :     x16 000000728649d8c0  x17 0000007286479900  x18 00000072835ea000  x19 00000000000004e4
+10-14 15:54:45.070 11045 11045 F DEBUG   :     x20 000000000000059b  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:54:45.071 11045 11045 F DEBUG   :     x24 000000613c3969a9  x25 000000613c39509e  x26 000000728410b020  x27 000000613c3bd000
+10-14 15:54:45.071 11045 11045 F DEBUG   :     x28 0000000000000bb8  x29 00000072841089c0
+10-14 15:54:45.071 11045 11045 F DEBUG   :     sp  0000007284108900  lr  000000728642b0c4  pc  000000728642b0f0
+10-14 15:54:45.073 11045 11045 F DEBUG   : 
+10-14 15:54:45.073 11045 11045 F DEBUG   : backtrace:
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #04 pc 0000000000013dc4  /vendor/bin/hvdcp_opti (s_pps_cool_limited_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:54:45.074 11045 11045 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:54:56.700 11048 11056 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11056 (hvdcp_opti), pid 11048 (hvdcp_opti)
+10-14 15:54:56.721 11098 11098 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:54:56.721 11098 11098 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:54:56.721 11098 11098 F DEBUG   : Revision: '0'
+10-14 15:54:56.721 11098 11098 F DEBUG   : ABI: 'arm64'
+10-14 15:54:56.722 11098 11098 F DEBUG   : Timestamp: 2026-10-14 15:54:56+0900
+10-14 15:54:56.722 11098 11098 F DEBUG   : pid: 11048, tid: 11056, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:54:56.722 11098 11098 F DEBUG   : uid: 0
+10-14 15:54:56.722 11098 11098 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:54:56.722 11098 11098 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x0  0000000000000000  x1  0000000000002b30  x2  0000000000000006  x3  0000007a34005920
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x8  00000000000000f0  x9  b276435650d333bb  x10 0000000000000001  x11 0000000000000000
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x16 0000007a372fd8c0  x17 0000007a372d9900  x18 0000007a32c80000  x19 0000000000002b28
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x20 0000000000002b30  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x24 00000064374959a9  x25 000000643749409e  x26 0000007a34008020  x27 00000064374bc000
+10-14 15:54:56.722 11098 11098 F DEBUG   :     x28 0000000000000bb8  x29 0000007a340059c0
+10-14 15:54:56.722 11098 11098 F DEBUG   :     sp  0000007a34005900  lr  0000007a3728b0c4  pc  0000007a3728b0f0
+10-14 15:54:56.724 11098 11098 F DEBUG   : 
+10-14 15:54:56.724 11098 11098 F DEBUG   : backtrace:
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:54:56.725 11098 11098 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:08.285 11101 11109 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11109 (hvdcp_opti), pid 11101 (hvdcp_opti)
+10-14 15:55:08.329 11120 11120 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:55:08.330 11120 11120 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:55:08.330 11120 11120 F DEBUG   : Revision: '0'
+10-14 15:55:08.330 11120 11120 F DEBUG   : ABI: 'arm64'
+10-14 15:55:08.330 11120 11120 F DEBUG   : Timestamp: 2026-10-14 15:55:08+0900
+10-14 15:55:08.330 11120 11120 F DEBUG   : pid: 11101, tid: 11109, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:55:08.330 11120 11120 F DEBUG   : uid: 0
+10-14 15:55:08.330 11120 11120 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:55:08.330 11120 11120 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x0  0000000000000000  x1  0000000000002b65  x2  0000000000000006  x3  0000007d1f708920
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x8  00000000000000f0  x9  092ca5c9aa62bb29  x10 0000000000000001  x11 0000000000000000
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x16 0000007d22b3c8c0  x17 0000007d22b18900  x18 0000007d1d914000  x19 0000000000002b5d
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x20 0000000000002b65  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x24 0000005cc845f9a9  x25 0000005cc845e09e  x26 0000007d1f70b020  x27 0000005cc8486000
+10-14 15:55:08.330 11120 11120 F DEBUG   :     x28 0000000000000bb8  x29 0000007d1f7089c0
+10-14 15:55:08.330 11120 11120 F DEBUG   :     sp  0000007d1f708900  lr  0000007d22aca0c4  pc  0000007d22aca0f0
+10-14 15:55:08.333 11120 11120 F DEBUG   : 
+10-14 15:55:08.333 11120 11120 F DEBUG   : backtrace:
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:08.333 11120 11120 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:19.927 11123 11131 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11131 (hvdcp_opti), pid 11123 (hvdcp_opti)
+10-14 15:55:19.983 11144 11144 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:55:19.983 11144 11144 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:55:19.983 11144 11144 F DEBUG   : Revision: '0'
+10-14 15:55:19.983 11144 11144 F DEBUG   : ABI: 'arm64'
+10-14 15:55:19.985 11144 11144 F DEBUG   : Timestamp: 2026-10-14 15:55:19+0900
+10-14 15:55:19.985 11144 11144 F DEBUG   : pid: 11123, tid: 11131, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:55:19.985 11144 11144 F DEBUG   : uid: 0
+10-14 15:55:19.985 11144 11144 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:55:19.985 11144 11144 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x0  0000000000000000  x1  0000000000002b7b  x2  0000000000000006  x3  00000072da20b920
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x8  00000000000000f0  x9  5caf7b7d2dd823a2  x10 0000000000000001  x11 0000000000000000
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x16 00000072db5128c0  x17 00000072db4ee900  x18 00000072d8dda000  x19 0000000000002b73
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x20 0000000000002b7b  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x24 0000006417b5d9a9  x25 0000006417b5c09e  x26 00000072da20e020  x27 0000006417b84000
+10-14 15:55:19.986 11144 11144 F DEBUG   :     x28 0000000000000bb8  x29 00000072da20b9c0
+10-14 15:55:19.986 11144 11144 F DEBUG   :     sp  00000072da20b900  lr  00000072db4a00c4  pc  00000072db4a00f0
+10-14 15:55:19.993 11144 11144 F DEBUG   : 
+10-14 15:55:19.993 11144 11144 F DEBUG   : backtrace:
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:19.994 11144 11144 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:31.589 11147 11156 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11156 (hvdcp_opti), pid 11147 (hvdcp_opti)
+10-14 15:55:31.630 11180 11180 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:55:31.630 11180 11180 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:55:31.630 11180 11180 F DEBUG   : Revision: '0'
+10-14 15:55:31.630 11180 11180 F DEBUG   : ABI: 'arm64'
+10-14 15:55:31.630 11180 11180 F DEBUG   : Timestamp: 2026-10-14 15:55:31+0900
+10-14 15:55:31.630 11180 11180 F DEBUG   : pid: 11147, tid: 11156, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:55:31.630 11180 11180 F DEBUG   : uid: 0
+10-14 15:55:31.630 11180 11180 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:55:31.630 11180 11180 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x0  0000000000000000  x1  0000000000002b94  x2  0000000000000006  x3  0000007bd9c0b920
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x8  00000000000000f0  x9  e5d345f0112b8747  x10 0000000000000001  x11 0000000000000000
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x16 0000007bdce508c0  x17 0000007bdce2c900  x18 0000007bd7392000  x19 0000000000002b8b
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x20 0000000000002b94  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x24 00000061b50ce9a9  x25 00000061b50cd09e  x26 0000007bd9c0e020  x27 00000061b50f5000
+10-14 15:55:31.630 11180 11180 F DEBUG   :     x28 0000000000000bb8  x29 0000007bd9c0b9c0
+10-14 15:55:31.630 11180 11180 F DEBUG   :     sp  0000007bd9c0b900  lr  0000007bdcdde0c4  pc  0000007bdcdde0f0
+10-14 15:55:31.633 11180 11180 F DEBUG   : 
+10-14 15:55:31.633 11180 11180 F DEBUG   : backtrace:
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:31.633 11180 11180 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:43.269 11185 11194 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11194 (hvdcp_opti), pid 11185 (hvdcp_opti)
+10-14 15:55:43.311 11219 11219 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:55:43.311 11219 11219 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:55:43.311 11219 11219 F DEBUG   : Revision: '0'
+10-14 15:55:43.311 11219 11219 F DEBUG   : ABI: 'arm64'
+10-14 15:55:43.311 11219 11219 F DEBUG   : Timestamp: 2026-10-14 15:55:43+0900
+10-14 15:55:43.311 11219 11219 F DEBUG   : pid: 11185, tid: 11194, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:55:43.311 11219 11219 F DEBUG   : uid: 0
+10-14 15:55:43.311 11219 11219 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:55:43.311 11219 11219 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x0  0000000000000000  x1  0000000000002bba  x2  0000000000000006  x3  0000007e2520b920
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x8  00000000000000f0  x9  8c67c37af8357561  x10 0000000000000001  x11 0000000000000000
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x16 0000007e2671b8c0  x17 0000007e266f7900  x18 0000007e23be8000  x19 0000000000002bb1
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x20 0000000000002bba  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x24 0000005e69fc99a9  x25 0000005e69fc809e  x26 0000007e2520e020  x27 0000005e69ff0000
+10-14 15:55:43.312 11219 11219 F DEBUG   :     x28 0000000000000bb8  x29 0000007e2520b9c0
+10-14 15:55:43.312 11219 11219 F DEBUG   :     sp  0000007e2520b900  lr  0000007e266a90c4  pc  0000007e266a90f0
+10-14 15:55:43.314 11219 11219 F DEBUG   : 
+10-14 15:55:43.314 11219 11219 F DEBUG   : backtrace:
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:43.314 11219 11219 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:54.916 11222 11229 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11229 (hvdcp_opti), pid 11222 (hvdcp_opti)
+10-14 15:55:54.952 11238 11238 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:55:54.952 11238 11238 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:55:54.952 11238 11238 F DEBUG   : Revision: '0'
+10-14 15:55:54.952 11238 11238 F DEBUG   : ABI: 'arm64'
+10-14 15:55:54.952 11238 11238 F DEBUG   : Timestamp: 2026-10-14 15:55:54+0900
+10-14 15:55:54.952 11238 11238 F DEBUG   : pid: 11222, tid: 11229, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:55:54.952 11238 11238 F DEBUG   : uid: 0
+10-14 15:55:54.952 11238 11238 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:55:54.953 11238 11238 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x0  0000000000000000  x1  0000000000002bdd  x2  0000000000000006  x3  0000006feb40b920
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x8  00000000000000f0  x9  1768d6823df35cc8  x10 0000000000000001  x11 0000000000000000
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x16 0000006fec5ca8c0  x17 0000006fec5a6900  x18 0000006fe9d22000  x19 0000000000002bd6
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x20 0000000000002bdd  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x24 0000005b122899a9  x25 0000005b1228809e  x26 0000006feb40e020  x27 0000005b122b0000
+10-14 15:55:54.953 11238 11238 F DEBUG   :     x28 0000000000000bb8  x29 0000006feb40b9c0
+10-14 15:55:54.953 11238 11238 F DEBUG   :     sp  0000006feb40b900  lr  0000006fec5580c4  pc  0000006fec5580f0
+10-14 15:55:54.955 11238 11238 F DEBUG   : 
+10-14 15:55:54.955 11238 11238 F DEBUG   : backtrace:
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:55:54.955 11238 11238 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:06.624 11241 11248 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11248 (hvdcp_opti), pid 11241 (hvdcp_opti)
+10-14 15:56:06.682 11273 11273 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:56:06.682 11273 11273 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:56:06.683 11273 11273 F DEBUG   : Revision: '0'
+10-14 15:56:06.683 11273 11273 F DEBUG   : ABI: 'arm64'
+10-14 15:56:06.684 11273 11273 F DEBUG   : Timestamp: 2026-10-14 15:56:06+0900
+10-14 15:56:06.684 11273 11273 F DEBUG   : pid: 11241, tid: 11248, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:56:06.684 11273 11273 F DEBUG   : uid: 0
+10-14 15:56:06.684 11273 11273 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:56:06.684 11273 11273 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x0  0000000000000000  x1  0000000000002bf0  x2  0000000000000006  x3  00000071c520b920
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x8  00000000000000f0  x9  41c08bd36e098b26  x10 0000000000000001  x11 0000000000000000
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x16 00000071c62e78c0  x17 00000071c62c3900  x18 00000071c2f6a000  x19 0000000000002be9
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x20 0000000000002bf0  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x24 00000056bb8799a9  x25 00000056bb87809e  x26 00000071c520e020  x27 00000056bb8a0000
+10-14 15:56:06.684 11273 11273 F DEBUG   :     x28 0000000000000bb8  x29 00000071c520b9c0
+10-14 15:56:06.684 11273 11273 F DEBUG   :     sp  00000071c520b900  lr  00000071c62750c4  pc  00000071c62750f0
+10-14 15:56:06.688 11273 11273 F DEBUG   : 
+10-14 15:56:06.688 11273 11273 F DEBUG   : backtrace:
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:06.689 11273 11273 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:18.290 11276 11286 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11286 (hvdcp_opti), pid 11276 (hvdcp_opti)
+10-14 15:56:18.325 11307 11307 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:56:18.325 11307 11307 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:56:18.325 11307 11307 F DEBUG   : Revision: '0'
+10-14 15:56:18.325 11307 11307 F DEBUG   : ABI: 'arm64'
+10-14 15:56:18.325 11307 11307 F DEBUG   : Timestamp: 2026-10-14 15:56:18+0900
+10-14 15:56:18.325 11307 11307 F DEBUG   : pid: 11276, tid: 11286, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:56:18.325 11307 11307 F DEBUG   : uid: 0
+10-14 15:56:18.325 11307 11307 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:56:18.325 11307 11307 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x0  0000000000000000  x1  0000000000002c16  x2  0000000000000006  x3  00000070cb60b920
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x8  00000000000000f0  x9  110f6a5df91cbb68  x10 0000000000000001  x11 0000000000000000
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x16 00000070cca518c0  x17 00000070cca2d900  x18 00000070c7e3e000  x19 0000000000002c0c
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x20 0000000000002c16  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x24 0000005ddc19e9a9  x25 0000005ddc19d09e  x26 00000070cb60e020  x27 0000005ddc1c5000
+10-14 15:56:18.325 11307 11307 F DEBUG   :     x28 0000000000000bb8  x29 00000070cb60b9c0
+10-14 15:56:18.326 11307 11307 F DEBUG   :     sp  00000070cb60b900  lr  00000070cc9df0c4  pc  00000070cc9df0f0
+10-14 15:56:18.328 11307 11307 F DEBUG   : 
+10-14 15:56:18.328 11307 11307 F DEBUG   : backtrace:
+10-14 15:56:18.328 11307 11307 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:18.328 11307 11307 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.328 11307 11307 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.328 11307 11307 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.328 11307 11307 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.328 11307 11307 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.329 11307 11307 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.329 11307 11307 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:18.329 11307 11307 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:18.329 11307 11307 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:29.898 11310 11317 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11317 (hvdcp_opti), pid 11310 (hvdcp_opti)
+10-14 15:56:29.933 11346 11346 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:56:29.933 11346 11346 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:56:29.933 11346 11346 F DEBUG   : Revision: '0'
+10-14 15:56:29.933 11346 11346 F DEBUG   : ABI: 'arm64'
+10-14 15:56:29.933 11346 11346 F DEBUG   : Timestamp: 2026-10-14 15:56:29+0900
+10-14 15:56:29.933 11346 11346 F DEBUG   : pid: 11310, tid: 11317, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:56:29.933 11346 11346 F DEBUG   : uid: 0
+10-14 15:56:29.933 11346 11346 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:56:29.933 11346 11346 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:56:29.933 11346 11346 F DEBUG   :     x0  0000000000000000  x1  0000000000002c35  x2  0000000000000006  x3  0000007546708920
+10-14 15:56:29.933 11346 11346 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:56:29.933 11346 11346 F DEBUG   :     x8  00000000000000f0  x9  beb984a4956b1ddb  x10 0000000000000001  x11 0000000000000000
+10-14 15:56:29.933 11346 11346 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:56:29.933 11346 11346 F DEBUG   :     x16 000000754b9448c0  x17 000000754b920900  x18 0000007545422000  x19 0000000000002c2e
+10-14 15:56:29.934 11346 11346 F DEBUG   :     x20 0000000000002c35  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:56:29.934 11346 11346 F DEBUG   :     x24 00000057279a09a9  x25 000000572799f09e  x26 000000754670b020  x27 00000057279c7000
+10-14 15:56:29.934 11346 11346 F DEBUG   :     x28 0000000000000bb8  x29 00000075467089c0
+10-14 15:56:29.934 11346 11346 F DEBUG   :     sp  0000007546708900  lr  000000754b8d20c4  pc  000000754b8d20f0
+10-14 15:56:29.936 11346 11346 F DEBUG   : 
+10-14 15:56:29.936 11346 11346 F DEBUG   : backtrace:
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:29.937 11346 11346 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:41.515 11349 11356 F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 11356 (hvdcp_opti), pid 11349 (hvdcp_opti)
+10-14 15:56:41.552 11382 11382 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-14 15:56:41.552 11382 11382 F DEBUG   : Build fingerprint: 'KYOCERA/KYV45_jp_kdi/KYV45:10/3.041RE.0212.a/3.041RE.0212.a:user/release-keys'
+10-14 15:56:41.552 11382 11382 F DEBUG   : Revision: '0'
+10-14 15:56:41.552 11382 11382 F DEBUG   : ABI: 'arm64'
+10-14 15:56:41.553 11382 11382 F DEBUG   : Timestamp: 2026-10-14 15:56:41+0900
+10-14 15:56:41.553 11382 11382 F DEBUG   : pid: 11349, tid: 11356, name: hvdcp_opti  >>> /system/vendor/bin/hvdcp_opti <<<
+10-14 15:56:41.553 11382 11382 F DEBUG   : uid: 0
+10-14 15:56:41.553 11382 11382 F DEBUG   : signal 6 (SIGABRT), code -1 (SI_QUEUE), fault addr --------
+10-14 15:56:41.553 11382 11382 F DEBUG   : Abort message: 'ubsan: mul-overflow'
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x0  0000000000000000  x1  0000000000002c5c  x2  0000000000000006  x3  00000071ff508920
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x4  0000000000000000  x5  0000000000000000  x6  0000000000000000  x7  0000000000000020
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x8  00000000000000f0  x9  b631fdb235166cc5  x10 0000000000000001  x11 0000000000000000
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x12 fffffff0ffffffdf  x13 ffffffffffffffff  x14 0000000000000000  x15 0000000000000000
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x16 00000072005dc8c0  x17 00000072005b8900  x18 00000071fbc42000  x19 0000000000002c55
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x20 0000000000002c5c  x21 00000000ffffffff  x22 0000000000000005  x23 00000000004c9960
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x24 0000005b7915e9a9  x25 0000005b7915d09e  x26 00000071ff50b020  x27 0000005b79185000
+10-14 15:56:41.553 11382 11382 F DEBUG   :     x28 0000000000000bb8  x29 00000071ff5089c0
+10-14 15:56:41.553 11382 11382 F DEBUG   :     sp  00000071ff508900  lr  000000720056a0c4  pc  000000720056a0f0
+10-14 15:56:41.555 11382 11382 F DEBUG   : 
+10-14 15:56:41.555 11382 11382 F DEBUG   : backtrace:
+10-14 15:56:41.555 11382 11382 F DEBUG   :       #00 pc 00000000000830f0  /apex/com.android.runtime/lib64/bionic/libc.so (abort+160) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:41.555 11382 11382 F DEBUG   :       #01 pc 000000000002ab04  /vendor/bin/hvdcp_opti (abort_with_message(char const*)+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.555 11382 11382 F DEBUG   :       #02 pc 000000000002ab58  /vendor/bin/hvdcp_opti (__ubsan_handle_mul_overflow_minimal_abort+24) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.555 11382 11382 F DEBUG   :       #03 pc 00000000000156c0  /vendor/bin/hvdcp_opti (switch_profile+1184) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.555 11382 11382 F DEBUG   :       #04 pc 000000000001445c  /vendor/bin/hvdcp_opti (s_pps_cool_min_on_entry+20) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.556 11382 11382 F DEBUG   :       #05 pc 0000000000014fd0  /vendor/bin/hvdcp_opti (pps_wakealarm_cb+196) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.556 11382 11382 F DEBUG   :       #06 pc 0000000000010550  /vendor/bin/hvdcp_opti (client_run+244) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.556 11382 11382 F DEBUG   :       #07 pc 0000000000014e28  /vendor/bin/hvdcp_opti (pps_main+680) (BuildId: 4031526b288e7a5ff460da0de57b34d9)
+10-14 15:56:41.556 11382 11382 F DEBUG   :       #08 pc 00000000000e6890  /apex/com.android.runtime/lib64/bionic/libc.so (__pthread_start(void*)+36) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 15:56:41.556 11382 11382 F DEBUG   :       #09 pc 0000000000084b6c  /apex/com.android.runtime/lib64/bionic/libc.so (__start_thread+64) (BuildId: cf739dbc84bcc78f7a1500721bfb3758)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: FATAL EXCEPTION: main
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 13160
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: java.lang.IllegalStateException: TcpSession must be initialized before sending detection via network
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.NetworkManager.pushDetection(NetworkManager.kt:208)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.config.PushFrameUseCase.invoke(PushFrameUseCase.kt:20)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.camera.CameraViewModel$onFrame$2.invokeSuspend(CameraViewModel.kt:143)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:883)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:214)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:7410)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:492)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:935)
+10-14 16:38:46.551 13160 13160 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@61d0704, Dispatchers.Main.immediate]
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: FATAL EXCEPTION: main
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 15348
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: java.lang.IllegalStateException: TcpSession must be initialized before sending detection via network
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.NetworkManager.pushDetection(NetworkManager.kt:208)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.config.PushFrameUseCase.invoke(PushFrameUseCase.kt:20)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.camera.CameraViewModel$onFrame$2.invokeSuspend(CameraViewModel.kt:143)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:883)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:214)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:7410)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:492)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:935)
+10-14 16:39:26.386 15348 15348 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@929eb73, Dispatchers.Main.immediate]
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-2
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 16979
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: java.lang.IllegalArgumentException: the size of bytes must be 4 in order to convert to Int. Actual size was: 0
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt.bytesToInt(PacketHeader.kt:29)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invokeSuspend(PacketHeader.kt:18)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(Unknown Source:8)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(Unknown Source:4)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:42)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:164)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt.withContext(Unknown Source:1)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.inputActor(TcpSessionImpl.kt:312)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.access$inputActor(TcpSessionImpl.kt:40)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl$inputActor$1.invokeSuspend(Unknown Source:15)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:113)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:589)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:823)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:720)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:707)
+10-14 17:01:15.144 16979 17019 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@c783eae, Dispatchers.IO]

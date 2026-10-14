@@ -1,0 +1,77 @@
+﻿10-14 15:47:01.625  2005  2005 E AndroidRuntime: FATAL EXCEPTION: main
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: Process: com.android.bluetooth, PID: 2005
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: java.lang.RuntimeException: Unable to start service com.android.bluetooth.pbap.BluetoothPbapService@917ddb3 with Intent { flg=0x10000000 cmp=com.android.bluetooth/.pbap.BluetoothPbapService (has extras) }: java.lang.NullPointerException: Attempt to invoke interface method 'void android.database.Cursor.close()' on a null object reference
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.app.ActivityThread.handleServiceArgs(ActivityThread.java:3687)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.app.ActivityThread.access$1600(ActivityThread.java:200)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1682)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:193)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:6710)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:493)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:858)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: Caused by: java.lang.NullPointerException: Attempt to invoke interface method 'void android.database.Cursor.close()' on a null object reference
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at com.android.bluetooth.pbap.BluetoothPbapService.start(BluetoothPbapService.java:617)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at com.android.bluetooth.btservice.ProfileService.doStart(ProfileService.java:284)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at com.android.bluetooth.btservice.ProfileService.onStartCommand(ProfileService.java:166)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	at android.app.ActivityThread.handleServiceArgs(ActivityThread.java:3668)
+10-14 15:47:01.625  2005  2005 E AndroidRuntime: 	... 8 more
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: FATAL EXCEPTION: main
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: Process: jp.kyocera.calendar, PID: 6885
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: java.lang.RuntimeException: Unable to start receiver jp.kyocera.calendar.alerts.AlertReceiver: java.lang.IllegalStateException: Not allowed to start service Intent { cmp=jp.kyocera.calendar/.alerts.AlertService (has extras) }: app is in background uid UidRecord{3bf8f5d u0a101 RCVR idle change:uncached procs:1 seq(0,0,0)}
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:3389)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ActivityThread.access$1200(ActivityThread.java:200)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1662)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:193)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:6710)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:493)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:858)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: Caused by: java.lang.IllegalStateException: Not allowed to start service Intent { cmp=jp.kyocera.calendar/.alerts.AlertService (has extras) }: app is in background uid UidRecord{3bf8f5d u0a101 RCVR idle change:uncached procs:1 seq(0,0,0)}
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ContextImpl.startServiceCommon(ContextImpl.java:1577)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ContextImpl.startService(ContextImpl.java:1532)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.content.ContextWrapper.startService(ContextWrapper.java:664)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.content.ContextWrapper.startService(ContextWrapper.java:664)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at jp.kyocera.calendar.alerts.AlertReceiver.beginStartingService(AlertReceiver.java:205)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at jp.kyocera.calendar.alerts.AlertReceiver.onReceive(AlertReceiver.java:187)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:3380)
+10-14 15:47:44.541  6885  6885 E AndroidRuntime: 	... 8 more
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: FATAL EXCEPTION: main
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 10147
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: java.lang.IllegalStateException: TcpSession must be initialized before sending detection via network
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.NetworkManager.pushDetection(NetworkManager.kt:208)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.config.PushFrameUseCase.invoke(PushFrameUseCase.kt:20)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.camera.CameraViewModel$onFrame$2.invokeSuspend(CameraViewModel.kt:143)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:873)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:193)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:6710)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:493)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:858)
+10-14 16:40:01.097 10147 10147 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@17a8bcf, Dispatchers.Main.immediate]
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-3
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: Process: com.taichi765.struckoutCameraApp.highspeed, PID: 11585
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: java.lang.IllegalArgumentException: the size of bytes must be 4 in order to convert to Int. Actual size was: 0
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt.bytesToInt(PacketHeader.kt:29)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invokeSuspend(PacketHeader.kt:18)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(Unknown Source:8)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.PacketHeaderKt$readPacket$len$1.invoke(Unknown Source:4)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:42)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:164)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.BuildersKt.withContext(Unknown Source:1)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.inputActor(TcpSessionImpl.kt:312)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl.access$inputActor(TcpSessionImpl.kt:40)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at com.taichi765.struckoutCameraApp.network.TcpSessionImpl$inputActor$1.invokeSuspend(Unknown Source:15)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:113)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:589)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:823)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:720)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:707)
+10-14 17:00:16.732 11585 11608 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@13c5fee, Dispatchers.IO]

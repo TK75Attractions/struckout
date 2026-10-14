@@ -1,0 +1,67 @@
+2026-10-14T08:11:55.270976Z  INFO ball_tracker::detection_input::network: trying to bind port for `DataTransport` port="0.0.0.0:5050"
+2026-10-14T08:11:55.273359Z  INFO ball_tracker::detection_input::network: succeed to bind port for `DataTransport`
+2026-10-14T08:11:55.273386Z  INFO ball_tracker::detection_input::network: trying to bind port for `CameraLocationListener` port="0.0.0.0:6060"
+2026-10-14T08:11:55.273609Z  INFO ball_tracker::detection_input::network: succeed to bind port for `CameraLocationListener`
+2026-10-14T08:11:55.281773Z  INFO ball_tracker::detection_input::network: starting TCP listener
+2026-10-14T08:11:55.281876Z DEBUG ball_tracker::detection_input::network: TcpTransport listening...
+2026-10-14T08:12:41.740697Z  INFO ball_tracker::detection_input::network: accepted new connection in DataTransport addr=127.0.0.1:55994
+2026-10-14T08:12:41.753807Z  INFO ball_tracker::detection_input::network: accepted new connection for TcpTransport addr=127.0.0.1:55995 camera_id=0
+2026-10-14T08:12:41.753902Z DEBUG ball_tracker::detection_input::network: TcpTransport listening...
+2026-10-14T08:12:41.754102Z DEBUG ball_tracker::detection_input::network: initialized connection camera_id=0
+2026-10-14T08:12:41.789907Z  INFO ball_tracker::detection_input::network: camera pose updated id=0 value=CameraPose { x: 0.075, y: 1.08, z: 1.258, rotation_x_degrees: 131.814, rotation_y_degrees: -1.825, rotation_z_degrees: -150.017 }
+2026-10-14T08:12:41.798289Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=0 value=CameraInfo { camera_id: 0, device_model: "KYV45", app_variant: "", timestamp_source: Unspecified, rolling_shutter_skew_ns: 0, exposure_time_ns: 0, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 0.0 }
+2026-10-14T08:12:51.037057Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=0 value=CameraInfo { camera_id: 0, device_model: "KYV45", app_variant: "", timestamp_source: Unknown, rolling_shutter_skew_ns: 0, exposure_time_ns: 0, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 0.0 }
+2026-10-14T08:12:51.055805Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=0 value=CameraInfo { camera_id: 0, device_model: "KYV45", app_variant: "highspeed", timestamp_source: Unknown, rolling_shutter_skew_ns: 0, exposure_time_ns: 0, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 120.0 }
+2026-10-14T08:12:52.564411Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=0 value=CameraInfo { camera_id: 0, device_model: "KYV45", app_variant: "highspeed", timestamp_source: Unknown, rolling_shutter_skew_ns: 8333000, exposure_time_ns: 8008320, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 120.0 }
+2026-10-14T08:12:56.623050Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=0 value=CameraInfo { camera_id: 0, device_model: "KYV45", app_variant: "highspeed", timestamp_source: Unknown, rolling_shutter_skew_ns: 8333000, exposure_time_ns: 8008320, image_width: 640, image_height: 360, focal_length_px: 482.1917786001437, frame_rate: 120.0 }
+2026-10-14T08:12:56.653625Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.8887 round_trip_ms=4.644765 min_latency_ms=116.506412 row_skew_ms=8.333
+2026-10-14T08:13:06.683193Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500328.4858 round_trip_ms=3.605422 min_latency_ms=72.14926000000001 row_skew_ms=8.333
+2026-10-14T08:13:16.119105Z  INFO ball_tracker::detection_input::network: accepted new connection in DataTransport addr=127.0.0.1:54460
+2026-10-14T08:13:16.133263Z  INFO ball_tracker::detection_input::network: accepted new connection for TcpTransport addr=127.0.0.1:54461 camera_id=1
+2026-10-14T08:13:16.133298Z DEBUG ball_tracker::detection_input::network: TcpTransport listening...
+2026-10-14T08:13:16.133425Z DEBUG ball_tracker::detection_input::network: initialized connection camera_id=1
+2026-10-14T08:13:16.175355Z  INFO ball_tracker::detection_input::network: camera pose updated id=1 value=CameraPose { x: 0.075, y: 0.12, z: 1.2587, rotation_x_degrees: 137.365, rotation_y_degrees: -1.534, rotation_z_degrees: -31.474 }
+2026-10-14T08:13:16.184348Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=1 value=CameraInfo { camera_id: 1, device_model: "KYV45", app_variant: "", timestamp_source: Unspecified, rolling_shutter_skew_ns: 0, exposure_time_ns: 0, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 0.0 }
+2026-10-14T08:13:21.148358Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.8894 round_trip_ms=4.341929 min_latency_ms=72.14926000000001 row_skew_ms=8.333
+2026-10-14T08:13:23.756652Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=1 value=CameraInfo { camera_id: 1, device_model: "KYV45", app_variant: "", timestamp_source: Unknown, rolling_shutter_skew_ns: 0, exposure_time_ns: 0, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 0.0 }
+2026-10-14T08:13:23.773398Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=1 value=CameraInfo { camera_id: 1, device_model: "KYV45", app_variant: "highspeed", timestamp_source: Unknown, rolling_shutter_skew_ns: 0, exposure_time_ns: 0, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 120.0 }
+2026-10-14T08:13:25.014509Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=1 value=CameraInfo { camera_id: 1, device_model: "KYV45", app_variant: "highspeed", timestamp_source: Unknown, rolling_shutter_skew_ns: 8333000, exposure_time_ns: 8008320, image_width: 0, image_height: 0, focal_length_px: 0.0, frame_rate: 120.0 }
+2026-10-14T08:13:25.507084Z  INFO ball_tracker::detection_input::network: camera info updated camera_id=1 value=CameraInfo { camera_id: 1, device_model: "KYV45", app_variant: "highspeed", timestamp_source: Unknown, rolling_shutter_skew_ns: 8333000, exposure_time_ns: 8008320, image_width: 640, image_height: 360, focal_length_px: 482.1917786001437, frame_rate: 120.0 }
+2026-10-14T08:13:25.527114Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500262.0845 round_trip_ms=5.599794 min_latency_ms=106.953826 row_skew_ms=8.333
+2026-10-14T08:13:35.657076Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500328.4072 round_trip_ms=4.349502 min_latency_ms=71.174524 row_skew_ms=8.333
+2026-10-14T08:13:39.004046Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500261.934 round_trip_ms=5.205135 min_latency_ms=78.427026 row_skew_ms=8.333
+2026-10-14T08:13:41.058191Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(2)
+2026-10-14T08:13:41.507868Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(14)
+2026-10-14T08:13:41.953087Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(19)
+2026-10-14T08:13:42.499673Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(29)
+2026-10-14T08:13:42.901459Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(37)
+2026-10-14T08:13:43.379537Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(48)
+2026-10-14T08:14:16.832367Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500262.2449 round_trip_ms=5.055706 min_latency_ms=73.899684 row_skew_ms=8.333
+2026-10-14T08:14:16.849904Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.7542 round_trip_ms=3.841956 min_latency_ms=69.254565 row_skew_ms=8.333
+2026-10-14T08:14:16.924130Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(49)
+2026-10-14T08:14:19.827250Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(50)
+2026-10-14T08:14:22.825954Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(51)
+2026-10-14T08:14:28.115318Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.7832 round_trip_ms=4.025089 min_latency_ms=69.254565 row_skew_ms=8.333
+2026-10-14T08:14:33.001465Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500262.0205 round_trip_ms=4.991702 min_latency_ms=71.106628 row_skew_ms=8.333
+2026-10-14T08:14:33.184234Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(52)
+2026-10-14T08:14:38.578808Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.302 round_trip_ms=4.25614 min_latency_ms=69.254565 row_skew_ms=8.333
+2026-10-14T08:14:38.670394Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(53)
+2026-10-14T08:14:42.058540Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(54)
+2026-10-14T08:14:46.663600Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500262.1917 round_trip_ms=5.180388 min_latency_ms=71.106628 row_skew_ms=8.333
+2026-10-14T08:14:46.762498Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(55)
+2026-10-14T08:14:52.415186Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.7769 round_trip_ms=3.885604 min_latency_ms=69.254565 row_skew_ms=8.333
+2026-10-14T08:14:52.451750Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(56)
+2026-10-14T08:14:55.238382Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(57)
+2026-10-14T08:15:02.429064Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500261.5264 round_trip_ms=6.188892 min_latency_ms=71.106628 row_skew_ms=8.333
+2026-10-14T08:15:08.982222Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.8257 round_trip_ms=4.349604 min_latency_ms=69.254565 row_skew_ms=8.333
+2026-10-14T08:15:09.009575Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(58)
+2026-10-14T08:15:10.731668Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(59)
+2026-10-14T08:15:13.696399Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500262.061 round_trip_ms=5.0973 min_latency_ms=71.106628 row_skew_ms=8.333
+2026-10-14T08:15:13.992130Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(60)
+2026-10-14T08:15:15.571104Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(61)
+2026-10-14T08:15:22.178779Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.6345 round_trip_ms=4.278029 min_latency_ms=68.653031 row_skew_ms=8.333
+2026-10-14T08:15:22.264954Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(62)
+2026-10-14T08:15:25.127756Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500261.4565 round_trip_ms=4.84197 min_latency_ms=68.71851099999999 row_skew_ms=8.333
+2026-10-14T08:15:25.239790Z TRACE ball_tracker::tracking: detected collision track_id=TrackId(63)
+2026-10-14T08:15:35.158908Z  INFO ball_tracker::clock_sync: camera clock camera_id=1 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500261.8171 round_trip_ms=4.476983 min_latency_ms=68.71851099999999 row_skew_ms=8.333
+2026-10-14T08:15:36.044464Z  INFO ball_tracker::clock_sync: camera clock camera_id=0 synced=true fallback=false timestamp_source=Unknown clock_offset_ms=-1791960500327.7476 round_trip_ms=4.043652 min_latency_ms=68.653031 row_skew_ms=8.333
