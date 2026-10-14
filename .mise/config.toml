@@ -51,11 +51,23 @@ description = "Create new screen in touchpanel"
 
 [tasks."touchpanel:view"]
 run = [
-    "echo '{\"nav-route\":\"UiNavRoute.{{ usage.screen_name }}\"}' > ../.states/data.json",
+    '''
+        JSON='{"nav-route": "UiNavRoute.{{ usage.screen_name }}"'
+        if [ "${usage_show_topbar:-false}" = "true" ]; then
+            JSON="${JSON},\"show-topbar\": true";
+        fi
+        if [ "${usage_show_backbutton:-false}" = "true" ]; then
+            JSON="${JSON},\"show-backbutton\": true";
+        fi
+        JSON="${JSON}}"
+        echo $JSON > ../.states/data.json
+    ''',
     "../../slint/target/debug/slint-viewer --style 'struckout' --auto-reload --load-data ../.states/data.json ui/app-window.slint"
 ]
 usage = '''
     arg "<screen-name>" help="Name of screen to show"
+    flag "--show-topbar" help="TopBarを表示する"
+    flag "--show-backbutton" help="戻るボタンを表示する"
 '''
 dir = "touchpanel/"
 description = "touchpanelの画面を表示する"
