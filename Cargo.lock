@@ -6972,7 +6972,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stern"
 version = "0.1.0"
-source = "git+https://github.com/Tk75Attractions/stern#517a044fbb3dab6d1c5b8cb3f700dfc121e2ed9b"
+source = "git+https://github.com/Tk75Attractions/stern#3a659c6f9fbbf6f1a2408687c07dc4b92fa2f171"
 dependencies = [
  "async-executor",
  "async-io",
@@ -6992,7 +6992,7 @@ dependencies = [
 [[package]]
 name = "stern-macros"
 version = "0.1.0"
-source = "git+https://github.com/Tk75Attractions/stern#517a044fbb3dab6d1c5b8cb3f700dfc121e2ed9b"
+source = "git+https://github.com/Tk75Attractions/stern#3a659c6f9fbbf6f1a2408687c07dc4b92fa2f171"
 dependencies = [
  "heck",
  "proc-macro2",
