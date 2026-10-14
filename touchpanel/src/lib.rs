@@ -52,14 +52,6 @@ impl Application {
             }
         })
     }
-
-    fn click_backbutton_callback_setter(&self) -> impl Fn(Box<dyn FnMut()>) + 'static {
-        let ui = self.ui.as_weak();
-        move |func| {
-            let ui = ui.unwrap();
-            ui.on_click_backbutton(func);
-        }
-    }
 }
 
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
@@ -124,6 +116,12 @@ pub fn run_main() {
         move |route| {
             let ui = ui.unwrap();
             ui.set_nav_route(route);
+        }
+    });
+    ui.on_click_backbutton({
+        let nc = nav_controller.clone();
+        move || {
+            nc.move_back();
         }
     });
 
