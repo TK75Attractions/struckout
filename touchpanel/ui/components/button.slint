@@ -179,6 +179,7 @@ export component TwoColorOutlinedButton {
     out property <bool> pressed: self.enabled && base.pressed;
     in-out property <bool> checked;
     private property <brush> comp_outline: @conic-gradient(StruckoutPalette.ref_secondary_60 0deg, StruckoutPalette.ref_secondary_60 60deg, StruckoutPalette.ref_primary_60 60deg, StruckoutPalette.ref_primary_60 240deg, StruckoutPalette.ref_secondary_60 240deg,);
+    private property <brush> comp_container: StruckoutPalette.ref_grey_10;
     private property <brush> comp_text: StruckoutPalette.ref_grey_80;
 
     callback clicked;
@@ -216,8 +217,8 @@ export component TwoColorOutlinedButton {
         border-radius: 20px;
         border-color: comp_outline;
         border-width: Outline.level2;
-        background: transparent;
-        drop-shadow-color: transparent;
+        background: comp_container;
+        drop-shadow-color: comp_container;
         drop-shadow-blur: Elevation.level0;
         drop-shadow-offset-y: 1px;
     }
