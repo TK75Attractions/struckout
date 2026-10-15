@@ -1,7 +1,7 @@
 import { Button, StyleMetrics } from "std-widgets.slint";
 import { Icons } from "icons.slint";
 import { StruckoutPalette, FontSettings } from "styling.slint";
-import { PrimarySquareButton } from "components/button.slint";
+import { SquareButton } from "components/button.slint";
 
 component RightArrow inherits Path {
     MoveTo {
@@ -119,8 +119,9 @@ export component TopBar {
     HorizontalLayout {
         alignment: LayoutAlignment.space-between;
 
-        if show-backbutton: PrimarySquareButton {
+        if show-backbutton: SquareButton {
             icon: Icons.arrow-back;
+            filled: true;
             accessible-id: "topbar__back-button";
             clicked => {
                 click-backbutton();
