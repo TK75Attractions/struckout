@@ -8,9 +8,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "#[stern::adopter]",
         );
     let profile = std::env::var("PROFILE").expect("'PROFILE' should be set by cargo");
-    let config = (profile == "debug")
-        .then_some(config.with_debug_info(true))
-        .unwrap_or(config);
+    let config = if profile == "debug" {
+        config.with_debug_info(true)
+    } else {
+        config
+    };
 
     slint_build::compile_with_config("./app-window.slint", config)?;
 
