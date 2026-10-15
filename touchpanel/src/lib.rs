@@ -14,6 +14,7 @@ use crate::{
 };
 
 pub mod data;
+mod keyboard;
 pub mod presentation;
 
 // provided by build.rs

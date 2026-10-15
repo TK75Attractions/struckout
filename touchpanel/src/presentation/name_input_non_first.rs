@@ -14,8 +14,11 @@ use touchpanel_ui::{
 };
 use tracing::instrument;
 
-use super::pop_player_name;
-use crate::{Application, Context, NavController, data::RequestError};
+use crate::{
+    Application, Context, NavController,
+    data::RequestError,
+    keyboard::{keyboard_modify, pop_player_name},
+};
 
 touchpanel_ui::define_name_input_non_first_mapper! {}
 viewmodel_rc!(NameInputNonFirstViewModel<Context,SlintExecutor>, NameInputNonFirstAdopter);
@@ -117,13 +120,15 @@ where
     }
 
     #[instrument]
-    fn on_switch_keyboard_mode(&mut self) {
-        let old_mode = self.state.keyboard_mode.get();
-        let new_mode = match old_mode {
-            KeyBoardMode::Hiragana => KeyBoardMode::Katakana,
-            KeyBoardMode::Katakana => KeyBoardMode::Hiragana,
-        };
-        self.state.keyboard_mode.set(new_mode);
+    fn on_set_keyboard_mode(&mut self, mode: KeyBoardMode) {
+        self.state.keyboard_mode.set(mode);
+    }
+
+    #[instrument]
+    fn on_modify(&mut self) {
+        let name = self.state.player_name_text.get_ref().clone();
+        let modified = keyboard_modify(name);
+        self.state.player_name_text.set(modified.to_shared_string());
     }
 }
 

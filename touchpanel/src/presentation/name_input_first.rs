@@ -10,8 +10,11 @@ use tokio_util::sync::CancellationToken;
 use tonic::Status;
 use tracing::{Instrument, debug, instrument, trace};
 
-use super::pop_player_name;
-use crate::{Application, Context, NavController, data::RequestError};
+use crate::{
+    Application, Context, NavController,
+    data::RequestError,
+    keyboard::{keyboard_modify, pop_player_name},
+};
 
 use touchpanel_ui::{
     KeyBoardMode, NameInputFirstPropertyMappers, NameInputFirstStates,
@@ -155,15 +158,9 @@ where
     C: PlayerRepository,
     E: ForegroundExecutor,
 {
-    fn on_switch_keyboard_mode(&mut self) {
-        trace!("NameInputViewModel::on_switch_keyboard_mode");
-
-        let old_mode = self.state.keyboard_mode.get();
-        let new_mode = match old_mode {
-            KeyBoardMode::Hiragana => KeyBoardMode::Katakana,
-            KeyBoardMode::Katakana => KeyBoardMode::Hiragana,
-        };
-        self.state.keyboard_mode.set(new_mode);
+    fn on_set_keyboard_mode(&mut self, mode: KeyBoardMode) {
+        trace!("NameInputViewModel::on_set_keyboard_mode");
+        self.state.keyboard_mode.set(mode);
     }
 
     fn on_push_character(&mut self, char: SharedString) {
@@ -209,6 +206,13 @@ where
             }
         })
         .unwrap();
+    }
+
+    #[instrument]
+    fn on_modify(&mut self) {
+        let name = self.state.player_name_text.get_ref().clone();
+        let modified = keyboard_modify(name);
+        self.state.player_name_text.set(modified.to_shared_string());
     }
 }
 

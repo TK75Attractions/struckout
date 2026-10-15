@@ -1,17 +1,17 @@
 import {
     KeyBoardMode,
-    KeyboardBottomBar,
-    KeyboardBody,
+    Keyboard,
 } from "../components/keyboard.slint";
 
 global Adopter {
     in property <string> player-name-text;
     in property <KeyBoardMode> keyboard-mode;
     in property <string> error-msg;
-    callback switch-keyboard-mode();
+    callback set-keyboard-mode(mode: KeyBoardMode);
     callback push-character(char: string);
     callback remove-character();
     callback submit-name();
+    callback modify();
 }
 
 export component NameInputNonFirstScreen inherits Rectangle {
@@ -19,8 +19,8 @@ export component NameInputNonFirstScreen inherits Rectangle {
         alignment: LayoutAlignment.stretch;
 
         Rectangle {
-            border-color: black;
-            border-width: 4px;
+            // border-color: black;
+            // border-width: 4px;
 
             Text {
                 text: Adopter.player-name-text;
@@ -35,26 +35,24 @@ export component NameInputNonFirstScreen inherits Rectangle {
             }
         }
 
-        KeyboardBody {
-            spacing: 4px;
+        Keyboard {
             mode: Adopter.keyboard-mode;
+            height: 50%;
 
-            text-added(text) => {
-                Adopter.push-character(text);
+            set-keyboard-mode(mode) => {
+                Adopter.set-keyboard-mode(mode);
             }
-        }
-
-        KeyboardBottomBar {
-            switch-keyboard-mode => {
-                Adopter.switch-keyboard-mode();
-            }
-
-            click-backspace => {
+            backspace() => {
                 Adopter.remove-character();
             }
-
-            submit-name => {
+            submit() => {
                 Adopter.submit-name();
+            }
+            modify() => {
+                Adopter.modify();
+            }
+            char-added(char) => {
+                Adopter.push-character(char);
             }
         }
     }
