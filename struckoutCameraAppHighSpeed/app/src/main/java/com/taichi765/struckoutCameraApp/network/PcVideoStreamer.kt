@@ -180,6 +180,8 @@ class PcVideoStreamer(
                     lastConfigCheck = now
                     if (configRepository.detectionOutputKind.value != DetectionOutputKind.NETWORK) return
                     val cameraId = currentCameraId() ?: throw IOException("lost the camera id")
+                    // ball_tracker につなぎ直して番号が変わったら、新しい番号で送り直す
+                    if (cameraId != config.cameraId) throw IOException("the camera id changed")
                     val latest = configFactory(cameraId) ?: continue
                     // 範囲や焦点距離を設定画面で変えたら、送り直す
                     if (latest != config) {

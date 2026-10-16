@@ -8,6 +8,7 @@ import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
+import com.taichi765.struckoutCameraApp.network.DeviceIdentity
 import com.taichi765.struckoutCameraApp.network.NetworkManager
 import com.taichi765.struckoutCameraApp.network.types.tcpIsConnected
 import com.taichi765.struckoutCameraApp.proto.cameraPose
@@ -65,7 +66,8 @@ class RemoteCommands @Inject constructor() {
  * adb shell am broadcast -a com.taichi765.struckoutCameraApp.remote.STATUS -p <アプリ ID>
  * ```
  *
- * 結果は broadcast の結果の文字列 (`am broadcast` が `data="..."` として表示する) で返す。
+ * 結果は broadcast の結果の文字列 (`am broadcast` が `data="..."` として表示する) で返す。SET_CONFIG と STATUS は
+ * 端末の識別子 (`device_id=...`、[DeviceIdentity]) も返す。
  * adb のシェル (DUMP の権限を持つ) からしか送れないよう、マニフェストで権限をかけてある。
  */
 /**
@@ -87,6 +89,9 @@ class RemoteControlReceiver : InjectableBroadcastReceiver() {
 
     @Inject
     lateinit var commands: RemoteCommands
+
+    @Inject
+    lateinit var deviceIdentity: DeviceIdentity
 
     @Inject
     @ApplicationScope
@@ -156,13 +161,16 @@ class RemoteControlReceiver : InjectableBroadcastReceiver() {
             configRepository.updateDetectionArea(DetectionArea(v[0], v[1], v[2], v[3]))
             applied += "area=${v.joinToString(",")}"
         }
-        return if (applied.isEmpty()) "error: nothing to set" else "ok: " + applied.joinToString(" ")
+        // PC はこの device_id を scripts/cameras.json に書き、ball_tracker が端末を見分けるのに使う
+        return if (applied.isEmpty()) "error: nothing to set" else
+            "ok: " + applied.joinToString(" ") + " device_id=${deviceIdentity.deviceId}"
     }
 
     private suspend fun status(): String {
         val pose = configRepository.cameraPose.first()
         val area = configRepository.detectionArea.value
         return listOf(
+            "device_id=${deviceIdentity.deviceId}",
             "output=${configRepository.detectionOutputKind.value}",
             "tcp=${if (networkManager.state.first().tcpIsConnected()) "connected" else "disconnected"}",
             "camera_screen=${commands.cameraScreenActive}",

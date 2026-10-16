@@ -13,14 +13,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +43,8 @@ class NetworkManager @Inject constructor(
     private val _lastTcpError = MutableStateFlow<TcpSession.ConnectionError?>(null)
     private val _dataConnection = MutableStateFlow<DataConnection?>(null)
     private val _lastDataConnError = MutableStateFlow<DataConnectionError?>(null)
+    private val tcpMutex = Mutex()
+    private val dataMutex = Mutex()
 
     val currentTcpSession: TcpSession?
         get() = _tcpSession.value
@@ -97,55 +99,30 @@ class NetworkManager @Inject constructor(
 
     fun start() {
         Timber.tag(TAG).i("ConnectionManager started")
-        applicationScope.launch {
-            watchTcpConnection()
-            watchDataConnectionStatus()
+        applicationScope.launch { superviseTcpSession() }
+        applicationScope.launch { superviseDataConnection() }
+    }
+
+    /**
+     * 検出の送り先が Network のあいだ、ball_tracker とのつながりを保つ。切れたり、ball_tracker がまだ動いて
+     * いなかったりしたら、[RETRY_INTERVAL_MILLIS] おきにつなぎ直す。PC 側をいつ起動・再起動してもよい。
+     */
+    private suspend fun superviseTcpSession() {
+        while (true) {
+            if (configRepository.detectionOutputKind.value == DetectionOutputKind.NETWORK) {
+                retryTcpConnection()
+            }
+            delay(RETRY_INTERVAL_MILLIS)
         }
     }
 
-    private fun CoroutineScope.watchTcpConnection() {
-        combine(
-            _tcpSession,
-            configRepository.detectionOutputKind
-        ) { tcpSession, detectionOutputKind ->
-            Pair(
-                detectionOutputKind == DetectionOutputKind.NETWORK &&
-                        tcpSession == null,
-                detectionOutputKind == DetectionOutputKind.NETWORK && tcpSession != null && tcpSession.state.value !is SessionState.Connected
-            )
-        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
-            if (shouldCreateInstance) {
-                _tcpSession.value = tcpSessionFactory.create()
+    private suspend fun superviseDataConnection() {
+        while (true) {
+            if (configRepository.detectionOutputKind.value == DetectionOutputKind.NETWORK) {
+                retryDataConnection()
             }
-            if (shouldConnect) {
-                val error = _tcpSession.value!!.connect()
-                if (error != null) {
-                    _lastTcpError.value = error
-                }
-            }
-        }.launchIn(this)
-    }
-
-    private fun CoroutineScope.watchDataConnectionStatus() {
-        combine(
-            _dataConnection,
-            configRepository.detectionOutputKind
-        ) { dataConnection, detectionOutputKind ->
-            Pair(
-                detectionOutputKind == DetectionOutputKind.NETWORK && dataConnection == null,
-                detectionOutputKind == DetectionOutputKind.NETWORK && dataConnection != null && !dataConnection.isConnected.value
-            )
-        }.distinctUntilChanged().onEach { (shouldCreateInstance, shouldConnect) ->
-            if (shouldCreateInstance) {
-                _dataConnection.value = dataConnectionFactory.create()
-            }
-            if (shouldConnect) {
-                val error = _dataConnection.value!!.connect()
-                if (error != null) {
-                    _lastDataConnError.value = error
-                }
-            }
-        }.launchIn(this)
+            delay(RETRY_INTERVAL_MILLIS)
+        }
     }
 
     /**
@@ -164,57 +141,41 @@ class NetworkManager @Inject constructor(
         }
     }
 
-    suspend fun retryTcpConnection() {
-        val session = _tcpSession.value ?: run {
-            Timber.tag(TAG).d("tcpSession was null, creating new one")
-            _tcpSession.value = tcpSessionFactory.create()
-            _tcpSession.value!!
-        }
-        if (session.state.value is SessionState.Connected) {
-            Timber.tag(TAG)
-                .w("retryTcpConnection(): retryConnection is called when TCP is already connected")
-            return
-        }
+    /**
+     * つながっていなければ、新しい [TcpSession] でつなぎ直す ([TcpSession] は 1 回しかつなげない)。
+     */
+    suspend fun retryTcpConnection() = tcpMutex.withLock {
+        val current = _tcpSession.value
+        if (current != null && current.state.value is SessionState.Connected) return@withLock
+        current?.close()
+        val session = tcpSessionFactory.create()
+        _tcpSession.value = session
         val error = session.connect()
         if (error != null) {
-            _lastTcpError.value = error
+            if (_lastTcpError.value == null) {
+                Timber.tag(TAG).i("cannot reach ball_tracker; retrying every %d ms", RETRY_INTERVAL_MILLIS)
+            }
+        } else {
+            Timber.tag(TAG).i("connected to ball_tracker")
         }
+        _lastTcpError.value = error
     }
 
-    suspend fun retryDataConnection() {
-        val dataConn = _dataConnection.value ?: run {
-            Timber.tag(TAG).d("retryDataConnection(): dataConnection was null, creating new one")
-            _dataConnection.value = dataConnectionFactory.create()
-            _dataConnection.value!!
+    suspend fun retryDataConnection() = dataMutex.withLock {
+        val dataConn = _dataConnection.value ?: dataConnectionFactory.create().also {
+            _dataConnection.value = it
         }
-        if (dataConn.isConnected.value) {
-            Timber.tag(TAG).w("retryDataConnection() is called but it's already connected")
-        }
-        val error = dataConn.connect()
-        if (error != null) {
-            _lastDataConnError.value = error
-        }
+        if (dataConn.isConnected.value) return@withLock
+        _lastDataConnError.value = dataConn.connect()
     }
 
     /**
      * TODO: 若干責務外かも
      */
     suspend fun pushDetection(data: DetectionData, sessionID: Uuid) {
-        val session = _tcpSession.value
-        check(session != null) {
-            "TcpSession instance must be created before sending detection via network"
-        }
-        val sessionState = session.state.value
-        check(sessionState is SessionState.Connected) {
-            "TcpSession must be initialized before sending detection via network"
-        }
-        val dataConnection = _dataConnection.value
-        check(dataConnection != null) {
-            "DataConnection instance must be created before sending detection via network"
-        }
-        check(dataConnection.isConnected.value) {
-            "DataConnection must be initialized before sending detection via network"
-        }
+        // つながっていないあいだの検出は捨てる (つなぎ直すのは superviseTcpSession と superviseDataConnection)
+        val sessionState = _tcpSession.value?.state?.value as? SessionState.Connected ?: return
+        val dataConnection = _dataConnection.value?.takeIf { it.isConnected.value } ?: return
 
         val packet = detectionsPacket {
             cameraId = sessionState.cameraID.toInt()
@@ -233,5 +194,8 @@ class NetworkManager @Inject constructor(
 
     companion object {
         const val TAG = "ConnectionManager"
+
+        /** ball_tracker につながらないとき、つなぎ直す間隔 */
+        const val RETRY_INTERVAL_MILLIS = 2000L
     }
 }

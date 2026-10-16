@@ -4,6 +4,8 @@ import android.os.Build
 import android.os.SystemClock
 import com.taichi765.struckoutCameraApp.camera.CameraClockInfo
 import com.taichi765.struckoutCameraApp.camera.CameraClockInfoHolder
+import com.taichi765.struckoutCameraApp.camera.DetectionArea
+import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.network.TcpSession.ConnectionError
 import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.proto.TcpClientPacketKt
@@ -36,10 +38,14 @@ import javax.inject.Inject
 /**
  * [NetworkManager]がインスタンスのライフサイクルを管理しているので他のところで
  * 直接使うべからず
+ *
+ * 1 つのインスタンスで接続するのは 1 回だけ。切れたら [state] が [SessionState.DisConnected] に戻るので、
+ * [NetworkManager] が新しいインスタンスを作ってつなぎ直す。
  */
 class TcpSessionImpl(
-    cameraPoseDataSource: CameraPoseDataSource,
+    private val configRepository: ConfigStoreRepository,
     cameraClockInfo: CameraClockInfoHolder,
+    private val deviceIdentity: DeviceIdentity,
 ) : TcpSession, SessionStateProvider, Closeable {
     /**
      * [outputActor]や[CameraPoseDataSource]のライフサイクルをApplicationやViewModelではなく
@@ -75,10 +81,10 @@ class TcpSessionImpl(
 
 
     init {
-        combine(cameraPoseDataSource.cameraPose, _connState) { location, connState ->
+        combine(configRepository.cameraPose, _connState) { location, connState ->
             if (connState !is InternalSessionState.Connected) {
                 Timber.tag(TAG)
-                    .w("camera location was updated but cannot sync change to TCP server: TCP is not connected")
+                    .d("camera location was updated but cannot sync change to TCP server: TCP is not connected")
                 return@combine
             }
             Timber.tag(TAG).d("updating cameraLocation")
@@ -89,24 +95,31 @@ class TcpSessionImpl(
 
     override suspend fun connect(): ConnectionError? {
         return withContext(Dispatchers.IO) {
-            Timber.tag(TAG).i("connecting to ball_tracker")
+            Timber.tag(TAG).d("connecting to ball_tracker")
             val socket = try {
                 val ret = Socket(TCP_REMOTE_ADDRESS, TCP_REMOTE_PORT)
                 // 時刻合わせは往復時間で精度が決まるので、返事をためずにすぐ送る。
                 ret.tcpNoDelay = true
-                Timber.tag(TAG).i("TCP connection has been established successfully")
                 ret
             } catch (e: IOException) {
-                Timber.tag(TAG).w("failed to connect to TCP server: $e")
+                Timber.tag(TAG).d("failed to connect to TCP server: $e")
                 return@withContext ConnectionError.TcpConnectionFailed(e)
             }
 
-            Timber.tag(TAG).i("initializing states via TCP")
             val packet = try {
-                val inputStream = socket.getInputStream()
-                readPacket(inputStream, CameraBallTracker.TcpServerPacket::parseFrom)
+                // 先に名乗る。ball_tracker はこれで端末を見分け、いつも同じ camera_id を振る
+                writePacket(socket.getOutputStream(), tcpClientPacket {
+                    hello = TcpClientPacketKt.hello {
+                        deviceId = deviceIdentity.deviceId
+                        deviceModel = Build.MODEL
+                        appVariant = APP_VARIANT
+                    }
+                })
+                readPacket(socket.getInputStream(), CameraBallTracker.TcpServerPacket::parseFrom)
             } catch (e: IOException) {
-                Timber.tag(TAG).w("failed to initialize connection states: $e")
+                // adb reverse は、PC で ball_tracker が動いていなくても接続をいったん受けるので、ここで分かる
+                Timber.tag(TAG).d("ball_tracker did not answer: $e")
+                runCatching { socket.close() }
                 return@withContext ConnectionError.InitializationFailed(
                     ConnectionError.InitializationError.ReadPacketFailed(
                         e
@@ -121,24 +134,25 @@ class TcpSessionImpl(
                         socket,
                         cameraId,
                     )
-                    Timber.tag(TAG).i("successfully initialized connection states")
+                    Timber.tag(TAG).i("connected to ball_tracker as camera %d", cameraId.toInt())
                 }
 
                 else -> {
                     Timber.tag(TAG)
                         .w("received invalid TCP packet from server")
+                    runCatching { socket.close() }
                     return@withContext ConnectionError.InitializationFailed(ConnectionError.InitializationError.InvalidPacket)
                 }
             }
 
             scope.launch {
-                outputActor(socket.getOutputStream())
+                outputActor(socket, socket.getOutputStream())
             }
             scope.launch {
-                cameraInfoActor(socket.getOutputStream())
+                cameraInfoActor(socket, socket.getOutputStream())
             }
             scope.launch {
-                inputActor(socket.getInputStream(), socket.getOutputStream())
+                inputActor(socket, socket.getInputStream(), socket.getOutputStream())
             }
             return@withContext null
         }
@@ -147,7 +161,7 @@ class TcpSessionImpl(
     override fun close() {
         val curState = _connState.value
         if (curState is InternalSessionState.Connected) {
-            curState.socket.close()
+            runCatching { curState.socket.close() }
         } else {
             Timber.tag(TAG).d("TcpSessionRepository.close() is called, but TCP is not connected")
         }
@@ -155,29 +169,44 @@ class TcpSessionImpl(
     }
 
     /**
+     * 接続が切れた。[NetworkManager] がつなぎ直す。
+     */
+    private fun onDisconnected(socket: Socket, cause: Exception) {
+        val curState = _connState.value
+        if (curState !is InternalSessionState.Connected || curState.socket !== socket) return
+        Timber.tag(TAG).i("disconnected from ball_tracker: $cause")
+        runCatching { socket.close() }
+        _connState.value = InternalSessionState.DisConnected
+    }
+
+    /**
      * [outChannel]から[OutputAction]を読んでTCPサーバーに色々送る
      */
-    private suspend fun outputActor(output: OutputStream) {
-        for (action in outChannel) {
-            val curState = _connState.value
-            check(curState is InternalSessionState.Connected)
-            when (action) {
-                is OutputAction.UpdateCameraLocation -> writeMutex.withLock {
-                    writePacket(output, tcpClientPacket {
-                        this.updateCameraPose = TcpClientPacketKt.updateCameraPose {
-                            cameraId = curState.cameraID.toInt()
-                            cameraPose = action.location
-                        }
-                    })
+    private suspend fun outputActor(socket: Socket, output: OutputStream) {
+        try {
+            for (action in outChannel) {
+                val curState = _connState.value
+                if (curState !is InternalSessionState.Connected) continue
+                when (action) {
+                    is OutputAction.UpdateCameraLocation -> writeMutex.withLock {
+                        writePacket(output, tcpClientPacket {
+                            this.updateCameraPose = TcpClientPacketKt.updateCameraPose {
+                                cameraId = curState.cameraID.toInt()
+                                cameraPose = action.location
+                            }
+                        })
+                    }
                 }
             }
+        } catch (e: IOException) {
+            onDisconnected(socket, e)
         }
     }
 
     /**
      * カメラの設定を、接続した直後と変わるたびにサーバーに知らせる。
      */
-    private suspend fun cameraInfoActor(output: OutputStream) {
+    private suspend fun cameraInfoActor(socket: Socket, output: OutputStream) {
         try {
             for (info in cameraInfoChannel) {
                 val curState = _connState.value
@@ -205,40 +234,67 @@ class TcpSessionImpl(
             }
         } catch (e: IOException) {
             Timber.tag(TAG).w("failed to send camera info: $e")
+            onDisconnected(socket, e)
         }
     }
 
     /**
-     * サーバーからの時刻合わせの要求に答える。
+     * サーバーからの要求に答える。
      *
-     * サーバーは、要求を送ってから返事が届くまでの往復時間と、ここで返す端末の時刻から、端末の時計と
-     * サーバーの時計の差を求める。時刻は端末を再起動するまで単調に進む時計で返す
-     * (壁時計は時刻の修正で飛ぶ)。時刻合わせに対応していないサーバーは要求を送ってこないので、
-     * そのときは何もしない。
+     * - 時刻合わせ: サーバーは、要求を送ってから返事が届くまでの往復時間と、ここで返す端末の時刻から、端末の時計と
+     *   サーバーの時計の差を求める。時刻は端末を再起動するまで単調に進む時計で返す
+     *   (壁時計は時刻の修正で飛ぶ)。時刻合わせに対応していないサーバーは要求を送ってこないので、
+     *   そのときは何もしない。
+     * - カメラの設定: PC が持っている位置と向き、焦点距離、検出の範囲を、この端末の設定に入れる。
+     *
+     * 読めなくなったら (ball_tracker が止まったら) 接続が切れたとみなす。
      */
-    private suspend fun inputActor(input: InputStream, output: OutputStream) {
+    private suspend fun inputActor(socket: Socket, input: InputStream, output: OutputStream) {
         try {
             while (true) {
                 val packet = readPacket(input, CameraBallTracker.TcpServerPacket::parseFrom)
                 val receivedAt = SystemClock.elapsedRealtimeNanos()
-                if (packet.dataCase != CameraBallTracker.TcpServerPacket.DataCase.TIME_SYNC_REQUEST) {
-                    continue
-                }
-                writeMutex.withLock {
-                    // 送る直前の時刻を入れたいので、ロックを取ってから読む。
-                    writePacket(output, tcpClientPacket {
-                        this.timeSyncResponse = TcpClientPacketKt.timeSyncResponse {
-                            sequence = packet.timeSyncRequest.sequence
-                            receiveElapsedRealtimeNs = receivedAt
-                            sendElapsedRealtimeNs = SystemClock.elapsedRealtimeNanos()
-                            sendUptimeNs = System.nanoTime()
-                        }
-                    })
+                when (packet.dataCase) {
+                    CameraBallTracker.TcpServerPacket.DataCase.TIME_SYNC_REQUEST -> writeMutex.withLock {
+                        // 送る直前の時刻を入れたいので、ロックを取ってから読む。
+                        writePacket(output, tcpClientPacket {
+                            this.timeSyncResponse = TcpClientPacketKt.timeSyncResponse {
+                                sequence = packet.timeSyncRequest.sequence
+                                receiveElapsedRealtimeNs = receivedAt
+                                sendElapsedRealtimeNs = SystemClock.elapsedRealtimeNanos()
+                                sendUptimeNs = System.nanoTime()
+                            }
+                        })
+                    }
+
+                    // 設定の保存は時刻合わせの返事を遅らせないよう、別に行う
+                    CameraBallTracker.TcpServerPacket.DataCase.CAMERA_SETTINGS ->
+                        scope.launch { applySettings(packet.cameraSettings) }
+
+                    else -> Unit
                 }
             }
         } catch (e: IOException) {
-            Timber.tag(TAG).i("stopped reading from TCP server: $e")
+            onDisconnected(socket, e)
         }
+    }
+
+    private suspend fun applySettings(settings: CameraBallTracker.TcpServerPacket.CameraSettings) {
+        if (settings.hasCameraPose()) {
+            configRepository.updateCameraPose(settings.cameraPose)
+        }
+        configRepository.updateFocalLengthRatio(settings.focalLengthRatio.coerceAtLeast(0.0))
+        if (settings.hasDetectionArea()) {
+            val area = settings.detectionArea
+            if (DetectionArea.isValid(area.leftPercent, area.topPercent, area.rightPercent, area.bottomPercent)) {
+                configRepository.updateDetectionArea(
+                    DetectionArea(area.leftPercent, area.topPercent, area.rightPercent, area.bottomPercent)
+                )
+            } else {
+                Timber.tag(TAG).w("ignored an invalid detection area from ball_tracker: $area")
+            }
+        }
+        Timber.tag(TAG).i("applied the camera settings from ball_tracker")
     }
 
     /**
@@ -259,11 +315,12 @@ class TcpSessionImpl(
     }
 
     class Factory @Inject constructor(
-        private val cameraPoseDataSource: CameraPoseDataSource,
+        private val configRepository: ConfigStoreRepository,
         private val cameraClockInfo: CameraClockInfoHolder,
+        private val deviceIdentity: DeviceIdentity,
     ) : TcpSession.Factory {
         override fun create(): TcpSession {
-            return TcpSessionImpl(cameraPoseDataSource, cameraClockInfo)
+            return TcpSessionImpl(configRepository, cameraClockInfo, deviceIdentity)
         }
     }
 
@@ -273,5 +330,7 @@ class TcpSessionImpl(
         const val TCP_REMOTE_ADDRESS = "127.0.0.1"
 
         const val TCP_REMOTE_PORT = 6060
+
+        const val APP_VARIANT = "highspeed"
     }
 }

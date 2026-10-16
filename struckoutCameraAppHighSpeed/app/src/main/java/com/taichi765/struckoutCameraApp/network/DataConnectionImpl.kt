@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.IOException
@@ -46,6 +48,9 @@ class DataConnectionImpl : DataConnection {
     override suspend fun connect(): DataConnectionError? {
         return withContext(Dispatchers.IO) {
             Timber.tag(TAG).i("connecting to ball_tracker")
+            // 前の接続が残っていれば閉じる
+            (_connState.value as? ConnectionState.Connected)?.let { runCatching { it.socket.close() } }
+            _connState.value = ConnectionState.DisConnected
             try {
                 val socket = Socket(REMOTE_ADDRESS, REMOTE_PORT)
                 // 検出結果は小さなパケットなので、ためずにすぐ送る。
@@ -61,16 +66,25 @@ class DataConnectionImpl : DataConnection {
         }
     }
 
+    /**
+     * 送れなかったら (ball_tracker が止まったら) 切れたとみなす。[NetworkManager] がつなぎ直す。
+     * 検出はフレームごとに別のコルーチンから送られるので、パケットが混ざらないよう 1 つずつ書く。
+     */
     override suspend fun sendPacket(packet: CameraBallTracker.DetectionsPacket) {
-        val curState = _connState.value
-        check(curState is ConnectionState.Connected) {
-            "TCP must be connected before sending packet"
-        }
+        val curState = _connState.value as? ConnectionState.Connected ?: return
 
-        withContext(Dispatchers.IO) {
-            writePacket(curState.output, packet)
+        writeMutex.withLock {
+            try {
+                writePacket(curState.output, packet)
+            } catch (e: IOException) {
+                Timber.tag(TAG).i("lost the connection to ball_tracker: $e")
+                runCatching { curState.socket.close() }
+                _connState.compareAndSet(curState, ConnectionState.DisConnected)
+            }
         }
     }
+
+    private val writeMutex = Mutex()
 
     object Factory : DataConnection.Factory {
         override fun create(): DataConnection {

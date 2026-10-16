@@ -58,15 +58,16 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         }
     )
 
+    // 既定は Network。設定が消えても ball_tracker につなぎに行き、位置などは ball_tracker から受け取り直せる
     override val detectionOutputKind: StateFlow<DetectionOutputKind> =
         context.dataStore.data.map { preferences ->
             preferences[DETECTION_OUTPUT_KIND]?.let {
                 DetectionOutputKind.valueOf(it)
-            } ?: DetectionOutputKind.LOCAL
+            } ?: DetectionOutputKind.NETWORK
         }.stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
-            initialValue = DetectionOutputKind.LOCAL
+            initialValue = DetectionOutputKind.NETWORK
         )
 
     override val detectionArea: StateFlow<DetectionArea> =
