@@ -177,6 +177,7 @@ starting TCP listener
 | `--video-snapshot-dir <dir>` | カメラごとに、PC で解析し始めた最初の画像を BMP で保存する。向きの確認用 (9 章) |
 | `--video-record-dir <dir>` | カメラから受け取った動画を保存する。`replay_video` で解析と追跡をやり直せる (`scripts/start-pc1.ps1` は既定で保存する) |
 | `--report-delay-ms <ms>` | 着弾を、予測した着弾時刻の何 ms 後に報告するか (負なら前、既定 -30)。撮影から届くまでの遅れ以上にすると、着弾の直前の視線を使えて精度が上がる。描画はそのぶん遅れる (`recordings/2026-10-16_experiment/notes.md`) |
+| `--cameras` | スマホごとの設定 (`scripts/cameras.json`)。`device_id` で端末を見分け、つないだ順によらず書いた順の camera_id (0, 1, ...) を振る。位置と向きは、スマホが送る値ではなくここに書いた値を使い、焦点距離などと一緒にスマホにも送る (6.1) |
 | `--auto-time-trim` | 右のカメラの時刻の補正を、報告した投球 (直近 9 球の中央値) から自動で決めて `--time-trim-ms` に足す。付けないときは決めた値をログに出すだけ。カメラの向きを較正してから使う (向きがずれていると、その誤差まで時刻で吸収する) |
 | `--video-hwaccel <方式>` | 動画のデコードに使う GPU。既定の `auto` は、その PC で使えるものを選ぶ (Windows は `d3d11va`→`cuda`→`qsv`→`dxva2`)。`none` で CPU。選んだ方式は起動時のログ (`decoding video on the GPU`) に出る。検出の結果は CPU と同じ。**電源につないだ状態での遅れはまだ確かめていない**。おかしければ `none` に戻す |
 | `--detection-center <box|centroid>` | PC で解析するとき、視線を作る検出の位置。`box` は枠の中心を整数に切り捨てる (カメラアプリと同じ、既定)、`centroid` は前景の画素の重心。2026-10-16 の録画で centroid のほうが少しよかった (1.66 → 1.52 cm) |
@@ -260,11 +261,14 @@ Git Bash が使えるなら `mise run adb-reverse` でも同じ (`scripts/adb-re
 
 カメラを設置したあとは画面に触れられないので、設定、カメラ画面を開く、「Save frame」を PC から adb で行う
 (`scripts/camera-remote.ps1`)。端末ごとの設定は `scripts/cameras.json` に書く (シリアル、出力先、焦点距離、位置と向き)。
-ball_tracker はつないだ順に camera_id を振るので、`open` は `cameras.json` に書いた順に 1 台ずつ開く。
+`config` は、端末が返す識別子 (`device_id`、アプリの ANDROID_ID) を `cameras.json` に書き込む。ball_tracker を
+`--cameras scripts\cameras.json` で起動すると、これで端末を見分けて、`cameras.json` の順の camera_id を振り、
+位置と向き、焦点距離、検出の範囲を端末に送る。そのため、開く順番も、アプリの設定が消えることも気にしなくてよい。
+端末ごとに 1 回 (アプリを別の PC で署名し直したときも) `config` を実行しておく (`run-pc1.ps1` は毎回実行する)。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 config       # 設定を入れる
-powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 open         # ball_tracker を起動してから
+powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 config       # 設定を入れ、device_id を記録する
+powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 open         # ball_tracker と、どちらが先でもよい
 powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 status       # tcp=connected camera_screen=true になったか
 powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 save-frame   # 画像を recordings\calibration\<シリアル> に取り込む
 ```
@@ -345,7 +349,38 @@ ball_tracker は、projector には的の面の上の位置 `(y, z)` を送る (
 
 ## 9. 起動する
 
-**順番に意味がある。** 再接続の仕組みが無いので、途中で落ちたら頭からやり直す。
+### いちばん簡単な起動 (2026-10-16 から)
+
+スマホ 2 台を USB でつなぎ、PC① で次の 1 つを実行する。PC② では `scripts\run-pc2.ps1` を実行する (`docs/setup_pc2.md`)。
+PC① と PC② のどちらを先に起動してもよい。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run-pc1.ps1
+```
+
+`run-pc1.ps1` は次を順に行い、それぞれ ball_tracker のログで済んだことを確かめてから次へ進む。
+
+1. 電源、ffmpeg、adb、スマホ (`scripts\cameras.json` の端末) を確かめる
+2. スマホのアプリをいったん止め、`adb reverse` を張り、設定を入れる (端末の `device_id` を `cameras.json` に記録する)
+3. ball_tracker を `scripts\pc1.json` の設定と `--cameras scripts\cameras.json` で起動する (精度を確かめた設定。値の意味は 3 章の表)
+4. PC② の `scripts\pc2.json` の `tracker_host` に書く、この PC の名前と IP を表示する。projector は待たない
+5. スマホを開く。つながらなければ 1 回開き直す
+6. 届いている fps と遅れを表にし、Save frame を撮って取り込む
+7. 「準備完了」と出たら投げてよい。着弾と警告、projector とスマホのつながり具合を表示する。Ctrl+C で止めると、
+   記録をまとめてスマホのアプリを止める
+
+スマホのアプリ (高速撮影版) と projector は、ball_tracker が止まっても 2 秒おきにつなぎ直す。ball_tracker を
+起動し直すときは、`run-pc1.ps1` をもう一度実行するだけでよい (projector は起動し直さなくてよい)。
+
+記録は `recordings\<日付>_<時分>` に残る。projector なしで試すときは `-Output csv` を付ける。
+受け取った動画は、既定では残さない (2 台で 1 時間に約 45 GB になる)。あとで解析し直す実験のときは `-Record` を付ける。
+ディスクの空きは起動時と 1 分おきに確かめ、足りなくなりそうなら知らせる。
+設定を変えるときは `scripts\pc1.json` (ball_tracker) と `scripts\cameras.json` (スマホ) を書き換える。
+
+### 手で起動するとき
+
+以下は 2026-10-16 までの手順。高速撮影版のアプリと projector は自分でつなぎ直し、`--cameras` を付ければ camera_id も
+端末で決まるので、いまは順番を気にしなくてよい。古いアプリ (CameraX 版) を使うときは、この順番に従う。
 
 1. (別の PC) game_master を起動しておく
 2. **PC①: ball_tracker を起動する**
@@ -439,17 +474,19 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 
 | 症状 | 見るところ |
 |---|---|
-| ball_tracker が `listening for projector` から進まない | 正常。projector がつなぐまで待つ。PC② から届かないなら 7 章と PC① の IP |
-| アプリが TCP につながらない | `adb devices` が `device` か、`adb reverse --list` に 6060 と 5050 があるか、ball_tracker が projector の接続を受けたあとか |
+| projector がつながらない (`accepted TCP connection from projector` が出ない) | PC② から届いていない。7 章と PC① の IP、PC② の `pc2.json` の `tracker_host` |
+| `no projector is connected; dropped a collision` | projector がつながっていないあいだの着弾は捨てる。つながれば、次の着弾から届く |
+| アプリが TCP につながらない | `adb devices` が `device` か、`adb reverse --list` に 6060 と 5050 があるか |
+| `its device_id is not in --cameras` | `cameras.json` にその端末の `device_id` が無い。`scripts\camera-remote.ps1 config` を実行する。それまでは、つないだ順の番号 (2 から) と、スマホが送る位置を使う |
 | カメラ画面が `検出: この端末で解析` のまま | `adb reverse --list` に 5052 があるか、設定の出力先が `Network` で TCP がつながっているか (カメラの番号が要る)、ball_tracker を `--no-video-analysis` で起動していないか。ball_tracker のログに `accepted new connection in VideoTransport` が出ているか |
 | `failed to start ffmpeg` | ffmpeg が PATH に無い。`--ffmpeg` で場所を渡す (1.4) |
 | `video analysis` の `fps` が 120 に届かない、`max_delay_ms` が大きい | PC① の処理が追いついていない。`analysis_ms` (1 枚の解析) が 8 ms を超えるなら PC① が遅い。`falling behind` が出ていれば、送信か ffmpeg が詰まっている |
-| アプリを開き直したら `camera_id` が 2, 3 ... になった | 番号は接続のたびに増える。前の接続の位置は消えずに残るので、2 台の組み合わせを誤る (右のカメラの判定など) おそれがある。つなぎ直したら ball_tracker も再起動し、1 台目から 9 章の 5 をやり直す |
+| アプリを開き直したら `camera_id` が 2, 3 ... になった | ball_tracker を `--cameras` なしで起動したか、その端末の `device_id` が `cameras.json` に無い。`--cameras` のないときの番号は接続のたびに増え、前の接続の位置も残るので、2 台の組み合わせを誤るおそれがある |
 | 検知が届かない | スマホがカメラ画面になっているか、画面が消えていないか |
 | 衝突が出ない | `-j` を付けて起動し、`events_*` を見る。`SeedDiagnostics` にトラックを作れなかった理由 (`RejectReason`) が残る。`SuppressedCollision` は、直前の報告に近い、またはほかのトラックのほうがボールらしいとして見送ったもの |
 | 位置がおかしい | `ThrowDiagnostics` の `residual_rms` が大きければ 2 台の時刻 (`--time-trim-ms`) かカメラの位置・向きを疑う。`residual_rms` が小さいのに偏るなら位置・向き。まず `Camera Pose` の実測値と軸の向き、原点 (8 章) を確かめる |
 | `camera clock` の `fallback` が `true` | センサー時刻が時刻合わせと合わない。`timestamp_source` を見る。KYV45 の時計の種類は未確認 (`docs/ball_detection_plan_3_time_sync_calibration.md` の U-1) |
-| projector を再起動した | ball_tracker も再起動する (次に送るときに落ちる)。そのあとカメラも 9 章の 5 からやり直す |
+| projector を再起動した | そのままでよい。ball_tracker は、いつつないだ projector にも送る |
 | ビルドで `link.exe` や `kernel32.lib` が見つからない | 1.2 の Windows SDK / C++ ツールが入っていない |
 | `protoc` が見つからない | `mise exec rust protoc -- ...` を付け忘れている |
 
@@ -466,8 +503,9 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 - **横に +5 cm 寄る偏りの原因は確定していない。** 行ごとの露光の時刻差とカメラの位置・向きの誤差が
   有力 (`docs/ball_detection_plan_0_overview.md`)。
 - **時刻合わせは自動の補正が無い。** 残差が大きくても警告が出るだけで、`--time-trim-ms` は人が決める。
-- **切断からの復帰が不十分。** カメラが切れても ball_tracker は落ちないが (`camera disconnected` を出す)、
-  projector が切れると、次に送るときに落ちる。
+- **切れているあいだに終わったゲームは、projector に伝わらない。** projector は ball_tracker とも game_master とも
+  自分でつなぎ直すが、game_master と切れているあいだに終わったゲームの終了は届かないので、次のゲームが始まるまで
+  遊んでいる状態のまま残る。
 - **`input-sqlite` 機能 (`--input sqlite`) はビルドできない。** 付けない (既定では無効)。
 - **Nightly Release にバイナリは出ていない。** 公開条件が `main` ブランチのままで、
   `master` への改名後は動いていない。当面は各 PC でビルドする
