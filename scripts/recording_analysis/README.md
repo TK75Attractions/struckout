@@ -14,6 +14,8 @@
 | `estimate_time_offset.py` | 飛んでいるボールの検出結果から、2 台のカメラの時刻のずれと、行ごとの露光の時刻差を見積もる |
 | `simulate_layouts.py` | カメラの置き方ごとに、着弾位置の予測がどのくらい当たるかをシミュレーションで比べる |
 | `replay_to_tracker.py` | 録画から作った検出結果を、カメラアプリと同じ通信で ball_tracker に流し込む |
+| `replay_stream_to_tracker.py` | ball_tracker が保存した動画 (`.vsp`) を、スマホが送ったときと同じ間隔で ball_tracker に流し直す。PC での解析の遅れを実機なしで確かめる |
+| `stream_video_to_tracker.py` | 普通の動画を H.264 にして、カメラアプリと同じ手順で ball_tracker に流す |
 | `calibrate_camera.py` | 筐体の線が映った解析画像から、カメラの向き (診断用に位置と焦点距離も) を求める |
 | `calibrate_intrinsics.py` | チェッカーボードを撮った解析画像から、焦点距離を求める |
 
