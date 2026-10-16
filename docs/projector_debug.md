@@ -194,8 +194,10 @@ STRUCKOUT_NETWORK_MODE=fake
 | `-machineId` | `STRUCKOUT_MACHINE_ID` | `1` |
 | `-connectAttempts` | `STRUCKOUT_CONNECT_ATTEMPTS` | `5` |
 
-ball_tracker への接続は指数バックオフで `connectAttempts` 回まで再試行するので、
-Unity を先に Play してから対向を立ち上げても間に合う。
+ball_tracker への接続は指数バックオフ (間隔は 5 秒まで) で `connectAttempts` 回まで再試行するので、
+Unity を先に Play してから対向を立ち上げても間に合う (`scripts/run-pc2.ps1` は 100000 回を渡して待ち続けさせる)。
+つながったあとで ball_tracker と切れたら、2 秒おきにつなぎ直す (projector を起動し直さなくてよい)。
+game_master のイベントの購読も、切れたら 2 秒おきにやり直す (`GrpcGameMasterClient`)。
 gRPC のチャネルは遅延接続なので、game_master は後から立てても繋がる。
 
 ## 6. protobuf のコード生成

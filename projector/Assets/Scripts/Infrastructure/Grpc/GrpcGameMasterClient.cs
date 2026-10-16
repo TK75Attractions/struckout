@@ -35,6 +35,9 @@ namespace Struckout.Infrastructure
         /// <summary>進行中のゲーム。GameStarted を受け取るまでは無い。</summary>
         private uint? _gameId;
 
+        /// <summary>game_master と切れたとき、購読をやり直す間隔。</summary>
+        private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
+
         public event Action<Difficulty> GameStarted;
         public event Action GameFinished;
         public event Action ConnectionLost;
@@ -83,49 +86,83 @@ namespace Struckout.Infrastructure
         /// machine_id での絞り込みは game_master 側が行う
         /// (service.rs の pass_events_through_by_machine_id)。
         /// 号機番号を間違えると、繋がってはいるのにイベントが一件も来ない。
+        ///
+        /// 切れたら (game_master の再起動、まだ起動していないなど) <see cref="ReconnectInterval"/> おきに
+        /// 購読をやり直す。projector を起動し直さなくてよい。切れたことは最初の 1 回だけ知らせる。
+        /// 切れているあいだに終わったゲームの GameFinished は届かないので、次の GameStarted までは
+        /// 遊んでいる状態のまま残る。
         /// </summary>
         private async Task ListenEventsAsync(CancellationToken token)
         {
-            try
+            bool lost = false;
+            while (!token.IsCancellationRequested)
             {
-                var request = new ListenEventsRequest { MachineId = (uint)_settings.MachineId };
-                using var call = _client.ListenEvents(request, cancellationToken: token);
-
-                while (await call.ResponseStream.MoveNext(token))
+                try
                 {
-                    var received = call.ResponseStream.Current?.Event;
-                    if (received == null)
+                    var request = new ListenEventsRequest { MachineId = (uint)_settings.MachineId };
+                    using var call = _client.ListenEvents(request, cancellationToken: token);
+
+                    // 応答のヘッダーが届いたら、つながっている。イベントはゲームが動くまで来ない
+                    await call.ResponseHeadersAsync;
+                    if (lost)
                     {
-                        Debug.LogWarning("[GameMaster] received a response without an event; ignored.");
-                        continue;
+                        Debug.Log("[GameMaster] reconnected; listening for events again.");
+                        lost = false;
                     }
 
-                    HandleEvent(received);
+                    while (await call.ResponseStream.MoveNext(token))
+                    {
+                        var received = call.ResponseStream.Current?.Event;
+                        if (received == null)
+                        {
+                            Debug.LogWarning("[GameMaster] received a response without an event; ignored.");
+                            continue;
+                        }
+
+                        HandleEvent(received);
+                    }
+
+                    if (!lost) Debug.LogWarning("[GameMaster] the event stream ended.");
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    // 自分で止めた。
+                    return;
+                }
+                catch (RpcException ex) when (token.IsCancellationRequested && ex.StatusCode == StatusCode.Cancelled)
+                {
+                    return;
+                }
+                catch (RpcException ex)
+                {
+                    if (!lost) Debug.LogWarning($"[GameMaster] the event stream failed: {ex.Status.StatusCode} {ex.Status.Detail}");
+                }
+                catch (Exception ex)
+                {
+                    if (!lost) Debug.LogException(ex);
                 }
 
-                Debug.LogWarning("[GameMaster] the event stream ended.");
-            }
-            catch (OperationCanceledException)
-            {
-                // 自分で止めた。
-                return;
-            }
-            catch (RpcException ex)
-            {
-                Debug.LogWarning($"[GameMaster] the event stream failed: {ex.Status.StatusCode} {ex.Status.Detail}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
+                if (!lost)
+                {
+                    lost = true;
+                    try
+                    {
+                        ConnectionLost?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogException(ex);
+                    }
+                }
 
-            try
-            {
-                ConnectionLost?.Invoke();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
+                try
+                {
+                    await Task.Delay(ReconnectInterval, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
             }
         }
 
