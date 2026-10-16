@@ -7,6 +7,7 @@ use std::{
 
 use crate::{
     CameraLocationStore,
+    clock_sync::AutoTimeTrim,
     detection_input::CameraFrame,
     tracking::{
         ball_track::{
@@ -60,6 +61,10 @@ pub struct TrackRunner<EL> {
     camera_locs: Arc<CameraLocationStore>,
     id_gen: TrackIdGenerator,
     event_logger: EL,
+    /// 予測した着弾時刻のどれだけ前に報告するか。負なら、着弾のあとに報告する
+    report_lead: TimeDelta,
+    /// 報告した投球の時刻合わせの手がかりを渡す先 (右のカメラの時刻の自動の補正)
+    auto_trim: Option<Arc<AutoTimeTrim>>,
 }
 
 struct TrackEntry {
@@ -96,7 +101,24 @@ where
             camera_locs,
             id_gen: TrackIdGenerator::new(),
             event_logger,
+            report_lead: REPORT_LEAD,
+            auto_trim: None,
         }
+    }
+
+    /// 報告した投球の時刻合わせの手がかりを、右のカメラの時刻の自動の補正に渡す。
+    pub fn with_auto_trim(mut self, auto_trim: Arc<AutoTimeTrim>) -> Self {
+        self.auto_trim = Some(auto_trim);
+        self
+    }
+
+    /// 着弾を、予測した着弾時刻の `delay` 後に報告する (負なら前)。既定は [`REPORT_LEAD`] 前。
+    ///
+    /// 遅らせるほど、着弾の直前に撮ったフレーム (ボールが的に近く、大きく写っている) が報告に間に合い、
+    /// 着弾位置の予測が正確になる。代わりに、的への描画がそのぶん着弾より遅れる。
+    pub fn with_report_delay(mut self, delay: TimeDelta) -> Self {
+        self.report_lead = -delay;
+        self
     }
 
     pub async fn start(
@@ -133,8 +155,9 @@ where
 
     /// フレームが届いていない間も、着弾の報告とトラックの片付けを進める。
     ///
-    /// `now` は [`CameraFrame`] の時刻と同じ時計 (この PC の時計) で渡す。
-    fn poll_collisions(&mut self, now: DateTime<Utc>) -> (Vec<CollisionPoint3D>, TrackingEventsDto) {
+    /// `now` は [`CameraFrame`] の時刻と同じ時計 (この PC の時計) で渡す。録画を解析し直すとき
+    /// (`bin/replay_video.rs`) は、[`Self::start`] の代わりにこれと [`Self::update_frame`] を直接呼ぶ。
+    pub fn poll_collisions(&mut self, now: DateTime<Utc>) -> (Vec<CollisionPoint3D>, TrackingEventsDto) {
         let mut events = Vec::new();
         let collisions = self.take_due_collisions(now, &mut events);
         self.expire(now, &mut events);
@@ -148,7 +171,7 @@ where
     }
 
     /// 1 台のカメラの 1 フレームぶんの検出で、追跡を進める。`now` はこの PC の時計での今の時刻。
-    fn update_frame(
+    pub fn update_frame(
         &mut self,
         frame: CameraFrame,
         now: DateTime<Utc>,
@@ -187,7 +210,7 @@ where
         )
     }
 
-    /// 報告する時刻 (予測した着弾の [`REPORT_LEAD`] 前) が来た着弾を、予測時刻の早い順に取り出す。
+    /// 報告する時刻 (既定は予測した着弾の [`REPORT_LEAD`] 前) が来た着弾を、予測時刻の早い順に取り出す。
     ///
     /// 1 個のボールを 2 回報告しないよう、直前の報告に近いものと、同じころに着弾する、
     /// よりボールらしいトラックがあるものは報告しない。
@@ -205,7 +228,7 @@ where
                 .enumerate()
                 .filter(|(_, track)| !track.reported)
                 .filter_map(|(index, track)| track.pending.map(|pending| (index, pending)))
-                .filter(|(_, pending)| pending.time - REPORT_LEAD <= now)
+                .filter(|(_, pending)| pending.time - self.report_lead <= now)
                 .min_by_key(|(_, pending)| pending.time);
             let Some((index, pending)) = due else {
                 break;
@@ -244,6 +267,9 @@ where
         }
         for diagnostics in diagnostics {
             self.watch_residual(diagnostics.residual_rms);
+            if let (Some(auto_trim), Some(right)) = (&self.auto_trim, self.camera_locs.rightmost()) {
+                auto_trim.observe(right.value(), &diagnostics);
+            }
             events.push(TrackingEventBodyDto::ThrowDiagnostics(diagnostics));
         }
         reported.into_values().collect()

@@ -41,9 +41,12 @@ pub const REPORTED_TRACK_LINGER: TimeDelta = TimeDelta::milliseconds(150);
 
 // 着弾の報告
 
-/// 着弾を、予測した時刻のどれだけ前に報告するか。
+/// 着弾を、予測した時刻のどれだけ前に報告するか (既定)。`--report-delay-ms` で変えられる
+/// ([`super::TrackRunner::with_report_delay`])。
 /// 根拠: 当てはめた着弾時刻は、着弾の音より 18〜37 ms 遅い。試作では、30 ms 早めても着弾位置の変化は最大 0.9 cm
-/// だった (60 ms だと 3.8 cm)。撮影から PC に届くまでの遅れは測っていないので、実機で決め直す。
+/// だった (60 ms だと 3.8 cm)。
+/// 2026-10-16 の録画では、報告を遅らせるほど着弾直前の視線を使えて精度が上がった
+/// (`recordings/2026-10-16_experiment/notes.md`)。描画が着弾より遅れてもよいなら、遅らせる。
 pub const REPORT_LEAD: TimeDelta = TimeDelta::milliseconds(30);
 
 /// 着弾を報告したら、予測した着弾時刻がそこからこの時間以内のものは報告しない。同じボールからできた別のトラック、

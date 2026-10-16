@@ -45,6 +45,8 @@ pub struct ClockSync {
     state: Mutex<State>,
     camera_locs: Arc<CameraLocationStore>,
     options: ClockSyncOptions,
+    /// 右のカメラの時刻の自動の補正。`time_trim` に足す
+    auto_trim: Option<Arc<AutoTimeTrim>>,
 }
 
 #[derive(Default)]
@@ -120,7 +122,14 @@ impl ClockSync {
             state: Mutex::new(State::default()),
             camera_locs,
             options,
+            auto_trim: None,
         }
+    }
+
+    /// 右のカメラの時刻に、[`AutoTimeTrim`] が決めた補正も足す。
+    pub fn with_auto_trim(mut self, auto_trim: Arc<AutoTimeTrim>) -> Self {
+        self.auto_trim = Some(auto_trim);
+        self
     }
 
     /// 時刻合わせの往復 1 回ぶんを記録する。
@@ -210,6 +219,10 @@ impl ClockSync {
 
         let trim = if self.camera_locs.rightmost() == Some(CameraId::new(packet.camera_id)) {
             self.options.time_trim
+                + self
+                    .auto_trim
+                    .as_ref()
+                    .map_or(TimeDelta::zero(), |auto| auto.current(packet.camera_id))
         } else {
             TimeDelta::zero()
         };
@@ -346,5 +359,196 @@ mod tests {
         assert_eq!(a.time, time(10_000));
         assert_eq!(b.time, time(10_012));
         assert_eq!(a_late.time, time(10_033));
+    }
+}
+
+/// 右のカメラの時刻の補正を、報告した投球から自動で決める (`--auto-time-trim`)。
+///
+/// 2 台の時計を合わせても数 ms のずれが残り、つなぎ直すたびに変わる (2026-10-16 は午前 -5 ms、午後 +5 ms)。
+/// 追跡は報告した投球ごとに、右のカメラの時刻をずらして当てはめ直し、最もよく合うずれを出す
+/// ([`ThrowDiagnosticsDto::best_time_shift_ms`])。そのずれに、そのときかけていた補正を足したものを
+/// 「必要な補正」とみなし、直近の投球の中央値に向けて補正を少しずつ動かす。
+///
+/// - カメラの位置と向きが合っていることが前提。向きがずれていると、その誤差まで時刻で吸収しようとして、
+///   着弾位置がかえってずれる (2026-10-16 の午後の録画で、向きを較正する前は、残差が最小になる補正が
+///   正解に最も合う補正より 10 ms 小さかった)。
+/// - 補正は、決めたときの 2 台の組み合わせ (camera_id) にだけかける。どちらかがつなぎ直すと camera_id が
+///   変わるので、補正は 0 に戻り、ためた投球も捨てる。
+/// - `apply` が偽なら、補正はかけずに、決めた値をログに出すだけ。
+pub struct AutoTimeTrim {
+    apply: bool,
+    state: Mutex<AutoTrimState>,
+}
+
+#[derive(Default)]
+struct AutoTrimState {
+    /// (左のカメラ, 右のカメラ)。補正はこの組み合わせのときだけかける
+    pair: Option<(u32, u32)>,
+    /// 直近の投球の「必要な補正」(ms)
+    needed: VecDeque<f64>,
+    /// いまかけている補正 (ms)
+    current_ms: f64,
+}
+
+/// 中央値を取る投球の数。
+const AUTO_TRIM_WINDOW: usize = 9;
+/// 補正を決め始めるまでに要る投球の数。
+const AUTO_TRIM_MIN_THROWS: usize = 3;
+/// 1 回の更新で、中央値までの差のどれだけ動かすか。外れ値が続いても急に動かないように。
+const AUTO_TRIM_GAIN: f64 = 0.5;
+/// 使う投球の条件: 2 台とも、この本数以上の視線がある。
+const AUTO_TRIM_MIN_RAYS: usize = 5;
+/// 使う投球の条件: ずらしたあとの視線と軌道の距離 (m) がこれ以下。
+const AUTO_TRIM_MAX_RESIDUAL: f64 = 0.015;
+/// 補正の上限 (ms)。これを超える値は、時刻ではなく別の原因 (位置や向き) とみなす。
+const AUTO_TRIM_LIMIT_MS: f64 = 30.0;
+
+impl AutoTimeTrim {
+    pub fn new(apply: bool) -> Self {
+        Self { apply, state: Mutex::new(AutoTrimState::default()) }
+    }
+
+    /// 右のカメラ `camera_id` のフレームの時刻に足す補正。
+    pub fn current(&self, camera_id: u32) -> TimeDelta {
+        let state = self.state.lock();
+        match state.pair {
+            Some((_, right)) if self.apply && right == camera_id => {
+                TimeDelta::nanoseconds((state.current_ms * 1e6).round() as i64)
+            }
+            _ => TimeDelta::zero(),
+        }
+    }
+
+    /// いま決まっている補正 (ms) と、それを決めた投球の数。`apply` が偽でも、決めた値を返す。
+    pub fn summary(&self) -> (f64, usize) {
+        let state = self.state.lock();
+        (state.current_ms, state.needed.len())
+    }
+
+    /// 報告した投球の時刻合わせの手がかりを受け取る。`right` は右のカメラ (位置の y が大きいほう)。
+    pub fn observe(&self, right: u32, diagnostics: &crate::tracking::ThrowDiagnosticsDto) {
+        let cameras: Vec<u32> = diagnostics.rays.keys().copied().collect();
+        let Some(&left) = cameras.iter().find(|&&id| id != right) else {
+            return;
+        };
+        let enough_rays = diagnostics.rays.values().all(|&count| count >= AUTO_TRIM_MIN_RAYS) && cameras.len() == 2;
+        let shift = diagnostics.best_time_shift_ms;
+        let at_edge = !TIME_SHIFT_INTERIOR.contains(&shift);
+        let mut state = self.state.lock();
+        if state.pair != Some((left, right)) {
+            if state.pair.is_some() {
+                info!(left, right, "cameras changed; restarting the automatic time trim");
+            }
+            *state = AutoTrimState { pair: Some((left, right)), ..Default::default() };
+        }
+        if !enough_rays || at_edge || diagnostics.best_residual_rms > AUTO_TRIM_MAX_RESIDUAL {
+            return;
+        }
+        // ずれは、そのときかけていた補正のうえで測っている
+        let applied = if self.apply { state.current_ms } else { 0.0 };
+        let needed = applied + shift as f64;
+        if state.needed.len() >= AUTO_TRIM_WINDOW {
+            state.needed.pop_front();
+        }
+        state.needed.push_back(needed);
+        if state.needed.len() < AUTO_TRIM_MIN_THROWS {
+            return;
+        }
+        let mut sorted: Vec<f64> = state.needed.iter().copied().collect();
+        sorted.sort_by(f64::total_cmp);
+        let median = sorted[sorted.len() / 2];
+        let target = median.clamp(-AUTO_TRIM_LIMIT_MS, AUTO_TRIM_LIMIT_MS);
+        if self.apply {
+            state.current_ms += AUTO_TRIM_GAIN * (target - state.current_ms);
+        } else {
+            state.current_ms = target;
+        }
+        info!(
+            right,
+            throws = state.needed.len(),
+            median_ms = format!("{median:.1}"),
+            trim_ms = format!("{:.1}", state.current_ms),
+            applied = self.apply,
+            "automatic time trim for the right camera (added to --time-trim-ms)"
+        );
+    }
+}
+
+/// [`crate::tracking`] がずれを探す範囲の、端を除いた部分。端に張り付いた値は、本当のずれが範囲の外にある。
+const TIME_SHIFT_INTERIOR: std::ops::RangeInclusive<i64> = -29..=59;
+
+#[cfg(test)]
+mod auto_trim_tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+    use crate::tracking::ThrowDiagnosticsDto;
+
+    fn throw(left: u32, right: u32, shift_ms: i64, rays: usize, residual: f64) -> ThrowDiagnosticsDto {
+        ThrowDiagnosticsDto {
+            track_id: serde_json::from_str("1").unwrap(),
+            rays: BTreeMap::from([(left, rays), (right, rays)]),
+            residual_rms: residual,
+            best_time_shift_ms: shift_ms,
+            best_residual_rms: residual,
+        }
+    }
+
+    fn ms(trim: &AutoTimeTrim, camera: u32) -> f64 {
+        trim.current(camera).num_microseconds().unwrap() as f64 / 1000.0
+    }
+
+    #[test]
+    fn moves_toward_the_median_once_enough_throws_arrive() {
+        let trim = AutoTimeTrim::new(true);
+        // 本当に必要な補正は +8 ms。補正をかけるたびに、残るずれはそのぶん小さくなる
+        let truth = 8.0;
+        let noise = [1.0, -2.0, 0.0, 3.0, -1.0, 2.0, -3.0, 0.0, 1.0, -1.0, 0.0, 2.0];
+        for (i, n) in noise.iter().enumerate() {
+            let shift = (truth - ms(&trim, 1) + n).round() as i64;
+            trim.observe(1, &throw(0, 1, shift, 10, 0.01));
+            if i < AUTO_TRIM_MIN_THROWS - 1 {
+                assert_eq!(ms(&trim, 1), 0.0, "no trim before enough throws");
+            }
+        }
+        assert!((ms(&trim, 1) - truth).abs() < 1.5, "trim {} should approach {truth}", ms(&trim, 1));
+        // 左のカメラには補正をかけない
+        assert_eq!(ms(&trim, 0), 0.0);
+    }
+
+    #[test]
+    fn ignores_throws_with_few_rays_a_poor_fit_or_a_shift_at_the_search_edge() {
+        let trim = AutoTimeTrim::new(true);
+        for _ in 0..5 {
+            trim.observe(1, &throw(0, 1, 10, 2, 0.01));
+            trim.observe(1, &throw(0, 1, 10, 10, 0.05));
+            trim.observe(1, &throw(0, 1, 60, 10, 0.01));
+            trim.observe(1, &throw(0, 1, -30, 10, 0.01));
+        }
+        assert_eq!(ms(&trim, 1), 0.0);
+    }
+
+    #[test]
+    fn restarts_when_a_camera_reconnects() {
+        let trim = AutoTimeTrim::new(true);
+        for _ in 0..6 {
+            trim.observe(1, &throw(0, 1, 10, 10, 0.01));
+        }
+        assert!(ms(&trim, 1) > 5.0);
+        // 右のカメラがつなぎ直して camera_id 3 になった
+        assert_eq!(ms(&trim, 3), 0.0);
+        trim.observe(3, &throw(0, 3, -6, 10, 0.01));
+        assert_eq!(ms(&trim, 3), 0.0, "the new pair starts from zero");
+        assert_eq!(ms(&trim, 1), 0.0, "the old pair is forgotten");
+    }
+
+    #[test]
+    fn only_reports_when_not_applying() {
+        let trim = AutoTimeTrim::new(false);
+        for _ in 0..6 {
+            trim.observe(1, &throw(0, 1, 10, 10, 0.01));
+        }
+        assert_eq!(ms(&trim, 1), 0.0);
+        assert!((trim.state.lock().current_ms - 10.0).abs() < 1e-9);
     }
 }

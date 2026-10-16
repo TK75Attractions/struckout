@@ -90,6 +90,72 @@ message CameraPose {
   double rotation_z_degrees = 6;
 }
 
+// PC で解析してもらうために、カメラが送る動画 (TCP の 5052 番)。
+// 接続して VideoStreamServerPacket を受け取ったら、VideoStreamConfig を送り、そのあと VideoFrame を送り続ける。
+// VideoStreamConfig は、設定が変わったときにも送り直してよい (同じ内容を何度送ってもよい)。
+// 解析を PC に任せている間、カメラは DetectionsPacket を送らない。PC が同じ形の DetectionsPacket を作る。
+message VideoStreamPacket {
+  oneof data {
+    VideoStreamConfig config = 1;
+    VideoFrame frame = 2;
+  }
+}
+
+message VideoStreamConfig {
+  // TcpServerPacket.camera_id で割り当てられた番号
+  uint32 camera_id = 1;
+  // DetectionsPacket.session_id と同じ
+  string session_id = 2;
+  // 動画の形式。いまは "video/avc" (H.264 の Annex B) だけ
+  string mime_type = 3;
+  uint32 video_width = 4;
+  uint32 video_height = 5;
+  double frame_rate = 6;
+
+  // 解析画像の大きさ。PC は動画をこの大きさに縮めてから解析する
+  uint32 analysis_width = 7;
+  uint32 analysis_height = 8;
+  // 解析画像での内部パラメータ (px)。アプリが自分で解析するときに使う値と同じ
+  double fx = 9;
+  double fy = 10;
+  double cx = 11;
+  double cy = 12;
+  // 端末の座標からカメラの座標への回転行列 (行優先で 9 個)。視線 (Detection.lay_*) は
+  // R^T K^-1 (u, v, 1) で、u, v は検出の枠の中心 (整数に切り捨て)
+  repeated double device_to_camera = 13;
+
+  // 検出を受け付ける範囲。アプリの設定画面の Detection Area と同じ意味 (プレビューの各辺から無視する幅、%)
+  double ignored_left_percent = 14;
+  double ignored_top_percent = 15;
+  double ignored_right_percent = 16;
+  double ignored_bottom_percent = 17;
+
+  // 解析の設定。アプリの ObjectTracker と同じ意味
+  double accumulate_weight = 18;
+  double binary_threshold = 19;
+  double min_contour_area = 20;
+  uint32 foreground_persistence_frames = 21;
+  double min_color_shift = 22;
+}
+
+message VideoFrame {
+  // エンコーダーが出したデータ (Annex B)
+  bytes data = 1;
+  // データが設定 (SPS/PPS) だけで、画像を含まない
+  bool codec_config = 2;
+  bool key_frame = 3;
+  // フレームのセンサー時刻 (ns)。DetectionsPacket.sensor_timestamp_ns と同じ。codec_config では 0
+  int64 sensor_timestamp_ns = 4;
+  // UNIX epoch からの経過時間 (ms)。DetectionsPacket.timestamp と同じ。codec_config では 0
+  int64 timestamp = 5;
+}
+
+// PC からカメラへ (TCP の 5052 番)。接続を受け付けたら 1 回送る
+message VideoStreamServerPacket {
+  // 解析を引き受ける。false のときカメラは切断して、自分で解析を続ける
+  bool accepted = 1;
+}
+
 // TCPでサーバーからカメラに送られるパケット
 message TcpServerPacket {
   // 端末の時計とサーバーの時計の差を測るための要求。端末は TimeSyncResponse を返す

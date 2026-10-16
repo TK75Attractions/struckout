@@ -17,6 +17,7 @@ pub mod collision_output;
 pub mod detection_input;
 pub mod tracking;
 pub mod types;
+pub mod video;
 
 const FRAME_CHANNEL_BUF: usize = 16;
 const COLLISION_CHANNEL_BUF: usize = 16;
@@ -39,8 +40,12 @@ where
         collision_output: CO,
         camera_locs: Arc<CameraLocationStore>,
         event_logger: EL,
+        report_delay: chrono::TimeDelta,
+        auto_trim: Arc<clock_sync::AutoTimeTrim>,
     ) -> Self {
-        let track_runner = TrackRunner::new(camera_locs.clone(), event_logger);
+        let track_runner = TrackRunner::new(camera_locs.clone(), event_logger)
+            .with_report_delay(report_delay)
+            .with_auto_trim(auto_trim);
         Self {
             detection_input,
             collision_output,
@@ -86,7 +91,7 @@ impl CameraLocationStore {
         self.0.read().get(&id).cloned()
     }
 
-    fn insert(&self, id: CameraId, pose: CameraPose) {
+    pub fn insert(&self, id: CameraId, pose: CameraPose) {
         self.0.write().insert(id, pose);
     }
 

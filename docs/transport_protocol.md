@@ -20,6 +20,15 @@ TCPはtracker -> projectorですでに使っており学習コストがない上
 | 6060 | ball_tracker → カメラ | `TcpServerPacket.TimeSyncRequest` | 時刻合わせの要求。接続直後に 50ms おきに 8 回、そのあとは 0.5 秒おき |
 | 6060 | カメラ → ball_tracker | `TcpClientPacket.TimeSyncResponse` | 要求を受け取った時刻と返事を送る時刻 (端末の単調な時計、ns) |
 | 5050 | カメラ → ball_tracker | `DetectionsPacket` | 検出のあったフレームごとに、検出の視線と、フレームのセンサー時刻 |
+| 5052 | ball_tracker → カメラ | `VideoStreamServerPacket` | 接続した直後に、動画を解析するか (`accepted`) を答える |
+| 5052 | カメラ → ball_tracker | `VideoStreamPacket.config` | 動画と解析画像の大きさ、内部パラメータ、向き、範囲、解析の設定。最初と、設定を変えたとき |
+| 5052 | カメラ → ball_tracker | `VideoStreamPacket.frame` | エンコーダーが出した H.264 (Annex B) をフレームごとに。センサー時刻つき |
+
+5052 番は、カメラの解析を PC に任せるためのもの (高速撮影版のアプリだけが使う)。アプリは 2 秒おきに
+つなぎに行き、ball_tracker が `accepted` を返したら、検出 (5050 番) を送るのをやめて動画を送る。
+ball_tracker は ffmpeg でデコードしてアプリと同じ方法で解析し、アプリが送るのと同じ `DetectionsPacket` を作る
+(`ball_tracker/src/video/`)。`adb reverse` は PC 側で誰も待ち受けていなくても接続を受けるので、
+アプリは返事が 2 秒来なければ、PC は解析しないとみなして自分で解析する。
 
 時刻合わせは、古いアプリと新しい ball_tracker、新しいアプリと古い ball_tracker のどちらの組み合わせでも動く。
 

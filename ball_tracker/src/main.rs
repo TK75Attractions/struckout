@@ -4,13 +4,14 @@ use std::{path::PathBuf, sync::Arc};
 use ball_tracker::detection_input::SqliteDetectionInput;
 use ball_tracker::{
     Application, CameraLocationStore,
-    clock_sync::{ClockSync, ClockSyncOptions},
+    clock_sync::{AutoTimeTrim, ClockSync, ClockSyncOptions},
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{CameraFrame, DetectionInput, NetworkDetectionInput},
     tracking::{
         EventLogger, FmtEventLogger, JsonEventLogger, SentryEventLogger, TrackingEventsDto,
     },
     types::CollisionPoint3D,
+    video::{self, VideoOptions},
 };
 use chrono::{Local, TimeDelta};
 use clap::{Parser, ValueEnum};
@@ -35,6 +36,37 @@ struct Cli {
     /// 画像の上端の行と下端の行の露光開始の時刻の差 (ms)。指定すると、カメラが知らせた値の代わりに使う
     #[arg(long = "rolling-shutter-skew-ms", allow_negative_numbers = true)]
     rolling_shutter_skew_ms: Option<f64>,
+    /// カメラから動画を受け取って解析するときに使う ffmpeg (PATH にあれば名前だけでよい)
+    #[arg(long = "ffmpeg", default_value = "ffmpeg")]
+    ffmpeg: String,
+    /// カメラから動画を受け取らない (5052 番で待ち受けない)。カメラは自分で解析する
+    #[arg(long = "no-video-analysis")]
+    no_video_analysis: bool,
+    /// 指定すると、カメラごとに PC で解析し始めた最初の画像をこのフォルダーに BMP で保存する (向きの確認用)
+    #[arg(long = "video-snapshot-dir")]
+    video_snapshot_dir: Option<PathBuf>,
+    /// 指定すると、カメラから受け取った動画をこのフォルダーに保存する (あとで解析し直すため)
+    #[arg(long = "video-record-dir")]
+    video_record_dir: Option<PathBuf>,
+    /// 着弾を、予測した着弾時刻の何 ms 後に報告するか (負なら前)。遅らせるほど着弾位置が正確になるが、
+    /// 的への描画がそのぶん遅れる
+    #[arg(long = "report-delay-ms", default_value_t = -30.0, allow_negative_numbers = true)]
+    report_delay_ms: f64,
+    /// 右のカメラの時刻の補正を、報告した投球から自動で決めて、--time-trim-ms に足す。付けないときは、
+    /// 決めた値をログに出すだけ。カメラの位置と向きが合っているときだけ使うこと
+    #[arg(long = "auto-time-trim")]
+    auto_time_trim: bool,
+    /// カメラから受け取った動画のデコードに使う GPU の方式 (ffmpeg の -hwaccel)。auto はその PC で使えるものを
+    /// 選ぶ (Windows は d3d11va、cuda、qsv、dxva2 の順)。none は CPU。d3d11va などの名前も指定できる
+    #[arg(long = "video-hwaccel", default_value = "auto")]
+    video_hwaccel: String,
+    /// PC で解析するとき、視線を作る検出の位置。box は枠の中心 (カメラアプリと同じ)、centroid は前景の画素の重心
+    #[arg(long = "detection-center", default_value = "box")]
+    detection_center: video::analysis::DetectionCenter,
+    /// PC で解析するとき、画像の端に接した検出 (ボールが欠けている) の扱い。keep はそのまま (カメラアプリと同じ)、
+    /// drop は捨てる、extrapolate は欠けていない向きの幅から中心を推定する
+    #[arg(long = "edge-detections", default_value = "keep")]
+    edge_detections: video::analysis::EdgeDetections,
 }
 
 fn millis(value: f64) -> TimeDelta {
@@ -80,10 +112,11 @@ impl DetectionInputImpl {
         kind: DetectionInputKind,
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
+        video: Option<VideoOptions>,
     ) -> Self {
         match kind {
             DetectionInputKind::Network => DetectionInputImpl::Network(
-                NetworkDetectionInput::new(camera_locs, clock)
+                NetworkDetectionInput::new(camera_locs, clock, video)
                     .await
                     .unwrap(),
             ),
@@ -188,16 +221,30 @@ async fn main() {
 
     let camera_locs = Arc::new(CameraLocationStore::new());
 
-    let clock = Arc::new(ClockSync::new(
-        camera_locs.clone(),
-        ClockSyncOptions {
-            time_trim: millis(cli.time_trim_ms),
-            rolling_shutter_skew: cli.rolling_shutter_skew_ms.map(millis),
-        },
-    ));
+    let auto_trim = Arc::new(AutoTimeTrim::new(cli.auto_time_trim));
+    let clock = Arc::new(
+        ClockSync::new(
+            camera_locs.clone(),
+            ClockSyncOptions {
+                time_trim: millis(cli.time_trim_ms),
+                rolling_shutter_skew: cli.rolling_shutter_skew_ms.map(millis),
+            },
+        )
+        .with_auto_trim(auto_trim.clone()),
+    );
 
+    let video = (!cli.no_video_analysis).then(|| VideoOptions {
+        hwaccel: video::hwaccel::select(&cli.ffmpeg, &cli.video_hwaccel),
+        detection: video::analysis::DetectionOptions {
+            center: cli.detection_center,
+            edge: cli.edge_detections,
+        },
+        ffmpeg: cli.ffmpeg.clone(),
+        snapshot_dir: cli.video_snapshot_dir.clone(),
+        record_dir: cli.video_record_dir.clone(),
+    });
     let detection_input =
-        DetectionInputImpl::new(cli.detection_input, camera_locs.clone(), clock).await;
+        DetectionInputImpl::new(cli.detection_input, camera_locs.clone(), clock, video).await;
     let collision_output = CollisionOutputImpl::new(&cli).await;
     let event_logger = EventLoggerImpl::new(&cli);
 
@@ -206,6 +253,8 @@ async fn main() {
         collision_output,
         camera_locs.clone(),
         event_logger,
+        millis(cli.report_delay_ms),
+        auto_trim,
     );
 
     app.run().await.unwrap();

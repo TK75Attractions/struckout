@@ -24,11 +24,13 @@ use crate::{
     clock_sync::ClockSync,
     detection_input::{CameraFrame, DetectionInput},
     types::CameraId,
+    video::{VideoOptions, VideoTransport},
 };
 
 const DATA_ADDR_DEFAULT: &str = "0.0.0.0:5050";
 const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
-const PAKCET_CHANNEL_BUF: usize = 5;
+// PC で動画を解析するときは、2 台から 120fps で検出が届くことがある
+const PAKCET_CHANNEL_BUF: usize = 64;
 /// 接続した直後は、時刻合わせの要求をこの間隔で [`TIME_SYNC_BURST`] 回送る。
 const TIME_SYNC_BURST_INTERVAL: Duration = Duration::from_millis(50);
 const TIME_SYNC_BURST: u64 = 8;
@@ -42,13 +44,17 @@ const TIME_SYNC_GIVE_UP_AFTER: Duration = Duration::from_secs(2);
 pub struct NetworkDetectionInput {
     data_transport: DataTransport,
     tcp_transport: TcpTransport,
+    /// カメラから動画を受け取って、この PC で解析する。`None` なら受け付けない
+    video_transport: Option<VideoTransport>,
     clock: Arc<ClockSync>,
 }
 
 impl NetworkDetectionInput {
+    /// `video` を渡すと、5052 番でカメラから動画を受け取り、この PC で解析する。
     pub async fn new(
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
+        video: Option<VideoOptions>,
     ) -> Result<Self, NetworkDetectionInputCreationError> {
         let data_transport = DataTransport::new()
             .await
@@ -56,9 +62,18 @@ impl NetworkDetectionInput {
         let tcp_transport = TcpTransport::new(camera_locs, clock.clone())
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Tcp(e))?;
+        let video_transport = match video {
+            Some(video) => Some(
+                VideoTransport::new(video)
+                    .await
+                    .map_err(NetworkDetectionInputCreationError::Video)?,
+            ),
+            None => None,
+        };
         Ok(Self {
             data_transport,
             tcp_transport,
+            video_transport,
             clock,
         })
     }
@@ -67,6 +82,10 @@ impl NetworkDetectionInput {
 impl DetectionInput for NetworkDetectionInput {
     async fn start(mut self, frame_tx: mpsc::Sender<CameraFrame>) -> std::io::Result<()> {
         let (packet_tx, mut packet_rx) = mpsc::channel(PAKCET_CHANNEL_BUF);
+        if let Some(video_transport) = self.video_transport {
+            let packet_tx = packet_tx.clone();
+            tokio::spawn(async move { video_transport.listen(packet_tx).await });
+        }
         tokio::spawn(async move { self.data_transport.listen(packet_tx).await });
         tokio::spawn(async move {
             loop {
@@ -97,6 +116,8 @@ pub enum NetworkDetectionInputCreationError {
     Tcp(#[source] std::io::Error),
     #[error("failed to create DataTransport: {:?}",.0)]
     Data(#[source] std::io::Error),
+    #[error("failed to create VideoTransport: {:?}",.0)]
+    Video(#[source] std::io::Error),
 }
 
 /// UDP Socket to receive frames from cameras.
