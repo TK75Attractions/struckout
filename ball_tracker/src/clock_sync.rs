@@ -169,6 +169,13 @@ impl ClockSync {
         });
     }
 
+    /// カメラがつなぎ直した。前の接続で測った時計の差は捨てる (端末を再起動していれば、もう合わない)。
+    pub fn reset_camera(&self, camera_id: u32) {
+        let mut state = self.state.lock();
+        state.cameras.remove(&camera_id);
+        state.legacy.retain(|(id, _), _| *id != camera_id);
+    }
+
     /// カメラが知らせた設定を記録する。
     pub fn record_info(&self, camera_id: u32, info: &tcp_client_packet::CameraInfo) {
         let mut state = self.state.lock();
@@ -372,8 +379,9 @@ mod tests {
 /// - カメラの位置と向きが合っていることが前提。向きがずれていると、その誤差まで時刻で吸収しようとして、
 ///   着弾位置がかえってずれる (2026-10-16 の午後の録画で、向きを較正する前は、残差が最小になる補正が
 ///   正解に最も合う補正より 10 ms 小さかった)。
-/// - 補正は、決めたときの 2 台の組み合わせ (camera_id) にだけかける。どちらかがつなぎ直すと camera_id が
-///   変わるので、補正は 0 に戻り、ためた投球も捨てる。
+/// - 補正は、決めたときの 2 台の組み合わせ (camera_id) にだけかける。`--cameras` に書いた端末は、つなぎ直しても
+///   同じ camera_id なので補正を続ける。書いていない端末はつなぎ直すと camera_id が変わるので、補正は 0 に戻り、
+///   ためた投球も捨てる。
 /// - `apply` が偽なら、補正はかけずに、決めた値をログに出すだけ。
 pub struct AutoTimeTrim {
     apply: bool,

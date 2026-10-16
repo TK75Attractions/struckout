@@ -14,7 +14,9 @@ TCPはtracker -> projectorですでに使っており学習コストがない上
 
 | ポート | 向き | パケット | 内容 |
 |---|---|---|---|
-| 6060 | ball_tracker → カメラ | `TcpServerPacket.camera_id` | 接続した直後に、カメラの番号を割り当てる |
+| 6060 | カメラ → ball_tracker | `TcpClientPacket.Hello` | 接続した直後に名乗る (端末の識別子 `device_id` = ANDROID_ID) |
+| 6060 | ball_tracker → カメラ | `TcpServerPacket.camera_id` | カメラの番号を割り当てる |
+| 6060 | ball_tracker → カメラ | `TcpServerPacket.CameraSettings` | PC が持つ位置と向き、焦点距離、検出の範囲 (`--cameras` に書いた端末だけ)。カメラは自分の設定に入れる |
 | 6060 | カメラ → ball_tracker | `TcpClientPacket.UpdateCameraPose` | カメラの位置と向き。接続時と、設定を変えたとき |
 | 6060 | カメラ → ball_tracker | `TcpClientPacket.CameraInfo` | センサー時刻の時計の種類、行ごとの露光の時刻差、解析画像の大きさ、焦点距離など |
 | 6060 | ball_tracker → カメラ | `TcpServerPacket.TimeSyncRequest` | 時刻合わせの要求。接続直後に 50ms おきに 8 回、そのあとは 0.5 秒おき |
@@ -36,5 +38,18 @@ ball_tracker は ffmpeg でデコードしてアプリと同じ方法で解析�
   フレームが届いた時刻から時計のずれを見積もる (これまでと同じ方法)。
 - 古い ball_tracker は要求を送らない。`CameraInfo` は中身のないパケットとして読み飛ばす。
   `DetectionsPacket.timestamp` (端末の時計での ms) は、今までどおり入れてある。
+
+### 端末の見分け方と、つなぎ直し
+
+- ball_tracker を `--cameras scripts/cameras.json` で起動すると、`Hello.device_id` が `cameras.json` の `device_id` と
+  一致した端末に、書いた順の camera_id (0, 1, ...) を振る。つなぎ直しても、開く順番が変わっても同じ番号になる。
+  位置と向きは `cameras.json` の値を使い (カメラが送る `UpdateCameraPose` は使わない)、`CameraSettings` でカメラにも送る。
+  `device_id` は `scripts/camera-remote.ps1 config` が端末から聞いて (`SET_CONFIG` の返事) `cameras.json` に書く。
+- 一致しない端末と、名乗らない送信元 (古いアプリ、`scripts/recording_analysis` の再生用スクリプト) には、
+  これまでどおり、つないだ順の番号 (`cameras.json` の台数から) を振る。ball_tracker は名乗るのを 0.5 秒待ってから番号を送る。
+- 高速撮影版のアプリは、検出の送り先が Network のあいだ、ball_tracker とのつながりが切れたら 2 秒おきにつなぎ直す。
+  ball_tracker は、つなぎ直したカメラの時計の差を測り直す。
+- projector (5000 番) は、ball_tracker が起動したあといつつないでも、つなぎ直してもよい。つないでいる projector すべてに
+  着弾を送り、1 台もつないでいないあいだの着弾は捨てる。projector は ball_tracker と切れたら 2 秒おきにつなぎ直す。
 
 projector が使うのは `ball-tracker__projector.proto` だけで、上の変更の影響を受けない。

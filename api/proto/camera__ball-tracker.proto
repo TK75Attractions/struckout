@@ -74,10 +74,21 @@ message TcpClientPacket {
     double frame_rate = 10;
   }
 
+  // 接続した直後、camera_id を受け取る前に送る。PC はこれで端末を見分け、同じ端末にはいつも同じ camera_id を振る。
+  // 送らない送信元には、PC は少し待ってから、つないだ順に camera_id を振る
+  message Hello {
+    // Settings.Secure.ANDROID_ID。端末とアプリの署名の組ごとに決まり、アプリの設定を消しても変わらない
+    string device_id = 1;
+    string device_model = 2;
+    // "camerax" / "highspeed"
+    string app_variant = 3;
+  }
+
   oneof data {
     UpdateCameraPose update_camera_pose = 1;
     TimeSyncResponse time_sync_response = 2;
     CameraInfo camera_info = 3;
+    Hello hello = 4;
   }
 }
 
@@ -163,9 +174,28 @@ message TcpServerPacket {
     uint64 sequence = 1;
   }
 
+  // PC が持っているこのカメラの設定 (scripts/cameras.json)。PC が端末を見分けられたとき、camera_id のあとに送る。
+  // 端末はこれを自分の設定に入れる (アプリの設定が消えても、つなげば元に戻る)
+  message CameraSettings {
+    CameraPose camera_pose = 1;
+    // 焦点距離の、解析画像の幅に対する比。0 なら端末が返す値から計算する
+    double focal_length_ratio = 2;
+    // 検出を受け付ける範囲。無ければ端末の設定のまま
+    DetectionArea detection_area = 3;
+  }
+
   oneof data {
     // assign a camera id to client.
     uint32 camera_id = 1;
     TimeSyncRequest time_sync_request = 2;
+    CameraSettings camera_settings = 3;
   }
+}
+
+// 検出を受け付ける範囲。アプリの設定画面の Detection Area と同じ意味 (プレビューの各辺から無視する幅、%)
+message DetectionArea {
+  double left_percent = 1;
+  double top_percent = 2;
+  double right_percent = 3;
+  double bottom_percent = 4;
 }

@@ -12,6 +12,7 @@ use crate::{
 };
 use struckout_proto::CameraPose;
 
+pub mod camera_config;
 pub mod clock_sync;
 pub mod collision_output;
 pub mod detection_input;

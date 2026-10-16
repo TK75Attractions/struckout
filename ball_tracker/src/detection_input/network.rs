@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering},
+    },
     time::{Duration, Instant},
 };
 
@@ -21,6 +24,7 @@ use tracing::{debug, info, trace_span, warn};
 
 use crate::{
     CameraLocationStore,
+    camera_config::CameraConfig,
     clock_sync::ClockSync,
     detection_input::{CameraFrame, DetectionInput},
     types::CameraId,
@@ -40,6 +44,9 @@ const TIME_SYNC_INTERVAL: Duration = Duration::from_millis(500);
 /// 送信元とみなして要求を送るのをやめる。
 const TIME_SYNC_MAX_UNANSWERED: usize = 5;
 const TIME_SYNC_GIVE_UP_AFTER: Duration = Duration::from_secs(2);
+/// つないだ直後に、端末が名乗る (`Hello`) のを待つ時間。名乗らない送信元 (古いアプリ、再生用のスクリプト) には、
+/// これだけ待ってから、つないだ順の camera_id を振る。
+const HELLO_TIMEOUT: Duration = Duration::from_millis(500);
 
 pub struct NetworkDetectionInput {
     data_transport: DataTransport,
@@ -51,15 +58,17 @@ pub struct NetworkDetectionInput {
 
 impl NetworkDetectionInput {
     /// `video` を渡すと、5052 番でカメラから動画を受け取り、この PC で解析する。
+    /// `cameras` を渡すと、そこに書いた端末を見分けて、決まった camera_id と位置を使う ([`CameraConfig`])。
     pub async fn new(
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
         video: Option<VideoOptions>,
+        cameras: Option<Arc<CameraConfig>>,
     ) -> Result<Self, NetworkDetectionInputCreationError> {
         let data_transport = DataTransport::new()
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Data(e))?;
-        let tcp_transport = TcpTransport::new(camera_locs, clock.clone())
+        let tcp_transport = TcpTransport::new(camera_locs, clock.clone(), cameras)
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Tcp(e))?;
         let video_transport = match video {
@@ -181,15 +190,18 @@ pub struct TcpTransport {
     join_handles: Vec<JoinHandle<()>>,
     camera_locs: Arc<CameraLocationStore>,
     clock: Arc<ClockSync>,
-    /// 次に接続してきた端末に割り当てる番号。接続ごとに増やす。登録済みの位置の数から決めると、
+    /// 端末ごとの設定。書いてある端末には、書いた順の camera_id を振る
+    cameras: Option<Arc<CameraConfig>>,
+    /// 見分けられなかった端末に次に割り当てる番号。接続ごとに増やす。登録済みの位置の数から決めると、
     /// 2 台がほぼ同時に接続したときに同じ番号になる。
-    next_camera_id: u32,
+    next_camera_id: Arc<AtomicU32>,
 }
 
 impl TcpTransport {
     pub async fn new(
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
+        cameras: Option<Arc<CameraConfig>>,
     ) -> std::io::Result<Self> {
         info!(
             port = CAMERA_LOC_TCP_ADDR_DEFAULT,
@@ -202,7 +214,8 @@ impl TcpTransport {
             join_handles: Vec::new(),
             camera_locs,
             clock,
-            next_camera_id: 0,
+            next_camera_id: Arc::new(AtomicU32::new(cameras.as_ref().map_or(0, |c| c.first_unknown_id()))),
+            cameras,
         })
     }
 
@@ -212,12 +225,11 @@ impl TcpTransport {
             debug!("TcpTransport listening...");
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
-                    let camera_id = self.next_camera_id;
-                    self.next_camera_id += 1;
-                    info!(?addr, camera_id, "accepted new connection for TcpTransport");
+                    info!(?addr, "accepted new connection for TcpTransport");
                     let join = tokio::spawn(Self::handle_connection(
                         stream,
-                        camera_id,
+                        self.cameras.clone(),
+                        Arc::clone(&self.next_camera_id),
                         Arc::clone(&self.camera_locs),
                         Arc::clone(&self.clock),
                     ));
@@ -232,7 +244,8 @@ impl TcpTransport {
 
     async fn handle_connection(
         stream: TcpStream,
-        camera_id: u32,
+        cameras: Option<Arc<CameraConfig>>,
+        next_camera_id: Arc<AtomicU32>,
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
     ) {
@@ -242,12 +255,60 @@ impl TcpTransport {
         }
         let (mut reader, mut writer) = stream.into_split();
 
+        // 端末が名乗るのを待つ。名乗らない送信元は camera_id を待っているので、こちらからは何も届かない
+        let hello = match tokio::time::timeout(HELLO_TIMEOUT, read_packet::<TcpClientPacket, _>(&mut reader)).await {
+            Ok(Ok(TcpClientPacket {
+                data: Some(tcp_client_packet::Data::Hello(hello)),
+            })) => Some(hello),
+            Ok(Ok(packet)) => {
+                warn!(?packet, "expected a Hello as the first packet; treating the camera as unknown");
+                None
+            }
+            Ok(Err(e)) => {
+                info!(error = ?e, "camera disconnected before it was given a camera id");
+                return;
+            }
+            Err(_) => None,
+        };
+        let device_id = hello.as_ref().map_or("", |hello| hello.device_id.as_str());
+        let known = cameras.as_deref().and_then(|cameras| cameras.find(device_id));
+        let camera_id = match known {
+            Some((camera_id, _)) => camera_id,
+            None => next_camera_id.fetch_add(1, Ordering::Relaxed),
+        };
+        let managed = known.is_some();
+        match (&hello, known) {
+            (_, Some((_, entry))) => info!(camera_id, name = entry.name, device_id, "camera connected"),
+            (Some(hello), None) if cameras.is_some() => warn!(
+                camera_id,
+                device_id,
+                model = hello.device_model,
+                "camera connected, but its device_id is not in --cameras (run scripts/camera-remote.ps1 config \
+                 to record it); using the pose the camera sends"
+            ),
+            (Some(_), None) => info!(camera_id, device_id, "camera connected"),
+            (None, _) => info!(camera_id, "camera connected (did not send a Hello)"),
+        }
+        // 前の接続で測った時計の差は使わない
+        clock.reset_camera(camera_id);
+
         let packet = TcpServerPacket {
             data: Some(tcp_server_packet::Data::CameraId(camera_id)),
         };
         if let Err(e) = write_packet(packet, &mut writer).await {
             warn!(camera_id, error = ?e, "failed to send a camera id");
             return;
+        }
+        if let Some((_, entry)) = known {
+            // 位置と焦点距離は PC が持っている値に合わせてもらう。スマホの設定が消えていても元に戻る
+            let packet = TcpServerPacket {
+                data: Some(tcp_server_packet::Data::CameraSettings(entry.settings())),
+            };
+            if let Err(e) = write_packet(packet, &mut writer).await {
+                warn!(camera_id, error = ?e, "failed to send the camera settings");
+                return;
+            }
+            debug!(camera_id, settings = ?entry.settings(), "sent the camera settings");
         }
         debug!(camera_id, "initialized connection");
 
@@ -280,6 +341,11 @@ impl TcpTransport {
                         warn!("camera_location field is missing for TcpClientPacket");
                         continue;
                     };
+                    if managed {
+                        // --cameras に書いた位置を使う (送ってきたのは、こちらが送った値のはず)
+                        debug!(camera_id, value = ?camera_pose, "ignored the pose sent by a camera listed in --cameras");
+                        continue;
+                    }
                     info!(id = pose_data.camera_id, value = ?camera_pose, "camera pose updated");
                     camera_locs.insert(CameraId::new(pose_data.camera_id), camera_pose);
                 }
@@ -290,6 +356,9 @@ impl TcpTransport {
                         *last_response.lock() = Instant::now();
                         clock.record_sync(camera_id, sent_at, received_at, &response);
                     }
+                }
+                Some(tcp_client_packet::Data::Hello(_)) => {
+                    warn!(camera_id, "ignored a second Hello");
                 }
                 Some(tcp_client_packet::Data::CameraInfo(camera_info)) => {
                     info!(camera_id, value = ?camera_info, "camera info updated");

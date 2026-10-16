@@ -4,13 +4,14 @@ use std::{path::PathBuf, sync::Arc};
 use ball_tracker::detection_input::SqliteDetectionInput;
 use ball_tracker::{
     Application, CameraLocationStore,
+    camera_config::CameraConfig,
     clock_sync::{AutoTimeTrim, ClockSync, ClockSyncOptions},
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{CameraFrame, DetectionInput, NetworkDetectionInput},
     tracking::{
         EventLogger, FmtEventLogger, JsonEventLogger, SentryEventLogger, TrackingEventsDto,
     },
-    types::CollisionPoint3D,
+    types::{CameraId, CollisionPoint3D},
     video::{self, VideoOptions},
 };
 use chrono::{Local, TimeDelta};
@@ -67,6 +68,10 @@ struct Cli {
     /// drop は捨てる、extrapolate は欠けていない向きの幅から中心を推定する
     #[arg(long = "edge-detections", default_value = "keep")]
     edge_detections: video::analysis::EdgeDetections,
+    /// カメラ用スマホごとの設定 (scripts/cameras.json)。書いた端末は、つないだ順によらず書いた順の camera_id
+    /// (0, 1, ...) になり、ここに書いた位置と向きを使う。位置と向き、焦点距離、検出の範囲はスマホにも送る
+    #[arg(long = "cameras")]
+    cameras: Option<PathBuf>,
 }
 
 fn millis(value: f64) -> TimeDelta {
@@ -113,10 +118,11 @@ impl DetectionInputImpl {
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
         video: Option<VideoOptions>,
+        cameras: Option<Arc<CameraConfig>>,
     ) -> Self {
         match kind {
             DetectionInputKind::Network => DetectionInputImpl::Network(
-                NetworkDetectionInput::new(camera_locs, clock, video)
+                NetworkDetectionInput::new(camera_locs, clock, video, cameras)
                     .await
                     .unwrap(),
             ),
@@ -144,7 +150,7 @@ impl CollisionOutputImpl {
     async fn new(cli: &Cli) -> Self {
         match &cli.collision_output {
             CollisionOutputKind::Network => {
-                Self::Network(NetworkCollisionOutput::connect().await.unwrap())
+                Self::Network(NetworkCollisionOutput::bind().await.unwrap())
             }
             CollisionOutputKind::Csv => {
                 // OPTIM: 無駄なclone
@@ -220,6 +226,22 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let camera_locs = Arc::new(CameraLocationStore::new());
+    let cameras = cli.cameras.as_ref().map(|path| {
+        let config = CameraConfig::load(path).unwrap();
+        // 位置は最初から分かっているので、つなぐ前から入れておく (左右もこれで決まる)
+        for (camera_id, entry) in config.entries().iter().enumerate() {
+            tracing::info!(
+                camera_id,
+                name = entry.name,
+                device_id = entry.device_id.as_deref().unwrap_or(""),
+                pose = ?entry.pose,
+                focal_ratio = entry.focal_ratio,
+                "loaded camera settings"
+            );
+            camera_locs.insert(CameraId::new(camera_id as u32), entry.camera_pose());
+        }
+        Arc::new(config)
+    });
 
     let auto_trim = Arc::new(AutoTimeTrim::new(cli.auto_time_trim));
     let clock = Arc::new(
@@ -244,7 +266,7 @@ async fn main() {
         record_dir: cli.video_record_dir.clone(),
     });
     let detection_input =
-        DetectionInputImpl::new(cli.detection_input, camera_locs.clone(), clock, video).await;
+        DetectionInputImpl::new(cli.detection_input, camera_locs.clone(), clock, video, cameras).await;
     let collision_output = CollisionOutputImpl::new(&cli).await;
     let event_logger = EventLoggerImpl::new(&cli);
 
