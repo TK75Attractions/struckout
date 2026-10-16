@@ -20,9 +20,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.StruckoutCameraApp">
+        <!-- PC から adb で開き直したとき (scripts/camera-remote.ps1)、新しい画面を重ねず、いまの画面に届ける -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.StruckoutCameraApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,6 +32,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- PC から adb で設定や Save frame を行う。DUMP の権限は adb のシェルにしかないので、ほかのアプリからは送れない -->
+        <receiver
+            android:name=".remote.RemoteControlReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.taichi765.struckoutCameraApp.remote.SET_CONFIG" />
+                <action android:name="com.taichi765.struckoutCameraApp.remote.SAVE_FRAME" />
+                <action android:name="com.taichi765.struckoutCameraApp.remote.RETRY_CONNECTION" />
+                <action android:name="com.taichi765.struckoutCameraApp.remote.STATUS" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

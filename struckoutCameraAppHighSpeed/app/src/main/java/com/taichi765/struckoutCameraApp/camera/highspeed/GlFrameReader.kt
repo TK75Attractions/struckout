@@ -15,10 +15,10 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * カメラが [SurfaceTexture] に書いたフレームを、[width] x [height] に縮小して RGBA で読み出す。
+ * [SurfaceTexture] に届いたフレームを、[width] x [height] に縮小して RGBA で読み出す。
  *
- * 高速撮影セッションは YUV の ImageReader を出力先にできないので、プレビュー用の出力先として
- * 認められている SurfaceTexture で受け、GPU で縮小してから CPU 側へ持ってくる。
+ * 高速撮影セッションは YUV の ImageReader を出力先にできないので、カメラのフレームは動画エンコーダーと
+ * デコーダー ([VideoRelay]) を通してこの SurfaceTexture に描かれる。GPU で縮小してから CPU 側へ持ってくる。
  *
  * すべてのメソッドは、[create] を呼んだスレッドから呼ぶこと (EGL コンテキストがそのスレッドに属する)。
  */
@@ -87,9 +87,10 @@ class GlFrameReader private constructor(
 
     /**
      * 次のフレームを取り込む。読み出さない場合もフレームごとに必ず呼ぶこと。
-     * 呼ばないとキューが詰まり、カメラ側が止まる。
+     * 呼ばないとキューが詰まり、デコーダー側が止まる。
      *
-     * @return フレームのセンサー時刻 (ナノ秒)
+     * @return フレームの時刻 (ナノ秒)。デコーダーが付けた時刻で、マイクロ秒に丸められている。
+     * センサー時刻に戻すのは [HighSpeedCamera] の仕事
      */
     fun acquireFrame(): Long {
         surfaceTexture.updateTexImage()

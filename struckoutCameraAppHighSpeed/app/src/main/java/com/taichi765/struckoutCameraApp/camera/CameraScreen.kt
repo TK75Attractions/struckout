@@ -25,12 +25,14 @@ fun CameraScreenRoute(
     val cameraState by viewModel.cameraState.collectAsState()
     val cameraStats by viewModel.cameraStats.collectAsState()
     val savedFrame by viewModel.savedFrame.collectAsState()
+    val analyzedOnPc by viewModel.analyzedOnPc.collectAsState()
 
     CameraScreen(
         image,
         savedFrame,
         cameraState,
         cameraStats,
+        analyzedOnPc,
         viewModel::requestSaveFrame,
         viewModel::flashVideo
     )
@@ -50,6 +52,7 @@ private fun CameraScreen(
     savedFrame: String?,
     cameraState: HighSpeedCamera.State,
     cameraStats: HighSpeedCamera.Stats?,
+    analyzedOnPc: Boolean,
     onSaveFrame: () -> Unit,
     onFlashVideo: () -> Unit
 ) {
@@ -60,6 +63,8 @@ private fun CameraScreen(
         Text("Camera Preview (high speed)")
         Text(cameraStateText(cameraState))
         cameraStats?.let { Text(cameraStatsText(it)) }
+        // PC で解析しているあいだ、この端末の「解析」の数字は画面の更新だけのもの
+        Text(if (analyzedOnPc) "検出: PC で解析 (動画を送信中)" else "検出: この端末で解析")
 
         ContoursPreview(
             image = image,
@@ -90,7 +95,9 @@ private fun cameraStateText(state: HighSpeedCamera.State): String = when (state)
 }
 
 private fun cameraStatsText(stats: HighSpeedCamera.Stats): String =
-    "カメラ %.1ffps  解析 %.1ffps  取りこぼし %d\n読み出し %.1fms  解析 %.1fms".format(
+    "撮影 %.1ffps  エンコード %.1ffps  受け取り %.1ffps\n解析 %.1ffps  取りこぼし %d  読み出し %.1fms  解析 %.1fms".format(
+        stats.captureFps,
+        stats.encodedFps,
         stats.cameraFps,
         stats.analyzedFps,
         stats.droppedFrames,

@@ -9,6 +9,7 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -30,6 +31,7 @@ import java.nio.ByteOrder
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -38,10 +40,13 @@ import kotlin.math.roundToInt
  * 縮小したフレームを解析用に渡す。
  *
  * 通常のセッションでは 30fps が上限の端末でも、このセッションなら 120fps で撮れる。
- * 出力先に YUV の ImageReader を使えないため、[GlFrameReader] 経由でフレームを取り出す。
+ * 出力先に YUV の ImageReader を使えないため、カメラ → [VideoRelay] (動画エンコーダーとデコーダー) →
+ * [GlFrameReader] の順にフレームを渡す。プレビュー用の出力先 (SurfaceTexture) で直接受けると、
+ * 30fps しか渡さない端末がある (KYV45)。
  *
- * スレッドは 3 本使う。
+ * スレッドは 4 本使う。
  * - カメラ: Camera2 のコールバック
+ * - コーデック: [VideoRelay] のコールバック
  * - GL: フレームの取り込みと縮小・読み出し
  * - 解析: [FrameListener] の呼び出し
  *
@@ -51,6 +56,19 @@ class HighSpeedCamera @Inject constructor(
     @ApplicationContext private val context: Context,
     private val clockInfo: CameraClockInfoHolder,
 ) {
+    /**
+     * エンコーダーが出したデータを受け取る (PC で解析してもらうときに使う)。コーデックのスレッドで呼ばれる。
+     */
+    fun interface EncodedFrameListener {
+        /**
+         * @param data H.264 (Annex B)。呼び出しのあとも使ってよい
+         * @param sensorTimestampNanos フレームのセンサー時刻。[codecConfig] のときは 0
+         * @param keyFrame キーフレーム
+         * @param codecConfig 画像を含まない設定 (SPS/PPS)
+         */
+        fun onEncoded(data: ByteArray, sensorTimestampNanos: Long, keyFrame: Boolean, codecConfig: Boolean)
+    }
+
     fun interface FrameListener {
         /**
          * 解析スレッドで呼ばれる。
@@ -65,13 +83,17 @@ class HighSpeedCamera @Inject constructor(
     /**
      * 直近 1 秒ほどの実績。
      *
-     * @param cameraFps センサー時刻の間隔から求めた、カメラが実際に出している fps
+     * @param captureFps カメラの撮影結果 (`onCaptureCompleted`) の fps。センサーが撮っている速さ
+     * @param encodedFps 動画エンコーダーが出力した fps
+     * @param cameraFps 縮小する手前まで届いたフレームの、センサー時刻の間隔から求めた fps
      * @param analyzedFps 解析まで終えた fps
      * @param droppedFrames 解析が追いつかず捨てたフレーム数
      * @param readbackMillis 縮小と読み出しにかかった時間の平均
      * @param analysisMillis [FrameListener.onFrame] にかかった時間の平均
      */
     data class Stats(
+        val captureFps: Double,
+        val encodedFps: Double,
         val cameraFps: Double,
         val analyzedFps: Double,
         val droppedFrames: Int,
@@ -99,12 +121,35 @@ class HighSpeedCamera @Inject constructor(
 
     private var run: Run? = null
 
+    /**
+     * @param encodedListener エンコーダーが出したデータも受け取るとき
+     */
     @Synchronized
-    fun start(listener: FrameListener) {
+    fun start(listener: FrameListener, encodedListener: EncodedFrameListener? = null) {
         if (run != null) return
         _state.value = State.Starting
         _stats.value = null
-        run = Run(listener).also { it.start() }
+        run = Run(listener, encodedListener).also { it.start() }
+    }
+
+    /** 次のフレームをキーフレームにするよう、エンコーダーに頼む (途中から受け取る相手がデコードを始められるように) */
+    @Synchronized
+    fun requestKeyFrame() {
+        run?.requestKeyFrame()
+    }
+
+    // 画面の更新にキーフレームだけを使う (PC が解析しているとき)。次の start にも引き継ぐ
+    @Volatile
+    private var keyFramePreview = false
+
+    /**
+     * true にすると、この端末ではキーフレーム (1 秒に 1 枚) だけをデコードして [FrameListener] に渡す。
+     * PC が解析を引き受けているあいだに使う。エンコーダーが 120fps に追いつきやすくなる ([VideoRelay.keyFramesOnly])。
+     */
+    @Synchronized
+    fun setKeyFramePreview(enabled: Boolean) {
+        keyFramePreview = enabled
+        run?.setKeyFramePreview(enabled)
     }
 
     @Synchronized
@@ -119,11 +164,24 @@ class HighSpeedCamera @Inject constructor(
     /**
      * start から stop までの 1 回分。スレッドや GL の資源をまとめて持ち、まとめて捨てる。
      */
-    private inner class Run(private val listener: FrameListener) {
+    private inner class Run(
+        private val listener: FrameListener,
+        private val encodedListener: EncodedFrameListener?,
+    ) {
         private val cameraThread = HandlerThread("hs-camera").apply { start() }
         private val cameraHandler = Handler(cameraThread.looper)
         private val glThread = HandlerThread("hs-gl").apply { start() }
         private val glHandler = Handler(glThread.looper)
+        private val codecThread = HandlerThread("hs-codec").apply { start() }
+        private val codecHandler = Handler(codecThread.looper)
+
+        // GL スレッドで作り、コーデックスレッドで捨てる
+        @Volatile
+        private var relay: VideoRelay? = null
+
+        // 撮影結果のセンサー時刻。エンコーダーとデコーダーを通ったフレームの時刻を、センサー時刻に戻すのに使う
+        private val timeline = CaptureTimeline()
+        private val capturedFrames = AtomicInteger()
 
         // 空きバッファと、解析待ちのフレーム。空きがなければそのフレームは捨てる。
         private val freeBuffers = ArrayBlockingQueue<ByteBuffer>(BUFFER_COUNT)
@@ -181,11 +239,29 @@ class HighSpeedCamera @Inject constructor(
                     reader.surfaceTexture.setOnFrameAvailableListener({ onFrameAvailable() }, glHandler)
                     val surface = Surface(reader.surfaceTexture)
                     this.surface = surface
+                    // カメラはエンコーダーの入力に書き、デコーダーが surface (SurfaceTexture) に描く
+                    val relay = VideoRelay(
+                        mode.size,
+                        mode.fpsRange.upper,
+                        surface,
+                        codecHandler,
+                        onEncoded = encodedListener?.let { listener ->
+                            { data, presentationTimeUs, keyFrame, codecConfig ->
+                                val sensorTimestamp =
+                                    if (codecConfig) 0L else timeline.sensorTimestamp(presentationTimeUs * 1000)
+                                listener.onEncoded(data, sensorTimestamp, keyFrame, codecConfig)
+                            }
+                        },
+                    ) { message, cause ->
+                        fail(message, cause)
+                    }
+                    relay.keyFramesOnly = keyFramePreview
+                    this.relay = relay
 
                     Thread({ analysisLoop(analysisSize) }, "hs-analysis")
                         .apply { isDaemon = true }
                         .start()
-                    cameraHandler.post { openCamera(manager, mode, surface, analysisSize) }
+                    cameraHandler.post { openCamera(manager, mode, relay.inputSurface, analysisSize) }
                 } catch (e: Exception) {
                     fail("failed to prepare the high speed camera", e)
                 }
@@ -201,13 +277,18 @@ class HighSpeedCamera @Inject constructor(
                 device = null
                 cameraThread.quitSafely()
 
-                // カメラを閉じてから出力先を捨てる。
-                glHandler.post {
-                    surface?.release()
-                    runCatching { reader?.release() }
-                    surface = null
-                    reader = null
-                    glThread.quitSafely()
+                // カメラを閉じてからエンコーダーとデコーダーを捨て、そのあと出力先を捨てる。
+                codecHandler.post {
+                    runCatching { relay?.release() }
+                    relay = null
+                    codecThread.quitSafely()
+                    glHandler.post {
+                        surface?.release()
+                        runCatching { reader?.release() }
+                        surface = null
+                        reader = null
+                        glThread.quitSafely()
+                    }
                 }
             }
         }
@@ -283,6 +364,7 @@ class HighSpeedCamera @Inject constructor(
                                     result: TotalCaptureResult
                                 ) {
                                     clockInfo.onCaptureResult(result)
+                                    result.get(CaptureResult.SENSOR_TIMESTAMP)?.let { recordCapture(it) }
                                 }
                             },
                             cameraHandler
@@ -319,7 +401,7 @@ class HighSpeedCamera @Inject constructor(
             val reader = reader ?: return
             if (stopped) return
             try {
-                val timestamp = reader.acquireFrame()
+                val timestamp = timeline.sensorTimestamp(reader.acquireFrame())
                 val now = SystemClock.elapsedRealtime()
                 if (acquiredFrames == 0) {
                     windowStartMillis = now
@@ -347,10 +429,32 @@ class HighSpeedCamera @Inject constructor(
             }
         }
 
+        // カメラスレッド
+        private fun recordCapture(timestamp: Long) {
+            timeline.record(timestamp)
+            capturedFrames.incrementAndGet()
+        }
+
+        fun requestKeyFrame() {
+            codecHandler.post { relay?.requestKeyFrame() }
+        }
+
+        fun setKeyFramePreview(enabled: Boolean) {
+            codecHandler.post {
+                relay?.let {
+                    it.keyFramesOnly = enabled
+                    // 全部のフレームに戻すときは、デコーダーがすぐ始められるようキーフレームを頼む
+                    if (!enabled) it.requestKeyFrame()
+                }
+            }
+        }
+
         private fun publishStats(now: Long) {
             val seconds = (now - windowStartMillis) / 1000.0
             val analyzed = analyzedFrames
             val stats = Stats(
+                captureFps = capturedFrames.getAndSet(0) / seconds,
+                encodedFps = (relay?.encodedFrames?.getAndSet(0) ?: 0) / seconds,
                 cameraFps = if (acquiredFrames > 1) {
                     (acquiredFrames - 1) * 1e9 / (lastTimestampNanos - firstTimestampNanos)
                 } else 0.0,
@@ -361,8 +465,8 @@ class HighSpeedCamera @Inject constructor(
             )
             _stats.value = stats
             Timber.tag(TAG).i(
-                "camera=%.1ffps analyzed=%.1ffps dropped=%d readback=%.2fms analysis=%.2fms",
-                stats.cameraFps, stats.analyzedFps, stats.droppedFrames,
+                "capture=%.1ffps encoded=%.1ffps camera=%.1ffps analyzed=%.1ffps dropped=%d readback=%.2fms analysis=%.2fms",
+                stats.captureFps, stats.encodedFps, stats.cameraFps, stats.analyzedFps, stats.droppedFrames,
                 stats.readbackMillis, stats.analysisMillis
             )
 

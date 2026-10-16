@@ -17,6 +17,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import com.taichi765.struckoutCameraApp.camera.CameraScreenRoute
 import com.taichi765.struckoutCameraApp.config.ConfigScreenRoute
 import com.taichi765.struckoutCameraApp.recording.LocalDataScreenRoute
+import kotlinx.coroutines.flow.StateFlow
 
 val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
@@ -41,10 +44,19 @@ val REQUIRED_PERMISSIONS = arrayOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun App() {
+fun App(remoteScreen: StateFlow<String?>, onRemoteScreenShown: () -> Unit) {
     val navController = rememberNavController()
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
+
+    // PC から adb で開く画面を指定されたとき (scripts/camera-remote.ps1)。権限がそろうまでは待つ
+    val requestedScreen by remoteScreen.collectAsState()
+    LaunchedEffect(requestedScreen, permissionGranted) {
+        val screen = requestedScreen ?: return@LaunchedEffect
+        if (!permissionGranted) return@LaunchedEffect
+        navController.navigate(screen) { launchSingleTop = true }
+        onRemoteScreenShown()
+    }
 
     Scaffold(
         bottomBar = {

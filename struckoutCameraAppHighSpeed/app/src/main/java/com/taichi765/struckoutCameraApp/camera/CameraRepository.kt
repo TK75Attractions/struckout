@@ -143,6 +143,16 @@ class CameraRepository @Inject constructor(
         }
     }
 
+    /**
+     * 端末の座標からカメラの座標への回転行列 (3x3、行優先の 9 個)。[WorldDirectionCalculator] はこの転置で
+     * 視線を端末の座標に直す。PC で解析するときに、同じ計算をしてもらうために送る。
+     */
+    val deviceToCameraRotation: DoubleArray = run {
+        val matrix = Mat()
+        Calib3d.Rodrigues(cameraRotation, matrix)
+        DoubleArray(9).also { matrix.get(0, 0, it) }.also { matrix.release() }
+    }
+
     private var calculator: SizedCalculator? = null
 
     /**
