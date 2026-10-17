@@ -3,6 +3,7 @@ import {
     SquareButton,
     TwoColorOutlinedButton,
 } from "../components/button.slint";
+import { Fonts } from "../styling.slint";
 
 enum Difficulity { Normal, Hard, VeryHard }
 
@@ -13,48 +14,53 @@ global Adopter {
     callback start-game();
 }
 
-component DifficulityButton {
-    in property <string> text;
-    in property <bool> highlighted;
+component DifficultyButton {
+    in property <string> text <=> inner.text;
+    in property <bool> emphasize <=> inner.emphasize;
     callback clicked();
 
-    Button {
-        text: root.text;
-        primary: root.highlighted;
-
-        clicked => {
-            root.clicked();
-        }
+    inner := TwoColorOutlinedButton {
+        font-family: Fonts.oxanium;
+        font-size: 24px;
+        layout-lr: 40px;
+        layout-tb: 10px;
+        clicked => root.clicked();
     }
 }
 
-
 export component DifficulitySelectScreen inherits Rectangle {
     VerticalLayout {
+        alignment: LayoutAlignment.stretch;
         padding-top: 16px;
 
         VerticalLayout {
-            DifficulityButton {
-                text: "NORMAL";
-                highlighted: Adopter.selected-difficulity == Difficulity.Normal;
-
-                clicked => {
-                    Adopter.select-difficulity(Difficulity.Normal);
+            cont1 := Rectangle {
+                DifficultyButton {
+                    text: "NORMAL";
+                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
+                    emphasize: Adopter.selected-difficulity == Difficulity.Normal;
+                    clicked => {
+                        Adopter.select-difficulity(Difficulity.Normal);
+                    }
                 }
             }
 
-            Rectangle {
-                TwoColorOutlinedButton {
+            cont2 := Rectangle {
+                DifficultyButton {
                     text: "HARD";
+                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
+                    emphasize: Adopter.selected-difficulity == Difficulity.Hard;
                     clicked => {
                         Adopter.select-difficulity(Difficulity.Hard);
                     }
                 }
             }
 
-            Rectangle {
-                TwoColorOutlinedButton {
+            cont3 := Rectangle {
+                DifficultyButton {
                     text: "VERY HARD";
+                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
+                    emphasize: Adopter.selected-difficulity == Difficulity.VeryHard;
                     clicked => {
                         Adopter.select-difficulity(Difficulity.VeryHard);
                     }
@@ -75,5 +81,6 @@ export component DifficulitySelectScreen inherits Rectangle {
         }
     }
 }
+
 
 export { Adopter as DifficulitySelectAdopter }
