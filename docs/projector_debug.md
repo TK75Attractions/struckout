@@ -29,8 +29,9 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 
 ## 座標系と得点の約束事
 
-- `CollisionPoint` は**物理座標 (m)**。ball_tracker は三角測量の結果をそのまま送る
-  (`ball_tracker/src/collision_output/network.rs`: `x = coll.x, y = coll.z`)。
+- `CollisionPoint` は**物理座標 (m)**。ball_tracker は的の面の上での着弾位置を送る。
+  `x` が面に沿った横方向 (世界座標の y)、`y` が高さ (世界座標の z)
+  (`ball_tracker/src/collision_output/network.rs`: `x = coll.y, y = coll.z`)。
 - **得点は差分**。game_master (`game_master/src/service.rs`) が `game.score += score_to_add`
   としているので、projector は累計ではなく的に当たったぶんだけを送る。
 - `AddScore` には `game_id` が要る。projector は `GameStarted` を受け取ったときに
@@ -55,12 +56,36 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 収まる、というだけの仮置きなので、盤面の実寸を測って必ず入れ直すこと。
 合わせ込むときは `Log Conversions` を on にすると、送った物理座標と変換結果が並んで出る。
 
+#### 書き出したプレイヤーで係数を変える
+
+Inspector の値は既定値で、起動時に設定ファイル `collision_transform.json` があれば
+その値で上書きする (`CollisionTransformStore`)。ファイルの場所は次の順で決まる。
+
+| 指定 | 例 |
+|---|---|
+| コマンドライン | `StruckOut.exe -collisionTransform C:\struckout\collision_transform.json` |
+| 環境変数 | `STRUCKOUT_COLLISION_TRANSFORM` |
+| 既定 | `%USERPROFILE%\AppData\LocalLow\DefaultCompany\StruckOut\collision_transform.json` (Editor とプレイヤーで共通) |
+
+ファイルが無ければ Inspector の値のまま動く。中身がおかしい (1 m あたりが 0 以下など) ときも
+Inspector の値を使い、`Player.log` に `[Collision] could not read ...` と出る。
+
+実行中は **F2** で調整画面 (`CollisionCalibrationPanel`) が開く。変えた値はすぐ着弾の表示に効く。
+
+- 係数を直接打ち込む。入力欄から Esc で抜けると、矢印キーで原点を 1 px、Ctrl+矢印キーで
+  1 m あたりを 0.5% 動かせる (Shift で 10 倍)
+- 「板の 4 隅と中央に印を出す」: 実測した板の点 (左の壁から 0.07 / 1.13 m、地面から 1.79 / 2.47 m と、その中央)
+  に印を出し続ける。印が板の角に乗るまで係数を動かす
+- 「合わせ用の 2 点に印を出す」: 盤面の (480, 270) と (1440, 810) に印を出す。それぞれが板の上で映った位置
+  (左の壁からの距離, 地面からの高さ。m) を測って入れ、「2 点から係数を計算して入れる」を押すと係数が決まる
+  (向きが逆なら `Flip` も立つ)
+- 「保存」で設定ファイルに書く。次の起動からその値を使う。「ファイルから読み直す」「Inspector の値に戻す」もある
+
 盤面座標からワールド座標への変換はさらに後段で、
 `docs/projector_rendering.md` に書いてある。
 
-> **未解決**: ball_tracker は `CollisionPoint` に `(x, z)` を詰めているが、そこに
-> `// FIXME: これあってる?` が残っている。縦に使う軸が違っていた場合は
-> `Swap Axes` で暫定的に逃げられるが、本来は ball_tracker 側で決着させるべき。
+> ball_tracker は以前 `CollisionPoint` に世界座標の `(x, z)` を詰めていた。的の面は x = 0 なので
+> 横方向がつねに 0 になっていたが、`(y, z)` を送るように直してある。`Swap Axes` は不要になった。
 
 ## 1. 対向なしで起動する (Fake モード)
 
@@ -194,8 +219,10 @@ STRUCKOUT_NETWORK_MODE=fake
 | `-machineId` | `STRUCKOUT_MACHINE_ID` | `1` |
 | `-connectAttempts` | `STRUCKOUT_CONNECT_ATTEMPTS` | `5` |
 
-ball_tracker への接続は指数バックオフで `connectAttempts` 回まで再試行するので、
-Unity を先に Play してから対向を立ち上げても間に合う。
+ball_tracker への接続は指数バックオフ (間隔は 5 秒まで) で `connectAttempts` 回まで再試行するので、
+Unity を先に Play してから対向を立ち上げても間に合う (`scripts/run-pc2.ps1` は 100000 回を渡して待ち続けさせる)。
+つながったあとで ball_tracker と切れたら、2 秒おきにつなぎ直す (projector を起動し直さなくてよい)。
+game_master のイベントの購読も、切れたら 2 秒おきにやり直す (`GrpcGameMasterClient`)。
 gRPC のチャネルは遅延接続なので、game_master は後から立てても繋がる。
 
 ## 6. protobuf のコード生成

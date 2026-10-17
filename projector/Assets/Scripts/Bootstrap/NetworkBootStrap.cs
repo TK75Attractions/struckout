@@ -3,6 +3,7 @@ using Tk75Attractions.Struckout.V1;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using System;
+using System.Threading;
 using Struckout.Domain;
 
 
@@ -14,6 +15,12 @@ namespace Struckout.Bootstrap
         private readonly IGameMasterClient _master;
         private readonly IPacketRouter _packetRouter;
         private readonly NetworkSettings _settings;
+
+        /// <summary>ball_tracker が落ちたり再起動したりしたとき、つなぎ直す間隔。</summary>
+        private static readonly TimeSpan TrackerReconnectInterval = TimeSpan.FromSeconds(2);
+
+        private readonly CancellationTokenSource _reconnectCancellation = new();
+        private int _reconnecting;
 
         public NetworkBootstrap(
             IClientService<ProjectorPacket> clientService,
@@ -40,7 +47,7 @@ namespace Struckout.Bootstrap
 
             _client.OnReceived += _packetRouter.RoutePacket;
 
-            // 自動再接続はまだ入れていないので、せめて切れたことは分かるようにする。
+            // どちらも切れたらつなぎ直す (ball_tracker はここで、game_master は GrpcGameMasterClient の中で)。
             _client.ConnectionLost += OnTrackerConnectionLost;
             _master.ConnectionLost += OnMasterConnectionLost;
 
@@ -57,11 +64,49 @@ namespace Struckout.Bootstrap
             return NetworkConnectionResult.Success;
         }
 
-        private void OnTrackerConnectionLost() =>
-            Debug.LogWarning("[Network] lost the connection to the tracker. Restart the projector to reconnect.");
+        private void OnTrackerConnectionLost()
+        {
+            Debug.LogWarning("[Network] lost the connection to the tracker. Reconnecting...");
+            ReconnectTrackerAsync(_reconnectCancellation.Token).Forget();
+        }
+
+        /// <summary>
+        /// ball_tracker につながるまで、一定の間隔でつなぎ直す。PC① の ball_tracker を再起動しても、
+        /// projector は起動し直さなくてよい。
+        /// </summary>
+        private async UniTaskVoid ReconnectTrackerAsync(CancellationToken token)
+        {
+            if (Interlocked.Exchange(ref _reconnecting, 1) == 1) return;
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        if (await _client.ConnectAsync())
+                        {
+                            Debug.Log("[Network] reconnected to the tracker.");
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[Network] failed to reconnect to the tracker: {ex.Message}");
+                    }
+                    await UniTask.Delay(TrackerReconnectInterval, cancellationToken: token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _reconnecting, 0);
+            }
+        }
 
         private void OnMasterConnectionLost() =>
-            Debug.LogWarning("[Network] lost the connection to game_master. Restart the projector to reconnect.");
+            Debug.LogWarning("[Network] lost the connection to game_master. Reconnecting...");
 
         private void OnReceiveMessage(TestMessage message)
         {
@@ -71,6 +116,7 @@ namespace Struckout.Bootstrap
 
         public async UniTask DisposeAsync()
         {
+            _reconnectCancellation.Cancel();
             if (_client == null) return;
             _client.OnReceived -= _packetRouter.RoutePacket;
             _client.ConnectionLost -= OnTrackerConnectionLost;

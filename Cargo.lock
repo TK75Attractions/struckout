@@ -1309,7 +1309,7 @@ dependencies = [
 [[package]]
 name = "const-field-offset"
 version = "0.2.1"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "const-field-offset-macro",
  "field-offset",
@@ -1318,7 +1318,7 @@ dependencies = [
 [[package]]
 name = "const-field-offset-macro"
 version = "0.2.1"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3067,7 +3067,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-linuxkms"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "bytemuck",
  "calloop 0.14.4",
@@ -3090,7 +3090,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-selector"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "cfg_aliases",
  "i-slint-backend-linuxkms",
@@ -3105,7 +3105,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-testing"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "cfg_aliases",
  "i-slint-common",
@@ -3117,7 +3117,7 @@ dependencies = [
 [[package]]
 name = "i-slint-backend-winit"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -3161,7 +3161,7 @@ dependencies = [
 [[package]]
 name = "i-slint-common"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "derive_more",
  "fontique",
@@ -3178,7 +3178,7 @@ dependencies = [
 [[package]]
 name = "i-slint-compiler"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "annotate-snippets",
  "by_address",
@@ -3212,7 +3212,7 @@ dependencies = [
 [[package]]
 name = "i-slint-core"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "accesskit",
  "async-channel",
@@ -3266,7 +3266,7 @@ dependencies = [
 [[package]]
 name = "i-slint-core-macros"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "quote",
  "serde_json",
@@ -3276,7 +3276,7 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-femtovg"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "const-field-offset",
  "femtovg",
@@ -3295,7 +3295,7 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-skia"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "bytemuck",
  "cfg_aliases",
@@ -3332,7 +3332,7 @@ dependencies = [
 [[package]]
 name = "i-slint-renderer-software"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "bytemuck",
  "clru",
@@ -6309,7 +6309,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8050abb251097357e24aff63ba2c52a6309ecb7d23a5474023df960a02694d8"
 dependencies = [
  "annotate-snippets",
- "base64 0.23.1",
+ "base64 0.22.1",
  "encoding_rs_io",
  "granit-parser",
  "nohash-hasher",
@@ -6587,7 +6587,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 [[package]]
 name = "slint"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "const-field-offset",
  "i-slint-backend-linuxkms",
@@ -6608,7 +6608,7 @@ dependencies = [
 [[package]]
 name = "slint-build"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "derive_more",
  "fontique",
@@ -6620,7 +6620,7 @@ dependencies = [
 [[package]]
 name = "slint-macros"
 version = "1.19.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "i-slint-compiler",
  "proc-macro2",
@@ -6972,7 +6972,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stern"
 version = "0.1.0"
-source = "git+https://github.com/Tk75Attractions/stern#def6fbb33097c7c72e2ecbba6610ac6c16d2fda9"
+source = "git+https://github.com/Tk75Attractions/stern#3a659c6f9fbbf6f1a2408687c07dc4b92fa2f171"
 dependencies = [
  "async-executor",
  "async-io",
@@ -6992,7 +6992,7 @@ dependencies = [
 [[package]]
 name = "stern-macros"
 version = "0.1.0"
-source = "git+https://github.com/Tk75Attractions/stern#def6fbb33097c7c72e2ecbba6610ac6c16d2fda9"
+source = "git+https://github.com/Tk75Attractions/stern#3a659c6f9fbbf6f1a2408687c07dc4b92fa2f171"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -8127,7 +8127,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vtable"
 version = "0.5.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "const-field-offset",
  "portable-atomic",
@@ -8138,7 +8138,7 @@ dependencies = [
 [[package]]
 name = "vtable-macro"
 version = "0.5.0"
-source = "git+https://github.com/Tk75Attractions/slint#124cdd743b023d015e8c1cbadaf81068b3840ad2"
+source = "git+https://github.com/Tk75Attractions/slint#9ee4ff04d16b1bfd514a08554e1527895647e9f4"
 dependencies = [
  "proc-macro2",
  "quote",

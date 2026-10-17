@@ -15,7 +15,7 @@ namespace Struckout.Infrastructure
     public class FakeClientService : IClientService<ProjectorPacket>
     {
         // CollisionPoint は物理座標 (m)。ball_tracker は三角測量の結果をそのまま送る
-        // (ball_tracker/src/collision_output/network.rs: x = coll.x, y = coll.z)。
+        // (ball_tracker/src/collision_output/network.rs: x = coll.y, y = coll.z)。
         // 盤面の実寸が決まったら直すこと。
         private const float FieldMinX = -1f;
         private const float FieldMaxX = 1f;

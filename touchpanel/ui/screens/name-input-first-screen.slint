@@ -1,39 +1,35 @@
 import { Icons } from "../icons.slint";
 import {
-    KeyboardBody,
+    Keyboard,
     KeyBoardMode,
-    KeyboardBottomBar,
 } from "../components/keyboard.slint";
-import { BackButton } from "../components/back-button.slint";
+import { StruckoutPalette } from "../styling.slint";
+import { TextEdit, LineEdit } from "std-widgets.slint";
 
 global Adopter {
     in property <string> player-name-text;
     in property <KeyBoardMode> keyboard-mode;
     in property <string> error-msg;
-    callback switch-keyboard-mode();
+    callback set-keyboard-mode(mode: KeyBoardMode);
     callback push-character(char: string);
     callback remove-character();
     callback submit-name();
-    callback move-back();
+    callback modify();
 }
 
 export component NameInputFirstScreen inherits Rectangle {
+    private property <brush> comp_outline: StruckoutPalette.ref_grey_30;
 
     VerticalLayout {
         alignment: LayoutAlignment.stretch;
 
-        BackButton {
-            on-click => {
-                Adopter.move-back();
-            }
-        }
-
+        // TODO: LineEditで違和感がないかを実機で試す
         Rectangle {
-            border-color: black;
-            border-width: 4px;
+            // border-color: comp_outline;
+            // border-width: 4px;
 
-            Text {
-                text: Adopter.player-name-text;
+            text-box := Text {
+                text: "たろう";
             }
         }
 
@@ -41,29 +37,28 @@ export component NameInputFirstScreen inherits Rectangle {
             Text {
                 text: Adopter.error-msg;
                 color: red;
+                wrap: TextWrap.char-wrap;
             }
         }
 
-        KeyboardBody {
-            spacing: 4px;
+        Keyboard {
             mode: Adopter.keyboard-mode;
+            height: 50%;
 
-            text-added(text) => {
-                Adopter.push-character(text);
+            set-keyboard-mode(mode) => {
+                Adopter.set-keyboard-mode(mode);
             }
-        }
-
-        KeyboardBottomBar {
-            switch-keyboard-mode => {
-                Adopter.switch-keyboard-mode();
-            }
-
-            click-backspace => {
+            backspace() => {
                 Adopter.remove-character();
             }
-
-            submit-name => {
+            submit() => {
                 Adopter.submit-name();
+            }
+            modify() => {
+                Adopter.modify();
+            }
+            char-added(char) => {
+                Adopter.push-character(char);
             }
         }
     }

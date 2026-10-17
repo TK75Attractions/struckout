@@ -1,14 +1,22 @@
-use std::{io, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering},
+    },
+    time::{Duration, Instant},
+};
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
+use parking_lot::Mutex;
 use struckout_proto::{
     DetectionsPacket, ReadPacketError, TcpClientPacket, TcpServerPacket, read_packet,
     tcp_client_packet, tcp_server_packet, write_packet,
 };
 use thiserror::Error;
 use tokio::{
-    net::{TcpListener, tcp},
+    net::{TcpListener, TcpStream, tcp},
     sync::mpsc,
     task::JoinHandle,
 };
@@ -16,41 +24,77 @@ use tracing::{debug, info, trace_span, warn};
 
 use crate::{
     CameraLocationStore,
-    detection_input::{DetectionInput, FramePairMatcher, PairedFrames},
+    camera_config::CameraConfig,
+    clock_sync::ClockSync,
+    detection_input::{CameraFrame, DetectionInput},
     types::CameraId,
+    video::{VideoOptions, VideoTransport},
 };
 
 const DATA_ADDR_DEFAULT: &str = "0.0.0.0:5050";
 const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
-const PAKCET_CHANNEL_BUF: usize = 5;
+// PC で動画を解析するときは、2 台から 120fps で検出が届くことがある
+const PAKCET_CHANNEL_BUF: usize = 64;
+/// 接続した直後は、時刻合わせの要求をこの間隔で [`TIME_SYNC_BURST`] 回送る。
+const TIME_SYNC_BURST_INTERVAL: Duration = Duration::from_millis(50);
+const TIME_SYNC_BURST: u64 = 8;
+/// そのあとの時刻合わせの間隔。端末の時計は PC と進み方が違うので、測り続ける。
+const TIME_SYNC_INTERVAL: Duration = Duration::from_millis(500);
+/// 返事のない要求がこの数だけたまり、この時間だけ返事が来なければ、時刻合わせに対応していない
+/// 送信元とみなして要求を送るのをやめる。
+const TIME_SYNC_MAX_UNANSWERED: usize = 5;
+const TIME_SYNC_GIVE_UP_AFTER: Duration = Duration::from_secs(2);
+/// つないだ直後に、端末が名乗る (`Hello`) のを待つ時間。名乗らない送信元 (古いアプリ、再生用のスクリプト) には、
+/// これだけ待ってから、つないだ順の camera_id を振る。
+const HELLO_TIMEOUT: Duration = Duration::from_millis(500);
 
 pub struct NetworkDetectionInput {
     data_transport: DataTransport,
     tcp_transport: TcpTransport,
-    matcher: FramePairMatcher,
+    /// カメラから動画を受け取って、この PC で解析する。`None` なら受け付けない
+    video_transport: Option<VideoTransport>,
+    clock: Arc<ClockSync>,
 }
 
 impl NetworkDetectionInput {
+    /// `video` を渡すと、5052 番でカメラから動画を受け取り、この PC で解析する。
+    /// `cameras` を渡すと、そこに書いた端末を見分けて、決まった camera_id と位置を使う ([`CameraConfig`])。
     pub async fn new(
         camera_locs: Arc<CameraLocationStore>,
+        clock: Arc<ClockSync>,
+        video: Option<VideoOptions>,
+        cameras: Option<Arc<CameraConfig>>,
     ) -> Result<Self, NetworkDetectionInputCreationError> {
         let data_transport = DataTransport::new()
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Data(e))?;
-        let tcp_transport = TcpTransport::new(camera_locs)
+        let tcp_transport = TcpTransport::new(camera_locs, clock.clone(), cameras)
             .await
             .map_err(|e| NetworkDetectionInputCreationError::Tcp(e))?;
+        let video_transport = match video {
+            Some(video) => Some(
+                VideoTransport::new(video)
+                    .await
+                    .map_err(NetworkDetectionInputCreationError::Video)?,
+            ),
+            None => None,
+        };
         Ok(Self {
             data_transport,
             tcp_transport,
-            matcher: FramePairMatcher::new(),
+            video_transport,
+            clock,
         })
     }
 }
 
 impl DetectionInput for NetworkDetectionInput {
-    async fn start(mut self, pair_tx: mpsc::Sender<PairedFrames>) -> std::io::Result<()> {
+    async fn start(mut self, frame_tx: mpsc::Sender<CameraFrame>) -> std::io::Result<()> {
         let (packet_tx, mut packet_rx) = mpsc::channel(PAKCET_CHANNEL_BUF);
+        if let Some(video_transport) = self.video_transport {
+            let packet_tx = packet_tx.clone();
+            tokio::spawn(async move { video_transport.listen(packet_tx).await });
+        }
         tokio::spawn(async move { self.data_transport.listen(packet_tx).await });
         tokio::spawn(async move {
             loop {
@@ -59,12 +103,12 @@ impl DetectionInput for NetworkDetectionInput {
                     .await
                     .with_context(|| "packet channel has been unexpectedly closed")
                     .unwrap();
-                let pair = self.matcher.pair_frame(received_at, packet);
-                if let Some(pair) = pair {
-                    pair_tx
-                        .send(pair)
+                // フレームの時刻を決めるのはここだけ。
+                if let Some(frame) = self.clock.frame(received_at, packet) {
+                    frame_tx
+                        .send(frame)
                         .await
-                        .with_context(|| "pair channel has been unexpectedly closed")
+                        .with_context(|| "frame channel has been unexpectedly closed")
                         .unwrap();
                 }
             }
@@ -81,6 +125,8 @@ pub enum NetworkDetectionInputCreationError {
     Tcp(#[source] std::io::Error),
     #[error("failed to create DataTransport: {:?}",.0)]
     Data(#[source] std::io::Error),
+    #[error("failed to create VideoTransport: {:?}",.0)]
+    Video(#[source] std::io::Error),
 }
 
 /// UDP Socket to receive frames from cameras.
@@ -115,8 +161,8 @@ impl DataTransport {
                     let join = tokio::spawn(Self::handle_input(packet_tx.clone(), reader));
                     self.join_handles.push(join);
                 }
-                Err(_e) => {
-                    todo!("handle errors")
+                Err(e) => {
+                    warn!(error = ?e, "failed to accept a connection in DataTransport");
                 }
             }
         }
@@ -129,20 +175,34 @@ impl DataTransport {
         loop {
             let packet: DetectionsPacket = read_packet(&mut reader).await?;
 
-            packet_tx.send((Utc::now(), packet)).await.unwrap();
+            if packet_tx.send((Utc::now(), packet)).await.is_err() {
+                return Ok(());
+            }
         }
     }
 }
 
 /// TCP socket to receive camera location from cameras.
+///
+/// この接続で、端末の時計と PC の時計の差も測る。
 pub struct TcpTransport {
     listener: TcpListener,
     join_handles: Vec<JoinHandle<()>>,
     camera_locs: Arc<CameraLocationStore>,
+    clock: Arc<ClockSync>,
+    /// 端末ごとの設定。書いてある端末には、書いた順の camera_id を振る
+    cameras: Option<Arc<CameraConfig>>,
+    /// 見分けられなかった端末に次に割り当てる番号。接続ごとに増やす。登録済みの位置の数から決めると、
+    /// 2 台がほぼ同時に接続したときに同じ番号になる。
+    next_camera_id: Arc<AtomicU32>,
 }
 
 impl TcpTransport {
-    pub async fn new(camera_locs: Arc<CameraLocationStore>) -> std::io::Result<Self> {
+    pub async fn new(
+        camera_locs: Arc<CameraLocationStore>,
+        clock: Arc<ClockSync>,
+        cameras: Option<Arc<CameraConfig>>,
+    ) -> std::io::Result<Self> {
         info!(
             port = CAMERA_LOC_TCP_ADDR_DEFAULT,
             "trying to bind port for `CameraLocationListener`"
@@ -153,73 +213,209 @@ impl TcpTransport {
             listener,
             join_handles: Vec::new(),
             camera_locs,
+            clock,
+            next_camera_id: Arc::new(AtomicU32::new(cameras.as_ref().map_or(0, |c| c.first_unknown_id()))),
+            cameras,
         })
     }
 
     pub async fn listen(&mut self) {
-        let mut writers = Vec::new();
         loop {
             let _span = trace_span!("TcpTransport_listen");
             debug!("TcpTransport listening...");
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection for TcpTransport");
-                    let (reader, mut writer) = stream.into_split();
-
-                    self.init_conneciton(&mut writer).await;
-                    debug!(?addr, "initialized connection");
-                    writers.push(writer);
-
-                    let join =
-                        tokio::spawn(Self::handle_stream(Arc::clone(&self.camera_locs), reader));
+                    let join = tokio::spawn(Self::handle_connection(
+                        stream,
+                        self.cameras.clone(),
+                        Arc::clone(&self.next_camera_id),
+                        Arc::clone(&self.camera_locs),
+                        Arc::clone(&self.clock),
+                    ));
                     self.join_handles.push(join);
                 }
-                Err(_e) => {
-                    todo!("handle errors")
+                Err(e) => {
+                    warn!(error = ?e, "failed to accept a connection in TcpTransport");
                 }
             }
         }
     }
 
-    async fn init_conneciton(&mut self, writer: &mut tcp::OwnedWriteHalf) {
-        let next_camera_id = self.camera_locs.next() as u32;
-        info!("camera id for new device is {}", next_camera_id);
-        let packet = TcpServerPacket {
-            data: Some(tcp_server_packet::Data::CameraId(next_camera_id)),
-        };
+    async fn handle_connection(
+        stream: TcpStream,
+        cameras: Option<Arc<CameraConfig>>,
+        next_camera_id: Arc<AtomicU32>,
+        camera_locs: Arc<CameraLocationStore>,
+        clock: Arc<ClockSync>,
+    ) {
+        // 時刻合わせは往復時間で精度が決まるので、小さなパケットをためずに送る。
+        if let Err(e) = stream.set_nodelay(true) {
+            warn!(error = ?e, "failed to set TCP_NODELAY");
+        }
+        let (mut reader, mut writer) = stream.into_split();
 
-        write_packet(packet, writer).await.unwrap();
-    }
-
-    async fn handle_stream(camera_locs: Arc<CameraLocationStore>, mut reader: tcp::OwnedReadHalf) {
-        loop {
-            let res = read_packet::<TcpClientPacket, _>(&mut reader).await;
-
-            if let Err(ReadPacketError::ReadFailed(e)) = &res {
-                match e.kind() {
-                    io::ErrorKind::ConnectionReset => {
-                        info!("connection reseted by peer");
-                        break;
-                    }
-                    _ => (),
-                }
+        // 端末が名乗るのを待つ。名乗らない送信元は camera_id を待っているので、こちらからは何も届かない
+        let hello = match tokio::time::timeout(HELLO_TIMEOUT, read_packet::<TcpClientPacket, _>(&mut reader)).await {
+            Ok(Ok(TcpClientPacket {
+                data: Some(tcp_client_packet::Data::Hello(hello)),
+            })) => Some(hello),
+            Ok(Ok(packet)) => {
+                warn!(?packet, "expected a Hello as the first packet; treating the camera as unknown");
+                None
             }
-            let packet = res.unwrap();
+            Ok(Err(e)) => {
+                info!(error = ?e, "camera disconnected before it was given a camera id");
+                return;
+            }
+            Err(_) => None,
+        };
+        let device_id = hello.as_ref().map_or("", |hello| hello.device_id.as_str());
+        let known = cameras.as_deref().and_then(|cameras| cameras.find(device_id));
+        let camera_id = match known {
+            Some((camera_id, _)) => camera_id,
+            None => next_camera_id.fetch_add(1, Ordering::Relaxed),
+        };
+        let managed = known.is_some();
+        match (&hello, known) {
+            (_, Some((_, entry))) => info!(camera_id, name = entry.name, device_id, "camera connected"),
+            (Some(hello), None) if cameras.is_some() => warn!(
+                camera_id,
+                device_id,
+                model = hello.device_model,
+                "camera connected, but its device_id is not in --cameras (run scripts/camera-remote.ps1 config \
+                 to record it); using the pose the camera sends"
+            ),
+            (Some(_), None) => info!(camera_id, device_id, "camera connected"),
+            (None, _) => info!(camera_id, "camera connected (did not send a Hello)"),
+        }
+        // 前の接続で測った時計の差は使わない
+        clock.reset_camera(camera_id);
 
+        let packet = TcpServerPacket {
+            data: Some(tcp_server_packet::Data::CameraId(camera_id)),
+        };
+        if let Err(e) = write_packet(packet, &mut writer).await {
+            warn!(camera_id, error = ?e, "failed to send a camera id");
+            return;
+        }
+        if let Some((_, entry)) = known {
+            // 位置と焦点距離は PC が持っている値に合わせてもらう。スマホの設定が消えていても元に戻る
+            let packet = TcpServerPacket {
+                data: Some(tcp_server_packet::Data::CameraSettings(entry.settings())),
+            };
+            if let Err(e) = write_packet(packet, &mut writer).await {
+                warn!(camera_id, error = ?e, "failed to send the camera settings");
+                return;
+            }
+            debug!(camera_id, settings = ?entry.settings(), "sent the camera settings");
+        }
+        debug!(camera_id, "initialized connection");
+
+        // 返事を待っている要求の、送った時刻。
+        let pending = Arc::new(Mutex::new(HashMap::<u64, DateTime<Utc>>::new()));
+        let last_response = Arc::new(Mutex::new(Instant::now()));
+        let requests = tokio::spawn(Self::request_time_sync(
+            writer,
+            camera_id,
+            Arc::clone(&pending),
+            Arc::clone(&last_response),
+        ));
+
+        loop {
+            let packet = match read_packet::<TcpClientPacket, _>(&mut reader).await {
+                Ok(packet) => packet,
+                Err(ReadPacketError::ReadFailed(e)) => {
+                    info!(camera_id, error = ?e, "camera disconnected");
+                    break;
+                }
+                Err(ReadPacketError::DecodeFailed(e)) => {
+                    // 長さは読めているので、このパケットだけ読み飛ばせる。
+                    warn!(camera_id, error = ?e, "failed to decode a TcpClientPacket");
+                    continue;
+                }
+            };
             match packet.data {
                 Some(tcp_client_packet::Data::UpdateCameraPose(pose_data)) => {
-                    if pose_data.camera_pose.is_none() {
+                    let Some(camera_pose) = pose_data.camera_pose else {
                         warn!("camera_location field is missing for TcpClientPacket");
                         continue;
+                    };
+                    if managed {
+                        // --cameras に書いた位置を使う (送ってきたのは、こちらが送った値のはず)
+                        debug!(camera_id, value = ?camera_pose, "ignored the pose sent by a camera listed in --cameras");
+                        continue;
                     }
-                    let camera_pose = pose_data.camera_pose.unwrap(); // checked above
                     info!(id = pose_data.camera_id, value = ?camera_pose, "camera pose updated");
                     camera_locs.insert(CameraId::new(pose_data.camera_id), camera_pose);
+                }
+                Some(tcp_client_packet::Data::TimeSyncResponse(response)) => {
+                    let received_at = Utc::now();
+                    let sent_at = pending.lock().remove(&response.sequence);
+                    if let Some(sent_at) = sent_at {
+                        *last_response.lock() = Instant::now();
+                        clock.record_sync(camera_id, sent_at, received_at, &response);
+                    }
+                }
+                Some(tcp_client_packet::Data::Hello(_)) => {
+                    warn!(camera_id, "ignored a second Hello");
+                }
+                Some(tcp_client_packet::Data::CameraInfo(camera_info)) => {
+                    info!(camera_id, value = ?camera_info, "camera info updated");
+                    clock.record_info(camera_id, &camera_info);
                 }
                 None => {
                     warn!("TcpClientPacket was empty");
                 }
             };
         }
+        requests.abort();
+    }
+
+    /// 時刻合わせの要求を送り続ける。
+    async fn request_time_sync(
+        mut writer: tcp::OwnedWriteHalf,
+        camera_id: u32,
+        pending: Arc<Mutex<HashMap<u64, DateTime<Utc>>>>,
+        last_response: Arc<Mutex<Instant>>,
+    ) {
+        let mut sequence = 0;
+        loop {
+            let unanswered = pending.lock().len();
+            if unanswered >= TIME_SYNC_MAX_UNANSWERED
+                && last_response.lock().elapsed() >= TIME_SYNC_GIVE_UP_AFTER
+            {
+                info!(
+                    camera_id,
+                    "the camera does not answer time sync requests; using arrival times instead"
+                );
+                break;
+            }
+            let packet = TcpServerPacket {
+                data: Some(tcp_server_packet::Data::TimeSyncRequest(
+                    tcp_server_packet::TimeSyncRequest { sequence },
+                )),
+            };
+            {
+                let mut pending = pending.lock();
+                // 返事の来なかった古い要求は忘れる。
+                let oldest = sequence.saturating_sub(4 * TIME_SYNC_MAX_UNANSWERED as u64);
+                pending.retain(|sent, _| *sent >= oldest);
+                pending.insert(sequence, Utc::now());
+            }
+            if write_packet(packet, &mut writer).await.is_err() {
+                return;
+            }
+            sequence += 1;
+            tokio::time::sleep(if sequence < TIME_SYNC_BURST {
+                TIME_SYNC_BURST_INTERVAL
+            } else {
+                TIME_SYNC_INTERVAL
+            })
+            .await;
+        }
+        // 書き込み側を閉じると、端末によっては接続全体が切れたとみなす。接続が終わるまで持っておく。
+        std::future::pending::<()>().await;
+        drop(writer);
     }
 }

@@ -31,6 +31,10 @@ impl CameraId {
     pub fn new(val: u32) -> Self {
         Self(val)
     }
+
+    pub fn value(self) -> u32 {
+        self.0
+    }
 }
 
 impl From<u32> for CameraId {

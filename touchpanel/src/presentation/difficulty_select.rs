@@ -3,7 +3,7 @@ use tokio::sync::oneshot;
 
 use crate::{Application, Context, NavController};
 use stern::{
-    WorkerThread,
+    PropertyHandle, WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -21,12 +21,14 @@ viewmodel_rc!(
     DifficulitySelectAdopter
 );
 
-#[derive(Debug)]
+#[derive(derive_more::Debug)]
 struct DifficulitySelectViewModel<E> {
     nav_controller: NavController,
     worker: WorkerThread<Context, E>,
     state: DifficulitySelectStates<Mapper>,
     player_id: Option<PlayerId>,
+    show_topbar_prop: PropertyHandle<bool>,
+    show_backbutton_prop: PropertyHandle<bool>,
 }
 
 impl DifficulitySelectViewModel<SlintExecutor> {
@@ -41,6 +43,8 @@ impl DifficulitySelectViewModel<SlintExecutor> {
                     .as_weak(),
             ),
             player_id: None,
+            show_topbar_prop: application.show_topbar_prop(),
+            show_backbutton_prop: application.show_backbutton_prop(),
         }
     }
 }
@@ -104,10 +108,17 @@ impl NavDestination<NavRoute> for DifficultySelectDestination {
             panic!("matched variant should be given");
         };
 
-        self.0.borrow_mut().player_id = Some(*player_id);
+        let mut guard = self.0.borrow_mut();
+        guard.player_id = Some(*player_id);
+        guard.show_topbar_prop.set(true);
+        guard.show_backbutton_prop.set(true);
     }
 
     fn route(&self) -> NavRouteKind {
         NavRouteKind::DifficulitySelect
     }
+}
+
+#[cfg(test)]
+mod tests {
 }

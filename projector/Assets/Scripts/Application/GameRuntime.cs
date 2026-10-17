@@ -71,6 +71,7 @@ namespace Struckout.Application
         public void StartGame(Difficulty difficulty)
         {
             _state.StartGame(difficulty);
+            _uiService.SetGamePhase(GamePhase.Playing);
             Debug.Log($"[Game] started ({difficulty})");
         }
 
@@ -80,6 +81,7 @@ namespace Struckout.Application
         public void FinishGame()
         {
             _state.FinishGame();
+            _uiService.SetGamePhase(GamePhase.Finished);
             Debug.Log($"[Game] finished (score={_state.Score})");
         }
 

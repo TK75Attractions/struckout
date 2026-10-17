@@ -1,6 +1,6 @@
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use stern::{
-    WorkerThread,
+    PropertyHandle, WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -10,8 +10,11 @@ use tokio_util::sync::CancellationToken;
 use tonic::Status;
 use tracing::{Instrument, debug, instrument, trace};
 
-use super::pop_player_name;
-use crate::{Application, Context, NavController, data::RequestError};
+use crate::{
+    Application, Context, NavController,
+    data::RequestError,
+    keyboard::{keyboard_modify, pop_player_name},
+};
 
 use touchpanel_ui::{
     KeyBoardMode, NameInputFirstPropertyMappers, NameInputFirstStates,
@@ -24,12 +27,14 @@ viewmodel_rc!(NameInputViewModel<Context, SlintExecutor>, NameInputFirstAdopter)
 
 #[derive(derive_more::Debug)]
 pub struct NameInputViewModel<C, E> {
-    pub nav_controller: NavController,
+    nav_controller: NavController,
     #[debug(skip)]
-    pub worker: WorkerThread<C, E>,
-    pub state: NameInputFirstStates<Mapper>,
+    worker: WorkerThread<C, E>,
+    state: NameInputFirstStates<Mapper>,
     /// Token to cancel request to game-master.
-    pub gm_cancel_tok: Option<CancellationToken>,
+    gm_cancel_tok: Option<CancellationToken>,
+    show_topbar_prop: PropertyHandle<bool>,
+    show_backbutton_prop: PropertyHandle<bool>,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -75,6 +80,8 @@ impl NameInputViewModel<Context, SlintExecutor> {
                     .as_weak(),
             ),
             gm_cancel_tok: None,
+            show_topbar_prop: application.show_topbar_prop(),
+            show_backbutton_prop: application.show_backbutton_prop(),
         }
     }
 }
@@ -151,15 +158,9 @@ where
     C: PlayerRepository,
     E: ForegroundExecutor,
 {
-    fn on_switch_keyboard_mode(&mut self) {
-        trace!("NameInputViewModel::on_switch_keyboard_mode");
-
-        let old_mode = self.state.keyboard_mode.get();
-        let new_mode = match old_mode {
-            KeyBoardMode::Hiragana => KeyBoardMode::Katakana,
-            KeyBoardMode::Katakana => KeyBoardMode::Hiragana,
-        };
-        self.state.keyboard_mode.set(new_mode);
+    fn on_set_keyboard_mode(&mut self, mode: KeyBoardMode) {
+        trace!("NameInputViewModel::on_set_keyboard_mode");
+        self.state.keyboard_mode.set(mode);
     }
 
     fn on_push_character(&mut self, char: SharedString) {
@@ -208,8 +209,10 @@ where
     }
 
     #[instrument]
-    fn on_move_back(&mut self) {
-        self.nav_controller.navigate(NavRoute::Start);
+    fn on_modify(&mut self) {
+        let name = self.state.player_name_text.get_ref().clone();
+        let modified = keyboard_modify(name);
+        self.state.player_name_text.set(modified.to_shared_string());
     }
 }
 
@@ -231,7 +234,9 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
             panic!("matched variant should be given");
         };
 
-        // do nothing because the route doesn't have any arguments
+        let vm = self.0.borrow();
+        vm.show_topbar_prop.set(true);
+        vm.show_backbutton_prop.set(true);
     }
 
     fn route(&self) -> NavRouteKind {
@@ -354,6 +359,8 @@ mod tests {
     impl NameInputScreenTest {
         pub fn new(cx: MockPlayerRepository) -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
+            let show_topbar = Rc::new(RefCell::new(false));
+            let show_backbutton = Rc::new(RefCell::new(false));
 
             let nav_controller = NavController::new(NavRoute::Start, {
                 let route = Rc::clone(&route);
@@ -369,6 +376,14 @@ mod tests {
                 worker: worker.clone(),
                 state,
                 gm_cancel_tok: None,
+                show_topbar_prop: PropertyHandle::new(move |new| {
+                    let mut guard = show_topbar.borrow_mut();
+                    *guard = new;
+                }),
+                show_backbutton_prop: PropertyHandle::new(move |new| {
+                    let mut guard = show_backbutton.borrow_mut();
+                    *guard = new;
+                }),
             };
             Self { route, worker, vm }
         }

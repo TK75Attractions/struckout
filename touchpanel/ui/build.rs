@@ -7,6 +7,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             |typ_name| typ_name.starts_with("Inner") && typ_name.ends_with("Adopter"),
             "#[stern::adopter]",
         );
+    let profile = std::env::var("PROFILE").expect("'PROFILE' should be set by cargo");
+    let config = if profile == "debug" {
+        config.with_debug_info(true)
+    } else {
+        config
+    };
+
     slint_build::compile_with_config("./app-window.slint", config)?;
 
     Ok(())

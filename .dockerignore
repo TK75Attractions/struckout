@@ -2,6 +2,7 @@
 
 # Secrets
 **/.env
+**/.env.*
 **/*.local.toml
 
 .git
@@ -12,6 +13,7 @@ target
 # Non-Rust directoris
 projector
 struckoutCameraApp
+struckoutCameraAppHighSpeed
 sandbox
 
 # docs
@@ -25,3 +27,6 @@ mcu
 .cargo/patches.toml
 
 .states
+
+# 実験の記録 (録画は数 GB 以上)
+recordings

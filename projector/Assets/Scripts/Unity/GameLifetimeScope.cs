@@ -54,8 +54,36 @@ namespace Struckout.Unity
             builder.RegisterInstance(networkSettings);
 
             // 物理座標 -> 描画座標 の係数。SensorProvider が使う。
+            // 書き出したプレイヤーでも変えられるよう、設定ファイルがあれば Inspector の値を上書きする。
+            // 実行中は F2 の調整画面 (CollisionCalibrationPanel) で同じインスタンスを書き換え、ファイルに保存できる。
+            var inspectorCollisionTransform = new CollisionCoordinateTransform();
+            inspectorCollisionTransform.CopyFrom(_collisionTransform);
+            var collisionTransformPath = CollisionTransformStore.ResolvePath();
+            if (CollisionTransformStore.TryLoadInto(_collisionTransform, collisionTransformPath, out var collisionTransformError))
+            {
+                Debug.Log($"[Collision] loaded {collisionTransformPath}");
+            }
+            else if (collisionTransformError != null)
+            {
+                Debug.LogWarning($"[Collision] could not read {collisionTransformPath}; using the Inspector values: {collisionTransformError}");
+            }
+            else
+            {
+                Debug.Log($"[Collision] {collisionTransformPath} not found; using the Inspector values");
+            }
+
             Debug.Log($"[Collision] transform {_collisionTransform}");
             builder.RegisterInstance(_collisionTransform);
+            builder.RegisterBuildCallback(container =>
+            {
+                var panel = new GameObject("CollisionCalibrationPanel").AddComponent<CollisionCalibrationPanel>();
+                panel.transform.SetParent(transform, false);
+                panel.Construct(
+                    container.Resolve<CollisionCoordinateTransform>(),
+                    inspectorCollisionTransform,
+                    container.Resolve<IUIService>(),
+                    collisionTransformPath);
+            });
 
             // 盤面の広さは的の配置 (TargetGenerator) と描画 (WorldCoordinateTransform) の
             // 両方が使う。片方だけ変えられないよう、同じインスタンスを配る。

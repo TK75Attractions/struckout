@@ -1,17 +1,24 @@
 import { Icons } from "../icons.slint";
+import { Button } from "std-widgets.slint";
+import { StruckoutPalette, Outline } from "../styling.slint";
+import { SquareButton } from "button.slint";
 
 export enum KeyBoardMode {
     Hiragana,
     Katakana,
+    AlphabetUpper,
+    AlphabetLower,
+    Number,
 }
 
 component KeyButton {
     in property <string> text;
+    private property <brush> comp_outline: StruckoutPalette.ref_grey_50;
     callback clicked();
 
     Rectangle {
-        border-color: black;
-        border-width: 4px;
+        border-color: comp_outline;
+        border-width: Outline.level1;
 
         Text {
             text: text;
@@ -25,408 +32,598 @@ component KeyButton {
     }
 }
 
-export component KeyboardBody inherits Rectangle {
-    in property <length> spacing;
-    in property <KeyBoardMode> mode;
-    callback text-added(text: string);
+component AlphabetUpperKeyboard inherits Rectangle {
+    callback char-added(char: string);
 
-    HorizontalLayout {
-        spacing: spacing;
-
-        VerticalLayout {
-            spacing: spacing;
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "わ" : "ワ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "わ" : "ワ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "を" : "ヲ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "を" : "ヲ")
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ん" : "ン";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ん" : "ン");
-                }
+    GridLayout {
+        for c[i] in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]: KeyButton {
+            text: c;
+            row: 0;
+            col: i;
+            clicked => {
+                root.char-added(c);
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ら" : "ラ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ら" : "ラ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "り" : "リ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "り" : "リ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "る" : "ル";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "る" : "ル");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "れ" : "レ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "れ" : "レ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ろ" : "ロ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ろ" : "ロ");
-                }
+        for c[i] in ["K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"]: KeyButton {
+            text: c;
+            row: 1;
+            col: i;
+            clicked => {
+                root.char-added(c);
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "や" : "ヤ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "や" : "ヤ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ゆ" : "ユ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ゆ" : "ユ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "よ" : "ヨ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "よ" : "ヨ");
-                }
+        for c[i] in ["U", "V", "W", "X", "Y", "Z"]: KeyButton {
+            text: c;
+            row: 2;
+            col: i;
+            clicked => {
+                root.char-added(c);
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ま" : "マ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ま" : "マ");
-                }
-            }
+        for c[i] in ["", "", "", ""]: KeyButton {
+            text: c;
+            row: 2;
+            col: i + 6;
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "み" : "ミ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "み" : "ミ");
-                }
-            }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 3;
+            col: i;
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "む" : "ム";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "む" : "ム");
-                }
-            }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 4;
+            col: i;
+        }
+    }
+}
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "め" : "メ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "め" : "メ");
-                }
-            }
+component AlphabetLowerKeyboard inherits Rectangle {
+    callback char-added(char: string);
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "も" : "モ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "も" : "モ");
-                }
+    GridLayout {
+        for c[i] in ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]: KeyButton {
+            text: c;
+            row: 0;
+            col: i;
+            clicked => {
+                root.char-added(c);
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "は" : "ハ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "は" : "ハ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ひ" : "ヒ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ひ" : "ヒ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ふ" : "フ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ふ" : "フ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "へ" : "ヘ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "へ" : "ヘ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ほ" : "ホ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ほ" : "ホ");
-                }
+        for c[i] in ["k", "l", "m", "n", "o", "p", "q", "r", "s", "t"]: KeyButton {
+            text: c;
+            row: 1;
+            col: i;
+            clicked => {
+                root.char-added(c);
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "な" : "ナ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "な" : "ナ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "に" : "ニ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "に" : "ニ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ぬ" : "ヌ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ぬ" : "ヌ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ね" : "ネ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ね" : "ネ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "の" : "ノ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "の" : "ノ");
-                }
+        for c[i] in ["u", "v", "w", "x", "y", "z"]: KeyButton {
+            text: c;
+            row: 2;
+            col: i;
+            clicked => {
+                root.char-added(c);
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "た" : "タ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "た" : "タ");
-                }
-            }
+        for c[i] in ["", "", "", ""]: KeyButton {
+            text: c;
+            row: 2;
+            col: i + 6;
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "ち" : "チ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "ち" : "チ");
-                }
-            }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 3;
+            col: i;
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "つ" : "ツ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "つ" : "ツ");
-                }
-            }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 4;
+            col: i;
+        }
+    }
+}
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "て" : "テ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "て" : "テ");
-                }
-            }
+component NumberKeyboard inherits Rectangle {
+    callback char-added(char: string);
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "と" : "ト";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "と" : "ト");
-                }
+    GridLayout {
+        for c[i] in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]: KeyButton {
+            text: c;
+            row: 0;
+            col: i;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 1;
+            col: i;
+        }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 2;
+            col: i;
+        }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 3;
+            col: i;
+        }
+        for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
+            text: c;
+            row: 4;
+            col: i;
+        }
+    }
+}
+
+component HiraganaKeyboard inherits Rectangle {
+    callback char-added(char: string);
+
+    GridLayout {
+        KeyButton {
+            text: "わ";
+            row: 0;
+            col: 0;
+            clicked => {
+                root.char-added("わ");
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "さ" : "サ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "さ" : "サ");
-                }
-            }
+        KeyButton {
+            text: "";
+            row: 1;
+            col: 0;
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "し" : "シ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "し" : "シ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "す" : "ス";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "す" : "ス");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "せ" : "セ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "せ" : "セ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "そ" : "ソ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "そ" : "ソ");
-                }
+        KeyButton {
+            text: "を";
+            row: 2;
+            col: 0;
+            clicked => {
+                root.char-added("を");
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "か" : "カ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "か" : "カ");
-                }
-            }
+        KeyButton {
+            text: "";
+            row: 3;
+            col: 0;
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "き" : "キ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "き" : "キ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "く" : "ク";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "く" : "ク");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "け" : "ケ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "け" : "ケ");
-                }
-            }
-
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "こ" : "コ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "こ" : "コ");
-                }
+        KeyButton {
+            text: "ん";
+            row: 4;
+            col: 0;
+            clicked => {
+                root.char-added("ん");
             }
         }
 
-        VerticalLayout {
-            spacing: spacing;
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "あ" : "ア";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "あ" : "ア");
-                }
+        for c[i] in ["ら", "り", "る", "れ", "ろ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 1;
+            clicked => {
+                root.char-added(c);
             }
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "い" : "イ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "い" : "イ");
-                }
+        KeyButton {
+            text: "や";
+            row: 0;
+            col: 2;
+            clicked => {
+                root.char-added("や");
             }
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "う" : "ウ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "う" : "ウ");
-                }
+        KeyButton {
+            text: "";
+            row: 1;
+            col: 2;
+        }
+
+        KeyButton {
+            text: "ゆ";
+            row: 2;
+            col: 2;
+            clicked => {
+                root.char-added("ゆ");
             }
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "え" : "エ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "え" : "エ");
-                }
+        KeyButton {
+            text: "";
+            row: 3;
+            col: 2;
+        }
+
+        KeyButton {
+            text: "よ";
+            row: 4;
+            col: 2;
+            clicked => {
+                root.char-added("よ");
             }
+        }
 
-            KeyButton {
-                text: mode == KeyBoardMode.Hiragana ? "お" : "オ";
-                clicked => {
-                    root.text-added(mode == KeyBoardMode.Hiragana ? "お" : "オ");
-                }
+        for c[i] in ["ま", "み", "む", "め", "も"]: KeyButton {
+            text: c;
+            row: i;
+            col: 3;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["は", "ひ", "ふ", "へ", "ほ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 4;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["な", "に", "ぬ", "ね", "の"]: KeyButton {
+            text: c;
+            row: i;
+            col: 5;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["た", "ち", "つ", "て", "と"]: KeyButton {
+            text: c;
+            row: i;
+            col: 6;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["さ", "し", "す", "せ", "そ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 7;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["か", "き", "く", "け", "こ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 8;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["あ", "い", "う", "え", "お"]: KeyButton {
+            text: c;
+            row: i;
+            col: 9;
+            clicked => {
+                root.char-added(c);
             }
         }
     }
 }
 
-export component KeyboardBottomBar inherits Rectangle {
-    callback switch-keyboard-mode();
-    callback click-backspace();
-    callback submit-name();
+component KatakanaKeyboard inherits Rectangle {
+    property <length> spacing;
+    callback char-added(char: string);
+
+    GridLayout {
+        KeyButton {
+            text: "ワ";
+            row: 0;
+            col: 0;
+            clicked => {
+                root.char-added("ワ");
+            }
+        }
+
+        KeyButton {
+            text: "";
+            row: 1;
+            col: 0;
+            clicked => {
+                root.char-added("");
+            }
+        }
+
+        KeyButton {
+            text: "ヲ";
+            row: 2;
+            col: 0;
+            clicked => {
+                root.char-added("ヲ");
+            }
+        }
+
+        KeyButton {
+            text: "";
+            row: 3;
+            col: 0;
+            clicked => {
+                root.char-added("");
+            }
+        }
+
+        KeyButton {
+            text: "ン";
+            row: 4;
+            col: 0;
+            clicked => {
+                root.char-added("ン");
+            }
+        }
+
+        for c[i] in ["ラ", "リ", "ル", "レ", "ロ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 1;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        KeyButton {
+            text: "ヤ";
+            row: 0;
+            col: 2;
+            clicked => {
+                root.char-added("ヤ");
+            }
+        }
+
+        KeyButton {
+            text: "";
+            row: 1;
+            col: 2;
+            clicked => {
+                root.char-added("");
+            }
+        }
+
+        KeyButton {
+            text: "ユ";
+            row: 2;
+            col: 2;
+            clicked => {
+                root.char-added("ユ");
+            }
+        }
+
+        KeyButton {
+            text: "";
+            row: 3;
+            col: 2;
+            clicked => {
+                root.char-added("");
+            }
+        }
+
+        KeyButton {
+            text: "ヨ";
+            row: 4;
+            col: 2;
+            clicked => {
+                root.char-added("ヨ");
+            }
+        }
+
+        for c[i] in ["マ", "ミ", "ム", "メ", "モ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 3;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["ハ", "ヒ", "フ", "ヘ", "ホ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 4;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["ナ", "ニ", "ヌ", "ネ", "ノ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 5;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["タ", "チ", "ツ", "テ", "ト"]: KeyButton {
+            text: c;
+            row: i;
+            col: 6;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["サ", "シ", "ス", "セ", "ソ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 7;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["カ", "キ", "ク", "ケ", "コ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 8;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+
+        for c[i] in ["ア", "イ", "ウ", "エ", "オ"]: KeyButton {
+            text: c;
+            row: i;
+            col: 9;
+            clicked => {
+                root.char-added(c);
+            }
+        }
+    }
+}
+
+
+component LeftBar {
+    in property <KeyBoardMode> current-mode;
+    callback set-keyboard-mode(mode: KeyBoardMode);
+    max-width: 28px;
+
+    VerticalLayout {
+        SquareButton {
+            text: "あ";
+            clicked => {
+                root.set-keyboard-mode(KeyBoardMode.Hiragana);
+            }
+        }
+
+        SquareButton {
+            text: "ア";
+            clicked => {
+                root.set-keyboard-mode(KeyBoardMode.Katakana);
+            }
+        }
+
+        SquareButton {
+            text: "a";
+            clicked => {
+                root.set-keyboard-mode(KeyBoardMode.AlphabetLower);
+            }
+        }
+
+        SquareButton {
+            text: "A";
+            clicked => {
+                root.set-keyboard-mode(KeyBoardMode.AlphabetUpper);
+            }
+        }
+
+        SquareButton {
+            text: "123";
+            clicked => {
+                root.set-keyboard-mode(KeyBoardMode.Number);
+            }
+        }
+    }
+}
+
+component RightBar {
+    callback backspace();
+    callback submit();
+    callback modify();
+
+    GridLayout {
+
+        Button {
+            icon: Icons.backspace;
+            row: 0;
+            clicked => {
+                root.backspace();
+            }
+        }
+
+        SquareButton {
+            // U+FF9E, U+FF9F
+            text: "小字ﾞﾟ";
+            row: 1;
+            clicked => {
+                root.modify();
+            }
+        }
+
+        SquareButton {
+            text: "OK";
+            filled: true;
+            row: 2;
+            rowspan: 3;
+            clicked => {
+                root.submit();
+            }
+        }
+    }
+}
+
+export component Keyboard inherits Rectangle {
+    in property <KeyBoardMode> mode;
+    callback set-keyboard-mode(mode: KeyBoardMode);
+    callback char-added(char: string);
+    callback backspace();
+    callback submit();
+    callback modify();
 
     HorizontalLayout {
-        Rectangle {
-            Text {
-                text: "あア";
-            }
-
-            touch1 := TouchArea {
-                clicked => {
-                    root.switch-keyboard-mode();
-                }
+        LeftBar {
+            set-keyboard-mode(mode) => {
+                root.set-keyboard-mode(mode);
             }
         }
 
-        Rectangle {
-            Image {
-                source: Icons.backspace;
+        if mode == KeyBoardMode.Hiragana: HiraganaKeyboard {
+            char-added(char) => {
+                root.char-added(char);
             }
-
-            touch2 := TouchArea {
-                clicked => {
-                    root.click-backspace();
-                }
+        }
+        if mode == KeyBoardMode.Katakana: KatakanaKeyboard {
+            char-added(char) => {
+                root.char-added(char);
+            }
+        }
+        if mode == KeyBoardMode.AlphabetUpper: AlphabetUpperKeyboard {
+            char-added(char) => {
+                root.char-added(char);
+            }
+        }
+        if mode == KeyBoardMode.AlphabetLower: AlphabetLowerKeyboard {
+            char-added(char) => {
+                root.char-added(char);
+            }
+        }
+        if mode == KeyBoardMode.Number: NumberKeyboard {
+            char-added(char) => {
+                root.char-added(char);
             }
         }
 
-        Rectangle {
-            Image {
-                source: Icons.arrow-forward;
+        RightBar {
+            backspace => {
+                root.backspace();
             }
-
-            touch3 := TouchArea {
-                clicked => {
-                    root.submit-name();
-                }
+            submit => {
+                root.submit();
+            }
+            modify => {
+                root.modify();
             }
         }
     }

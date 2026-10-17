@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use slint::{SharedString, ToSharedString};
 use stern::{
-    WorkerThread,
+    PropertyHandle, WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -14,8 +14,11 @@ use touchpanel_ui::{
 };
 use tracing::instrument;
 
-use super::pop_player_name;
-use crate::{Application, Context, NavController, data::RequestError};
+use crate::{
+    Application, Context, NavController,
+    data::RequestError,
+    keyboard::{keyboard_modify, pop_player_name},
+};
 
 touchpanel_ui::define_name_input_non_first_mapper! {}
 viewmodel_rc!(NameInputNonFirstViewModel<Context,SlintExecutor>, NameInputNonFirstAdopter);
@@ -26,6 +29,8 @@ struct NameInputNonFirstViewModel<C, E> {
     nav_controller: NavController,
     #[debug(skip)]
     worker: WorkerThread<C, E>,
+    show_topbar_prop: PropertyHandle<bool>,
+    show_backbutton_prop: PropertyHandle<bool>,
 }
 
 impl NameInputNonFirstViewModel<Context, SlintExecutor> {
@@ -40,6 +45,8 @@ impl NameInputNonFirstViewModel<Context, SlintExecutor> {
             ),
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
+            show_topbar_prop: application.show_topbar_prop(),
+            show_backbutton_prop: application.show_backbutton_prop(),
         }
     }
 }
@@ -113,18 +120,15 @@ where
     }
 
     #[instrument]
-    fn on_switch_keyboard_mode(&mut self) {
-        let old_mode = self.state.keyboard_mode.get();
-        let new_mode = match old_mode {
-            KeyBoardMode::Hiragana => KeyBoardMode::Katakana,
-            KeyBoardMode::Katakana => KeyBoardMode::Hiragana,
-        };
-        self.state.keyboard_mode.set(new_mode);
+    fn on_set_keyboard_mode(&mut self, mode: KeyBoardMode) {
+        self.state.keyboard_mode.set(mode);
     }
 
     #[instrument]
-    fn on_back(&mut self) {
-        self.nav_controller.navigate(NavRoute::Start);
+    fn on_modify(&mut self) {
+        let name = self.state.player_name_text.get_ref().clone();
+        let modified = keyboard_modify(name);
+        self.state.player_name_text.set(modified.to_shared_string());
     }
 }
 
@@ -139,8 +143,12 @@ impl NameInputNonFirstDestination {
 impl NavDestination<NavRoute> for NameInputNonFirstDestination {
     fn load(&mut self, route: &NavRoute) {
         let NavRoute::NameInputNonFirst = route else {
-            panic!("given NavRoute has invalid variant value");
+            unreachable!();
         };
+
+        let vm = self.0.borrow();
+        vm.show_topbar_prop.set(true);
+        vm.show_backbutton_prop.set(true);
     }
 
     fn route(&self) -> NavRouteKind {

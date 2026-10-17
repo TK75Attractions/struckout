@@ -26,6 +26,7 @@ namespace Struckout.Infrastructure
         private bool isRegister = false;
         private readonly SemaphoreSlim _slim = new(1, 1);
         private readonly SemaphoreSlim _sendSlim = new(1, 1);
+        private const double MaxRetryDelaySeconds = 5;
 
         private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
 
@@ -144,7 +145,8 @@ namespace Struckout.Infrastructure
                     Debug.LogWarning($"Connect attempt failed because of {ex}");
                 }
             
-                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                // 指数バックオフ。ただし相手 (ball_tracker) が後から起動したときにすぐつながるよう、間隔は 5 秒までにする
+                await Task.Delay(TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt), MaxRetryDelaySeconds)));
             }
             return false;
         }

@@ -12,19 +12,22 @@ namespace Struckout.Bootstrap
         private readonly ISensorProvider _sensorProvider;
         private readonly IUIService _service;
         private readonly IGameMasterClient _master;
+        private readonly IMainThreadDispatcher _dispatcher;
 
 
         public GameBootstrap(
             GameRuntime runtime,
             ISensorProvider sensorProvider,
             IUIService uiService,
-            IGameMasterClient master
+            IGameMasterClient master,
+            IMainThreadDispatcher dispatcher
         )
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _sensorProvider = sensorProvider ?? throw new ArgumentNullException(nameof(sensorProvider));
             _service = uiService ?? throw new ArgumentNullException(nameof(uiService));
             _master = master ?? throw new ArgumentNullException(nameof(master));
+            _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         }
 
         internal async UniTask Initialize(
@@ -50,10 +53,10 @@ namespace Struckout.Bootstrap
         }
 
         private void OnGameStarted(Difficulty difficulty) =>
-            _runtime.StartGame(difficulty);
+            _dispatcher.Enqueue(() => _runtime.StartGame(difficulty));
 
         private void OnGameFinished() =>
-            _runtime.FinishGame();
+            _dispatcher.Enqueue(_runtime.FinishGame);
 
         private void OnScoreAdded(int points)
         {
