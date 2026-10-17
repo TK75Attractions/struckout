@@ -1,7 +1,11 @@
 import { Button, StyleMetrics } from "std-widgets.slint";
 import { Icons } from "icons.slint";
 import { StruckoutPalette, FontSettings } from "styling.slint";
-import { SquareButton } from "components/button.slint";
+import {
+    SquareButton,
+    CornerButton,
+    Corner,
+} from "components/button.slint";
 
 component RightArrow inherits Path {
     MoveTo {
@@ -111,16 +115,19 @@ component TopBarItem {
 }
 
 export component TopBar {
-    in property <bool> show-backbutton;
+    in property <int> current-item-idx;
+    in property <[string]> items;
     callback click-backbutton();
 
-    max-height: 44px;
+    max-height: 52px;
 
     HorizontalLayout {
         alignment: LayoutAlignment.space-between;
 
-        if show-backbutton: SquareButton {
+        CornerButton {
+            width: self.preferred-width * 1.5;
             icon: Icons.arrow-back;
+            corner: Corner.LeftTop;
             filled: true;
             accessible-id: "topbar__back-button";
             clicked => {
@@ -129,16 +136,9 @@ export component TopBar {
         }
 
         HorizontalLayout {
-            HorizontalLayout {
-                TopBarItem {
-                    enphasize: true;
-                    text: "プレイヤー名入力";
-                }
-
-                TopBarItem {
-                    enphasize: false;
-                    text: "難易度選択";
-                }
+            for item[idx] in root.items: TopBarItem {
+                enphasize: current-item-idx == idx;
+                text: item;
             }
         }
     }

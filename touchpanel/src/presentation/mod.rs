@@ -81,7 +81,7 @@ where
     let (tx, rx) = oneshot::channel();
 
     worker.spawn_cx({
-        async move |cx| {
+        async move |_| {
             let res = timeout(
                 Duration::from_secs(5),
                 GameMasterClient::connect(config.server_addr.as_ref(), config.machine_id.into()),
