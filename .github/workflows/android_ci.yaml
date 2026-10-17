@@ -4,13 +4,13 @@ on:
   push: 
     branches: master
     paths: 
-      - struckoutCameraApp/**
+      - camera/**
       - api/proto/**
       - .github/workflows/android_ci.yaml
   pull_request:
     branches: master
     paths:
-      - struckoutCameraApp/**
+      - camera/**
       - api/proto/**
       - .github/workflows/android_ci.yaml
   workflow_dispatch: 
@@ -21,12 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: struckoutCameraApp/
+        working-directory: camera/
     steps:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            struckoutCameraApp
+            camera
             api/proto
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
