@@ -53,17 +53,51 @@ $exe = Join-Path $root $settings.projector_exe
 $compose = @('compose', '-f', (Join-Path $root 'game_master\compose.yaml'), '-f', (Join-Path $root 'game_master\compose.dev.yaml'))
 
 # データベースのパスワード。mise の MYSQL_ROOT_PASSWORD_DEV (.mise/config.local.toml、`mise run game-master:dev` と同じ) を使う。
-# 環境変数に無ければ .mise/config.local.toml から読み、それも無ければ前の game_master/.env.dev を使う。値は表示しない
+# 環境変数に無ければ .mise/config.local.toml から読み、それも無ければ前の game_master/.env.dev から読む。
+# compose には環境変数 MYSQL_ROOT_PASSWORD で渡す。値は表示しない
 function Set-DatabasePassword {
-    if ($env:MYSQL_ROOT_PASSWORD_DEV) { $env:MYSQL_ROOT_PASSWORD = $env:MYSQL_ROOT_PASSWORD_DEV; return $true }
+    $password = $env:MYSQL_ROOT_PASSWORD_DEV
     $local = Join-Path $root '.mise\config.local.toml'
-    if (Test-Path $local) {
-        $line = Get-Content $local -Encoding UTF8 | Where-Object { $_ -match '^\s*MYSQL_ROOT_PASSWORD_DEV\s*=\s*"([^"]*)"' } | Select-Object -First 1
-        if ($line -and $line -match '^\s*MYSQL_ROOT_PASSWORD_DEV\s*=\s*"([^"]*)"') { $env:MYSQL_ROOT_PASSWORD = $Matches[1]; return $true }
+    if (-not $password -and (Test-Path $local)) {
+        $line = Get-Content $local -Encoding UTF8 | Where-Object { $_ -match '^\s*MYSQL_ROOT_PASSWORD_DEV\s*=' } | Select-Object -First 1
+        if ($line -match '^\s*MYSQL_ROOT_PASSWORD_DEV\s*=\s*"([^"]*)"') { $password = $Matches[1] }
     }
     $envFile = Join-Path $root 'game_master\.env.dev'
-    if (Test-Path $envFile) { $script:compose += @('--env-file', $envFile); return $true }
-    return $false
+    if (-not $password -and (Test-Path $envFile)) {
+        $line = Get-Content $envFile -Encoding UTF8 | Where-Object { $_ -match '^\s*MYSQL_ROOT_PASSWORD\s*=' } | Select-Object -First 1
+        if ($line -match '^\s*MYSQL_ROOT_PASSWORD\s*=\s*(.*)$') { $password = $Matches[1].Trim().Trim('"', "'") }
+    }
+    if (-not $password) { return $false }
+    $env:MYSQL_ROOT_PASSWORD = $password
+    return $true
+}
+
+# データベースのテーブルを作る (作成済みなら何もしない)。game_master は起動時に作らないので、新しいデータベース
+# (初めての PC、compose のプロジェクト名が変わったときなど) では、これをしないと game_master がエラーを返す
+function Invoke-DatabaseMigration {
+    $sqlx = (Get-Command sqlx -ErrorAction SilentlyContinue).Source
+    if (-not $sqlx) {
+        $sqlx = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'mise\installs\cargo-sqlx-cli') -Recurse -Filter sqlx.exe -ErrorAction SilentlyContinue |
+            Select-Object -Last 1 -ExpandProperty FullName
+    }
+    if (-not $sqlx) {
+        Warn 'sqlx が見つからないので、データベースのテーブルを確かめられません (mise install cargo:sqlx-cli)。新しいデータベースだと game_master がエラーを返します'
+        return
+    }
+    $password = $env:MYSQL_ROOT_PASSWORD
+    $env:DATABASE_URL = "mysql://root:$([uri]::EscapeDataString($password))@127.0.0.1:3306/main_dev"
+    Push-Location (Join-Path $root 'game_master')
+    try {
+        # sqlx.toml (game_master にある) が migrations/mysql を指している
+        $out = @(& $sqlx migrate run 2>&1 | ForEach-Object { "$_".Replace($password, '***') })
+        $code = $LASTEXITCODE
+    } finally {
+        Pop-Location
+        Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+    }
+    if ($code -ne 0) { Fail "データベースのテーブルを作れませんでした: $(($out | Select-Object -Last 2) -join ' ')" }
+    $applied = @($out | Where-Object { $_ -match '^Applied' })
+    if ($applied.Count -gt 0) { Ok "データベースのテーブルを作った ($($applied.Count) 件)" } else { Ok 'データベースのテーブル: 作成済み' }
 }
 
 if ($Stop) {
@@ -144,6 +178,7 @@ if ($settings.game_master) {
         try { $client.Connect('127.0.0.1', 8020); $ready = $true } catch { Start-Sleep -Seconds 2 } finally { $client.Dispose() }
     }
     if (-not $ready) { Fail 'game_master が 8020 番で待ち受けません (docker compose logs で確かめる)' }
+    Invoke-DatabaseMigration
     Ok 'game_master: 127.0.0.1:8020'
 }
 

@@ -35,7 +35,7 @@ PC② で次の 1 つを実行する。PC① の `scripts\run-pc1.ps1` と、ど
 powershell -ExecutionPolicy Bypass -File scripts\run-pc2.ps1
 ```
 
-1. Docker Desktop を起動し (止まっていれば)、game_master とデータベースを起動する (初回はビルドに数分から十数分)
+1. Docker Desktop を起動し (止まっていれば)、game_master とデータベースを起動する (初回はイメージの組み立てに 20 分ほど。そのあいだは 1 分おきに経過を出す)。新しいデータベースなら、テーブルも作る (`sqlx migrate run`。mise の `cargo:sqlx-cli` が要る)
 2. projector の書き出し (`projector/Builds/Windows`) が無ければ、Unity でコマンドから書き出す。
    **Unity Editor で projector を開いていると書き出せない**。projector を直したあとは `-Build` で書き出し直す
 3. projector を、プロジェクターの画面に全画面で起動する (つなぎ先は `pc2.json`、`-TrackerHost` で上書きできる)
