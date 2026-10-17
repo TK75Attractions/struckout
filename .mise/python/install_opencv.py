@@ -15,6 +15,15 @@ DOWNLOAD_URL = (
 )
 
 
+def replace_proguard(opencv_dir: Path):
+    gradle_path = opencv_dir / "build.gradle"
+    content_old = gradle_path.read_text()
+    content_new = content_old.replace(
+        "proguard-android.txt", "proguard-android-optimize.txt"
+    )
+    gradle_path.write_text(content_new)
+
+
 def main() -> int:
     project_root = Path.cwd()
     camera_dir = project_root / "camera"
@@ -54,6 +63,7 @@ def main() -> int:
                 )
 
             shutil.move(str(sdk_directory), dst)
+            replace_proguard(dst)
     except (OSError, urllib.error.URLError, zipfile.BadZipFile) as error:
         print(f"OpenCV SDKのインストールに失敗しました: {error}", file=sys.stderr)
         return 1

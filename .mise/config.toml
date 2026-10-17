@@ -42,6 +42,7 @@ description = "Check the committed C# matches api/proto (regenerates in place)"
 run = "python3 .mise/python/install_opencv.py"
 dir = "."
 description = "cameraで使うOpenCVをインストールする"
+raw = true
 
 [tasks."touchpanel:fmt-slint"]
 run = "find -name '*.slint' | xargs slint-lsp format --inline"
