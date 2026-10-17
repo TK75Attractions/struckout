@@ -90,9 +90,7 @@ where
         };
 
         let score_cancel = {
-            let score_stream = WatchStream::new(score_rx)
-                .map(|v| v.try_into().expect("score overflowed"))
-                .fuse();
+            let score_stream = WatchStream::new(score_rx).fuse();
             let score_prop = self.state.score.clone();
             score_prop.bind(&worker, score_stream)
         };
@@ -211,7 +209,7 @@ mod tests {
                 let route = Rc::clone(&route);
                 move |new| {
                     let mut guard = route.borrow_mut();
-                    *guard = new.into();
+                    *guard = new;
                 }
             });
             let (score_tx, score_rx) = watch::channel(0);

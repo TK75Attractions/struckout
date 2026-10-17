@@ -43,56 +43,99 @@ jobs:
       - name: Build
         run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
       
-      - name: Upload ball-tracker (Windows)
-        uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'windows-2022' }}
+      - name: Reame binaries
+        id: triple
+        run: |
+          mkdir upload
+          case ${{ matrix.os }} in
+            "windows-2022")
+              echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT"
+              mv target/release/ball_tracker.exe upload/ball-tracker-x86_64-windows
+              mv target/release/touchpanel.exe upload/touchpanel-x86_64-windows
+              ;;
+            "macos-14")
+              echo "triple=aarch64-macos" >> "$GITHUB_OUTPUT"
+              mv target/release/ball_tracker upload/ball-tracker-aarch64-macos
+              mv target/release/touchpanel upload/touchpanel-aarch64-macos
+              ;;
+            "ubuntu-22.04")
+              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
+              mv target/release/ball_tracker upload/ball-tracker-x86_64-linux
+              mv target/release/touchpanel upload/touchpanel-x86_64-linux
+              ;;
+            *)
+              exit 1;;
+          esac
+      - name: Upload binaries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ball-tracker-x86_64-windows
-          path: ./target/release/ball_tracker.exe
-      - name: Upload touchpanel (Windows)
-        uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'windows-2022' }}
-        with:
-          name: touchpanel-x86_64-windows
-          path: ./target/release/touchpanel.exe
-          
-      - name: Upload ball-tracker (macOS)
-        uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'macos-14' }} 
-        with:
-          name: ball-tracker-aarch64-macos
-          path: ./target/release/ball_tracker
-      - name: Upload touchpanel (macOS)
-        uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'macos-14' }}
-        with:
-          name: touchpanel-aarch64-macos
-          path: ./target/release/touchpanel
+          name: rust-${{ steps.triple.outputs.triple }}
+          path: ./upload/
 
-      - name: Upload ball-tracker (Linux)
-        uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
+  unity-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target-platform:
+          - StandaloneWindows64
+          - StandaloneLinux64
+          - StandaloneOSX
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          name: ball-tracker-x86_64-linux
-          path: ./target/release/ball_tracker
-      - name: Upload touchpanel (Linux)
-        uses: actions/upload-artifact@v7
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
+          sparse-checkout: |
+            projector
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          name: touchpanel-x86_64-linux
-          path: ./target/release/touchpanel
+          path: projector/Library
+          key: Library-${{ matrix.target-platform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ matrix.target-platform }}-
+      - uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.target-platform }}
+          projectPath: projector
+      - name: Determine file suffix
+        id: triple
+        run: |
+          case ${{ matrix.target-platform }} in
+            "StandaloneWindows64")
+              echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT";;
+            "StandaloneOSX")
+              echo "triple=aarch64-macos" >> "$GITHUB_OUTPUT";;
+            "StandaloneLinux64")
+              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT";;
+            *)
+              exit 1;;
+          esac
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: projector-${{ steps.triple.outputs.triple }}
+          path: ./build/
   
   publish-release:
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name == 'main' }}
-    needs: [rust-build]
+    if: ${{ github.ref_name == 'master' }}
+    needs: [rust-build, unity-build]
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: .
-      - uses: actions/download-artifact@v8
+      - name: Download projector artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: projector-*
+          skip-decompress: true # zipファイルのまま
+      - name: Download rust artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: rust-*
       - name: Remove old release
         # continue even when there's no previous release
         run: gh release delete nightly -y --cleanup-tag || true 
@@ -100,15 +143,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Create release
         run: |
-          mkdir upload
-
-          mv touchpanel-x86_64-linux/touchpanel upload/touchpanel-x86_64-linux
-          mv ball-tracker-x86_64-linux/ball_tracker upload/ball-tracker-x86_64-linux
-          mv touchpanel-x86_64-windows/touchpanel.exe upload/touchpanel-x86_64-windows.exe
-          mv ball-tracker-x86_64-windows/ball_tracker.exe upload/ball-tracker-x86_64-windows.exe
-          mv touchpanel-aarch64-macos/touchpanel upload/touchpanel-aarch64-macos
-          mv ball-tracker-aarch64-macos/ball_tracker upload/ball-tracker-aarch64-macos
-
-          gh release create nightly --notes "nightly release" upload/*
+          gh release create nightly --notes "nightly release" \
+            rust-x86_64-windows/* rust-x86_64-linux/* rust-aarch64-macos/* \
+            projector-aarch64-macos/projector-aarch64-macos.zip \
+            projector-x86_64-windows/projector-x86_64-windows.zip \
+            projector-x86_64-linux/projector-x86_64-linux.zip
         env:
           GH_TOKEN: ${{ github.token }}

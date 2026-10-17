@@ -32,28 +32,32 @@ pub struct NameInputViewModel<C, E> {
     pub gm_cancel_tok: Option<CancellationToken>,
 }
 
+#[cfg_attr(test, mockall::automock)]
 pub trait PlayerRepository: Send + Sync + 'static {
-    fn validate_player_name(
+    fn validate_player_name<T: Into<String> + Send + 'static>(
         &self,
-        name: impl Into<String> + Send,
+        name: T,
     ) -> impl Future<Output = Result<ValidatePlayerNameResp, RequestError>> + Send;
 
-    fn add_player(
+    fn add_player<T: Into<String> + Send + 'static>(
         &self,
-        name: impl Into<String> + Send,
+        name: T,
     ) -> impl Future<Output = Result<PlayerId, Status>> + Send;
 }
 
 impl PlayerRepository for Context {
-    async fn validate_player_name(
+    async fn validate_player_name<T: Into<String> + Send + 'static>(
         &self,
-        name: impl Into<String> + Send,
+        name: T,
     ) -> Result<ValidatePlayerNameResp, RequestError> {
         let mut gm = self.game_master.get().unwrap().clone();
         gm.validate_player_name(name).await
     }
 
-    async fn add_player(&self, name: impl Into<String> + Send) -> Result<PlayerId, Status> {
+    async fn add_player<T: Into<String> + Send + 'static>(
+        &self,
+        name: T,
+    ) -> Result<PlayerId, Status> {
         let mut gm = self.game_master.get().unwrap().clone();
         gm.add_player(name).await
     }
@@ -237,15 +241,7 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        cell::RefCell,
-        pin::Pin,
-        rc::Rc,
-        sync::{
-            Arc,
-            atomic::{AtomicU8, Ordering},
-        },
-    };
+    use std::{cell::RefCell, rc::Rc};
 
     use rstest::rstest;
     use stern::worker::SmolExecutor;
@@ -274,37 +270,39 @@ mod tests {
         #[case] error_msg_after_first_call_dur: &'static str,
         #[case] error_msg_after_between_plus_second: &'static str,
     ) {
+        // Arrange
         assert!(first_call_dur.is_positive());
         assert!(second_call_dur.is_positive());
         assert!(dur_between_two_calls.is_positive());
 
-        let tracker = Tracker::new();
-        let test = NameInputScreenTest::new(FakePlayerRepository::new().on_validate_player_name({
-            let tracker = tracker.clone();
-            move |_| {
-                let tracker = tracker.clone();
+        let mut pr = MockPlayerRepository::new();
+        let mut pr_mock_seq = mockall::Sequence::new();
+        pr.expect_validate_player_name()
+            .times(1)
+            .in_sequence(&mut pr_mock_seq)
+            .return_once(move |_: String| {
                 Box::pin(async move {
-                    tracker.called();
-                    match tracker.count() {
-                        1 => {
-                            tokio::time::sleep(first_call_dur.unsigned_abs()).await;
-                            Ok(ValidatePlayerNameResp::AlreadyUsed(
-                                validate_player_name_response::AlreadyUsed {},
-                            ))
-                        }
-                        2 => {
-                            tokio::time::sleep(second_call_dur.unsigned_abs()).await;
-                            Ok(ValidatePlayerNameResp::Ok(
-                                validate_player_name_response::Ok {},
-                            ))
-                        }
-                        _ => unimplemented!(),
-                    }
+                    tokio::time::sleep(first_call_dur.unsigned_abs()).await;
+                    Ok(ValidatePlayerNameResp::AlreadyUsed(
+                        validate_player_name_response::AlreadyUsed {},
+                    ))
                 })
-            }
-        }));
+            });
+        pr.expect_validate_player_name()
+            .times(1)
+            .in_sequence(&mut pr_mock_seq)
+            .return_once(move |_: String| {
+                Box::pin(async move {
+                    tokio::time::sleep(second_call_dur.unsigned_abs()).await;
+                    Ok(ValidatePlayerNameResp::Ok(
+                        validate_player_name_response::Ok {},
+                    ))
+                })
+            });
+        let test = NameInputScreenTest::new(pr);
         test.vm.state.error_msg.set("dummy!".to_shared_string());
 
+        // Act
         let worker = test.worker.clone();
         worker.spawn_local({
             let NameInputScreenTest { worker, mut vm, .. } = test;
@@ -347,87 +345,21 @@ mod tests {
         worker.foreground_executor().start();
     }
 
-    #[derive(derive_more::Debug)]
-    pub struct FakePlayerRepository {
-        #[debug(skip)]
-        on_validate_player_name: Box<
-            dyn Fn(
-                    String,
-                ) -> Pin<
-                    Box<dyn Future<Output = Result<ValidatePlayerNameResp, RequestError>> + Send>,
-                > + Send
-                + Sync,
-        >,
-        #[debug(skip)]
-        on_add_player: Box<
-            dyn Fn(String) -> Pin<Box<dyn Future<Output = Result<PlayerId, Status>> + Send>>
-                + Send
-                + Sync,
-        >,
-    }
-
-    impl FakePlayerRepository {
-        pub fn new() -> Self {
-            Self {
-                on_validate_player_name: Box::new(|_| Box::pin(async { unimplemented!() })),
-                on_add_player: Box::new(|_| Box::pin(async { unimplemented!() })),
-            }
-        }
-
-        pub fn on_validate_player_name(
-            mut self,
-            f: impl Fn(
-                String,
-            ) -> Pin<
-                Box<dyn Future<Output = Result<ValidatePlayerNameResp, RequestError>> + Send>,
-            > + Send
-            + Sync
-            + 'static,
-        ) -> Self {
-            self.on_validate_player_name = Box::new(f);
-            self
-        }
-
-        pub fn on_add_player(
-            mut self,
-            f: impl Fn(String) -> Pin<Box<dyn Future<Output = Result<PlayerId, Status>> + Send>>
-            + Send
-            + Sync
-            + 'static,
-        ) -> Self {
-            self.on_add_player = Box::new(f);
-            self
-        }
-    }
-
-    impl PlayerRepository for FakePlayerRepository {
-        async fn validate_player_name(
-            &self,
-            name: impl Into<String> + Send,
-        ) -> Result<ValidatePlayerNameResp, RequestError> {
-            (self.on_validate_player_name)(name.into()).await
-        }
-
-        async fn add_player(&self, name: impl Into<String> + Send) -> Result<PlayerId, Status> {
-            (self.on_add_player)(name.into()).await
-        }
-    }
-
     struct NameInputScreenTest {
         pub route: Rc<RefCell<UiNavRoute>>,
-        pub worker: WorkerThread<FakePlayerRepository, SmolExecutor>,
-        pub vm: NameInputViewModel<FakePlayerRepository, SmolExecutor>,
+        pub worker: WorkerThread<MockPlayerRepository, SmolExecutor>,
+        pub vm: NameInputViewModel<MockPlayerRepository, SmolExecutor>,
     }
 
     impl NameInputScreenTest {
-        pub fn new(cx: FakePlayerRepository) -> Self {
+        pub fn new(cx: MockPlayerRepository) -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
 
             let nav_controller = NavController::new(NavRoute::Start, {
                 let route = Rc::clone(&route);
                 move |new| {
                     let mut guard = route.borrow_mut();
-                    *guard = new.into();
+                    *guard = new;
                 }
             });
             let worker = WorkerThread::new_smol(cx);
@@ -439,28 +371,6 @@ mod tests {
                 gm_cancel_tok: None,
             };
             Self { route, worker, vm }
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct Tracker {
-        count: Arc<AtomicU8>,
-    }
-
-    impl Tracker {
-        fn new() -> Self {
-            Self {
-                count: Arc::new(AtomicU8::new(0)),
-            }
-        }
-
-        /// Increments count.
-        fn called(&self) {
-            self.count.fetch_add(1, Ordering::SeqCst);
-        }
-
-        fn count(&self) -> u8 {
-            self.count.load(Ordering::Relaxed)
         }
     }
 }

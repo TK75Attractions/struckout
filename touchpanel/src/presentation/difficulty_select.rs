@@ -12,7 +12,7 @@ use touchpanel_ui::{
     DifficulitySelectPropertyMappers, DifficulitySelectStates, DifficulitySelectViewModelTrait,
     NavRoute, NavRouteKind,
 };
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 touchpanel_ui::define_difficulity_select_mapper! {}
 
@@ -71,8 +71,9 @@ where
                 Ok(game_id) => {
                     nc.navigate(NavRoute::Playing(difficulty_ui, game_id));
                 }
-                Err(e) => {
-                    nc.navigate(NavRoute::Fallback(e.to_string()));
+                Err(err) => {
+                    error!(?err, "an error occured while running game");
+                    nc.navigate(NavRoute::Fallback(err.to_string()));
                 }
             }
         })

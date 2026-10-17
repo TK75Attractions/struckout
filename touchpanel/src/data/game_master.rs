@@ -238,7 +238,7 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
         {
             let mut guard = self.session.write();
             *guard = Some(Session {
-                difficulty: difficulty,
+                difficulty,
                 rem_tx: rem_tx.clone(),
                 score_tx: score_tx.clone(),
                 error_tx: error_tx.clone(),

@@ -144,16 +144,16 @@ pub fn init_worker_context(application: &Application) {
 /// Registers each [`NavDestination`][crate::nav::NavDestination]s at [`NavHost`].
 pub fn attach_navhost(application: &Application) {
     NavHost::builder(application.nav_controller.clone())
-        .register(StartScreenDestination::new(&application))
-        .register(NameInputFirstDestination::new(&application))
-        .register(DifficultySelectDestination::new(&application))
-        .register(FallbackDestination::new(&application))
-        .register(ConnectionFailedDestination::new(&application))
-        .register(PlayingDestination::new(&application))
-        .register(ScoreDestination::new(&application))
-        .register(ConnectingDestination::new(&application))
-        .register(RankingDestination::new(&application))
-        .register(NameInputNonFirstDestination::new(&application))
+        .register(StartScreenDestination::new(application))
+        .register(NameInputFirstDestination::new(application))
+        .register(DifficultySelectDestination::new(application))
+        .register(FallbackDestination::new(application))
+        .register(ConnectionFailedDestination::new(application))
+        .register(PlayingDestination::new(application))
+        .register(ScoreDestination::new(application))
+        .register(ConnectingDestination::new(application))
+        .register(RankingDestination::new(application))
+        .register(NameInputNonFirstDestination::new(application))
         //@xtask-register
         .finish()
         .expect("failed to build NavHost");
@@ -199,7 +199,7 @@ mod tests {
 
             move |route| {
                 let ui = ui.unwrap();
-                ui.set_nav_route(route.into());
+                ui.set_nav_route(route);
             }
         });
 

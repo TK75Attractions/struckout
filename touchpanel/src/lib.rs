@@ -93,7 +93,7 @@ pub fn run_main() {
 
         move |route| {
             let ui = ui.unwrap();
-            ui.set_nav_route(route.into());
+            ui.set_nav_route(route);
         }
     });
 
