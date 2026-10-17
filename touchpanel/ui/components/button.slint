@@ -173,7 +173,6 @@ component MaterialButtonBase {
     }
 }
 
-
 export component TwoColorOutlinedButton {
     in property <string> text <=> base.text;
     in property <string> font-family <=> base.font-family;
@@ -309,6 +308,135 @@ export component SquareButton {
             layout-padding-left: 24px;
             layout-padding-right: 24px;
             border-radius: background.border-radius;
+            text-color: root.filled ? StruckoutPalette.on-primary : Palette.control-foreground;
+            text-opacity: 1.0;
+            colorize-icon: true;
+
+            clicked => {
+                root.clicked();
+            }
+        }
+    }
+}
+
+export enum Corner {
+    LeftTop,
+    RightBottom,
+}
+
+export component CornerButton {
+    in property <string> text <=> base.text;
+    in property <bool> enabled <=> base.enabled;
+    in property <image> icon <=> base.icon;
+    in property <length> icon-size <=> base.icon-size;
+    in property <bool> filled;
+    in property <Corner> corner;
+    out property <bool> has-focus: base.has-focus;
+    out property <bool> pressed: self.enabled && base.pressed;
+
+    callback clicked;
+
+    private property <float> streamline-percent: 0.3;
+
+    min-height: max(40px, layout.min-height);
+    min-width: max(40px, layout.min-width);
+    forward-focus: base;
+
+    accessible-role: button;
+    accessible-enabled: root.enabled;
+    accessible-label: root.text;
+    accessible-action-default => {
+        if (root.enabled) {
+            base.clicked();
+        }
+    }
+
+    states [
+        disabled when !root.enabled: {
+            background.background: Palette.foreground-alt;
+            background.opacity: 0.12;
+            base.text-opacity: 0.38;
+            base.text-color: Palette.control-foreground;
+        }
+    ]
+
+    background := Rectangle {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        drop-shadow-color: transparent;
+        drop-shadow-blur: Elevation.level0;
+        drop-shadow-offset-y: 1px;
+    }
+
+    if root.corner == Corner.RightBottom: background-rb := Path {
+        fill: root.filled ? StruckoutPalette.primary : Palette.control-background;
+        width: 100%;
+        height: 100%;
+        MoveTo {
+            x: 0;
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: root.width / 1px;
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: root.width / 1px;
+            y: 0;
+        }
+
+        LineTo {
+            x: (root.width / 1px) * root.streamline-percent;
+            y: 0;
+        }
+
+        LineTo {
+            x: 0;
+            y: root.height / 1px;
+        }
+
+        Close { }
+    }
+
+    if root.corner == Corner.LeftTop: background-lt := Path {
+        fill: root.filled ? StruckoutPalette.primary : Palette.control-background;
+        width: 100%;
+        height: 100%;
+        MoveTo {
+            x: 0;
+            y: 0;
+        }
+
+        LineTo {
+            x: 0;
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: (root.width / 1px) * (1 - root.streamline-percent);
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: root.width / 1px;
+            y: 0;
+        }
+
+        LineTo {
+            x: 0;
+            y: 0;
+        }
+
+        Close { }
+    }
+
+    layout := HorizontalLayout {
+        base := MaterialButtonBase {
+            layout-padding-left: 24px;
+            layout-padding-right: 24px;
             text-color: root.filled ? StruckoutPalette.on-primary : Palette.control-foreground;
             text-opacity: 1.0;
             colorize-icon: true;
