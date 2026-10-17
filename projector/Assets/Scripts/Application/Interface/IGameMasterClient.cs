@@ -26,6 +26,12 @@ namespace Struckout.Application
         /// </summary>
         event Action GameFinished;
 
+        /// <summary>サーバーの残り時間。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
+        event Action<TimeSpan> RemainingTimeChanged;
+
+        /// <summary>サーバーの累計得点。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
+        event Action<uint> ScoreChanged;
+
         /// <summary>イベント購読が切れた。</summary>
         event Action ConnectionLost;
 

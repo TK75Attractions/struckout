@@ -40,6 +40,8 @@ namespace Struckout.Infrastructure
 
         public event Action<Difficulty> GameStarted;
         public event Action GameFinished;
+        public event Action<TimeSpan> RemainingTimeChanged;
+        public event Action<uint> ScoreChanged;
         public event Action ConnectionLost;
 
         public GrpcGameMasterClient(NetworkSettings settings)
@@ -177,6 +179,7 @@ namespace Struckout.Infrastructure
                     break;
 
                 case Event.EventDataOneofCase.GameFinished:
+                    if (_gameId != received.GameId) break;
                     // これ以降 game_master は running_games から外すので、
                     // 得点を送っても NotFound で弾かれる。手元でも送信を止める。
                     _gameId = null;
@@ -184,9 +187,26 @@ namespace Struckout.Infrastructure
                     break;
 
                 case Event.EventDataOneofCase.GameTimeLimitNotify:
-                    // 毎秒届く。残り時間を projector と touchpanel のどちらが出すかが
-                    // 未決なので、今は捨てている。projector で出すと決まったら
-                    // IGameMasterClient にイベントを足してここから流す。
+                    if (_gameId != received.GameId) break;
+                    var remaining = received.GameTimeLimitNotify.Remaining;
+                    if (remaining == null) break;
+
+                    TimeSpan remainingTime;
+                    try
+                    {
+                        remainingTime = remaining.ToTimeSpan();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        Debug.LogWarning("[GameMaster] received an invalid remaining duration; ignored.");
+                        break;
+                    }
+                    RemainingTimeChanged?.Invoke(remainingTime);
+                    break;
+
+                case Event.EventDataOneofCase.GameScoreChanged:
+                    if (_gameId != received.GameId) break;
+                    ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
                     break;
 
                 default:

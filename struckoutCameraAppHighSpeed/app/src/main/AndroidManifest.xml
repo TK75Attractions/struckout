@@ -20,7 +20,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.StruckoutCameraApp">
-        <!-- PC から adb で開き直したとき (scripts/camera-remote.ps1)、新しい画面を重ねず、いまの画面に届ける -->
+        <!-- PC から adb で開き直したとき (scripts/camera_remote.py)、新しい画面を重ねず、いまの画面に届ける -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

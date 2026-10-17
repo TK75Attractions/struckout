@@ -1,5 +1,6 @@
 using Struckout.Domain;
 using System.Collections.Generic;
+using System;
 
 namespace Struckout.Application
 {
@@ -7,6 +8,12 @@ namespace Struckout.Application
     {
         /// <summary>投影画面をゲーム進行状態に合わせて切り替える。</summary>
         void SetGamePhase(GamePhase phase);
+
+        /// <summary>game_master から受信した残り時間を表示する。</summary>
+        void SetRemainingTime(TimeSpan remaining);
+
+        /// <summary>game_master が確定した累計得点を表示する。</summary>
+        void SetScore(uint totalScore);
 
         void InstantiateTargets(IReadOnlyList<Target> targets);
         /// <summary>

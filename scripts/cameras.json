@@ -1,8 +1,8 @@
 {
   "description": [
-    "scripts/camera-remote.ps1 が使う、カメラ用スマホごとの設定。",
+    "scripts/camera_remote.py と scripts/run_pc1.py が使う、カメラ用スマホごとの設定。",
     "ball_tracker を --cameras scripts/cameras.json で起動すると、device_id で端末を見分け、つないだ順によらず cameras の順に camera_id を 0, 1, ... と振る。",
-    "device_id は camera-remote.ps1 config が端末から聞いて書き込む (アプリの Settings.Secure.ANDROID_ID)。位置と向き、焦点距離、area は ball_tracker がつないだ端末にも送る。",
+    "device_id は camera_remote.py config (run_pc1.py も毎回実行する) が端末から聞いて書き込む (アプリの Settings.Secure.ANDROID_ID)。位置と向き、焦点距離、area は ball_tracker がつないだ端末にも送る。",
     "pose は x, y, z (m), 回転 x, y, z (度)。アプリの設定画面の Camera Pose と同じ。",
     "2026-10-16: 位置は実測 (レンズは奥の外側の板から 11 cm、左の壁から 12 cm / 106 cm、地面から 1.23 m)。",
     "回転は 2026-10-16 12:26 の Save frame から較正した値 (recordings/2026-10-16_experiment_2/analysis/camera_pose.py)。",

@@ -49,7 +49,7 @@ fun App(remoteScreen: StateFlow<String?>, onRemoteScreenShown: () -> Unit) {
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(checkCurrentPermission(context)) }
 
-    // PC から adb で開く画面を指定されたとき (scripts/camera-remote.ps1)。権限がそろうまでは待つ
+    // PC から adb で開く画面を指定されたとき (scripts/camera_remote.py)。権限がそろうまでは待つ
     val requestedScreen by remoteScreen.collectAsState()
     LaunchedEffect(requestedScreen, permissionGranted) {
         val screen = requestedScreen ?: return@LaunchedEffect

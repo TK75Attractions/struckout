@@ -48,3 +48,6 @@ sandbox/fake_game_master/
 
 # 検証用に撮影した動画。サイズが大きいので追跡しない。
 recordings/
+
+# Python のキャッシュ (scripts/ のスクリプトが互いに読み込むと作られる)
+__pycache__/

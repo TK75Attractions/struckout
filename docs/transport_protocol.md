@@ -44,7 +44,7 @@ ball_tracker は ffmpeg でデコードしてアプリと同じ方法で解析�
 - ball_tracker を `--cameras scripts/cameras.json` で起動すると、`Hello.device_id` が `cameras.json` の `device_id` と
   一致した端末に、書いた順の camera_id (0, 1, ...) を振る。つなぎ直しても、開く順番が変わっても同じ番号になる。
   位置と向きは `cameras.json` の値を使い (カメラが送る `UpdateCameraPose` は使わない)、`CameraSettings` でカメラにも送る。
-  `device_id` は `scripts/camera-remote.ps1 config` が端末から聞いて (`SET_CONFIG` の返事) `cameras.json` に書く。
+  `device_id` は `scripts/camera_remote.py config` が端末から聞いて (`SET_CONFIG` の返事) `cameras.json` に書く。
 - 一致しない端末と、名乗らない送信元 (古いアプリ、`scripts/recording_analysis` の再生用スクリプト) には、
   これまでどおり、つないだ順の番号 (`cameras.json` の台数から) を振る。ball_tracker は名乗るのを 0.5 秒待ってから番号を送る。
 - 高速撮影版のアプリは、検出の送り先が Network のあいだ、ball_tracker とのつながりが切れたら 2 秒おきにつなぎ直す。

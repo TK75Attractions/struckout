@@ -12,7 +12,7 @@ import javax.inject.Singleton
  *
  * [Settings.Secure.ANDROID_ID] は、端末とアプリの署名の組ごとに決まり、アプリの設定を消しても、入れ直しても変わらない
  * (端末を初期化すると変わる。別の PC で署名したアプリを入れたときも変わる)。adb のシリアルはアプリからは読めない。
- * PC は `scripts/camera-remote.ps1 config` でこの値を聞き、`scripts/cameras.json` に書いておく。
+ * PC は `scripts/camera_remote.py config` でこの値を聞き、`scripts/cameras.json` に書いておく。
  */
 @Singleton
 class DeviceIdentity @Inject constructor(@ApplicationContext context: Context) {

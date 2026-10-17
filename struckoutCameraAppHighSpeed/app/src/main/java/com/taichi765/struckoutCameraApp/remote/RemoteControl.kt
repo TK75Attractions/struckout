@@ -57,7 +57,7 @@ class RemoteCommands @Inject constructor() {
 }
 
 /**
- * 設置したあとで画面に触れずに済むよう、PC から adb で操作するための受け口 (`scripts/camera-remote.ps1`)。
+ * 設置したあとで画面に触れずに済むよう、PC から adb で操作するための受け口 (`scripts/camera_remote.py`)。
  *
  * ```
  * adb shell am broadcast -a com.taichi765.struckoutCameraApp.remote.SET_CONFIG -p <アプリ ID> \

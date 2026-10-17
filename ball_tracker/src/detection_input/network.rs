@@ -283,7 +283,7 @@ impl TcpTransport {
                 camera_id,
                 device_id,
                 model = hello.device_model,
-                "camera connected, but its device_id is not in --cameras (run scripts/camera-remote.ps1 config \
+                "camera connected, but its device_id is not in --cameras (run scripts/camera_remote.py config \
                  to record it); using the pose the camera sends"
             ),
             (Some(_), None) => info!(camera_id, device_id, "camera connected"),

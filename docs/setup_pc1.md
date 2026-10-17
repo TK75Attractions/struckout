@@ -175,7 +175,7 @@ starting TCP listener
 | `--ffmpeg <path>` | カメラから受け取った動画のデコードに使う ffmpeg。既定は `ffmpeg` (PATH から探す) |
 | `--no-video-analysis` | 動画を受け付けない (5052 番で待ち受けない)。カメラは自分で解析して検出を送る |
 | `--video-snapshot-dir <dir>` | カメラごとに、PC で解析し始めた最初の画像を BMP で保存する。向きの確認用 (9 章) |
-| `--video-record-dir <dir>` | カメラから受け取った動画を保存する。`replay_video` で解析と追跡をやり直せる (`scripts/start-pc1.ps1` は既定で保存する) |
+| `--video-record-dir <dir>` | カメラから受け取った動画を保存する。`replay_video` で解析と追跡をやり直せる (`scripts/run_pc1.py --record` で保存する) |
 | `--report-delay-ms <ms>` | 着弾を、予測した着弾時刻の何 ms 後に報告するか (負なら前、既定 -30)。撮影から届くまでの遅れ以上にすると、着弾の直前の視線を使えて精度が上がる。描画はそのぶん遅れる (`recordings/2026-10-16_experiment/notes.md`) |
 | `--cameras` | スマホごとの設定 (`scripts/cameras.json`)。`device_id` で端末を見分け、つないだ順によらず書いた順の camera_id (0, 1, ...) を振る。位置と向きは、スマホが送る値ではなくここに書いた値を使い、焦点距離などと一緒にスマホにも送る (6.1) |
 | `--auto-time-trim` | 右のカメラの時刻の補正を、報告した投球 (直近 9 球の中央値) から自動で決めて `--time-trim-ms` に足す。付けないときは決めた値をログに出すだけ。カメラの向きを較正してから使う (向きがずれていると、その誤差まで時刻で吸収する) |
@@ -260,17 +260,17 @@ Git Bash が使えるなら `mise run adb-reverse` でも同じ (`scripts/adb-re
 ### 6.1 PC からアプリを操作する (高速撮影版)
 
 カメラを設置したあとは画面に触れられないので、設定、カメラ画面を開く、「Save frame」を PC から adb で行う
-(`scripts/camera-remote.ps1`)。端末ごとの設定は `scripts/cameras.json` に書く (シリアル、出力先、焦点距離、位置と向き)。
+(`scripts/camera_remote.py`)。端末ごとの設定は `scripts/cameras.json` に書く (シリアル、出力先、焦点距離、位置と向き)。
 `config` は、端末が返す識別子 (`device_id`、アプリの ANDROID_ID) を `cameras.json` に書き込む。ball_tracker を
 `--cameras scripts\cameras.json` で起動すると、これで端末を見分けて、`cameras.json` の順の camera_id を振り、
 位置と向き、焦点距離、検出の範囲を端末に送る。そのため、開く順番も、アプリの設定が消えることも気にしなくてよい。
-端末ごとに 1 回 (アプリを別の PC で署名し直したときも) `config` を実行しておく (`run-pc1.ps1` は毎回実行する)。
+端末ごとに 1 回 (アプリを別の PC で署名し直したときも) `config` を実行しておく (`run_pc1.py` は毎回実行する)。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 config       # 設定を入れ、device_id を記録する
-powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 open         # ball_tracker と、どちらが先でもよい
-powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 status       # tcp=connected camera_screen=true になったか
-powershell -ExecutionPolicy Bypass -File scripts\camera-remote.ps1 save-frame   # 画像を recordings\calibration\<シリアル> に取り込む
+```bash
+python scripts/camera_remote.py config       # 設定を入れ、device_id を記録する
+python scripts/camera_remote.py open         # ball_tracker と、どちらが先でもよい
+python scripts/camera_remote.py status       # tcp=connected camera_screen=true になったか
+python scripts/camera_remote.py save-frame   # 画像を recordings/calibration/<シリアル> に取り込む
 ```
 
 ほかに `retry` (ball_tracker への接続をやり直す)、`stop` (アプリを止める) がある。
@@ -351,14 +351,17 @@ ball_tracker は、projector には的の面の上の位置 `(y, z)` を送る (
 
 ### いちばん簡単な起動 (2026-10-16 から)
 
-スマホ 2 台を USB でつなぎ、PC① で次の 1 つを実行する。PC② では `scripts\run-pc2.ps1` を実行する (`docs/setup_pc2.md`)。
+スマホ 2 台を USB でつなぎ、PC① で次の 1 つを実行する。PC② では `scripts/run_pc2.py` を実行する (`docs/setup_pc2.md`)。
 PC① と PC② のどちらを先に起動してもよい。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\run-pc1.ps1
+```bash
+python scripts/run_pc1.py
 ```
 
-`run-pc1.ps1` は次を順に行い、それぞれ ball_tracker のログで済んだことを確かめてから次へ進む。
+スクリプトは Python 3.9 以上の標準ライブラリだけで書いてあり、Windows でも Linux でも動く
+(Windows で `python` が無ければ `py`)。
+
+`run_pc1.py` は次を順に行い、それぞれ ball_tracker のログで済んだことを確かめてから次へ進む。
 
 1. 電源、ffmpeg、adb、スマホ (`scripts\cameras.json` の端末) を確かめる
 2. スマホのアプリをいったん止め、`adb reverse` を張り、設定を入れる (端末の `device_id` を `cameras.json` に記録する)
@@ -370,10 +373,11 @@ powershell -ExecutionPolicy Bypass -File scripts\run-pc1.ps1
    記録をまとめてスマホのアプリを止める
 
 スマホのアプリ (高速撮影版) と projector は、ball_tracker が止まっても 2 秒おきにつなぎ直す。ball_tracker を
-起動し直すときは、`run-pc1.ps1` をもう一度実行するだけでよい (projector は起動し直さなくてよい)。
+起動し直すときは、`run_pc1.py` をもう一度実行するだけでよい (projector は起動し直さなくてよい)。
 
-記録は `recordings\<日付>_<時分>` に残る。projector なしで試すときは `-Output csv` を付ける。
-受け取った動画は、既定では残さない (2 台で 1 時間に約 45 GB になる)。あとで解析し直す実験のときは `-Record` を付ける。
+記録は `recordings\<日付>_<時分>` に残る。projector なしで試すときは `--output csv` を付ける。
+受け取った動画は、既定では残さない (2 台で 1 時間に約 45 GB になる)。あとで解析し直す実験のときは `--record` を付ける。
+ball_tracker にオプションを足すときは `--` のあとに書く (`python scripts/run_pc1.py -- --time-trim-ms 3`)。
 ディスクの空きは起動時と 1 分おきに確かめ、足りなくなりそうなら知らせる。
 設定を変えるときは `scripts\pc1.json` (ball_tracker) と `scripts\cameras.json` (スマホ) を書き換える。
 
@@ -391,15 +395,8 @@ powershell -ExecutionPolicy Bypass -File scripts\run-pc1.ps1
 
    `listening for projector` で止まるのが正常。
 
-   `scripts\start-pc1.ps1` を使うと、`adb reverse` (4) もまとめて行い、ffmpeg を探して `--ffmpeg` に渡し、
-   ログ (`tracker_<時分>.log`、UTF-8)、PC がデコードした最初の画像 (`snapshots\`)、止めたあとの `-j` の記録
-   (`events_*`、`frames_*`) を記録フォルダー (既定は `recordings\<日付>_experiment`) に残す。止めるのは Ctrl+C。
-
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File scripts\start-pc1.ps1
-   ```
-
-   projector 無しで試すときは `-Output csv` (着弾は記録フォルダーの `collisions_<時分>_raw.csv`)。
+   `adb reverse` (4)、ffmpeg の場所、ログと `-j` の記録の保存をまとめて行いたいときは、`scripts/run_pc1.py` を使う
+   (スマホを開くところまで行う。ball_tracker のオプションは `--` のあとに足せる)。
    スマホをあとからつないだときは、`adb reverse` だけ張り直す (6 章)。
 3. **PC②: projector を起動する。** `TrackerHost` に PC① の IP を入れておく。
    PC① 側に `accepted TCP connection from projector` が出れば、ここで初めてカメラの受け付けが始まる
@@ -477,7 +474,7 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 | projector がつながらない (`accepted TCP connection from projector` が出ない) | PC② から届いていない。7 章と PC① の IP、PC② の `pc2.json` の `tracker_host` |
 | `no projector is connected; dropped a collision` | projector がつながっていないあいだの着弾は捨てる。つながれば、次の着弾から届く |
 | アプリが TCP につながらない | `adb devices` が `device` か、`adb reverse --list` に 6060 と 5050 があるか |
-| `its device_id is not in --cameras` | `cameras.json` にその端末の `device_id` が無い。`scripts\camera-remote.ps1 config` を実行する。それまでは、つないだ順の番号 (2 から) と、スマホが送る位置を使う |
+| `its device_id is not in --cameras` | `cameras.json` にその端末の `device_id` が無い。`python scripts/camera_remote.py config` を実行する。それまでは、つないだ順の番号 (2 から) と、スマホが送る位置を使う |
 | カメラ画面が `検出: この端末で解析` のまま | `adb reverse --list` に 5052 があるか、設定の出力先が `Network` で TCP がつながっているか (カメラの番号が要る)、ball_tracker を `--no-video-analysis` で起動していないか。ball_tracker のログに `accepted new connection in VideoTransport` が出ているか |
 | `failed to start ffmpeg` | ffmpeg が PATH に無い。`--ffmpeg` で場所を渡す (1.4) |
 | `video analysis` の `fps` が 120 に届かない、`max_delay_ms` が大きい | PC① の処理が追いついていない。`analysis_ms` (1 枚の解析) が 8 ms を超えるなら PC① が遅い。`falling behind` が出ていれば、送信か ffmpeg が詰まっている |
