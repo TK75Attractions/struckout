@@ -1,4 +1,8 @@
 import { Button } from "std-widgets.slint";
+import {
+    SquareButton,
+    TwoColorOutlinedButton,
+} from "../components/button.slint";
 
 enum Difficulity { Normal, Hard, VeryHard }
 
@@ -24,17 +28,6 @@ component DifficulityButton {
     }
 }
 
-component StartGameButton {
-    callback clicked();
-
-    Button {
-        text: "スタート";
-
-        clicked => {
-            root.clicked();
-        }
-    }
-}
 
 export component DifficulitySelectScreen inherits Rectangle {
     VerticalLayout {
@@ -50,21 +43,21 @@ export component DifficulitySelectScreen inherits Rectangle {
                 }
             }
 
-            DifficulityButton {
-                text: "HARD";
-                highlighted: Adopter.selected-difficulity == Difficulity.Hard;
-
-                clicked => {
-                    Adopter.select-difficulity(Difficulity.Hard);
+            Rectangle {
+                TwoColorOutlinedButton {
+                    text: "HARD";
+                    clicked => {
+                        Adopter.select-difficulity(Difficulity.Hard);
+                    }
                 }
             }
 
-            DifficulityButton {
-                text: "VERY HARD";
-                highlighted: Adopter.selected-difficulity == Difficulity.VeryHard;
-
-                clicked => {
-                    Adopter.select-difficulity(Difficulity.VeryHard);
+            Rectangle {
+                TwoColorOutlinedButton {
+                    text: "VERY HARD";
+                    clicked => {
+                        Adopter.select-difficulity(Difficulity.VeryHard);
+                    }
                 }
             }
         }
@@ -72,7 +65,9 @@ export component DifficulitySelectScreen inherits Rectangle {
         HorizontalLayout {
             alignment: LayoutAlignment.end;
 
-            StartGameButton {
+            SquareButton {
+                text: "Start";
+                filled: true;
                 clicked => {
                     Adopter.start-game();
                 }

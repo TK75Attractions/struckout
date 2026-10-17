@@ -1,5 +1,5 @@
 use slint::{ComponentHandle, Global};
-use stern::nav::NavDestination;
+use stern::{PropertyHandle, nav::NavDestination};
 use tracing::{debug, trace};
 
 use crate::{Application, NavController};
@@ -16,6 +16,7 @@ touchpanel_ui::define_start_mapper! {}
 struct StartViewModel {
     nav_controller: NavController,
     _state: StartStates<Mapper>,
+    show_topbar_prop: PropertyHandle<bool>,
 }
 
 impl StartViewModel {
@@ -28,6 +29,7 @@ impl StartViewModel {
                     .global::<touchpanel_ui::StartAdopter>()
                     .as_weak(),
             ),
+            show_topbar_prop: application.show_topbar_prop(),
         }
     }
 }
@@ -62,6 +64,9 @@ impl NavDestination<NavRoute> for StartScreenDestination {
         let NavRoute::Start = route else {
             panic!("matched variant should be given");
         };
+
+        let vm = self.0.borrow();
+        vm.show_topbar_prop.set(false);
     }
 
     fn route(&self) -> NavRouteKind {

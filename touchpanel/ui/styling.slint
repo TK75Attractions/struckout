@@ -1,0 +1,80 @@
+
+// typo settings
+struct TextStyle {
+    font-size: relative-font-size,
+    font-weight: int,
+}
+
+export global FontSettings {
+    out property <TextStyle> label-large: { font-size: 14pt * 1rem / 14pt, font-weight: FontWeight.medium };
+    out property <TextStyle> label-medium: { font-size: 12pt * 1rem / 14pt, font-weight: FontWeight.medium };
+    out property <TextStyle> body-large: { font-size: 16pt * 1rem / 14pt, font-weight: FontWeight.normal };
+    out property <TextStyle> body-small: { font-size: 12pt * 1rem / 14pt, font-weight: FontWeight.normal };
+    out property <TextStyle> title-small: { font-size: 14pt * 1rem / 14pt, font-weight: FontWeight.medium };
+    out property <TextStyle> headline-large: { font-size: 32pt * 1rem / 14pt, font-weight: FontWeight.medium };
+}
+
+export global Elevation {
+    out property <length> level0: 0px;
+    out property <length> level1: 1px;
+    out property <length> level2: 2px;
+}
+
+export global Outline {
+    out property <length> level1: 1px;
+    out property <length> level2: 2px;
+}
+
+export global StruckoutPalette {
+    out property <brush> background: #000000;
+    out property <brush> primary: ref_primary_80;
+    out property <brush> on-primary: ref_primary_30;
+
+    // 197, 59
+    out property <brush> ref_primary_0: #000000;
+    out property <brush> ref_primary_10: #01006e;
+    out property <brush> ref_primary_20: #0200ac;
+    out property <brush> ref_primary_30: #0400ef;
+    out property <brush> ref_primary_40: #353cff;
+    out property <brush> ref_primary_50: #5a63ff;
+    out property <brush> ref_primary_60: #7c84ff;
+    out property <brush> ref_primary_70: #9da3ff;
+    out property <brush> ref_primary_80: #bfc2ff;
+    out property <brush> ref_primary_90: #e0e0ff;
+    out property <brush> ref_primary_95: #f1efff;
+    out property <brush> ref_primary_98: #fbf8ff;
+    out property <brush> ref_primary_99: #fffbff;
+    out property <brush> ref_primary_100: #ffffff;
+
+    // 283, 87
+    out property <brush> ref_secondary_0: #000000;
+    out property <brush> ref_secondary_10: #1d1d00;
+    out property <brush> ref_secondary_20: #323200;
+    out property <brush> ref_secondary_30: #494900;
+    out property <brush> ref_secondary_40: #626200;
+    out property <brush> ref_secondary_50: #7b7b00;
+    out property <brush> ref_secondary_60: #969600;
+    out property <brush> ref_secondary_70: #b1b100;
+    out property <brush> ref_secondary_80: #cdcd00;
+    out property <brush> ref_secondary_90: #eaea00;
+    out property <brush> ref_secondary_95: #f9f900;
+    out property <brush> ref_secondary_98: #fffeae;
+    out property <brush> ref_secondary_99: #ffffd7;
+    out property <brush> ref_secondary_100: #ffffff;
+
+    // 202, 6
+    out property <brush> ref_grey_0: #000000;
+    out property <brush> ref_grey_10: #161d1d;
+    out property <brush> ref_grey_20: #2b3232;
+    out property <brush> ref_grey_30: #414848;
+    out property <brush> ref_grey_40: #596060;
+    out property <brush> ref_grey_50: #727878;
+    out property <brush> ref_grey_60: #8b9292;
+    out property <brush> ref_grey_70: #a6acac;
+    out property <brush> ref_grey_80: #c1c8c8;
+    out property <brush> ref_grey_90: #dde4e4;
+    out property <brush> ref_grey_95: #ecf2f2;
+    out property <brush> ref_grey_98: #f4fafa;
+    out property <brush> ref_grey_99: #f7fdfd;
+    out property <brush> ref_grey_100: #ffffff;
+}

@@ -1,0 +1,300 @@
+// The file is originally copy & pasted from button.slint and components.slint in Slint's material std-widgets,
+// but is heavily modified.
+
+import {
+    FontSettings,
+    Elevation,
+    StruckoutPalette,
+    Outline,
+} from "../styling.slint";
+import { Palette } from "std-widgets.slint";
+
+
+export component Ripple inherits Rectangle {
+    in property <length> ripple-x;
+    in property <length> ripple-y;
+    in property <bool> active;
+    in property <bool> has-effect;
+    in property <brush> ripple-color <=> i-circle.background;
+
+    states [
+        active when root.active && root.has-effect: {
+            i-circle.width: root.width * 2 * 1.4142;
+            in {
+                animate i-circle.width {
+                    duration: 2s;
+                    easing: ease-out;
+                }
+            }
+        }
+    ]
+
+    i-circle := Rectangle {
+        x: root.ripple-x - self.width / 2;
+        y: root.ripple-y - self.width / 2;
+        height: self.width;
+        border-radius: self.width / 2;
+    }
+}
+
+// A touch area that also represents a visual state.
+export component StateLayer inherits TouchArea {
+    in property <bool> focusable;
+    in property <brush> checked-background;
+    in property <brush> ripple-color;
+    in property <bool> has-ripple;
+    in property <length> border-radius;
+    out property <bool> has-focus <=> i-focus-scope.has-focus;
+    in-out property <brush> background;
+    in-out property <bool> checked;
+
+    forward-focus: i-focus-scope;
+
+    states [
+        pressed when root.pressed: {
+            i-ripple.opacity: 0.12;
+        }
+        checked when root.checked: {
+            i-ripple.opacity: 1.0;
+            i-ripple.background: root.checked-background;
+        }
+        hover when root.has-hover: {
+            i-ripple.opacity: 0.08;
+        }
+        focused when root.has-focus: {
+            i-ripple.opacity: 0.12;
+        }
+    ]
+
+    i-ripple := Ripple {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        active: root.pressed;
+        ripple-x: root.pressed-x;
+        ripple-y: root.pressed-y;
+        clip: true;
+        border-radius: root.border-radius;
+        background: root.background;
+        ripple-color: root.ripple-color;
+        has-effect: root.has-ripple;
+
+        animate opacity {
+            duration: 250ms;
+            easing: ease;
+        }
+        animate background { duration: 250ms; }
+    }
+
+    i-focus-scope := FocusScope {
+        x: 0;
+        width: 0px; // Do not react on clicks
+        enabled: root.enabled && root.focusable;
+
+        key-pressed(event) => {
+            if (event.text == Key.Space || event.text == Key.Return) {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+}
+
+
+component MaterialButtonBase {
+    in property <string> text;
+    in property <image> icon;
+    in property <length> icon-size: 24px;
+    in property <length> border-radius <=> state-layer.border-radius;
+    in property <bool> checkable;
+    in property <brush> text-color;
+    in property <float> text-opacity;
+    in property <bool> colorize-icon;
+    in property <bool> enabled <=> state-layer.enabled;
+    in property <length> layout-padding-left;
+    in property <length> layout-padding-right;
+    out property <bool> has-focus <=> state-layer.has-focus;
+    out property <bool> pressed <=> state-layer.pressed;
+    in-out property <bool> checked;
+
+    callback clicked <=> state-layer.clicked;
+
+    min-width: layout.min-width;
+    min-height: layout.min-height;
+    forward-focus: state-layer;
+
+    state-layer := StateLayer {
+        width: 100%;
+        height: 100%;
+        has-ripple: true;
+        background: Palette.foreground-alt;
+        ripple-color: Palette.secondary-ripple;
+        checked-background: Palette.accent-background;
+        focusable: true;
+    }
+
+    layout := HorizontalLayout {
+        spacing: 8px;
+        padding-left: root.layout-padding-left;
+        padding-right: root.layout-padding-right;
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        if root.icon.width > 0 && root.icon.height > 0: Image {
+            source <=> root.icon;
+            width: root.icon-size;
+            min-height: root.icon-size;
+            opacity: root.text-opacity;
+            colorize: root.colorize-icon ? root.text-color : transparent;
+            accessible-role: none;
+        }
+
+        if root.text != "": Text {
+            text: root.text;
+            color: root.text-color;
+            opacity: root.text-opacity;
+            vertical-alignment: center;
+            horizontal-alignment: center;
+            font-weight: FontSettings.label-large.font-weight;
+            accessible-role: none;
+
+            animate color {
+                duration: 250ms;
+                easing: ease;
+            }
+        }
+    }
+}
+
+
+export component TwoColorOutlinedButton {
+    in property <string> text <=> base.text;
+    in property <bool> enabled <=> base.enabled;
+    in property <bool> checkable;
+    in property <image> icon <=> base.icon;
+    in property <length> icon-size <=> base.icon-size;
+    in property <bool> colorize-icon <=> base.colorize-icon;
+    out property <bool> has-focus: base.has-focus;
+    out property <bool> pressed: self.enabled && base.pressed;
+    in-out property <bool> checked;
+    private property <brush> comp_outline: @conic-gradient(StruckoutPalette.ref_secondary_60 0deg, StruckoutPalette.ref_secondary_60 60deg, StruckoutPalette.ref_primary_60 60deg, StruckoutPalette.ref_primary_60 240deg, StruckoutPalette.ref_secondary_60 240deg,);
+    private property <brush> comp_container: StruckoutPalette.ref_grey_10;
+    private property <brush> comp_text: StruckoutPalette.ref_grey_80;
+
+    callback clicked;
+
+    min-height: max(40px, layout.min-height);
+    min-width: max(40px, layout.min-width);
+    forward-focus: base;
+
+    accessible-role: button;
+    accessible-enabled: root.enabled;
+    accessible-checkable: root.checkable;
+    accessible-checked: root.checked;
+    accessible-label: root.text;
+    accessible-action-default => {
+        if (root.enabled) {
+            base.clicked();
+        }
+    }
+
+    states [
+        disabled when !root.enabled: {
+            background.background: Palette.foreground-alt;
+            background.opacity: 0.12;
+            base.text-opacity: 0.38;
+            base.text-color: Palette.control-foreground;
+        }
+        checked when root.checked: {
+            base.text-color: Palette.accent-foreground;
+        }
+    ]
+
+    background := Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: 20px;
+        border-color: comp_outline;
+        border-width: Outline.level2;
+        background: comp_container;
+        drop-shadow-color: comp_container;
+        drop-shadow-blur: Elevation.level0;
+        drop-shadow-offset-y: 1px;
+    }
+
+    layout := HorizontalLayout {
+        base := MaterialButtonBase {
+            layout-padding-left: 24px;
+            layout-padding-right: 24px;
+            border-radius: background.border-radius;
+            text-color: comp_text;
+            text-opacity: 1.0;
+
+            clicked => {
+                if root.checkable {
+                    root.checked = !root.checked;
+                }
+                root.clicked();
+            }
+        }
+    }
+}
+
+export component SquareButton {
+    in property <string> text <=> base.text;
+    in property <bool> enabled <=> base.enabled;
+    in property <image> icon <=> base.icon;
+    in property <length> icon-size <=> base.icon-size;
+    in property <bool> filled;
+    out property <bool> has-focus: base.has-focus;
+    out property <bool> pressed: self.enabled && base.pressed;
+
+    callback clicked;
+
+    min-height: max(40px, layout.min-height);
+    min-width: max(40px, layout.min-width);
+    forward-focus: base;
+
+    accessible-role: button;
+    accessible-enabled: root.enabled;
+    accessible-label: root.text;
+    accessible-action-default => {
+        if (root.enabled) {
+            base.clicked();
+        }
+    }
+
+    states [
+        disabled when !root.enabled: {
+            background.background: Palette.foreground-alt;
+            background.opacity: 0.12;
+            base.text-opacity: 0.38;
+            base.text-color: Palette.control-foreground;
+        }
+    ]
+
+    background := Rectangle {
+        width: 100%;
+        height: 100%;
+        background: root.filled ? StruckoutPalette.primary : Palette.control-background;
+        drop-shadow-color: transparent;
+        drop-shadow-blur: Elevation.level0;
+        drop-shadow-offset-y: 1px;
+    }
+
+    layout := HorizontalLayout {
+        base := MaterialButtonBase {
+            layout-padding-left: 24px;
+            layout-padding-right: 24px;
+            border-radius: background.border-radius;
+            text-color: root.filled ? StruckoutPalette.on-primary : Palette.control-foreground;
+            text-opacity: 1.0;
+            colorize-icon: true;
+
+            clicked => {
+                root.clicked();
+            }
+        }
+    }
+}

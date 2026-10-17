@@ -5,7 +5,7 @@ use crate::{
 use parking_lot::RwLockReadGuard;
 use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{
-    WorkerThread,
+    PropertyHandle, WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -22,6 +22,7 @@ pub struct PlayingViewModel<C, E> {
     nav_controller: NavController,
     worker: WorkerThread<C, E>,
     state: PlayingStates<Mapper>,
+    show_topbar_prop: PropertyHandle<bool>,
 }
 
 touchpanel_ui::define_playing_mapper! {
@@ -55,6 +56,7 @@ impl PlayingViewModel<Context, SlintExecutor> {
                     .global::<touchpanel_ui::PlayingAdopter>()
                     .as_weak(),
             ),
+            show_topbar_prop: application.show_topbar_prop(),
         }
     }
 }
@@ -147,7 +149,9 @@ impl NavDestination<NavRoute> for PlayingDestination {
             panic!("matched variant should be given");
         };
 
-        self.0.borrow().listen_session(*game_id);
+        let vm = self.0.borrow();
+        vm.listen_session(*game_id);
+        vm.show_topbar_prop.set(false);
     }
 
     fn route(&self) -> NavRouteKind {
@@ -204,6 +208,7 @@ mod tests {
     impl PlayingScreenTest {
         pub fn new() -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
+            let show_topbar = Rc::new(RefCell::new(false));
 
             let nav_controller = NavController::new(NavRoute::Start, {
                 let route = Rc::clone(&route);
@@ -230,6 +235,10 @@ mod tests {
                 nav_controller,
                 worker: worker.clone(),
                 state,
+                show_topbar_prop: PropertyHandle::new(move |new| {
+                    let mut guard = show_topbar.borrow_mut();
+                    *guard = new;
+                }),
             };
 
             Self {
