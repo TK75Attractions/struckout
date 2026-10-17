@@ -20,6 +20,7 @@ namespace Struckout.Unity
 
         private static Sprite _circle;
         private static Sprite _diamond;
+        private static Sprite _rippleRing;
 
         /// <summary>的の仮の見た目。</summary>
         public static Sprite Circle =>
@@ -28,6 +29,16 @@ namespace Struckout.Unity
         /// <summary>着弾マーカーの仮の見た目。的が円なので、区別できるよう菱形にしている。</summary>
         public static Sprite Diamond =>
             _diamond != null ? _diamond : _diamond = Build("PlaceholderDiamond", (u, v) => 0.5f - (Mathf.Abs(u) + Mathf.Abs(v)));
+
+        /// <summary>着弾した的の周囲に広がる細い波紋リング。</summary>
+        public static Sprite RippleRing =>
+            _rippleRing != null
+                ? _rippleRing
+                : _rippleRing = Build("PlaceholderRippleRing", (u, v) =>
+                {
+                    float radius = Mathf.Sqrt(u * u + v * v);
+                    return 0.009f - Mathf.Abs(radius - 0.48f);
+                });
 
         /// <param name="signedDistance">
         /// テクスチャ内の位置 (u, v はどちらも -0.5〜0.5) を受け取り、

@@ -21,16 +21,31 @@ namespace Struckout.Unity
     /// </summary>
     public class UIService : MonoBehaviour, IUIService
     {
-        /// <summary>マーカーは的より手前に出す。</summary>
-        private const int MarkerSortingOrder = 10;
+        private const int BackgroundSortingOrder = -100;
+        private const int OverlaySortingOrder = 100;
+        private const int MarkerSortingOrder = 150;
 
         private Dictionary<Target, Transform> _targetToTransform;
         [SerializeField]
         private Transform _circleUI;
 
+        [Header("Projected Screens")]
+        [SerializeField] private Sprite _backgroundSprite;
+        [SerializeField] private Sprite _idleSprite;
+        [SerializeField] private Sprite _finishedSprite;
+        [SerializeField, Min(0f)] private float _screenFadeSeconds = 0.55f;
+
+        [Header("Impact Sprites")]
+        [SerializeField] private Sprite _scoredImpactSprite;
+        [SerializeField] private Sprite _missedImpactSprite;
+        [SerializeField] private Sprite _ignoredImpactSprite;
+        [SerializeField, Min(1f)] private float _scoredImpactSize = 280f;
+        [SerializeField, Min(1f)] private float _missedImpactSize = 170f;
+        [SerializeField, Min(1f)] private float _ignoredImpactSize = 150f;
+
         [Header("Collision Marker")]
         [SerializeField]
-        [Tooltip("当たった位置に出すマーカー。未設定ならコード側で簡易的なものを作る。演出を作ったらここに差し替える。")]
+        [Tooltip("独自の着弾演出 Prefab。未設定なら結果別の画像で演出する。")]
         private Transform _collisionMarkerUI;
 
         [SerializeField]
@@ -43,18 +58,24 @@ namespace Struckout.Unity
 
         [SerializeField]
         [Tooltip("的に当たって得点したとき。")]
-        private Color _hitColor = new(0.35f, 1f, 0.45f, 0.9f);
+        private Color _hitColor = new(1f, 0.95f, 0f, 0.9f);
 
         [SerializeField]
         [Tooltip("ゲームが始まっていないので判定しなかったとき。")]
-        private Color _ignoredColor = new(1f, 0.9f, 0.25f, 0.9f);
+        private Color _ignoredColor = new(1f, 1f, 1f, 0.9f);
 
         [SerializeField]
         [Tooltip("どの的にも当たらなかったとき。")]
-        private Color _missColor = new(1f, 0.45f, 0.3f, 0.9f);
+        private Color _missColor = new(0f, 0.35f, 1f, 0.9f);
 
         private UIRoot _uiRoot;
         private WorldCoordinateTransform _world;
+        private SpriteRenderer _idleRenderer;
+        private SpriteRenderer _finishedRenderer;
+        private TextMesh _finishedText;
+        private GamePhase _phase = GamePhase.Idle;
+        private float _idleOpacity = 1f;
+        private float _finishedOpacity;
 
         [Inject]
         public void Construct(
@@ -65,6 +86,93 @@ namespace Struckout.Unity
             _uiRoot = uiRoot;
             _world = world;
             _targetToTransform = new();
+
+            CreateFieldSprite("ArenaBackground", _backgroundSprite, BackgroundSortingOrder);
+            _idleRenderer = CreateFieldSprite("IdleScreen", _idleSprite, OverlaySortingOrder);
+            _finishedRenderer = CreateFieldSprite("FinishedScreen", _finishedSprite, OverlaySortingOrder);
+            _finishedText = CreateFinishedText();
+            SetAlpha(_idleRenderer, _idleOpacity);
+            SetAlpha(_finishedRenderer, _finishedOpacity);
+        }
+
+        private SpriteRenderer CreateFieldSprite(string objectName, Sprite sprite, int sortingOrder)
+        {
+            if (sprite == null) return null;
+
+            var go = new GameObject(objectName, typeof(SpriteRenderer));
+            go.transform.SetParent(transform, false);
+            var renderer = go.GetComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = sortingOrder;
+
+            // 画面比率に関係なく、論理盤面と同じ矩形を覆う。
+            float width = _world.ToWorldLength(_world.Field.Width);
+            float height = _world.ToWorldLength(_world.Field.Height);
+            go.transform.localScale = new Vector3(
+                width / sprite.bounds.size.x,
+                height / sprite.bounds.size.y,
+                1f);
+            return renderer;
+        }
+
+        private TextMesh CreateFinishedText()
+        {
+            if (_finishedSprite == null) return null;
+
+            var go = new GameObject("FinishedMessage", typeof(TextMesh));
+            go.transform.SetParent(transform, false);
+            var label = go.GetComponent<TextMesh>();
+            label.text = "TIME UP";
+            label.anchor = TextAnchor.MiddleCenter;
+            label.alignment = TextAlignment.Center;
+            label.fontSize = 100;
+            label.characterSize = 1.2f;
+            label.color = new Color(1f, 1f, 1f, 0f);
+            var textRenderer = go.GetComponent<MeshRenderer>();
+            if (textRenderer != null) textRenderer.sortingOrder = OverlaySortingOrder + 1;
+            return label;
+        }
+
+        private void Update()
+        {
+            if (_world == null) return;
+
+            float step = _screenFadeSeconds <= 0f
+                ? 1f
+                : Time.deltaTime / _screenFadeSeconds;
+            _idleOpacity = Mathf.MoveTowards(_idleOpacity, _phase == GamePhase.Idle ? 1f : 0f, step);
+            _finishedOpacity = Mathf.MoveTowards(_finishedOpacity, _phase == GamePhase.Finished ? 1f : 0f, step);
+            SetAlpha(_idleRenderer, _idleOpacity);
+            SetAlpha(_finishedRenderer, _finishedOpacity);
+
+            if (_finishedText != null)
+            {
+                var color = _finishedText.color;
+                color.a = _finishedOpacity;
+                _finishedText.color = color;
+            }
+        }
+
+        private static void SetAlpha(SpriteRenderer renderer, float alpha)
+        {
+            if (renderer == null) return;
+            var color = renderer.color;
+            color.a = alpha;
+            renderer.color = color;
+        }
+
+        public void SetGamePhase(GamePhase phase)
+        {
+            _phase = phase;
+            int index = 0;
+            foreach (var transform in _targetToTransform.Values)
+            {
+                if (transform != null && transform.TryGetComponent<CircleTargetUI>(out var targetUI))
+                {
+                    targetUI.SetPresentationVisible(phase == GamePhase.Playing, index * 0.07f);
+                    index++;
+                }
+            }
         }
         
         public void InstantiateTargets(IReadOnlyList<Target> targets)
@@ -79,8 +187,8 @@ namespace Struckout.Unity
         public void InstantiateTarget(Target target)
         {
             Transform trans;
-            if (target == null) Debug.Log("Target is null");
-            if (_targetToTransform == null) Debug.Log("Dictionary is null");
+            if (target == null) return;
+            if (_targetToTransform == null) throw new InvalidOperationException("UIService is not initialized.");
             if (_targetToTransform.TryGetValue(target, out var _)) return;
 
             switch (target.Type)
@@ -106,6 +214,12 @@ namespace Struckout.Unity
             var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
             ui.Initialize(target, _world);
             _targetToTransform[target] = trans;
+            if (trans.TryGetComponent<CircleTargetUI>(out var circle))
+            {
+                circle.SetPresentationVisible(_phase == GamePhase.Playing,
+                    _phase == GamePhase.Playing ? (_targetToTransform.Count - 1) * 0.07f : 0f,
+                    _phase != GamePhase.Playing);
+            }
         }
 
         bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
@@ -137,6 +251,19 @@ namespace Struckout.Unity
                 _ => _missColor,
             };
 
+            var sprite = result switch
+            {
+                CollisionResult.Scored => _scoredImpactSprite,
+                CollisionResult.Ignored => _ignoredImpactSprite,
+                _ => _missedImpactSprite,
+            };
+            float size = result switch
+            {
+                CollisionResult.Scored => _scoredImpactSize,
+                CollisionResult.Ignored => _ignoredImpactSize,
+                _ => _missedImpactSize,
+            };
+
             Transform marker;
             if (_collisionMarkerUI != null)
             {
@@ -146,8 +273,8 @@ namespace Struckout.Unity
             }
             else
             {
-                marker = CreateDefaultMarker(colour);
-                marker.gameObject.AddComponent<CollisionMarker>();
+                marker = CreateSpriteMarker(sprite, sprite == null ? _collisionMarkerSize : size,
+                    sprite == null ? colour : Color.white, result);
             }
 
             // 的と同じ盤面座標で置く。
@@ -155,25 +282,39 @@ namespace Struckout.Unity
         }
 
         /// <summary>
-        /// Prefab が用意されていないときの最低限のマーカー。
-        /// 的が円なので、区別できるよう菱形にしている。
+        /// 結果別の着弾画像でマーカーを生成する。
+        /// 画像未設定時はプレースホルダーの菱形を使用する。
         /// </summary>
-        private Transform CreateDefaultMarker(Color colour)
+        private Transform CreateSpriteMarker(Sprite sprite, float size, Color colour, CollisionResult result)
         {
             var go = new GameObject("CollisionMarker", typeof(SpriteRenderer));
             go.transform.SetParent(_uiRoot.TargetRoot, false);
 
             var renderer = go.GetComponent<SpriteRenderer>();
-            renderer.sprite = PlaceholderSprites.Diamond;
+            renderer.sprite = sprite != null ? sprite : PlaceholderSprites.Diamond;
             renderer.color = colour;
             renderer.sortingOrder = MarkerSortingOrder;
 
             // 的と同じ理屈で、スプライトの実寸から倍率を出す。
-            float desired = _world.ToWorldLength(_collisionMarkerSize);
+            float desired = _world.ToWorldLength(size);
             float spriteWidth = renderer.sprite.bounds.size.x;
             go.transform.localScale = spriteWidth > 0f
                 ? Vector3.one * (desired / spriteWidth)
                 : Vector3.one;
+
+            var animation = go.AddComponent<CollisionMarker>();
+            switch (result)
+            {
+                case CollisionResult.Scored:
+                    animation.Configure(0.7f, 0.45f, 1.2f, 14f);
+                    break;
+                case CollisionResult.Ignored:
+                    animation.Configure(0.45f, 0.8f, 1.05f, 0f);
+                    break;
+                default:
+                    animation.Configure(0.55f, 0.7f, 1.12f, 0f);
+                    break;
+            }
 
             return go.transform;
         }

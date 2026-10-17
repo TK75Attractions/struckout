@@ -5,6 +5,9 @@ namespace Struckout.Application
 {
     public interface IUIService
     {
+        /// <summary>投影画面をゲーム進行状態に合わせて切り替える。</summary>
+        void SetGamePhase(GamePhase phase);
+
         void InstantiateTargets(IReadOnlyList<Target> targets);
         /// <summary>
         /// 的が移動したことを見た目に反映する。的は消えない。

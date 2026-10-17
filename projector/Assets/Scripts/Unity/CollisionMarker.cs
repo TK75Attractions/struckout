@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Struckout.Unity
 {
     /// <summary>
-    /// ボールが当たった位置に一瞬だけ出るマーカー。
+    /// 着弾位置や的の移動元・移動先に短時間表示する拡大フェード演出。
     ///
     /// デバッグでは「どこに当たったか」を目で確認するために使う。
     /// 変換係数を合わせ込むときは、この位置と的の位置を見比べる。
@@ -30,6 +30,7 @@ namespace Struckout.Unity
         private Vector3 _baseScale = Vector3.one;
         private Color _baseColour = Color.white;
         private float _elapsed;
+        private float _rotationDegrees;
 
         private void Awake()
         {
@@ -41,6 +42,19 @@ namespace Struckout.Unity
             _baseScale = transform.localScale;
         }
 
+        public void Configure(float lifetimeSeconds, float startScale, float endScale, float rotationDegrees)
+        {
+            _lifetimeSeconds = lifetimeSeconds;
+            _startScale = startScale;
+            _endScale = endScale;
+            _rotationDegrees = rotationDegrees;
+            _baseScale = transform.localScale;
+            if (_renderer == null) _renderer = GetComponent<SpriteRenderer>();
+            if (_renderer != null) _baseColour = _renderer.color;
+            _elapsed = 0f;
+            Apply(0f);
+        }
+
         private void Update()
         {
             _elapsed += Time.deltaTime;
@@ -49,7 +63,16 @@ namespace Struckout.Unity
                 ? 1f
                 : Mathf.Clamp01(_elapsed / _lifetimeSeconds);
 
-            transform.localScale = _baseScale * Mathf.Lerp(_startScale, _endScale, progress);
+            Apply(progress);
+
+            if (progress >= 1f) Destroy(gameObject);
+        }
+
+        private void Apply(float progress)
+        {
+            float eased = 1f - (1f - progress) * (1f - progress);
+            transform.localScale = _baseScale * Mathf.Lerp(_startScale, _endScale, eased);
+            transform.localRotation = Quaternion.Euler(0f, 0f, _rotationDegrees * eased);
 
             if (_renderer != null)
             {
@@ -58,7 +81,6 @@ namespace Struckout.Unity
                 _renderer.color = colour;
             }
 
-            if (progress >= 1f) Destroy(gameObject);
         }
     }
 }
