@@ -1,6 +1,0 @@
-2026-10-14T07:14:27.207213Z  INFO ball_tracker::detection_input::network: trying to bind port for `DataTransport` port="0.0.0.0:5050"
-2026-10-14T07:14:27.210663Z  INFO ball_tracker::detection_input::network: succeed to bind port for `DataTransport`
-2026-10-14T07:14:27.210698Z  INFO ball_tracker::detection_input::network: trying to bind port for `CameraLocationListener` port="0.0.0.0:6060"
-2026-10-14T07:14:27.210976Z  INFO ball_tracker::detection_input::network: succeed to bind port for `CameraLocationListener`
-2026-10-14T07:14:27.218293Z  INFO ball_tracker::detection_input::network: starting TCP listener
-2026-10-14T07:14:27.218395Z DEBUG ball_tracker::detection_input::network: TcpTransport listening...
