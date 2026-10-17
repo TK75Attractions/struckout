@@ -1,9 +1,7 @@
-#![allow(dead_code, unused_variables)]
-
 use clap::Parser;
 use slint::ComponentHandle;
 use std::sync::{Arc, OnceLock};
-use stern::{PropertyHandle, WorkerThread, worker::SlintExecutor};
+use stern::{WorkerThread, worker::SlintExecutor};
 use tracing::info;
 
 use touchpanel_ui::NavRoute;
@@ -31,28 +29,6 @@ pub struct Application {
     #[allow(dead_code)] // チャンネルを生存させるために必要
     pub worker: WorkerThread<Context, SlintExecutor>,
     config: Arc<Config>,
-}
-
-impl Application {
-    fn show_backbutton_prop(&self) -> PropertyHandle<bool> {
-        PropertyHandle::new({
-            let ui_weak = self.ui.as_weak();
-            move |v| {
-                let ui = ui_weak.unwrap();
-                ui.set_show_backbutton(v);
-            }
-        })
-    }
-
-    fn show_topbar_prop(&self) -> PropertyHandle<bool> {
-        PropertyHandle::new({
-            let ui = self.ui.as_weak();
-            move |v| {
-                let ui = ui.unwrap();
-                ui.set_show_topbar(v);
-            }
-        })
-    }
 }
 
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.

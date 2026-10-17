@@ -63,13 +63,87 @@ export component AppWindow inherits Window {
         default-font-family: "Oxanium,Noto Sans JP";
 
         in property <UiNavRoute> nav-route;
-        in property <bool> show-topbar;
-        in property <bool> show-backbutton;
         callback click-backbutton();
 
+        pure function items(route: UiNavRoute) -> [string] {
+            if route == UiNavRoute.Start {
+                return [];
+            } else if route == UiNavRoute.NameInputFirst {
+                return ["プレイヤー名入力", "難易度選択"];
+            } else if route == UiNavRoute.NameInputNonFirst {
+                return ["プレイヤー名入力", "難易度選択"];
+            } else if route == UiNavRoute.DifficulitySelect {
+                return ["プレイヤー名入力", "難易度選択"];
+            } else if route == UiNavRoute.Playing {
+                return [];
+            } else if route == UiNavRoute.Score {
+                return ["スコア", "ランキング"];
+            } else if route == UiNavRoute.Ranking {
+                return ["スコア", "ランキング"];
+            } else if route == UiNavRoute.Fallback {
+                return [];
+            } else if route == UiNavRoute.ConnectionFailed {
+                return [];
+            } else if route == UiNavRoute.Connecting {
+                return [];
+            }
+            return ["UNKNOWN ROUTE"];
+        }
+
+        pure function current-item-idx(route: UiNavRoute) -> int {
+            if route == UiNavRoute.Start {
+                return 0;
+            } else if route == UiNavRoute.NameInputFirst {
+                return 0;
+            } else if route == UiNavRoute.NameInputNonFirst {
+                return 0;
+            } else if route == UiNavRoute.DifficulitySelect {
+                return 1;
+            } else if route == UiNavRoute.Playing {
+                return 0;
+            } else if route == UiNavRoute.Score {
+                return 0;
+            } else if route == UiNavRoute.Ranking {
+                return 1;
+            } else if route == UiNavRoute.Fallback {
+                return 0;
+            } else if route == UiNavRoute.ConnectionFailed {
+                return 0;
+            } else if route == UiNavRoute.Connecting {
+                return 0;
+            }
+            return 0;
+        }
+
+        pure function show-topbar(route: UiNavRoute) -> bool {
+            if route == UiNavRoute.Start {
+                return false;
+            } else if route == UiNavRoute.NameInputFirst {
+                return true;
+            } else if route == UiNavRoute.NameInputNonFirst {
+                return true;
+            } else if route == UiNavRoute.DifficulitySelect {
+                return true;
+            } else if route == UiNavRoute.Playing {
+                return false;
+            } else if route == UiNavRoute.Score {
+                return true;
+            } else if route == UiNavRoute.Ranking {
+                return true;
+            } else if route == UiNavRoute.Fallback {
+                return false;
+            } else if route == UiNavRoute.ConnectionFailed {
+                return false;
+            } else if route == UiNavRoute.Connecting {
+                return false;
+            }
+            return false;
+        }
+
         VerticalLayout {
-            if show-topbar: topbar := TopBar {
-                show-backbutton: root.show-backbutton;
+            if show-topbar(root.nav-route): topbar := TopBar {
+                items: items(nav-route);
+                current-item-idx: current-item-idx(nav-route);
                 click-backbutton => {
                     root.click-backbutton();
                 }
