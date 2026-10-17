@@ -5,7 +5,12 @@ import {
     CornerButton,
     Corner,
 } from "../components/button.slint";
-import { Fonts } from "../styling.slint";
+import {
+    Fonts,
+    Outline,
+    StruckoutPalette,
+    FontSettings,
+} from "../styling.slint";
 
 enum Difficulity { Normal, Hard, VeryHard }
 
@@ -21,11 +26,25 @@ export component DifficulitySelectScreen inherits Rectangle {
     private property <length> comp_margin_lr: 40px;
     private property <length> comp_margin_tb: 10px;
 
+    pure function difficulty-text(difficulty: Difficulity) -> string {
+        if difficulty == Difficulity.Normal {
+            return "的が緩やかに動く";
+        } else if difficulty == Difficulity.Hard {
+            return "的が激しめに動く";
+        } else if difficulty == Difficulity.VeryHard {
+            return "的が激しく動く";
+        }
+        return "UNKNOWN DIFFICULTY";
+    }
+
     VerticalLayout {
-        alignment: LayoutAlignment.stretch;
+        alignment: LayoutAlignment.space-between;
         padding-top: 16px;
 
         VerticalLayout {
+            alignment: LayoutAlignment.stretch;
+            // spacing: 12px;
+            height: 75%;
             cont1 := Rectangle {
                 TwoColorOutlinedButton {
                     font-family: Fonts.oxanium;
@@ -72,11 +91,36 @@ export component DifficulitySelectScreen inherits Rectangle {
             }
         }
 
-        HorizontalLayout {
-            alignment: LayoutAlignment.end;
+        Rectangle {
+            height: 25%;
+
+            VerticalLayout {
+                width: 40%;
+                padding-bottom: 16px;
+                padding-top: 16px;
+
+                Rectangle {
+                    border-width: Outline.level1;
+                    border-color: StruckoutPalette.ref_primary_60;
+
+                    Text {
+                        text: difficulty-text(Adopter.selected-difficulity);
+                        color: StruckoutPalette.ref_primary_90;
+                        font-size: FontSettings.body-large.font-size;
+                        font-weight: FontSettings.body-large.font-weight;
+                        font-family: Fonts.note-sans-jp;
+                    }
+                }
+            }
 
             CornerButton {
-                text: "Start";
+                x: parent.width - self.width;
+                y: parent.height - self.height;
+                height: 100%;
+                width: self.preferred-width * 1.5;
+                text: "START";
+                font-family: Fonts.oxanium;
+                font-size: root.comp_button_font_size;
                 corner: Corner.RightBottom;
                 filled: true;
                 clicked => {
