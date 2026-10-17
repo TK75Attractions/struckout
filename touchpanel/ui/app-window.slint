@@ -59,10 +59,8 @@ enum UiNavRoute {
 }
 
 export component AppWindow inherits Window {
-        full-screen: false;
+        full-screen: true;
         default-font-family: "Oxanium,Noto Sans JP";
-        width: 600px;
-        height: 400px;
 
         in property <UiNavRoute> nav-route;
         in property <bool> show-topbar;
