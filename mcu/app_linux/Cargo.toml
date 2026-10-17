@@ -1,8 +1,0 @@
-[package]
-name = "struckout-mcu-linux"
-version = "0.1.0"
-edition.workspace = true
-
-[dependencies]
-struckout-mcu-core = { workspace = true }
-tokio = { version = "1.52.3", features = ["net"] }
