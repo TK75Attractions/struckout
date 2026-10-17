@@ -114,7 +114,29 @@ if ($settings.game_master) {
         & docker stop $old 2>&1 | Out-Null
     }
     Write-Host '  ..  game_master を起動しています (初回はビルドに数分から十数分かかる)'
-    & docker @compose up -d 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -match 'error|Error|failed' } | ForEach-Object { Warn $_ }
+    # イメージが無いと、ここで Rust のコンパイルから組み立てる (この PC で約 20 分)。そのあいだ何も表示されないので、
+    # 別のプロセスで動かして、1 分おきに経過を出す
+    $upLog = Join-Path $env:TEMP 'struckout_game_master_up.log'
+    $upArgs = (@($compose) + @('up', '-d')) | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }
+    $up = Start-Process -FilePath $docker -ArgumentList ($upArgs -join ' ') -NoNewWindow -PassThru `
+        -RedirectStandardOutput "$upLog.out" -RedirectStandardError $upLog
+    # ハンドルを先に取っておかないと、終わったあとに ExitCode が読めない (PowerShell 5.1)
+    $null = $up.Handle
+    $upStarted = Get-Date
+    $lastNote = $upStarted
+    while (-not $up.HasExited) {
+        Start-Sleep -Seconds 2
+        if (((Get-Date) - $lastNote).TotalSeconds -ge 60) {
+            $lastNote = Get-Date
+            $minutes = [math]::Floor(((Get-Date) - $upStarted).TotalMinutes)
+            $building = (& docker buildx history ls 2>$null | Select-String 'Running') -ne $null
+            if ($building) { Write-Host "  ..  game_master のイメージを組み立てています ($minutes 分経過。初回は 20 分ほど)" }
+            else { Write-Host "  ..  game_master を起動しています ($minutes 分経過)" }
+        }
+    }
+    $up.WaitForExit()
+    Get-Content $upLog, "$upLog.out" -ErrorAction SilentlyContinue | Where-Object { $_ -match 'error|Error|failed' } | ForEach-Object { Warn $_ }
+    if ($up.ExitCode -ne 0) { Fail "game_master を起動できませんでした (docker compose の出力: $upLog)" }
     $deadline = (Get-Date).AddMinutes(2)
     $ready = $false
     while (-not $ready -and (Get-Date) -lt $deadline) {
