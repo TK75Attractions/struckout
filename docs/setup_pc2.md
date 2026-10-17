@@ -10,7 +10,8 @@ game_master は PC② の Docker で動かす。
 |---|---|
 | Unity 6000.5.2f1 と Windows の書き出しの部品 | Unity Hub から (`projector/ProjectSettings/ProjectVersion.txt` の版) |
 | Docker Desktop | <https://www.docker.com/products/docker-desktop/> |
-| リポジトリ | PC① と同じ。`game_master/.env.dev` があること (データベースのパスワード) |
+| リポジトリ | PC① と同じ |
+| データベースのパスワード | `.mise/config.local.toml` の `[env]` に `MYSQL_ROOT_PASSWORD_DEV = "..."` を書く (コミットしない)。`run-pc2.ps1` はこれを読む。前の `game_master/.env.dev` があればそれも使える |
 | プロジェクター | PC② につなぎ、Windows の画面の設定で「拡張」、1920x1080 |
 
 PC② のファイアウォールは開けなくてよい (PC② から PC① へつなぎに行くだけ)。PC① は 5000 番の受信を許可しておく

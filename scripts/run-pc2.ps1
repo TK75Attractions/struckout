@@ -50,8 +50,21 @@ function Warn($text) { Write-Host "  !!  $text" -ForegroundColor Yellow }
 function Fail($text) { Write-Host "  NG  $text" -ForegroundColor Red; exit 1 }
 
 $exe = Join-Path $root $settings.projector_exe
-$compose = @('compose', '-f', (Join-Path $root 'game_master\compose.yaml'), '-f', (Join-Path $root 'game_master\compose.dev.yaml'),
-    '--env-file', (Join-Path $root 'game_master\.env.dev'))
+$compose = @('compose', '-f', (Join-Path $root 'game_master\compose.yaml'), '-f', (Join-Path $root 'game_master\compose.dev.yaml'))
+
+# データベースのパスワード。mise の MYSQL_ROOT_PASSWORD_DEV (.mise/config.local.toml、`mise run game-master:dev` と同じ) を使う。
+# 環境変数に無ければ .mise/config.local.toml から読み、それも無ければ前の game_master/.env.dev を使う。値は表示しない
+function Set-DatabasePassword {
+    if ($env:MYSQL_ROOT_PASSWORD_DEV) { $env:MYSQL_ROOT_PASSWORD = $env:MYSQL_ROOT_PASSWORD_DEV; return $true }
+    $local = Join-Path $root '.mise\config.local.toml'
+    if (Test-Path $local) {
+        $line = Get-Content $local -Encoding UTF8 | Where-Object { $_ -match '^\s*MYSQL_ROOT_PASSWORD_DEV\s*=\s*"([^"]*)"' } | Select-Object -First 1
+        if ($line -and $line -match '^\s*MYSQL_ROOT_PASSWORD_DEV\s*=\s*"([^"]*)"') { $env:MYSQL_ROOT_PASSWORD = $Matches[1]; return $true }
+    }
+    $envFile = Join-Path $root 'game_master\.env.dev'
+    if (Test-Path $envFile) { $script:compose += @('--env-file', $envFile); return $true }
+    return $false
+}
 
 if ($Stop) {
     Step '止める'
@@ -91,6 +104,15 @@ if ($settings.game_master) {
         if ($LASTEXITCODE -ne 0) { Fail 'Docker が起動しません。Docker Desktop を手で起動してからやり直してください' }
     }
     Ok 'Docker'
+    if (-not (Set-DatabasePassword)) {
+        Fail 'データベースのパスワードがありません。.mise/config.local.toml の [env] に MYSQL_ROOT_PASSWORD_DEV を書いてください (docs/setup_pc2.md)'
+    }
+    # 2026-10-17 までの game_master は compose のプロジェクト名が game_master だった。残っていると 8020 番がぶつかるので止める
+    $old = @(& docker ps -q --filter 'name=^game_master-' 2>$null)
+    if ($old.Count -gt 0) {
+        Warn '前の名前 (game_master) で動いている game_master を止めます'
+        & docker stop $old 2>&1 | Out-Null
+    }
     Write-Host '  ..  game_master を起動しています (初回はビルドに数分から十数分かかる)'
     & docker @compose up -d 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -match 'error|Error|failed' } | ForEach-Object { Warn $_ }
     $deadline = (Get-Date).AddMinutes(2)
