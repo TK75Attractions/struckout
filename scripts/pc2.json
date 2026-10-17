@@ -3,7 +3,7 @@
     "scripts/run-pc2.ps1 の設定。tracker_host には PC① の名前 (PC① の run-pc1.ps1 が表示する) か IP を書く。",
     "monitor はプロジェクターをつないだ画面の番号 (1 から)。collision_transform は着弾位置の係数のファイル (空なら projector の既定)。"
   ],
-  "tracker_host": "",
+  "tracker_host": "172.20.10.2",
   "master_host": "127.0.0.1",
   "machine_id": 1,
   "monitor": 2,

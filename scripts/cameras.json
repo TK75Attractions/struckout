@@ -6,19 +6,22 @@
     "pose は x, y, z (m), 回転 x, y, z (度)。アプリの設定画面の Camera Pose と同じ。",
     "2026-10-16: 位置は実測 (レンズは奥の外側の板から 11 cm、左の壁から 12 cm / 106 cm、地面から 1.23 m)。",
     "回転は 2026-10-16 12:26 の Save frame から較正した値 (recordings/2026-10-16_experiment_2/analysis/camera_pose.py)。",
-    "焦点距離 0.97 は 2026-10-16 の録画で最もよく合った値 (0.98 前後) に近づけたもの。回転はこの焦点距離で解き直した。"
+    "焦点距離 0.97 は 2026-10-16 の録画で最もよく合った値 (0.98 前後) に近づけたもの。回転はこの焦点距離で解き直した。",
+    "2026-10-17: スマホを左右入れ替えて取り付けた (左が 166810122536)。位置と向きは取り付け位置ごとの値なので、そのまま使える。"
   ],
   "package": "com.taichi765.struckoutCameraApp.highspeed",
   "cameras": [
     {
-      "serial": "166810131208",
+      "serial": "166810122536",
+      "device_id": "94674f368ce5be0e",
       "name": "left",
       "output": "network",
       "focal_ratio": 0.97,
       "pose": [0.11, 0.12, 1.23, 136.962, -0.453, -32.331]
     },
     {
-      "serial": "166810122536",
+      "serial": "166810131208",
+      "device_id": "3d7cc4fb2b85ac4f",
       "name": "right",
       "output": "network",
       "focal_ratio": 0.97,
