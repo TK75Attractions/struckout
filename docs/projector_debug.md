@@ -56,6 +56,31 @@ TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 収まる、というだけの仮置きなので、盤面の実寸を測って必ず入れ直すこと。
 合わせ込むときは `Log Conversions` を on にすると、送った物理座標と変換結果が並んで出る。
 
+#### 書き出したプレイヤーで係数を変える
+
+Inspector の値は既定値で、起動時に設定ファイル `collision_transform.json` があれば
+その値で上書きする (`CollisionTransformStore`)。ファイルの場所は次の順で決まる。
+
+| 指定 | 例 |
+|---|---|
+| コマンドライン | `StruckOut.exe -collisionTransform C:\struckout\collision_transform.json` |
+| 環境変数 | `STRUCKOUT_COLLISION_TRANSFORM` |
+| 既定 | `%USERPROFILE%\AppData\LocalLow\DefaultCompany\StruckOut\collision_transform.json` (Editor とプレイヤーで共通) |
+
+ファイルが無ければ Inspector の値のまま動く。中身がおかしい (1 m あたりが 0 以下など) ときも
+Inspector の値を使い、`Player.log` に `[Collision] could not read ...` と出る。
+
+実行中は **F2** で調整画面 (`CollisionCalibrationPanel`) が開く。変えた値はすぐ着弾の表示に効く。
+
+- 係数を直接打ち込む。入力欄から Esc で抜けると、矢印キーで原点を 1 px、Ctrl+矢印キーで
+  1 m あたりを 0.5% 動かせる (Shift で 10 倍)
+- 「板の 4 隅と中央に印を出す」: 実測した板の点 (左の壁から 0.07 / 1.13 m、地面から 1.79 / 2.47 m と、その中央)
+  に印を出し続ける。印が板の角に乗るまで係数を動かす
+- 「合わせ用の 2 点に印を出す」: 盤面の (480, 270) と (1440, 810) に印を出す。それぞれが板の上で映った位置
+  (左の壁からの距離, 地面からの高さ。m) を測って入れ、「2 点から係数を計算して入れる」を押すと係数が決まる
+  (向きが逆なら `Flip` も立つ)
+- 「保存」で設定ファイルに書く。次の起動からその値を使う。「ファイルから読み直す」「Inspector の値に戻す」もある
+
 盤面座標からワールド座標への変換はさらに後段で、
 `docs/projector_rendering.md` に書いてある。
 
