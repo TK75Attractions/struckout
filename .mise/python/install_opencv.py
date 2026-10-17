@@ -16,6 +16,10 @@ DOWNLOAD_URL = (
 
 
 def replace_proguard(opencv_dir: Path):
+    '''
+       以下のエラーで落ちるのを修正する:
+       `getDefaultProguardFile('proguard-android.txt')` is no longer supported since it includes `-dontoptimize`, which prevents R8 from performing many optimizations. Instead use `getDefaultProguardFile('proguard-android-optimize.txt)`, and if needed, temporarily use `-dontoptimize` in a custom keep rule file while fixing breakages. 
+    '''
     gradle_path = opencv_dir / "build.gradle"
     content_old = gradle_path.read_text()
     content_new = content_old.replace(
