@@ -17,8 +17,7 @@ use ball_tracker::{
 use chrono::{Local, TimeDelta};
 use clap::{Parser, ValueEnum};
 use tokio::sync::mpsc;
-use tracing::Level;
-use tracing_subscriber::{FmtSubscriber, layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = env!("SENTRY_DSN");
@@ -253,11 +252,6 @@ fn main() {
 
 async fn run_main() {
     let cli = Cli::parse();
-
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = cli.cameras.as_ref().map(|path| {
