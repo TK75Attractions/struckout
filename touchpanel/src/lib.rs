@@ -19,9 +19,6 @@ pub mod presentation;
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
 type NavController = stern::nav::NavController<NavRoute>;
-type NavHost = stern::nav::NavHost<NavRoute>;
-type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;
-type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 
 pub struct Application {
     nav_controller: NavController,

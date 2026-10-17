@@ -128,7 +128,10 @@ where
     }
 }
 
-pub struct NameInputNonFirstDestination(NameInputNonFirstViewModelRc);
+pub struct NameInputNonFirstDestination(
+    #[allow(unused)] // just for viewmodel initialization
+    NameInputNonFirstViewModelRc,
+);
 
 impl NameInputNonFirstDestination {
     pub fn new(application: &Application) -> Self {
@@ -141,8 +144,6 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
         let NavRoute::NameInputNonFirst = route else {
             unreachable!();
         };
-
-        let vm = self.0.borrow();
     }
 
     fn route(&self) -> NavRouteKind {

@@ -62,8 +62,6 @@ impl NavDestination<NavRoute> for StartScreenDestination {
         let NavRoute::Start = route else {
             panic!("matched variant should be given");
         };
-
-        let vm = self.0.borrow();
     }
 
     fn route(&self) -> NavRouteKind {
