@@ -3,6 +3,7 @@
 java = "temurin-21"
 "rust" = "latest"
 dotnet = "10"
+python = "latest"
 
 # Tools
 
@@ -36,6 +37,11 @@ description = "Generate the committed C# from api/proto"
 depends = ["proto"]
 run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
 description = "Check the committed C# matches api/proto (regenerates in place)"
+
+[tasks.install-opencv]
+run = "python3 .mise/python/install_opencv.py"
+dir = "."
+description = "cameraで使うOpenCVをインストールする"
 
 [tasks."touchpanel:fmt-slint"]
 run = "find -name '*.slint' | xargs slint-lsp format --inline"
