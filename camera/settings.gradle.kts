@@ -26,5 +26,3 @@ dependencyResolutionManagement {
 rootProject.name = "StruckoutCameraAppHighSpeed"
 include(":app")
 include(":opencv")
-// OpenCV SDK は 1.9GB あるので複製せず、元のアプリのものを共有する。
-project(":opencv").projectDir = file("../struckoutCameraApp/opencv")
