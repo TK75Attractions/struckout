@@ -59,12 +59,6 @@ desktop.ini
 sysinfo.txt
 
 # =========================
-# Unity Package Cache
-# =========================
-
-Packages/packages-lock.json
-
-# =========================
 # Generated Files
 # =========================
 
