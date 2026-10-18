@@ -1,3 +1,9 @@
+import {
+    FontSettings,
+    Fonts,
+    Outline,
+    StruckoutPalette,
+} from "../styling.slint";
 global Adopter {
     in property <int> score;
     in property <string> remaining-time;
@@ -5,22 +11,36 @@ global Adopter {
 
 export component PlayingScreen inherits Rectangle {
     VerticalLayout {
+        width: 100%;
         cross-axis-alignment: CrossAxisAlignment.center;
+        padding-top: 40px;
+        padding-bottom: 40px;
+        spacing: 80px;
 
-        HorizontalLayout {
-            Text {
-                text: "残り時間: ";
-            }
+        Rectangle {
+            border-width: Outline.level1;
+            border-color: StruckoutPalette.ref_secondary_50;
+            width: 32%;
 
             Text {
-                text: Adopter.remaining-time;
+                text: "01:20";
+                font-family: Fonts.oxanium;
+                font-size: 40pt;
+                font-weight: FontSettings.body-large.font-weight;
             }
         }
 
         Rectangle {
+            border-width: Outline.level2;
+            border-color: StruckoutPalette.ref_primary_50;
+            width: 50%;
+
             Text {
-                text: Adopter.score;
-                font-size: 36pt;
+                text: "8000";
+                color: StruckoutPalette.ref_grey_100;
+                font-family: Fonts.oxanium;
+                font-size: 72pt;
+                font-weight: FontSettings.body-large.font-weight;
             }
         }
     }
