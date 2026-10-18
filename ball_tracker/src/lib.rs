@@ -5,9 +5,7 @@ use parking_lot::RwLock;
 use tokio::sync::mpsc;
 
 use crate::{
-    collision_output::CollisionOutput,
-    detection_input::DetectionInput,
-    tracking::TrackRunner,
+    collision_output::CollisionOutput, detection_input::DetectionInput, tracking::TrackRunner,
     types::CameraId,
 };
 use struckout_proto::CameraPose;

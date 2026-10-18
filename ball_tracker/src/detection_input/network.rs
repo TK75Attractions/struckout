@@ -214,7 +214,9 @@ impl TcpTransport {
             join_handles: Vec::new(),
             camera_locs,
             clock,
-            next_camera_id: Arc::new(AtomicU32::new(cameras.as_ref().map_or(0, |c| c.first_unknown_id()))),
+            next_camera_id: Arc::new(AtomicU32::new(
+                cameras.as_ref().map_or(0, |c| c.first_unknown_id()),
+            )),
             cameras,
         })
     }
@@ -256,12 +258,20 @@ impl TcpTransport {
         let (mut reader, mut writer) = stream.into_split();
 
         // 端末が名乗るのを待つ。名乗らない送信元は camera_id を待っているので、こちらからは何も届かない
-        let hello = match tokio::time::timeout(HELLO_TIMEOUT, read_packet::<TcpClientPacket, _>(&mut reader)).await {
+        let hello = match tokio::time::timeout(
+            HELLO_TIMEOUT,
+            read_packet::<TcpClientPacket, _>(&mut reader),
+        )
+        .await
+        {
             Ok(Ok(TcpClientPacket {
                 data: Some(tcp_client_packet::Data::Hello(hello)),
             })) => Some(hello),
             Ok(Ok(packet)) => {
-                warn!(?packet, "expected a Hello as the first packet; treating the camera as unknown");
+                warn!(
+                    ?packet,
+                    "expected a Hello as the first packet; treating the camera as unknown"
+                );
                 None
             }
             Ok(Err(e)) => {
@@ -271,14 +281,18 @@ impl TcpTransport {
             Err(_) => None,
         };
         let device_id = hello.as_ref().map_or("", |hello| hello.device_id.as_str());
-        let known = cameras.as_deref().and_then(|cameras| cameras.find(device_id));
+        let known = cameras
+            .as_deref()
+            .and_then(|cameras| cameras.find(device_id));
         let camera_id = match known {
             Some((camera_id, _)) => camera_id,
             None => next_camera_id.fetch_add(1, Ordering::Relaxed),
         };
         let managed = known.is_some();
         match (&hello, known) {
-            (_, Some((_, entry))) => info!(camera_id, name = entry.name, device_id, "camera connected"),
+            (_, Some((_, entry))) => {
+                info!(camera_id, name = entry.name, device_id, "camera connected")
+            }
             (Some(hello), None) if cameras.is_some() => warn!(
                 camera_id,
                 device_id,

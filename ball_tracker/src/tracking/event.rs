@@ -57,13 +57,14 @@ impl TrackSummaryDto {
             track_id: track.id(),
             rays: rays_per_camera(track.rays()),
             noise: track.noise(),
-            predicted_collision: prediction.as_ref().ok().map(|predicted| {
-                PredictedCollisionDto {
+            predicted_collision: prediction
+                .as_ref()
+                .ok()
+                .map(|predicted| PredictedCollisionDto {
                     time: predicted.time,
                     y: predicted.point.y,
                     z: predicted.point.z,
-                }
-            }),
+                }),
             rejected: prediction.as_ref().err().copied(),
         }
     }

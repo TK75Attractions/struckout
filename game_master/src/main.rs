@@ -21,7 +21,7 @@ const SENTRY_DSN: &str = env!("SENTRY_DSN");
 
 #[derive(Parser)]
 #[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
-struct Cli{}
+struct Cli {}
 
 fn main() -> std::process::ExitCode {
     #[cfg(feature = "sentry")]

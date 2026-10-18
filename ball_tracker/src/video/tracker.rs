@@ -96,7 +96,10 @@ impl ObjectTracker {
     /// 1 フレームを解析する。`frame` は 3 チャンネルで、画素ごとに並んだ画像 (チャンネルの並びは問わない)。
     /// 最初のフレーム (と、大きさが変わったフレーム) は背景にするだけで、何も返さない。
     pub fn next_frame(&mut self, frame: &[u8], width: usize, height: usize) -> Vec<Rect> {
-        self.next_frame_blobs(frame, width, height).into_iter().map(|blob| blob.rect).collect()
+        self.next_frame_blobs(frame, width, height)
+            .into_iter()
+            .map(|blob| blob.rect)
+            .collect()
     }
 
     /// [`Self::next_frame`] と同じ処理で、枠に加えて重心と、画像の端に接しているかも返す。
@@ -134,7 +137,11 @@ impl ObjectTracker {
 
         // 小さな点を消してから (オープニング 1 回)、穴を埋める (クロージング 2 回)
         let (w, h) = (width, height);
-        let mut work = Work { tmp: &mut self.scratch_c, line: &mut self.scratch_d, line_tmp: &mut self.scratch_e };
+        let mut work = Work {
+            tmp: &mut self.scratch_c,
+            line: &mut self.scratch_d,
+            line_tmp: &mut self.scratch_e,
+        };
         erode_ellipse5(&self.binary, &mut self.scratch_a, &mut work, w, h);
         dilate_ellipse5(&self.scratch_a, &mut self.scratch_b, &mut work, w, h);
         dilate_ellipse5(&self.scratch_b, &mut self.scratch_a, &mut work, w, h);
@@ -156,7 +163,8 @@ impl ObjectTracker {
             if update {
                 for c in 0..3 {
                     let i = p * 3 + c;
-                    self.background[i] = (1.0 - weight) * self.background[i] + weight * f32::from(frame[i]);
+                    self.background[i] =
+                        (1.0 - weight) * self.background[i] + weight * f32::from(frame[i]);
                 }
             }
         }
@@ -175,8 +183,14 @@ impl ObjectTracker {
                 height: (component.max_y - component.min_y + 1) as i32,
             };
             if self.params.min_color_shift > 0.0
-                && color_shift(frame, &self.background8, &self.labels, w, component.label, rect)
-                    < self.params.min_color_shift
+                && color_shift(
+                    frame,
+                    &self.background8,
+                    &self.labels,
+                    w,
+                    component.label,
+                    rect,
+                ) < self.params.min_color_shift
             {
                 continue;
             }
@@ -193,7 +207,10 @@ impl ObjectTracker {
             rects.push(Blob {
                 rect,
                 centroid: (sx / n, sy / n),
-                touches_edge: component.min_x == 0 || component.min_y == 0 || component.max_x == w - 1 || component.max_y == h - 1,
+                touches_edge: component.min_x == 0
+                    || component.min_y == 0
+                    || component.max_x == w - 1
+                    || component.max_y == h - 1,
             });
         }
         rects
@@ -239,7 +256,16 @@ fn erode_ellipse5(src: &[u8], dst: &mut [u8], work: &mut Work, w: usize, h: usiz
 /// 1 画素ずつ窓を見るのではなく、行 (縦の処理では行どうし) をずらして重ねる。CPU のベクトル命令が使えるので速い。
 /// 画像の外は、ずらしたときに重ならないだけなので、膨張では 0、収縮では 1 とみなしたことになる。
 #[allow(clippy::too_many_arguments)]
-fn rect_filter(src: &[u8], dst: &mut [u8], tmp: &mut [u8], w: usize, h: usize, rx: usize, ry: usize, dilate: bool) {
+fn rect_filter(
+    src: &[u8],
+    dst: &mut [u8],
+    tmp: &mut [u8],
+    w: usize,
+    h: usize,
+    rx: usize,
+    ry: usize,
+    dilate: bool,
+) {
     let combine = |out: &mut [u8], other: &[u8]| {
         if dilate {
             out.iter_mut().zip(other).for_each(|(o, v)| *o |= *v);
@@ -295,7 +321,14 @@ fn label_components(binary: &[u8], labels: &mut [u32], w: usize, h: usize) -> Ve
                 continue;
             }
             let label = components.len() as u32 + 1;
-            let mut component = Component { label, start: (x, y), min_x: x, min_y: y, max_x: x, max_y: y };
+            let mut component = Component {
+                label,
+                start: (x, y),
+                min_x: x,
+                min_y: y,
+                max_x: x,
+                max_y: y,
+            };
             labels[i] = label;
             stack.push((x, y));
             while let Some((cx, cy)) = stack.pop() {
@@ -325,12 +358,33 @@ fn label_components(binary: &[u8], labels: &mut [u32], w: usize, h: usize) -> Ve
 }
 
 /// 時計回りの 8 近傍 (画像の y は下向き)。西から始める。
-const NEIGHBORS: [(i32, i32); 8] = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1)];
+const NEIGHBORS: [(i32, i32); 8] = [
+    (-1, 0),
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+    (0, 1),
+    (-1, 1),
+];
 
 /// 領域の外側の輪郭を、画素の中心の並びとして返す (ムーア近傍の追跡)。
 /// `start` はラスタ順で最初の画素なので、その西は必ず領域の外。
-fn trace_outer_contour(labels: &[u32], w: usize, h: usize, label: u32, start: (usize, usize)) -> Vec<(i32, i32)> {
-    let inside = |x: i32, y: i32| x >= 0 && y >= 0 && x < w as i32 && y < h as i32 && labels[y as usize * w + x as usize] == label;
+fn trace_outer_contour(
+    labels: &[u32],
+    w: usize,
+    h: usize,
+    label: u32,
+    start: (usize, usize),
+) -> Vec<(i32, i32)> {
+    let inside = |x: i32, y: i32| {
+        x >= 0
+            && y >= 0
+            && x < w as i32
+            && y < h as i32
+            && labels[y as usize * w + x as usize] == label
+    };
     let b0 = (start.0 as i32, start.1 as i32);
     let mut contour = vec![b0];
     // 次の画素を探す。`from` は b の近傍のうち、最後に見た外の画素の向き
@@ -395,8 +449,20 @@ fn polygon_area(points: &[(i32, i32)]) -> f64 {
 /// 次の 2 つの残りの小さいほう。アプリの ObjectTracker.colorShift と同じ式。
 /// 1. 明るさだけが何倍かになったとみなしたときの残り
 /// 2. 全チャンネルが同じ量だけ増減したとみなしたときの残り
-fn color_shift(frame: &[u8], background8: &[u8], labels: &[u32], w: usize, label: u32, rect: Rect) -> f64 {
-    let (rx, ry, rw, rh) = (rect.x as usize, rect.y as usize, rect.width as usize, rect.height as usize);
+fn color_shift(
+    frame: &[u8],
+    background8: &[u8],
+    labels: &[u32],
+    w: usize,
+    label: u32,
+    rect: Rect,
+) -> f64 {
+    let (rx, ry, rw, rh) = (
+        rect.x as usize,
+        rect.y as usize,
+        rect.width as usize,
+        rect.height as usize,
+    );
     // 四角形の縁からたどれる「領域でない画素」が外。それ以外 (領域とその穴) を平均する
     let mut outside = vec![false; rw * rh];
     let mut stack = Vec::new();
@@ -456,8 +522,15 @@ fn color_shift(frame: &[u8], background8: &[u8], labels: &[u32], w: usize, label
     }
     let dot: f64 = (0..3).map(|c| now[c] * before[c]).sum();
     let denominator: f64 = before.iter().map(|b| b * b).sum();
-    let k = if denominator > 0.0 { dot / denominator } else { 0.0 };
-    let scale_residual = (0..3).map(|c| (now[c] - k * before[c]).powi(2)).sum::<f64>().sqrt();
+    let k = if denominator > 0.0 {
+        dot / denominator
+    } else {
+        0.0
+    };
+    let scale_residual = (0..3)
+        .map(|c| (now[c] - k * before[c]).powi(2))
+        .sum::<f64>()
+        .sqrt();
     let delta: Vec<f64> = (0..3).map(|c| now[c] - before[c]).collect();
     let mean = delta.iter().sum::<f64>() / 3.0;
     let offset_residual = delta.iter().map(|d| (d - mean).powi(2)).sum::<f64>().sqrt();
@@ -495,7 +568,17 @@ mod tests {
         src[4 * w + 4] = 1;
         let mut dst = vec![0u8; w * h];
         let (mut a, mut b, mut c) = (vec![0u8; w * h], vec![0u8; w * h], vec![0u8; w * h]);
-        dilate_ellipse5(&src, &mut dst, &mut Work { tmp: &mut a, line: &mut b, line_tmp: &mut c }, w, h);
+        dilate_ellipse5(
+            &src,
+            &mut dst,
+            &mut Work {
+                tmp: &mut a,
+                line: &mut b,
+                line_tmp: &mut c,
+            },
+            w,
+            h,
+        );
         let expected = [
             [0, 0, 1, 0, 0],
             [1, 1, 1, 1, 1],
@@ -517,7 +600,17 @@ mod tests {
         let src = vec![1u8; w * h];
         let mut dst = vec![0u8; w * h];
         let (mut a, mut b, mut c) = (vec![0u8; w * h], vec![0u8; w * h], vec![0u8; w * h]);
-        erode_ellipse5(&src, &mut dst, &mut Work { tmp: &mut a, line: &mut b, line_tmp: &mut c }, w, h);
+        erode_ellipse5(
+            &src,
+            &mut dst,
+            &mut Work {
+                tmp: &mut a,
+                line: &mut b,
+                line_tmp: &mut c,
+            },
+            w,
+            h,
+        );
         assert!(dst.iter().all(|&v| v == 1));
     }
 
@@ -563,7 +656,10 @@ mod tests {
         }
         let area = polygon_area(&trace_outer_contour(&labels, w, h, 1, start.unwrap()));
         // 画素の中心を結ぶので、画素の数より外周の半分ほど小さい
-        assert!(area < count as f64 && area > count as f64 * 0.8, "area {area}, pixels {count}");
+        assert!(
+            area < count as f64 && area > count as f64 * 0.8,
+            "area {area}, pixels {count}"
+        );
     }
 
     #[test]
@@ -571,7 +667,11 @@ mod tests {
         let (w, h) = (160, 90);
         let background = [120u8, 110, 100];
         let mut tracker = ObjectTracker::new(TrackerParams::APP_DEFAULT);
-        assert!(tracker.next_frame(&image(w, h, background), w, h).is_empty());
+        assert!(
+            tracker
+                .next_frame(&image(w, h, background), w, h)
+                .is_empty()
+        );
 
         // 黄色いボールと、背景を暗くしただけの影
         let mut frame = image(w, h, background);
@@ -580,14 +680,25 @@ mod tests {
         let rects = tracker.next_frame(&frame, w, h);
         assert_eq!(rects.len(), 1, "{rects:?}");
         // 円 (直径 17) の左右の先端 1 画素ずつは、横長の核のオープニングで削れる (OpenCV でも同じ)
-        assert_eq!(rects[0], Rect { x: 33, y: 32, width: 15, height: 17 });
+        assert_eq!(
+            rects[0],
+            Rect {
+                x: 33,
+                y: 32,
+                width: 15,
+                height: 17
+            }
+        );
     }
 
     #[test]
     fn ignores_small_specks() {
         let (w, h) = (80, 60);
         let background = [100u8, 100, 100];
-        let mut tracker = ObjectTracker::new(TrackerParams { min_color_shift: 0.0, ..TrackerParams::APP_DEFAULT });
+        let mut tracker = ObjectTracker::new(TrackerParams {
+            min_color_shift: 0.0,
+            ..TrackerParams::APP_DEFAULT
+        });
         tracker.next_frame(&image(w, h, background), w, h);
         let mut frame = image(w, h, background);
         // 2x2 の点はオープニングで消え、輪郭の面積が 80 に満たない領域も捨てる
@@ -612,7 +723,10 @@ mod tests {
         blobs.sort_by_key(|b| b.rect.x);
         assert_eq!(blobs.len(), 2, "{blobs:?}");
         let (cx, cy) = blobs[0].centroid;
-        assert!((cx - 40.3).abs() < 0.5 && (cy - 40.6).abs() < 0.5, "centroid {cx}, {cy}");
+        assert!(
+            (cx - 40.3).abs() < 0.5 && (cy - 40.6).abs() < 0.5,
+            "centroid {cx}, {cy}"
+        );
         assert!(!blobs[0].touches_edge);
         assert!(blobs[1].touches_edge);
         // 欠けたボールの重心は、画像の内側に寄る

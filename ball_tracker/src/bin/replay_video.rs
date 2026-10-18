@@ -128,7 +128,10 @@ struct Cli {
 
 fn parse_camera_value(text: &str) -> Result<(u32, f64), String> {
     let (id, value) = text.split_once('=').ok_or("expected <camera id>=<value>")?;
-    Ok((id.parse().map_err(|e| format!("{e}"))?, value.parse().map_err(|e| format!("{e}"))?))
+    Ok((
+        id.parse().map_err(|e| format!("{e}"))?,
+        value.parse().map_err(|e| format!("{e}"))?,
+    ))
 }
 
 /// 記録フォルダーの `.vsp` から、カメラごとの最初の設定 (端末の座標 → カメラの座標の回転) を読む。
@@ -137,7 +140,8 @@ fn device_to_camera(dir: &Path) -> Result<HashMap<u32, [f64; 9]>> {
     for path in recordings_in(&dir.join("video"))? {
         for item in RecordingReader::open(&path)? {
             if let Some(video_stream_packet::Data::Config(config)) = item?.1.data {
-                let settings = AnalysisSettings::from_config(&config).map_err(anyhow::Error::msg)?;
+                let settings =
+                    AnalysisSettings::from_config(&config).map_err(anyhow::Error::msg)?;
                 out.insert(settings.camera_id, settings.device_to_camera);
                 break;
             }
@@ -190,17 +194,23 @@ struct ClockMap(HashMap<u32, Vec<(i64, i64)>>);
 
 impl ClockMap {
     fn load(path: &Path) -> Result<Self> {
-        let reader = BufReader::new(File::open(path).with_context(|| format!("cannot open {}", path.display()))?);
+        let reader = BufReader::new(
+            File::open(path).with_context(|| format!("cannot open {}", path.display()))?,
+        );
         let mut map: HashMap<u32, Vec<(i64, i64)>> = HashMap::new();
         for line in serde_json::Deserializer::from_reader(reader).into_iter::<FrameLine>() {
             let line = line.with_context(|| format!("cannot read {}", path.display()))?;
             if line.packet.sensor_timestamp_ns == 0 {
                 continue;
             }
-            let time_ns = line.time.timestamp_nanos_opt().context("time out of range")?;
-            map.entry(line.packet.camera_id)
-                .or_default()
-                .push((line.packet.sensor_timestamp_ns, time_ns - line.packet.sensor_timestamp_ns));
+            let time_ns = line
+                .time
+                .timestamp_nanos_opt()
+                .context("time out of range")?;
+            map.entry(line.packet.camera_id).or_default().push((
+                line.packet.sensor_timestamp_ns,
+                time_ns - line.packet.sensor_timestamp_ns,
+            ));
         }
         for samples in map.values_mut() {
             samples.sort_unstable();
@@ -260,7 +270,11 @@ struct Detected {
 
 enum Meta {
     Settings(AnalysisSettings),
-    Frame { sensor_ns: i64, timestamp_ms: i64, captured_at: DateTime<Utc> },
+    Frame {
+        sensor_ns: i64,
+        timestamp_ms: i64,
+        captured_at: DateTime<Utc>,
+    },
 }
 
 struct CameraStats {
@@ -290,7 +304,8 @@ fn analyze_recording(
         };
         match item?.1.data {
             Some(video_stream_packet::Data::Config(config)) => {
-                let mut settings = AnalysisSettings::from_config(&config).map_err(anyhow::Error::msg)?;
+                let mut settings =
+                    AnalysisSettings::from_config(&config).map_err(anyhow::Error::msg)?;
                 overrides.apply(&mut settings);
                 break settings;
             }
@@ -300,7 +315,9 @@ fn analyze_recording(
     };
     let camera_id = settings.camera_id;
     let (width, height) = (settings.width, settings.height);
-    let hwaccel: Vec<&str> = hwaccel.map(|name| vec!["-hwaccel", name]).unwrap_or_default();
+    let hwaccel: Vec<&str> = hwaccel
+        .map(|name| vec!["-hwaccel", name])
+        .unwrap_or_default();
     let mut child = Command::new(ffmpeg)
         .args(["-hide_banner", "-loglevel", "error"])
         .args(&hwaccel)
@@ -338,13 +355,21 @@ fn analyze_recording(
             let (sensor_ns, timestamp_ms, captured_at) = loop {
                 match meta_rx.recv() {
                     Ok(Meta::Settings(settings)) => analyzer.update(settings),
-                    Ok(Meta::Frame { sensor_ns, timestamp_ms, captured_at }) => break (sensor_ns, timestamp_ms, captured_at),
+                    Ok(Meta::Frame {
+                        sensor_ns,
+                        timestamp_ms,
+                        captured_at,
+                    }) => break (sensor_ns, timestamp_ms, captured_at),
                     Err(_) => return (out, decoded),
                 }
             };
             decoded += 1;
             if let Some(packet) = analyzer.analyze(&image, sensor_ns, timestamp_ms).packet {
-                out.push(Detected { camera_id, captured_at, packet });
+                out.push(Detected {
+                    camera_id,
+                    captured_at,
+                    packet,
+                });
             }
         }
         (out, decoded)
@@ -356,7 +381,10 @@ fn analyze_recording(
     let mut started = false;
     let mut written = 0;
     let mut unmapped = 0;
-    let frames = pending_frames.into_iter().map(|f| Ok(Some(f))).chain(packets.map(|item| {
+    let frames = pending_frames
+        .into_iter()
+        .map(|f| Ok(Some(f)))
+        .chain(packets.map(|item| {
         item.map(|(_, packet)| match packet.data {
             Some(video_stream_packet::Data::Frame(frame)) => Some(frame),
             Some(video_stream_packet::Data::Config(config)) => {
@@ -367,7 +395,9 @@ fn analyze_recording(
                             settings = next.clone();
                             let _ = meta_tx.send(Meta::Settings(next));
                         } else {
-                            eprintln!("camera {camera_id}: analysis size changed; ignored the new config");
+                            eprintln!(
+                                "camera {camera_id}: analysis size changed; ignored the new config"
+                            );
                         }
                     }
                     Err(e) => eprintln!("camera {camera_id}: invalid config: {e}"),
@@ -416,10 +446,21 @@ fn analyze_recording(
     let (detected, decoded) = reader.join().expect("analysis thread panicked");
     child.wait()?;
     if unmapped > 0 {
-        eprintln!("camera {camera_id}: {unmapped} frames had no time mapping in frames_* and were skipped");
+        eprintln!(
+            "camera {camera_id}: {unmapped} frames had no time mapping in frames_* and were skipped"
+        );
     }
     let with_detections = detected.len();
-    Ok((detected, CameraStats { camera_id, written, decoded, with_detections, settings: Some(settings) }))
+    Ok((
+        detected,
+        CameraStats {
+            camera_id,
+            written,
+            decoded,
+            with_detections,
+            settings: Some(settings),
+        },
+    ))
 }
 
 /// 追跡にフレームを渡したときの記録 (フレームは書かない)。
@@ -468,13 +509,19 @@ fn analyze_all(
                     center: cli.detection_center,
                     edge: cli.edge_detections,
                 };
-                scope.spawn(move || analyze_recording(path, clock, range, overrides, ffmpeg, hwaccel, detection))
+                scope.spawn(move || {
+                    analyze_recording(path, clock, range, overrides, ffmpeg, hwaccel, detection)
+                })
             })
             .collect();
-        handles.into_iter().map(|h| h.join().expect("camera thread panicked")).collect()
+        handles
+            .into_iter()
+            .map(|h| h.join().expect("camera thread panicked"))
+            .collect()
     });
     for (path, result) in recordings.iter().zip(results) {
-        let (frames, stats) = result.with_context(|| format!("failed to analyze {}", path.display()))?;
+        let (frames, stats) =
+            result.with_context(|| format!("failed to analyze {}", path.display()))?;
         let tracker = stats.settings.as_ref().map(|s| s.tracker);
         eprintln!(
             "camera {}: {} -> written {} decoded {} with detections {} (tracker {:?})",
@@ -486,7 +533,9 @@ fn analyze_all(
             tracker
         );
         if stats.written != stats.decoded {
-            eprintln!("  warning: ffmpeg returned a different number of frames; timestamps may be shifted");
+            eprintln!(
+                "  warning: ffmpeg returned a different number of frames; timestamps may be shifted"
+            );
         }
         detected.extend(frames);
     }
@@ -505,7 +554,9 @@ fn main() -> Result<()> {
     let locs = Arc::new(CameraLocationStore::new());
     let mut rightmost: Option<(u32, f64)> = None;
     for (id, pose) in &poses {
-        let id: u32 = id.parse().with_context(|| format!("camera id must be a number: {id}"))?;
+        let id: u32 = id
+            .parse()
+            .with_context(|| format!("camera id must be a number: {id}"))?;
         locs.insert(
             CameraId::new(id),
             CameraPose {
@@ -527,19 +578,30 @@ fn main() -> Result<()> {
         Some(path) => path.clone(),
         None => std::fs::read_dir(&cli.dir)?
             .filter_map(|e| e.ok().map(|e| e.path()))
-            .filter(|p| p.file_name().is_some_and(|n| n.to_string_lossy().starts_with("frames_")))
+            .filter(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("frames_"))
+            })
             .max_by_key(|p| p.metadata().and_then(|m| m.modified()).ok())
             .context("no frames_* in the folder; pass --frames")?,
     };
     let clock = ClockMap::load(&frames_path)?;
-    eprintln!("time mapping: {} ({} cameras)", frames_path.display(), clock.0.len());
+    eprintln!(
+        "time mapping: {} ({} cameras)",
+        frames_path.display(),
+        clock.0.len()
+    );
 
     // 解析する範囲 (この PC の時計の、その日の時刻)
     let day = clock
         .0
         .values()
         .flat_map(|v| v.first())
-        .map(|(s, o)| DateTime::from_timestamp_nanos(s + o).with_timezone(&Local).date_naive())
+        .map(|(s, o)| {
+            DateTime::from_timestamp_nanos(s + o)
+                .with_timezone(&Local)
+                .date_naive()
+        })
         .next()
         .context("frames_* has no frames with sensor timestamps")?;
     let to_utc = |t: Option<NaiveTime>| -> Result<Option<DateTime<Utc>>> {
@@ -564,15 +626,22 @@ fn main() -> Result<()> {
     };
     let mut detected: Vec<Detected> = Vec::new();
     if let Some(path) = &cli.load_detections {
-        let reader = BufReader::new(File::open(path).with_context(|| format!("cannot open {}", path.display()))?);
+        let reader = BufReader::new(
+            File::open(path).with_context(|| format!("cannot open {}", path.display()))?,
+        );
         for item in serde_json::Deserializer::from_reader(reader).into_iter::<Detected>() {
             let item = item?;
-            let inside = range.0.is_none_or(|from| item.captured_at >= from) && range.1.is_none_or(|to| item.captured_at <= to);
+            let inside = range.0.is_none_or(|from| item.captured_at >= from)
+                && range.1.is_none_or(|to| item.captured_at <= to);
             if inside {
                 detected.push(item);
             }
         }
-        eprintln!("loaded {} frames with detections from {}", detected.len(), path.display());
+        eprintln!(
+            "loaded {} frames with detections from {}",
+            detected.len(),
+            path.display()
+        );
     } else {
         detected = analyze_all(&cli, &clock, range, &overrides)?;
     }
@@ -580,7 +649,8 @@ fn main() -> Result<()> {
         let rotations = device_to_camera(&cli.dir)?;
         let scales: HashMap<u32, f64> = cli.focal_scale.iter().copied().collect();
         for d in &mut detected {
-            let (Some(scale), Some(r)) = (scales.get(&d.camera_id), rotations.get(&d.camera_id)) else {
+            let (Some(scale), Some(r)) = (scales.get(&d.camera_id), rotations.get(&d.camera_id))
+            else {
                 continue;
             };
             for det in &mut d.packet.detections {
@@ -604,8 +674,14 @@ fn main() -> Result<()> {
             let w = match writers.entry(d.camera_id) {
                 std::collections::hash_map::Entry::Occupied(e) => e.into_mut(),
                 std::collections::hash_map::Entry::Vacant(e) => {
-                    let mut w = BufWriter::new(File::create(cli.out.join(format!("detections_camera{}.csv", d.camera_id)))?);
-                    writeln!(w, "captured_at,sensor_timestamp_ns,image_x,image_y,bbox_width,bbox_height")?;
+                    let mut w = BufWriter::new(File::create(
+                        cli.out
+                            .join(format!("detections_camera{}.csv", d.camera_id)),
+                    )?);
+                    writeln!(
+                        w,
+                        "captured_at,sensor_timestamp_ns,image_x,image_y,bbox_width,bbox_height"
+                    )?;
                     e.insert(w)
                 }
             };
@@ -631,19 +707,28 @@ fn main() -> Result<()> {
     // 補正は追跡に渡す時点でかける (自動の補正は、それまでの投球で決まった値をその場と同じく使う)
     let mut frames: Vec<CameraFrame> = detected
         .into_iter()
-        .map(|d| CameraFrame { time: d.captured_at, row_skew_ns, received_at: d.captured_at + latency, packet: d.packet })
+        .map(|d| CameraFrame {
+            time: d.captured_at,
+            row_skew_ns,
+            received_at: d.captured_at + latency,
+            packet: d.packet,
+        })
         .collect();
     frames.sort_by_key(|f| f.received_at);
     let right_camera = rightmost.map(|(id, _)| id);
     let auto_trim = Arc::new(AutoTimeTrim::new(cli.auto_time_trim));
 
     let mut runner = TrackRunner::new(locs, NoFrameLog)
-        .with_report_delay(TimeDelta::nanoseconds((cli.report_delay_ms * 1e6).round() as i64))
+        .with_report_delay(TimeDelta::nanoseconds(
+            (cli.report_delay_ms * 1e6).round() as i64
+        ))
         .with_auto_trim(auto_trim.clone());
     let mut events_out = BufWriter::new(File::create(cli.out.join("events.jsonl"))?);
     let mut rows: Vec<(TrackId, CollisionRow)> = Vec::new();
     let mut predicted: HashMap<TrackId, DateTime<Utc>> = HashMap::new();
-    let mut handle = |dto: TrackingEventsDto, rows: &mut Vec<(TrackId, CollisionRow)>| -> Result<()> {
+    let mut handle = |dto: TrackingEventsDto,
+                      rows: &mut Vec<(TrackId, CollisionRow)>|
+     -> Result<()> {
         if dto.events.is_empty() {
             return Ok(());
         }
@@ -669,7 +754,8 @@ fn main() -> Result<()> {
                     }
                 }
                 TrackingEventBodyDto::ThrowDiagnostics(d) => {
-                    if let Some((_, row)) = rows.iter_mut().rev().find(|(id, _)| *id == d.track_id) {
+                    if let Some((_, row)) = rows.iter_mut().rev().find(|(id, _)| *id == d.track_id)
+                    {
                         row.rays = d.rays.clone();
                         row.residual_rms = Some(d.residual_rms);
                         row.best_time_shift_ms = Some(d.best_time_shift_ms);
@@ -718,11 +804,24 @@ fn main() -> Result<()> {
     for id in &cameras {
         write!(csv, ",rays_camera{id}")?;
     }
-    writeln!(csv, ",residual_rms_cm,best_time_shift_ms,best_residual_rms_cm")?;
-    let local = |t: Option<DateTime<Utc>>| t.map(|t| t.with_timezone(&Local).format("%H:%M:%S%.3f").to_string()).unwrap_or_default();
+    writeln!(
+        csv,
+        ",residual_rms_cm,best_time_shift_ms,best_residual_rms_cm"
+    )?;
+    let local = |t: Option<DateTime<Utc>>| {
+        t.map(|t| t.with_timezone(&Local).format("%H:%M:%S%.3f").to_string())
+            .unwrap_or_default()
+    };
     let opt = |v: Option<f64>| v.map(|v| format!("{:.2}", v * 100.0)).unwrap_or_default();
     for (_, row) in &rows {
-        write!(csv, "{},{},{:.4},{:.4}", local(row.reported_at), local(row.impact_at), row.y, row.z)?;
+        write!(
+            csv,
+            "{},{},{:.4},{:.4}",
+            local(row.reported_at),
+            local(row.impact_at),
+            row.y,
+            row.z
+        )?;
         for id in &cameras {
             write!(csv, ",{}", row.rays.get(id).copied().unwrap_or_default())?;
         }
@@ -730,7 +829,9 @@ fn main() -> Result<()> {
             csv,
             ",{},{},{}",
             opt(row.residual_rms),
-            row.best_time_shift_ms.map(|v| v.to_string()).unwrap_or_default(),
+            row.best_time_shift_ms
+                .map(|v| v.to_string())
+                .unwrap_or_default(),
             opt(row.best_residual_rms)
         )?;
     }
@@ -738,7 +839,11 @@ fn main() -> Result<()> {
     let (auto_ms, auto_throws) = auto_trim.summary();
     eprintln!(
         "automatic time trim: {auto_ms:+.1} ms from {auto_throws} throws ({})",
-        if cli.auto_time_trim { "applied" } else { "not applied" }
+        if cli.auto_time_trim {
+            "applied"
+        } else {
+            "not applied"
+        }
     );
     eprintln!(
         "{} collisions -> {} ({:.1} s)",

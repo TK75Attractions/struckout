@@ -82,13 +82,18 @@ impl AnalysisSettings {
             return Err("analysis size is zero".into());
         }
         if config.fx <= 0.0 || config.fy <= 0.0 {
-            return Err(format!("focal length must be positive: fx={}, fy={}", config.fx, config.fy));
+            return Err(format!(
+                "focal length must be positive: fx={}, fy={}",
+                config.fx, config.fy
+            ));
         }
-        let device_to_camera: [f64; 9] = config
-            .device_to_camera
-            .as_slice()
-            .try_into()
-            .map_err(|_| format!("device_to_camera must have 9 elements, got {}", config.device_to_camera.len()))?;
+        let device_to_camera: [f64; 9] =
+            config.device_to_camera.as_slice().try_into().map_err(|_| {
+                format!(
+                    "device_to_camera must have 9 elements, got {}",
+                    config.device_to_camera.len()
+                )
+            })?;
         if config.foreground_persistence_frames == 0 {
             return Err("foreground_persistence_frames must be positive".into());
         }
@@ -127,14 +132,20 @@ impl AnalysisSettings {
         let (w, h) = (self.width as f64, self.height as f64);
         let x = f64::from(rect.x) + f64::from(rect.width) / 2.0;
         let y = f64::from(rect.y) + f64::from(rect.height) / 2.0;
-        x >= w * top / 100.0 && x <= w * (1.0 - bottom / 100.0) && y >= h * right / 100.0 && y <= h * (1.0 - left / 100.0)
+        x >= w * top / 100.0
+            && x <= w * (1.0 - bottom / 100.0)
+            && y >= h * right / 100.0
+            && y <= h * (1.0 - left / 100.0)
     }
 
     /// 検出の枠から、端末の座標での視線を求める。アプリの `WorldDirectionCalculator.calc` と同じ。
     ///
     /// 枠の中心は整数に切り捨てる (アプリが `rect.x + rect.width / 2` を整数で計算しているため)。
     pub fn ray(&self, rect: Rect) -> [f64; 3] {
-        self.ray_at(f64::from(rect.x + rect.width / 2), f64::from(rect.y + rect.height / 2))
+        self.ray_at(
+            f64::from(rect.x + rect.width / 2),
+            f64::from(rect.y + rect.height / 2),
+        )
     }
 
     /// 画像の点 (u, v) の視線。
@@ -158,7 +169,8 @@ impl AnalysisSettings {
             lay_y,
             lay_z,
             image_x: ((f64::from(rect.x) + f64::from(rect.width) / 2.0) / self.width as f64) as f32,
-            image_y: ((f64::from(rect.y) + f64::from(rect.height) / 2.0) / self.height as f64) as f32,
+            image_y: ((f64::from(rect.y) + f64::from(rect.height) / 2.0) / self.height as f64)
+                as f32,
         }
     }
 
@@ -192,14 +204,23 @@ impl AnalysisSettings {
     fn extrapolated_center(&self, blob: &Blob) -> Option<(f64, f64)> {
         let r = blob.rect;
         let (w, h) = (self.width as i32, self.height as i32);
-        let (left, top, right, bottom) = (r.x == 0, r.y == 0, r.x + r.width == w, r.y + r.height == h);
+        let (left, top, right, bottom) =
+            (r.x == 0, r.y == 0, r.x + r.width == w, r.y + r.height == h);
         let (cx, cy) = blob.centroid;
         let radius = |diameter: i32| f64::from(diameter - 1) / 2.0;
         match (left, top, right, bottom) {
-            (false, false, false, true) if r.height < r.width => Some((cx, f64::from(r.y) + radius(r.width))),
-            (false, true, false, false) if r.height < r.width => Some((cx, f64::from(r.y + r.height - 1) - radius(r.width))),
-            (false, false, true, false) if r.width < r.height => Some((f64::from(r.x) + radius(r.height), cy)),
-            (true, false, false, false) if r.width < r.height => Some((f64::from(r.x + r.width - 1) - radius(r.height), cy)),
+            (false, false, false, true) if r.height < r.width => {
+                Some((cx, f64::from(r.y) + radius(r.width)))
+            }
+            (false, true, false, false) if r.height < r.width => {
+                Some((cx, f64::from(r.y + r.height - 1) - radius(r.width)))
+            }
+            (false, false, true, false) if r.width < r.height => {
+                Some((f64::from(r.x) + radius(r.height), cy))
+            }
+            (true, false, false, false) if r.width < r.height => {
+                Some((f64::from(r.x + r.width - 1) - radius(r.height), cy))
+            }
             _ => None,
         }
     }
@@ -224,7 +245,12 @@ pub struct AnalyzedFrame {
 impl Analyzer {
     pub fn new(settings: AnalysisSettings) -> Self {
         let tracker = ObjectTracker::new(settings.tracker);
-        Self { settings, tracker, frame_id: 0, options: DetectionOptions::default() }
+        Self {
+            settings,
+            tracker,
+            frame_id: 0,
+            options: DetectionOptions::default(),
+        }
     }
 
     /// 検出の扱い方を変える (既定はカメラアプリと同じ)。
@@ -239,21 +265,33 @@ impl Analyzer {
 
     /// 設定を差し替える。解析の設定が変わったときだけ、背景を作り直す。
     pub fn update(&mut self, settings: AnalysisSettings) {
-        if settings.tracker != self.tracker.params() || settings.width != self.settings.width || settings.height != self.settings.height {
+        if settings.tracker != self.tracker.params()
+            || settings.width != self.settings.width
+            || settings.height != self.settings.height
+        {
             self.tracker = ObjectTracker::new(settings.tracker);
         }
         self.settings = settings;
     }
 
     /// `rgb` は解析画像の大きさ (幅 x 高さ x 3) の画像。センサーの向きのまま。
-    pub fn analyze(&mut self, rgb: &[u8], sensor_timestamp_ns: i64, timestamp_ms: i64) -> AnalyzedFrame {
+    pub fn analyze(
+        &mut self,
+        rgb: &[u8],
+        sensor_timestamp_ns: i64,
+        timestamp_ms: i64,
+    ) -> AnalyzedFrame {
         let (w, h) = (self.settings.width, self.settings.height);
         let blobs = self.tracker.next_frame_blobs(rgb, w, h);
         let drop_edge = self.options.edge == EdgeDetections::Drop;
-        let (accepted, ignored): (Vec<Blob>, Vec<Blob>) =
-            blobs.into_iter().partition(|b| self.settings.accepts(b.rect) && !(drop_edge && b.touches_edge));
+        let (accepted, ignored): (Vec<Blob>, Vec<Blob>) = blobs
+            .into_iter()
+            .partition(|b| self.settings.accepts(b.rect) && !(drop_edge && b.touches_edge));
         if accepted.is_empty() {
-            return AnalyzedFrame { packet: None, ignored: ignored.len() };
+            return AnalyzedFrame {
+                packet: None,
+                ignored: ignored.len(),
+            };
         }
         self.frame_id += 1;
         let packet = DetectionsPacket {
@@ -261,10 +299,16 @@ impl Analyzer {
             session_id: self.settings.session_id.clone(),
             timestamp: timestamp_ms,
             frame_id: self.frame_id,
-            detections: accepted.iter().map(|b| self.settings.detection_with(b, self.options)).collect(),
+            detections: accepted
+                .iter()
+                .map(|b| self.settings.detection_with(b, self.options))
+                .collect(),
             sensor_timestamp_ns,
         };
-        AnalyzedFrame { packet: Some(packet), ignored: ignored.len() }
+        AnalyzedFrame {
+            packet: Some(packet),
+            ignored: ignored.len(),
+        }
     }
 }
 
@@ -294,7 +338,12 @@ mod tests {
     #[test]
     fn ray_of_the_image_center_points_out_of_the_back_of_the_device() {
         let s = settings();
-        let ray = s.ray(Rect { x: 310, y: 170, width: 20, height: 20 });
+        let ray = s.ray(Rect {
+            x: 310,
+            y: 170,
+            width: 20,
+            height: 20,
+        });
         assert_relative_eq!(ray[0], 0.0);
         assert_relative_eq!(ray[1], 0.0);
         assert_relative_eq!(ray[2], -1.0);
@@ -304,13 +353,23 @@ mod tests {
     fn ray_uses_the_truncated_center_like_the_app() {
         let s = settings();
         // 中心は 100 + 21 / 2 = 110 (整数)、50 + 9 / 2 = 54
-        let ray = s.ray(Rect { x: 100, y: 50, width: 21, height: 9 });
+        let ray = s.ray(Rect {
+            x: 100,
+            y: 50,
+            width: 21,
+            height: 9,
+        });
         let n = [(110.0 - 320.0) / 482.0, (54.0 - 180.0) / 482.0];
         // R^T (nx, ny, 1) = (-ny, -nx, -1)
         assert_relative_eq!(ray[0], -n[1]);
         assert_relative_eq!(ray[1], -n[0]);
         assert_relative_eq!(ray[2], -1.0);
-        let d = s.detection(Rect { x: 100, y: 50, width: 21, height: 9 });
+        let d = s.detection(Rect {
+            x: 100,
+            y: 50,
+            width: 21,
+            height: 9,
+        });
         assert_relative_eq!(d.image_x, 110.5 / 640.0);
         assert_relative_eq!(d.image_y, 54.5 / 360.0);
     }
@@ -320,12 +379,32 @@ mod tests {
         let mut s = settings();
         // プレビューの上を 25% 無視 = 解析画像の左 25% を無視
         s.ignored_percent = [0.0, 25.0, 0.0, 0.0];
-        assert!(!s.accepts(Rect { x: 100, y: 100, width: 10, height: 10 }));
-        assert!(s.accepts(Rect { x: 200, y: 100, width: 10, height: 10 }));
+        assert!(!s.accepts(Rect {
+            x: 100,
+            y: 100,
+            width: 10,
+            height: 10
+        }));
+        assert!(s.accepts(Rect {
+            x: 200,
+            y: 100,
+            width: 10,
+            height: 10
+        }));
         // プレビューの左を 50% 無視 = 解析画像の下半分を無視
         s.ignored_percent = [50.0, 0.0, 0.0, 0.0];
-        assert!(!s.accepts(Rect { x: 200, y: 250, width: 10, height: 10 }));
-        assert!(s.accepts(Rect { x: 200, y: 100, width: 10, height: 10 }));
+        assert!(!s.accepts(Rect {
+            x: 200,
+            y: 250,
+            width: 10,
+            height: 10
+        }));
+        assert!(s.accepts(Rect {
+            x: 200,
+            y: 100,
+            width: 10,
+            height: 10
+        }));
     }
 
     #[test]
@@ -333,20 +412,44 @@ mod tests {
         let s = settings();
         // 下端 (高さ 360) で欠けたボール: 横幅 21 が直径。上の縁 (y = 345) から半径 10 だけ下が中心
         let blob = Blob {
-            rect: Rect { x: 100, y: 345, width: 21, height: 15 },
+            rect: Rect {
+                x: 100,
+                y: 345,
+                width: 21,
+                height: 15,
+            },
             centroid: (110.0, 351.0),
             touches_edge: true,
         };
         assert_eq!(s.extrapolated_center(&blob), Some((110.0, 355.0)));
-        let options = DetectionOptions { center: DetectionCenter::Centroid, edge: EdgeDetections::Extrapolate };
+        let options = DetectionOptions {
+            center: DetectionCenter::Centroid,
+            edge: EdgeDetections::Extrapolate,
+        };
         let d = s.detection_with(&blob, options);
         let expected = s.ray_at(110.0, 355.0);
         assert_relative_eq!(d.lay_x, expected[0]);
         assert_relative_eq!(d.lay_y, expected[1]);
         // 欠けていない (縦のほうが長い) ときや、角で 2 辺が欠けたときは推定しない
-        let tall = Blob { rect: Rect { x: 100, y: 330, width: 15, height: 30 }, ..blob };
+        let tall = Blob {
+            rect: Rect {
+                x: 100,
+                y: 330,
+                width: 15,
+                height: 30,
+            },
+            ..blob
+        };
         assert_eq!(s.extrapolated_center(&tall), None);
-        let corner = Blob { rect: Rect { x: 0, y: 345, width: 21, height: 15 }, ..blob };
+        let corner = Blob {
+            rect: Rect {
+                x: 0,
+                y: 345,
+                width: 21,
+                height: 15,
+            },
+            ..blob
+        };
         assert_eq!(s.extrapolated_center(&corner), None);
     }
 }
