@@ -1,4 +1,5 @@
 import shutil
+import subprocess
 import sys
 import tempfile
 import urllib.error
@@ -15,11 +16,35 @@ DOWNLOAD_URL = (
 )
 
 
+def get_github_token() -> str | None:
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "token", "--hostname", "github.com"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        print("ghコマンドが見つかりませんでした。認証せずにダウンロードします")
+        return None
+    except subprocess.CalledProcessError:
+        print(
+            "GitHubの認証トークンを取得できませんでした。認証せずにダウンロードします"
+        )
+        return None
+
+    token = result.stdout.strip()
+    if not token:
+        raise RuntimeError("gh auth tokenが空のトークンを返しました")
+
+    return token
+
+
 def replace_proguard(opencv_dir: Path):
-    '''
-       以下のエラーで落ちるのを修正する:
-       `getDefaultProguardFile('proguard-android.txt')` is no longer supported since it includes `-dontoptimize`, which prevents R8 from performing many optimizations. Instead use `getDefaultProguardFile('proguard-android-optimize.txt)`, and if needed, temporarily use `-dontoptimize` in a custom keep rule file while fixing breakages. 
-    '''
+    """
+    以下のエラーで落ちるのを修正する:
+    `getDefaultProguardFile('proguard-android.txt')` is no longer supported since it includes `-dontoptimize`, which prevents R8 from performing many optimizations. Instead use `getDefaultProguardFile('proguard-android-optimize.txt)`, and if needed, temporarily use `-dontoptimize` in a custom keep rule file while fixing breakages.
+    """
     gradle_path = opencv_dir / "build.gradle"
     content_old = gradle_path.read_text()
     content_new = content_old.replace(
@@ -50,10 +75,15 @@ def main() -> int:
             archive_path = workdir / ARCHIVE_NAME
 
             print("SDKをダウンロードしています...")
-            urllib.request.urlretrieve(
-                DOWNLOAD_URL,
-                archive_path,
-            )
+            token = get_github_token()
+            headers = {"Accept": "application/octet-stream"}
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+
+            request = urllib.request.Request(DOWNLOAD_URL, headers=headers)
+            with urllib.request.urlopen(request) as response:
+                with archive_path.open("wb") as archive_file:
+                    shutil.copyfileobj(response, archive_file)
 
             with zipfile.ZipFile(archive_path) as archive:
                 print("ダウンロードしたSDKを解凍しています...")
@@ -68,7 +98,7 @@ def main() -> int:
 
             shutil.move(str(sdk_directory), dst)
             replace_proguard(dst)
-    except (OSError, urllib.error.URLError, zipfile.BadZipFile) as error:
+    except (OSError, RuntimeError, urllib.error.URLError, zipfile.BadZipFile) as error:
         print(f"OpenCV SDKのインストールに失敗しました: {error}", file=sys.stderr)
         return 1
 
