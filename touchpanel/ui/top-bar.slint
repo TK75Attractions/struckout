@@ -121,6 +121,12 @@ export component TopBar {
 
     max-height: 52px;
 
+    Image {
+        source: @image-url("./assets/logos/struckout_logo_compact.jpg");
+        height: 100%;
+        x: (root.width / 2) - (self.width / 2) - 32px; // 理論上の真ん中があんまり真ん中に見えないので微調整
+    }
+
     HorizontalLayout {
         alignment: LayoutAlignment.space-between;
 
