@@ -23,7 +23,7 @@ export component PlayingScreen inherits Rectangle {
             width: 32%;
 
             Text {
-                text: "01:20";
+                text: Adopter.remaining-time;
                 font-family: Fonts.oxanium;
                 font-size: 40pt;
                 font-weight: FontSettings.body-large.font-weight;
@@ -36,7 +36,7 @@ export component PlayingScreen inherits Rectangle {
             width: 50%;
 
             Text {
-                text: "8000";
+                text: Adopter.score;
                 color: StruckoutPalette.ref_grey_100;
                 font-family: Fonts.oxanium;
                 font-size: 72pt;
