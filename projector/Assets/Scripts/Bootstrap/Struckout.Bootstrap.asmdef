@@ -1,13 +1,13 @@
 {
     "name": "Struckout.Bootstrap",
-    "rootNamespace": "",
+    "rootNamespace": "Struckout",
     "references": [
-        "Struckout.Infrastructure",
-        "Struckout.Application",
-        "Struckout.Generated",
-        "Struckout.Domain",
-        "UniTask",
-        "VContainer"
+        "GUID:2d46d53e135c3e448bf1d8b695dfa901",
+        "GUID:b9dfb3c5711c7744ebf3a95ef227b67b",
+        "GUID:1dc54d70efa73714f925e602e943cd30",
+        "GUID:460e46054705c7f49a140c08e36982c2",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:b0214a6008ed146ff8f122a6a9c2f6cc"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
