@@ -1,7 +1,7 @@
-using Struckout.Domain;
 using System.Collections.Generic;
+using Struckout.Domain.TargetDefinition;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface ITargetGenerator
     {

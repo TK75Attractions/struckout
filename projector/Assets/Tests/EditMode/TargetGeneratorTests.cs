@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 using Struckout.Infrastructure;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 的の配置は乱数を使わず毎回同じになる。これは仕様。

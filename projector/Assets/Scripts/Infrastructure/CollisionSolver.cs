@@ -1,11 +1,13 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.V1;
-using System;
 using UnityEngine;
 
-namespace Struckout.Application
+namespace Struckout.Infrastructure
 {
     public class CollisionSolver : ICollisionSolver
     {
@@ -21,6 +23,7 @@ namespace Struckout.Application
             target = null;
             foreach (var tar in targets)
             {
+                // ReSharper disable once InvertIf
                 if(IsWithinTarget(collisionPoint, tar))
                 {
                     target = tar;

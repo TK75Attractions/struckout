@@ -1,15 +1,16 @@
-using System.Net.Sockets;
-using System.Threading.Tasks;
 using System;
 using System.Buffers.Binary;
-using Google.Protobuf;
-using System.Threading;
 using System.IO;
-using UnityEngine;
-using Struckout.Application;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+using Google.Protobuf;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Struckout.Domain;
+using UnityEngine;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.TCP
 {
     public class TCPClientBase<T> : IClientService<T>
     {
@@ -30,6 +31,7 @@ namespace Struckout.Infrastructure
 
         private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public TCPClientBase(IMessageParser<T> parser)
         {
             _parser = parser;

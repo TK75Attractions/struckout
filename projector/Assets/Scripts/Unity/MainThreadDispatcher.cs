@@ -1,8 +1,8 @@
-using Struckout.Application;
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
 using System.Diagnostics;
+using Struckout.Application.Interface;
 
 namespace Struckout.Unity
 {

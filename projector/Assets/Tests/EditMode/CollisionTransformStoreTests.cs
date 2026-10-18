@@ -5,7 +5,7 @@ using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Infrastructure;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 書き出したプレイヤーでも係数を変えられるようにする、設定ファイルの読み書き。

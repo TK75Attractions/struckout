@@ -4,15 +4,15 @@ using System.Threading.Tasks;
 using Cysharp.Net.Http;
 using Grpc.Core;
 using Grpc.Net.Client;
-using Struckout.Application;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
-
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
 using Event = Tk75Attractions.Struckout.V1.Event;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.Grpc
 {
     /// <summary>
     /// game_master (tonic) への gRPC クライアント。
@@ -42,6 +42,7 @@ namespace Struckout.Infrastructure
         public event Action GameFinished;
         public event Action ConnectionLost;
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GrpcGameMasterClient(NetworkSettings settings)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));

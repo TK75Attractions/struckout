@@ -1,8 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface IClientService<T>
     {

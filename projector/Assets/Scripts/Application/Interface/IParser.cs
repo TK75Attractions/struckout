@@ -1,4 +1,4 @@
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface IParser
     {

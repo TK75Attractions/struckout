@@ -1,4 +1,4 @@
-namespace Struckout.Domain
+namespace Struckout.Domain.TargetDefinition
 {
     public struct TargetCoordinate
     {

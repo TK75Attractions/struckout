@@ -1,7 +1,7 @@
 using System;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface ISensorProvider
     {

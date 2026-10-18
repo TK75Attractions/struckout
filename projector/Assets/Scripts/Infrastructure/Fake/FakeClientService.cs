@@ -1,12 +1,13 @@
-using Struckout.Application;
-using Google.Protobuf;
 using System;
-using Tk75Attractions.Struckout.V1;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
+using Google.Protobuf;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
+using Tk75Attractions.Struckout.V1;
 using UnityEngine;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.Fake
 {
     /// <summary>
     /// ball_tracker のかわりに、ランダムな衝突点を流し続けるダミー。
@@ -23,6 +24,9 @@ namespace Struckout.Infrastructure
         private const float FieldMaxY = 2f;
 
         private const int IntervalMilliseconds = 1000;
+        
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
+        public FakeClientService(){}
 
         public event Action<ProjectorPacket> OnReceived;
 

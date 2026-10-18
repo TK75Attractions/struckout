@@ -1,7 +1,8 @@
-using Struckout.Application;
 using Struckout.Domain;
 using System;
 using System.Collections.Generic;
+using Struckout.Application.Interface;
+using Struckout.Domain.TargetDefinition;
 
 namespace Struckout.Infrastructure
 {

@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using Struckout.Application;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
+using Struckout.Infrastructure;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 当たり判定。描画される円と判定の大きさが一致していることを固定する。

@@ -1,6 +1,6 @@
 {
     "name": "Struckout.Application",
-    "rootNamespace": "",
+    "rootNamespace": "Struckout",
     "references": [
         "GUID:1dc54d70efa73714f925e602e943cd30",
         "GUID:460e46054705c7f49a140c08e36982c2"

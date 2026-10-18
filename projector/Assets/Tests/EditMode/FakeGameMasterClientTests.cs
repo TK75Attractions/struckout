@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using Struckout.Infrastructure;
+using Struckout.Infrastructure.Fake;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// Fake モードでゲームが始まることを固定する。

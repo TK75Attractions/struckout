@@ -1,8 +1,9 @@
 using UnityEngine;
 using Struckout.Domain;
-using Struckout.Application;
 using System.Collections.Generic;
 using System;
+using Struckout.Application.Interface;
+using Struckout.Domain.TargetDefinition;
 using VContainer;
 
 namespace Struckout.Unity
