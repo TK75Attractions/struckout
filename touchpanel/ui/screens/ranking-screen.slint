@@ -9,19 +9,25 @@ export component RankingScreen {
     private property <length> comp_button_font_size: 24px;
 
     HorizontalLayout {
-        Rectangle {
-            width: 70%;
-            Text {
-                text: "らんきんぐ";
+        cross-axis-alignment: CrossAxisAlignment.end;
+
+        VerticalLayout {
+            height: 100%;
+            Rectangle {
+                width: 70%;
+                Text {
+                    text: "らんきんぐ";
+                }
             }
         }
 
         CornerButton {
+            width: 28%;
+            height: 24%;
             corner: Corner.RightBottom;
             filled: true;
             font-size: root.comp_button_font_size;
             icon: Icons.home;
-            text: "スタート画面に戻る";
             clicked => {
                 Adopter.move-to-start-screen();
             }
