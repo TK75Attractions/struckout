@@ -16,7 +16,6 @@ UserSettings/
 # =========================
 
 .vs/
-.idea/
 .gradle/
 
 *.csproj
@@ -52,12 +51,6 @@ UserSettings/
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# =========================
-# JetBrains Rider
-# =========================
-
-.idea/
 
 # =========================
 # Crash Reports
