@@ -69,17 +69,17 @@ export component AppWindow inherits Window {
             if route == UiNavRoute.Start {
                 return [];
             } else if route == UiNavRoute.NameInputFirst {
-                return ["プレイヤー名入力", "難易度選択"];
+                return ["PLAYER NAME", "DIFFICULTY"];
             } else if route == UiNavRoute.NameInputNonFirst {
-                return ["プレイヤー名入力", "難易度選択"];
+                return ["PLAYER NAME", "DIFFICULTY"];
             } else if route == UiNavRoute.DifficulitySelect {
-                return ["プレイヤー名入力", "難易度選択"];
+                return ["PLAYER NAME", "DIFFICULTY"];
             } else if route == UiNavRoute.Playing {
                 return [];
             } else if route == UiNavRoute.Score {
-                return ["スコア", "ランキング"];
+                return ["SCORE", "RANKING"];
             } else if route == UiNavRoute.Ranking {
-                return ["スコア", "ランキング"];
+                return ["SCORE", "RANKING"];
             } else if route == UiNavRoute.Fallback {
                 return [];
             } else if route == UiNavRoute.ConnectionFailed {

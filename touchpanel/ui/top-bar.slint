@@ -1,6 +1,6 @@
 import { Button, StyleMetrics } from "std-widgets.slint";
 import { Icons } from "icons.slint";
-import { StruckoutPalette, FontSettings } from "styling.slint";
+import { StruckoutPalette, FontSettings, Fonts } from "styling.slint";
 import {
     SquareButton,
     CornerButton,
@@ -103,6 +103,7 @@ component TopBarItem {
                 color: root.enphasize ? StruckoutPalette.on-primary : comp_on_container;
                 font-weight: comp_font_weight;
                 font-size: comp_font_size;
+                font-family: Fonts.oxanium;
             }
         }
 
