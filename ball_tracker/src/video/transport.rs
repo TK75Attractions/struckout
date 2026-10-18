@@ -16,7 +16,7 @@ use tracing::{info, warn};
 
 use super::{VideoOptions, analysis::AnalysisSettings, pipeline::Pipeline, recorder::Recorder};
 
-pub const VIDEO_ADDR_DEFAULT: &str = "0.0.0.0:5052";
+pub const VIDEO_ADDR_DEFAULT: &str = concat!("0.0.0.0:", env!("CAMERA_VIDEO_PORT"));
 
 pub struct VideoTransport {
     listener: TcpListener,

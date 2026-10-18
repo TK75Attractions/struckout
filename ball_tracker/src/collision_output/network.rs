@@ -16,7 +16,7 @@ use tracing::{error, info, warn};
 
 use crate::{collision_output::CollisionOutput, types::CollisionPoint3D};
 
-const PROJECTOR_ADDR: &str = "0.0.0.0:5000";
+const PROJECTOR_ADDR: &str = concat!("0.0.0.0:", env!("PROJECTOR_PORT"));
 /// 書き込みの遅い projector のために、ためておける着弾の数。超えたぶんはその projector には送らない
 const PROJECTOR_BUF: usize = 16;
 

@@ -31,8 +31,8 @@ use crate::{
     video::{VideoOptions, VideoTransport},
 };
 
-const DATA_ADDR_DEFAULT: &str = "0.0.0.0:5050";
-const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = "0.0.0.0:6060";
+const DATA_ADDR_DEFAULT: &str = concat!("0.0.0.0:", env!("CAMERA_DATA_PORT"));
+const CAMERA_LOC_TCP_ADDR_DEFAULT: &str = concat!("0.0.0.0:", env!("CAMERA_CTRL_PORT"));
 // PC で動画を解析するときは、2 台から 120fps で検出が届くことがある
 const PAKCET_CHANNEL_BUF: usize = 64;
 /// 接続した直後は、時刻合わせの要求をこの間隔で [`TIME_SYNC_BURST`] 回送る。
