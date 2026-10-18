@@ -37,7 +37,7 @@ namespace Struckout.Bootstrap
             RuntimeContext context
             )
         {
-            if(_service == null) throw new Exception("There are no IUIService in uiService");
+            if (_service == null) throw new Exception("There are no IUIService in uiService");
 
             context.PacketRouter.OnCollisionReceived += _sensorProvider.GetSensorData;
             _sensorProvider.OnCollisionReceived += _runtime.CollisionDetected;

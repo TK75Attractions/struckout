@@ -61,8 +61,13 @@ namespace Struckout.Tests.Tests.EditMode
             var path = Path.Combine(_directory, "sub", CollisionTransformStore.FileName);
             var saved = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 905.5f, PixelsPerMetreY = 880.25f, OriginX = 410f, OriginY = -1350f,
-                FlipX = true, SwapAxes = false, LogConversions = true,
+                PixelsPerMetreX = 905.5f,
+                PixelsPerMetreY = 880.25f,
+                OriginX = 410f,
+                OriginY = -1350f,
+                FlipX = true,
+                SwapAxes = false,
+                LogConversions = true,
             };
 
             CollisionTransformStore.Save(saved, path);

@@ -9,9 +9,9 @@ namespace Struckout.Infrastructure.TCP
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public ProjectorPacketParser()
         {
-            
+
         }
-        
+
         public ProjectorPacket MessageParse(byte[] bytes) => ProjectorPacket.Parser.ParseFrom(bytes);
     }
 }

@@ -147,7 +147,7 @@ namespace Struckout.Unity
             SetAlpha(_finishedRenderer, _finishedOpacity);
 
             if (!_finishedText) return;
-            
+
             var color = _finishedText.color;
             color.a = _finishedOpacity;
             _finishedText.color = color;
@@ -174,7 +174,7 @@ namespace Struckout.Unity
                 }
             }
         }
-        
+
         public void InstantiateTargets(IReadOnlyList<Target> targets)
         {
             foreach (var target in targets)
@@ -200,7 +200,7 @@ namespace Struckout.Unity
                         return;
                     }
 
-                    if(!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
+                    if (!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
                     {
                         Debug.LogError("CircleTargetUI is null");
                         return;
@@ -208,7 +208,7 @@ namespace Struckout.Unity
                     trans = transform;
                     break;
                 default:
-                    Debug.LogError($"Missing TargetType { target.Type }");
+                    Debug.LogError($"Missing TargetType {target.Type}");
                     return;
             }
             var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
@@ -224,14 +224,14 @@ namespace Struckout.Unity
 
         bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
         {
-            if(prefab.GetComponent<TTargetUI>() == null)
+            if (prefab.GetComponent<TTargetUI>() == null)
             {
                 transform = null;
                 Debug.LogError("There are no ITargetUI");
                 return false;
             }
-            
-            transform = Instantiate(prefab,_uiRoot.TargetRoot);
+
+            transform = Instantiate(prefab, _uiRoot.TargetRoot);
             return true;
         }
 

@@ -13,7 +13,7 @@ namespace Struckout.Bootstrap
 
         private NetworkBootstrap _networkBootstrap;
         private GameBootstrap _gameBootstrap;
-        
+
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public RootBootstrap(
             NetworkBootstrap networkBootstrap,
@@ -51,14 +51,14 @@ namespace Struckout.Bootstrap
                 default:
                     throw new InvalidOperationException("Unknown result");
             }
-            
+
         }
-        
+
 
         public void Dispose()
         {
             Debug.Log("DisposeAsync");
-            if(_runtimeContext == null) return;
+            if (_runtimeContext == null) return;
             Debug.Log("DisposeAsync2");
 
             var destroyList = _runtimeContext.DestroyEvents;

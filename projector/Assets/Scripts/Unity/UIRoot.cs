@@ -9,7 +9,7 @@ namespace Struckout.Unity
     /// </summary>
     public class UIRoot
     {
-        public Transform TargetRoot { get; private set;}
+        public Transform TargetRoot { get; private set; }
         public UIRoot(
             Transform targetRoot
         )

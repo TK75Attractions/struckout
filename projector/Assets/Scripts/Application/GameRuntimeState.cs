@@ -31,7 +31,7 @@ namespace Struckout.Application
         }
 
         public int Score { get; private set; } = 0;
-        public Difficulty Difficulty { get; private set;}
+        public Difficulty Difficulty { get; private set; }
 
         public void SetDifficulty(Difficulty difficulty)
         {
@@ -42,7 +42,7 @@ namespace Struckout.Application
             foreach (var target in targets)
             {
                 _targets.Add(target);
-            }   
+            }
         }
 
         public void AddScore(int score)
@@ -63,7 +63,7 @@ namespace Struckout.Application
         public void AddTargets(ITargetGenerator generator, int num, TargetType type)
         {
             var targets = generator.GenerateTargets(num, type, Targets);
-            
+
             foreach (var target in targets)
             {
                 if (_targets.Contains(target)) throw new Exception("Add Existing Target");

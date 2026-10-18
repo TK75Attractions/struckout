@@ -76,8 +76,13 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var transform = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 870f, PixelsPerMetreY = 910f, OriginX = 120f, OriginY = -1500f,
-                FlipX = flipX, FlipY = flipY, SwapAxes = swap,
+                PixelsPerMetreX = 870f,
+                PixelsPerMetreY = 910f,
+                OriginX = 120f,
+                OriginY = -1500f,
+                FlipX = flipX,
+                FlipY = flipY,
+                SwapAxes = swap,
             };
 
             var (rx, ry) = transform.ToRenderSpace(0.37, 2.21);
@@ -92,8 +97,14 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var source = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 1f, PixelsPerMetreY = 2f, OriginX = 3f, OriginY = 4f,
-                FlipX = true, FlipY = true, SwapAxes = true, LogConversions = true,
+                PixelsPerMetreX = 1f,
+                PixelsPerMetreY = 2f,
+                OriginX = 3f,
+                OriginY = 4f,
+                FlipX = true,
+                FlipY = true,
+                SwapAxes = true,
+                LogConversions = true,
             };
             var target = new CollisionCoordinateTransform();
 

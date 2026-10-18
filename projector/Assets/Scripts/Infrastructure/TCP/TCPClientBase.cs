@@ -18,7 +18,7 @@ namespace Struckout.Infrastructure.TCP
         private string _host;
         private int _port;
         private TcpClient _tcpClient;
-        private NetworkStream  _networkStream;
+        private NetworkStream _networkStream;
         private CancellationTokenSource _receiveCancellationToken;
         public event Action<T> OnReceived;
         public event Action ConnectionLost;
@@ -29,7 +29,7 @@ namespace Struckout.Infrastructure.TCP
         private readonly SemaphoreSlim _sendSlim = new(1, 1);
         private const double MaxRetryDelaySeconds = 5;
 
-        private ConnectionState Transit(ConnectionState to) =>_state = ConnectionStateMachine.Transition(_state, to);
+        private ConnectionState Transit(ConnectionState to) => _state = ConnectionStateMachine.Transition(_state, to);
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public TCPClientBase(IMessageParser<T> parser)
@@ -56,7 +56,7 @@ namespace Struckout.Infrastructure.TCP
                     Transit(ConnectionState.Failed);
                     throw new Exception("Haven't been register port");
                 }
-                
+
                 _tcpClient = new();
                 try
                 {
@@ -93,21 +93,21 @@ namespace Struckout.Infrastructure.TCP
         public async Task DisconnectAsync()
         {
             await _slim.WaitAsync();
-            
+
             try
             {
                 // Failed (通信中に切れた) からも後片付けできるようにする。
                 if (_state != ConnectionState.Connected
                     && _state != ConnectionState.Connecting
                     && _state != ConnectionState.Failed) return;
-                if(_tcpClient == null) Debug.Log("Failed To Disconnect");
-                
+                if (_tcpClient == null) Debug.Log("Failed To Disconnect");
+
                 Transit(ConnectionState.Disconnecting);
-                
+
                 _receiveCancellationToken?.Cancel();
                 try
                 {
-                    if(_receiveTask != null) await _receiveTask;
+                    if (_receiveTask != null) await _receiveTask;
                 }
                 catch (Exception ex)
                 {
@@ -133,20 +133,20 @@ namespace Struckout.Infrastructure.TCP
 
         public async Task<bool> ConnectRetryAsync(int maxAttempts)
         {
-            for(int attempt = 0; attempt < maxAttempts; attempt++)
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 try
                 {
-                    if(await ConnectAsync())
+                    if (await ConnectAsync())
                     {
                         return true;
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Debug.LogWarning($"Connect attempt failed because of {ex}");
                 }
-            
+
                 // 指数バックオフ。ただし相手 (ball_tracker) が後から起動したときにすぐつながるよう、間隔は 5 秒までにする
                 await Task.Delay(TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt), MaxRetryDelaySeconds)));
             }
@@ -321,6 +321,6 @@ namespace Struckout.Infrastructure.TCP
                 }
                 offset += received;
             }
-        } 
+        }
     }
 }
