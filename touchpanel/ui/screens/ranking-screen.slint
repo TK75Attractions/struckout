@@ -1,8 +1,31 @@
-global Adopter { }
+import { CornerButton, Corner } from "../components/button.slint";
+import { Icons } from "../icons.slint";
+
+global Adopter {
+    callback move-to-start-screen();
+}
 
 export component RankingScreen {
-    Text {
-        text: "らんきんぐ";
+    private property <length> comp_button_font_size: 24px;
+
+    HorizontalLayout {
+        Rectangle {
+            width: 70%;
+            Text {
+                text: "らんきんぐ";
+            }
+        }
+
+        CornerButton {
+            corner: Corner.RightBottom;
+            filled: true;
+            font-size: root.comp_button_font_size;
+            icon: Icons.home;
+            text: "スタート画面に戻る";
+            clicked => {
+                Adopter.move-to-start-screen();
+            }
+        }
     }
 }
 
