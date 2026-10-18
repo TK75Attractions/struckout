@@ -1,5 +1,5 @@
 [package]
-name = "struckout-yaml"
+name = "struckout-utils"
 version = "0.1.0"
 edition.workspace = true
 

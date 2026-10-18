@@ -1,6 +1,7 @@
 use std::ffi::OsStr;
 
 use backon::{ExponentialBuilder, Retryable as _};
+use clap::Parser;
 use game_master::{DataSourceImpl, GameMasterServiceImpl};
 use struckout_proto::game_master_service_server::GameMasterServiceServer;
 
@@ -17,6 +18,10 @@ const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
 const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = env!("SENTRY_DSN");
+
+#[derive(Parser)]
+#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
+struct Cli{}
 
 fn main() -> std::process::ExitCode {
     #[cfg(feature = "sentry")]

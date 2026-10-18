@@ -796,6 +796,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "struckout-proto",
+ "struckout-utils",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
@@ -2350,6 +2351,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "backon",
+ "clap",
  "derive_more",
  "parking_lot",
  "prost",
@@ -2358,7 +2360,7 @@ dependencies = [
  "serde",
  "sqlx",
  "struckout-proto",
- "struckout-yaml",
+ "struckout-utils",
  "testcontainers-modules",
  "thiserror 2.0.21",
  "time",
@@ -7043,7 +7045,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "struckout-yaml"
+name = "struckout-utils"
 version = "0.1.0"
 dependencies = [
  "serde",
@@ -7696,7 +7698,7 @@ dependencies = [
  "slint-build",
  "stern",
  "struckout-proto",
- "struckout-yaml",
+ "struckout-utils",
  "strum",
  "tempfile",
  "thiserror 2.0.21",

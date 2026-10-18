@@ -45,6 +45,7 @@ impl Context {
 
 /// CLI arguments.
 #[derive(Parser)]
+#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
 struct Cli {
     #[arg(
         short = 'a',
@@ -80,6 +81,7 @@ impl Config {
 
 pub fn run_main() {
     let cli = Cli::parse();
+
     let config = Arc::new(Config::from_cli(cli));
 
     let ui = touchpanel_ui::AppWindow::new().unwrap();

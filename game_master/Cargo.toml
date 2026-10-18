@@ -25,6 +25,7 @@ sentry = { workspace = true, optional = true }
 serde = { workspace = true }
 time = { workspace = true }
 parking_lot = { workspace = true }
+clap = { workspace = true }
 
 sqlx = { workspace = true, features = [
     "mysql",
@@ -40,4 +41,4 @@ toml = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["mysql"] }
 
 [build-dependencies]
-struckout-yaml = { workspace = true }
+struckout-utils = { workspace = true }

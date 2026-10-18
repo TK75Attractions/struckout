@@ -5,7 +5,7 @@ members = [
   "touchpanel",
   "ball_tracker",
   "api/rust/proto",
-  "api/rust/yaml",
+  "api/rust/utils",
   "touchpanel/ui",
 ]
 resolver = "3"
@@ -15,7 +15,7 @@ edition = "2024"
 
 [workspace.dependencies]
 struckout-proto = { path = "./api/rust/proto" }
-struckout-yaml = { path = "./api/rust/yaml" }
+struckout-utils = { path = "./api/rust/utils" }
 
 tokio = "1.52.3"
 tracing = "0.1.44"

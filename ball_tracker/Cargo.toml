@@ -55,3 +55,4 @@ sqlx = { workspace = true, features = [
 
 [build-dependencies]
 prost-build = { workspace = true }
+struckout-utils = { workspace = true }
