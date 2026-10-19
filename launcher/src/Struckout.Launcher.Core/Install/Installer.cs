@@ -42,7 +42,14 @@ public sealed class Installer
     /// Installs <paramref name="modules"/> from <paramref name="release"/>, with their prerequisites.
     /// Modules that are already installed are updated. The settings the user edited are kept.
     /// </summary>
-    /// <exception cref="LauncherException">A step failed. The modules installed before it stay recorded.</exception>
+    /// <remarks>
+    /// The prerequisites are installed one at a time, because winget and Homebrew refuse to run twice at once.
+    /// The modules are then installed at the same time: they write to their own directories, and most of the time
+    /// goes to downloading them (projector alone is about 50 MB).
+    /// </remarks>
+    /// <exception cref="LauncherException">
+    /// A prerequisite or a module failed. The other modules are still installed and recorded.
+    /// </exception>
     public async Task InstallAsync(
         IReadOnlyCollection<ModuleId> modules,
         Release release,
@@ -50,38 +57,74 @@ public sealed class Installer
         IProgress<DownloadProgress>? download,
         CancellationToken cancellationToken)
     {
-        foreach (var id in ModuleIds.All.Where(modules.Contains))
+        var selected = ModuleIds.All.Where(modules.Contains).ToList();
+        var tools = new Dictionary<PrerequisiteId, string>();
+        foreach (var prerequisite in selected.SelectMany(PrerequisiteInstaller.RequiredBy).Distinct())
         {
-            var tools = new Dictionary<PrerequisiteId, string>();
-            try
-            {
-                foreach (var prerequisite in PrerequisiteInstaller.RequiredBy(id))
-                {
-                    tools[prerequisite] = await prerequisites.EnsureAsync(prerequisite, State, log, cancellationToken);
-                    State.Save(paths.InstallStateFile);
-                }
-
-                if (id is ModuleId.BallTracker or ModuleId.Camera)
-                {
-                    await EnsureCamerasFileAsync(release, log, cancellationToken);
-                }
-
-                var context = new InstallContext(release, tools, log, download, cancellationToken);
-                State.Modules[id] = await installers[id].InstallAsync(context, State.Modules.GetValueOrDefault(id));
-                State.Save(paths.InstallStateFile);
-                log.Report($"{id.Slug()}: インストールしました");
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                throw new LauncherException(
-                    $"{id.Slug()}: ファイルを書き込めません (起動中なら止めてからやり直してください): {e.Message}", e);
-            }
+            tools[prerequisite] = await prerequisites.EnsureAsync(prerequisite, State, log, cancellationToken);
+            State.Save(paths.InstallStateFile);
         }
+
+        if (selected.Any(id => id is ModuleId.BallTracker or ModuleId.Camera))
+        {
+            await EnsureCamerasFileAsync(release, log, cancellationToken);
+        }
+
+        var downloads = new CombinedDownloadProgress(download);
+        var failures = await Task.WhenAll(selected.Select(id =>
+        {
+            var context = new InstallContext(
+                release,
+                PrerequisiteInstaller.RequiredBy(id).ToDictionary(p => p, p => tools[p]),
+                log,
+                downloads.Add(),
+                cancellationToken);
+            return InstallModuleAsync(id, context);
+        }));
 
         if (LauncherConfigTemplate.WriteIfMissing(paths.LauncherConfigFile, State.Modules.Keys))
         {
             log.Report($"起動の設定を {paths.LauncherConfigFile} に作りました");
         }
+
+        var messages = failures.OfType<string>().ToList();
+        if (messages.Count > 0)
+        {
+            throw new LauncherException("インストールできなかったモジュールがあります:\n" + string.Join('\n', messages));
+        }
+    }
+
+    /// <returns>Why it failed, or null when it's installed.</returns>
+    private async Task<string?> InstallModuleAsync(ModuleId id, InstallContext context)
+    {
+        ModuleInstallation installation;
+        try
+        {
+            ModuleInstallation? previous;
+            lock (State)
+            {
+                previous = State.Modules.GetValueOrDefault(id);
+            }
+
+            installation = await installers[id].InstallAsync(context, previous);
+        }
+        catch (LauncherException e)
+        {
+            return $"・{id.Slug()}: {e.Message}";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return $"・{id.Slug()}: ファイルを書き込めません (起動中なら止めてからやり直してください): {e.Message}";
+        }
+
+        lock (State)
+        {
+            State.Modules[id] = installation;
+            State.Save(paths.InstallStateFile);
+        }
+
+        context.Log.Report($"{id.Slug()}: インストールしました");
+        return null;
     }
 
     /// <summary>
