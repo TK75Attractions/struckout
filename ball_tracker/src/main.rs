@@ -20,7 +20,7 @@ use tokio::sync::mpsc;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 #[cfg(feature = "sentry")]
-const SENTRY_DSN: &str = env!("SENTRY_DSN");
+const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
 #[derive(Parser)]
 #[command(version = version())]
@@ -81,9 +81,13 @@ struct Cli {
     cameras: Option<PathBuf>,
 }
 
-fn version()->String{
-    if let Some(version) = option_env!("ST_VERSION"){
-        format!("{} ({})", version, option_env!("ST_COMMIT_SHORT_HASH").unwrap())
+fn version() -> String {
+    if let Some(version) = option_env!("ST_VERSION") {
+        format!(
+            "{} ({})",
+            version,
+            option_env!("ST_COMMIT_SHORT_HASH").unwrap()
+        )
     } else {
         format!("no version")
     }

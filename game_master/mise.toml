@@ -1,28 +1,35 @@
-["game-master:dev"]
+[tools]
+"cargo:sqlx-cli" = "latest"
+
+[env]
+DATABASE_URL = { default = "", redact = true }
+SENTRY_DSN = { default = "", redact = true }
+
+[tasks.dev]
 shell = "bash -c"
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up"
-dir = "game_master/"
+dir = "{{ config_root }}"
 description = "Start a dev server of game-master using docker-compose"
 env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
 raw = true
 
-["game-master:prod"]
+[tasks.prod]
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_PROD docker compose -f compose.yaml -f compose.prod.yaml up"
-dir = "game_master/"
+dir = "{{ config_root }}"
 description = "Start a production server of game-master using docker-compose"
 env.MYSQL_ROOT_PASSWORD_PROD = { required = true, redact = true }
 raw = true
 
-["game-master:db"]
+[tasks.db]
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up db"
-dir = "game_master/"
+dir = "{{ config_root }}"
 description = "Start a MySQL service for game-master."
 env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
 raw = true
 
-["game-master:build"]
-depends = ["patches:disable", "game-master:prepare"]
-depends_post = "patches:restore"
+[tasks.build]
+depends = ["//:patches:disable", "prepare"]
+depends_post = "//:patches:restore"
 run = '''
   FLAGS=""
   if [ ${usage_release:-false} = "true" ]; then
@@ -33,20 +40,20 @@ run = '''
   fi
   docker compose -f compose.yaml -f compose.dev.yaml build ${FLAGS}
 '''
-dir = "game_master/"
+dir = "{{ config_root }}"
 description = "game-masterのDockerイメージをビルドする"
 usage = '''
   flag "--release" help="releaseプロファイルでビルドする"
   flag "--sentry" help="sentryを有効にする (--releaseがついている場合既定で有効)"
 '''
 
-["game-master:prepare"]
+[tasks.prepare]
 run = "cargo sqlx prepare -- --all-targets"
-dir = "game_master/"
+dir = "{{ config_root }}"
 description = "game-masterのクエリ検証用メタデータを生成する"
 
-["game-master"]
+[tasks.compose]
 run = "docker compose -f compose.yaml -f compose.dev.yaml"
-dir = "game_master/"
+dir = "{{ config_root }}"
 description = "game-master-devのサービスを操作する"
 raw = true

@@ -48,7 +48,7 @@ BUILD_TARGETS = {
 
 
 def database_password() -> str | None:
-    """データベースのパスワード。mise の MYSQL_ROOT_PASSWORD_DEV (.mise/config.local.toml、`mise run game-master:dev`
+    """データベースのパスワード。mise の MYSQL_ROOT_PASSWORD_DEV (.mise/config.local.toml、`mise run //game_master:dev`
     と同じ) を使う。環境変数に無ければ .mise/config.local.toml から読み、それも無ければ前の game_master/.env.dev から読む。
     値は表示しない。"""
     password = os.environ.get("MYSQL_ROOT_PASSWORD_DEV")
@@ -103,7 +103,7 @@ def migrate_database(password: str) -> None:
     (初めての PC、compose のプロジェクト名が変わったときなど) では、これをしないと game_master がエラーを返す。"""
     sqlx = find_mise_tool("cargo-sqlx-cli", "sqlx")
     if not sqlx:
-        warn("sqlx が見つからないので、データベースのテーブルを確かめられません (mise install cargo:sqlx-cli)。"
+        warn("sqlx が見つからないので、データベースのテーブルを確かめられません (mise -C game_master install cargo:sqlx-cli)。"
              "新しいデータベースだと game_master がエラーを返します")
         return
     url = f"mysql://root:{urllib.parse.quote(password, safe='')}@127.0.0.1:3306/main_dev"

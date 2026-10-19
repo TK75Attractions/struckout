@@ -54,12 +54,11 @@ def replace_proguard(opencv_dir: Path):
 
 
 def main() -> int:
-    project_root = Path.cwd()
-    camera_dir = project_root / "camera"
+    camera_dir = Path(__file__).resolve().parents[1]
 
     if not camera_dir.exists():
         print(
-            "プロジェクトのルートディレクトリから実行してください",
+            "cameraディレクトリが見つかりません",
             file=sys.stderr,
         )
         return 1

@@ -8,6 +8,8 @@ target/
 
 # Personal mise overrides. mise.toml itself is committed.
 .mise/config.local.toml
+**/mise.local.toml
+**/mise.local.lock
 
 # .NET generated state
 sandbox/testTcpCLI/bin/

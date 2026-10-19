@@ -5,7 +5,7 @@ lockfile_version = 3
 [[tools.buf]]
 version = "1.72.0"
 backend = "aqua:bufbuild/buf"
-specifiers = ["1.72.0"]
+specifiers = ["latest"]
 
 [tools.buf."platforms.linux-arm64"]
 checksum = "sha256:7641bd7e06a37a54cbb8c789f53465899def96196ab5c08057432f781a15d517"
@@ -225,9 +225,4 @@ provenance = "github-attestations"
 [[tools.rust]]
 version = "1.99.0"
 backend = "core:rust"
-specifiers = ["latest"]
-
-[[tools.tokei]]
-version = "15.0.0"
-backend = "cargo:tokei"
 specifiers = ["latest"]

@@ -17,7 +17,7 @@ const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
 
 const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 #[cfg(feature = "sentry")]
-const SENTRY_DSN: &str = env!("SENTRY_DSN");
+const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
 #[derive(Parser)]
 #[command(version = version())]

@@ -157,6 +157,8 @@ namespace Struckout.Unity
                 return;
             }
 
+            CreateBuildInfoLabel();
+
             _hud = new GameObject("GameHud", typeof(RectTransform));
             var root = _hud.GetComponent<RectTransform>();
             root.SetParent(_hudCanvas.transform, false);
@@ -169,6 +171,25 @@ namespace Struckout.Unity
             SetScore(0);
             _remainingTimeText.text = "TIME  --:--";
             _hud.SetActive(false);
+        }
+
+        private void CreateBuildInfoLabel()
+        {
+            var go = new GameObject("BuildInfo", typeof(RectTransform), typeof(Text));
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(_hudCanvas.transform, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0f);
+            rect.anchoredPosition = new Vector2(-24f, 16f);
+            rect.sizeDelta = new Vector2(700f, 40f);
+
+            var label = go.GetComponent<Text>();
+            label.font = _displayFont;
+            label.fontSize = 22;
+            label.alignment = TextAnchor.MiddleRight;
+            label.color = new Color(1f, 1f, 1f, 0.55f);
+            label.supportRichText = false;
+            label.raycastTarget = false;
+            label.text = BuildInfo.Display;
         }
 
         private Text CreateHudLabel(string objectName, RectTransform root, bool right, float width)

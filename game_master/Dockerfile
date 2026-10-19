@@ -24,7 +24,9 @@ WORKDIR /build/
 # (root のままだと、linux-arm64 の PC で Permission denied になった)
 COPY --chown=builder:builder .mise/config.toml .mise/config.toml
 COPY --chown=builder:builder .mise/mise.lock .mise/mise.lock
-RUN mise install protoc
+COPY --chown=builder:builder game_master/mise.toml game_master/mise.toml
+COPY --chown=builder:builder game_master/mise.lock game_master/mise.lock
+RUN mise -C game_master install protoc
 
 COPY --chown=builder:builder ./ ./
 RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/.cargo/registry \
@@ -46,7 +48,7 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
         TARGET_DIR="debug"; \
     fi &&\
     SQLX_OFFLINE=true ST_VERSION=${ST_VERSION} ST_COMMIT_SHORT_HASH=${ST_COMMIT_SHORT_HASH} \
-    mise exec protoc -- cargo build ${FLAGS} -p game_master \
+    mise -C game_master exec protoc -- cargo build ${FLAGS} -p game_master \
     && mkdir -p /build/bin/ \
     && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 
