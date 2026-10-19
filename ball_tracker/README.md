@@ -75,6 +75,24 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
 - 範囲、内部パラメータ、向き、解析の設定は、アプリが `VideoStreamConfig` で送ってくる値を使う。
 - 遅れは、60fps の録画を流して受け取ってから解析し終えるまで 50〜60 ms (2026-10-15)。
   `scripts/recording_analysis/stream_video_to_tracker.py` で、録画をアプリと同じ手順で流して確かめられる。
+- 10 秒おきに、カメラごとに `video analysis` のログを出す。時間はどれも 1 フレームあたりで、`_p50`、`_p95` は
+  その 10 秒の中央値と 95% の値。
+
+  | 項目 | 内容 |
+  |---|---|
+  | `fps` | 解析したフレームの数 (1 秒あたり) |
+  | `analysis_ms` | 解析にかかった時間の平均 |
+  | `delay_ms_p50`、`delay_ms_p95`、`max_delay_ms` | 受け取ってから解析し終えるまで |
+  | `queued` | 受け取って、まだ解析していないフレームの数 |
+  | `input_ms_p95` | 受け取ってから ffmpeg に書き始めるまで (ffmpeg が標準入力を読まないあいだ伸びる) |
+  | `ffmpeg_ms_p50`、`ffmpeg_ms_p95` | ffmpeg に書き始めてから、縮小した画像を読み終えるまで。解析が遅れて ffmpeg の出力が詰まっているあいだも含む |
+  | `queued_in_ffmpeg` | ffmpeg に書いて、まだ出てきていないフレームの数 |
+  | `wait_ms` | 解析のスレッドが ffmpeg の出力を待っていた時間の平均 |
+  | `send_ms` | 解析のスレッドが検出を追跡に渡すのを待っていた時間の平均 |
+
+  追いついているあいだは、`wait_ms` + `analysis_ms` + `send_ms` が 1 フレームの間隔 (120fps で 8.33 ms) に近い。
+  `queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が
+  追いついていない。
 - `--no-video-analysis` で受け付けをやめると、アプリは自分で解析する。
 
 ### 視線の集まりからボールを見つける
