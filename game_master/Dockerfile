@@ -2,6 +2,8 @@ FROM rust@sha256:6ff07edce8775d0f64be7aba9197229407301bddf2054d62c27b541a6238a18
 
 ARG RELEASE_MODE=false
 ARG SENTRY_DSN
+ARG ST_VERSION
+ARG ST_COMMIT_SHORT_HASH
 
 ENV CARGO_HOME="/home/builder/.cargo/"
 ENV PATH="/home/builder/.local/bin/:${PATH}"
@@ -43,7 +45,8 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
         fi &&\
         TARGET_DIR="debug"; \
     fi &&\
-    SQLX_OFFLINE=true mise exec protoc -- cargo build ${FLAGS} -p game_master \
+    SQLX_OFFLINE=true ST_VERSION=${ST_VERSION} ST_COMMIT_SHORT_HASH=${ST_COMMIT_SHORT_HASH} \
+    mise exec protoc -- cargo build ${FLAGS} -p game_master \
     && mkdir -p /build/bin/ \
     && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 

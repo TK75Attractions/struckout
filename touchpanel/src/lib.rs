@@ -1,7 +1,7 @@
 use clap::Parser;
 use slint::ComponentHandle;
 use std::sync::{Arc, OnceLock};
-use stern::{WorkerThread, worker::SlintExecutor};
+use stern::{worker::SlintExecutor, WorkerThread};
 use tracing::info;
 
 use touchpanel_ui::NavRoute;
@@ -45,7 +45,7 @@ impl Context {
 
 /// CLI arguments.
 #[derive(Parser)]
-#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
+#[command(version = version())]
 struct Cli {
     #[arg(
         short = 'a',
@@ -55,6 +55,18 @@ struct Cli {
     server_addr: String,
     #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
     machine_id: u32,
+}
+
+fn version() -> String {
+    if let Some(version) = option_env!("ST_VERSION") {
+        format!(
+            "{} ({})",
+            version,
+            option_env!("ST_COMMIT_SHORT_HASH").unwrap()
+        )
+    } else {
+        format!("no version")
+    }
 }
 
 /// Application configs.

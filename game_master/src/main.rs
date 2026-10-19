@@ -20,8 +20,16 @@ const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 const SENTRY_DSN: &str = env!("SENTRY_DSN");
 
 #[derive(Parser)]
-#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
+#[command(version = version())]
 struct Cli {}
+
+fn version()->String{
+    if let Some(version) = option_env!("ST_VERSION"){
+        format!("{} ({})", version, option_env!("ST_COMMIT_SHORT_HASH").unwrap())
+    } else {
+        format!("no version")
+    }
+}
 
 fn main() -> std::process::ExitCode {
     #[cfg(feature = "sentry")]

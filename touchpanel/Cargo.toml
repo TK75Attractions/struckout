@@ -46,7 +46,7 @@ tempfile = { workspace = true }
 time = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
 enum_dispatch = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive", "string"] }
 
 i-slint-core = { workspace = true }
 slint = { workspace = true }

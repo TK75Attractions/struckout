@@ -1,4 +1,4 @@
-name: Nightly Release
+name: Release
 
 on:
   schedule:
@@ -10,14 +10,28 @@ env:
 
 concurrency:
   cancel-in-progress: true
-  group: nightly-release
+  group: release
 
 jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    outputs:
+      short-hash: ${{ steps.info.outputs.short-hash }}
+      version: ${{ steps.info.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Get commit hash and version of this release
+        id: info
+        run: |
+            echo "short-hash=$(cargo xtask release short-hash)" >> "$GITHUB_OUTPUT"
+            echo "version=$(cargo xtask release next-version)" >> "$GITHUB_OUTPUT"
+
   rust-build:
     strategy:
       matrix:
         os: ["windows-2022", "macos-14", "ubuntu-22.04"]
     runs-on: ${{ matrix.os }}
+    needs: [get-version]
     defaults:
       run:
         shell: bash
@@ -46,7 +60,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
       - name: Build
-        run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel --features sentry
+        run: |
+            SQLX_OFFLINE=true \
+            ST_COMMIT_SHORT_HASH=${{ needs.get-version.outputs.short-hash }} \
+            ST_VERSION=${{ needs.get-version.outputs.version }} \
+            mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel --features sentry
 
       - name: Rename binaries
         id: triple
@@ -125,6 +143,7 @@ jobs:
   publish-game-master-image:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'Tk75Attractions/struckout' && github.ref_name == 'master' }}
+    needs: [get-version]
     permissions:
       contents: read
       packages: write
@@ -147,7 +166,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/game-master
-          tags: type=raw,value=nightly
+          tags: type=raw,value=${{ needs.get-version.outputs.version }}
       - name: Build and push game-master image
         uses: docker/build-push-action@v6
         with:
@@ -159,6 +178,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=game-master
           cache-to: type=gha,mode=max,scope=game-master
+          build-args: |
+            ST_VERSION=${{ needs.get-version.outputs.version }}
+            ST_COMMIT_SHORT_HASH=${{ needs.get-version.outputs.short-hash }}
 
   publish-release:
     runs-on: ubuntu-latest
@@ -179,14 +201,10 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           pattern: rust-*
-      - name: Remove old release
-        # continue even when there's no previous release
-        run: gh release delete nightly -y --cleanup-tag || true
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Create release
         run: |
-          gh release create nightly --notes "nightly release" \
+          VERSION=$(cargo xtask release next-version)
+          gh release create $VERSION \
             rust-x86_64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
             projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \

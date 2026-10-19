@@ -1,0 +1,153 @@
+use std::fmt::Display;
+
+use anyhow::{Context, bail};
+use clap::{Args, ValueEnum};
+use time::{
+    Date, OffsetDateTime, UtcOffset,
+    macros::{format_description, offset},
+};
+
+const JP_OFFSET: UtcOffset = offset!(+9);
+
+#[derive(Args)]
+pub struct ReleaseArgs {
+    mode: Mode,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum Mode {
+    ShortHash,
+    NextVersion,
+}
+
+impl ReleaseArgs {
+    pub async fn run(self) -> Result<(), anyhow::Error> {
+        if !std::fs::exists(".git").unwrap() {
+            bail!("release command should be run from the project's root directory");
+        }
+
+        match self.mode {
+            Mode::ShortHash => {
+                let sha =std::env::var("GITHUB_SHA").with_context(||"both .git/HEAD and GITHUB_SHA are not provided; can't determine the commit hash")?;
+                println!("{}", &sha[..7])
+            }
+            Mode::NextVersion => {
+                let gh_tok = std::env::var("GITHUB_TOKEN")
+                    .with_context(|| "GITHUB_TOKEN env var is not given")?;
+                let gh = octocrab::Octocrab::builder()
+                    .personal_token(gh_tok)
+                    .build()
+                    .with_context(|| "failed to build GitHub client")?;
+                let repo = gh.repos("Tk75Attractions", "struckout");
+
+                let tag = Self::get_next_tag(&repo).await?;
+                println!("{}", tag);
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn get_next_tag(
+        repo: &octocrab::repos::RepoHandler<'_>,
+    ) -> Result<String, anyhow::Error> {
+        let releases = repo.releases();
+        let latest = releases.get_latest().await;
+        let next_tag = if let Ok(latest) = latest {
+            let tag = ReleaseTag::parse(&latest.tag_name);
+            tag.next()
+        } else {
+            let today = OffsetDateTime::now_utc().to_offset(JP_OFFSET).date();
+            ReleaseTag {
+                date: today,
+                release_num: 0,
+            }
+        };
+        Ok(next_tag.to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ReleaseTag {
+    date: Date,
+    release_num: u8,
+}
+
+impl ReleaseTag {
+    /// Parses string formatted like '2026-10-18.1'.
+    fn parse(tag: &str) -> Self {
+        let mut parts = tag.split('-');
+        let year = parts.next().unwrap();
+        let month = parts.next().unwrap();
+        let mut parts = parts.next().unwrap().split('.');
+        let day = parts.next().unwrap();
+        let release_num = parts.next().unwrap();
+        Self {
+            date: Date::from_calendar_date(
+                year.parse().unwrap(),
+                month.parse::<u8>().unwrap().try_into().unwrap(),
+                day.parse().unwrap(),
+            )
+            .unwrap(),
+            release_num: release_num
+                .parse()
+                .expect("invalid tag name: release_num must be u8"),
+        }
+    }
+
+    /// Returns next release.
+    ///
+    /// If `self`'s date is today, it increments `release_num`.
+    /// e.g. `2026-10-09.0` -> `2026-10-09.1`.
+    ///
+    /// Otherwise it returns `<today>.0`.
+    fn next(self) -> Self {
+        let today = OffsetDateTime::now_utc().to_offset(JP_OFFSET).date();
+        if self.date == today {
+            let next_num = self.release_num + 1;
+            Self {
+                release_num: next_num,
+                ..self
+            }
+        } else {
+            Self {
+                date: today,
+                release_num: 0,
+            }
+        }
+    }
+}
+
+impl Display for ReleaseTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let date = self
+            .date
+            .format(format_description!("[year]-[month]-[day]"))
+            .unwrap();
+        write!(f, "{}.{}", date, self.release_num)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use time::macros::date;
+
+    use super::*;
+
+    #[test]
+    fn parse_relase_tag_parses_correctly() {
+        let tag = "2026-10-19.2";
+        let tag = ReleaseTag::parse(tag);
+        assert_eq!(tag.date, date!(2026 - 10 - 19));
+        assert_eq!(tag.release_num, 2);
+    }
+
+    #[test]
+    fn release_tag_displayed_correctly() {
+        let tag = ReleaseTag {
+            date: date!(2026 - 08 - 15),
+            release_num: 2,
+        };
+        assert_eq!(tag.to_string(), "2026-08-15.2");
+    }
+}

@@ -23,7 +23,7 @@ use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _
 const SENTRY_DSN: &str = env!("SENTRY_DSN");
 
 #[derive(Parser)]
-#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
+#[command(version = version())]
 struct Cli {
     #[arg(value_enum, long = "input", help = "detectionをどこから受け取るか")]
     detection_input: DetectionInputKind,
@@ -79,6 +79,14 @@ struct Cli {
     /// (0, 1, ...) になり、ここに書いた位置と向きを使う。位置と向き、焦点距離、検出の範囲はスマホにも送る
     #[arg(long = "cameras")]
     cameras: Option<PathBuf>,
+}
+
+fn version()->String{
+    if let Some(version) = option_env!("ST_VERSION"){
+        format!("{} ({})", version, option_env!("ST_COMMIT_SHORT_HASH").unwrap())
+    } else {
+        format!("no version")
+    }
 }
 
 fn millis(value: f64) -> TimeDelta {
