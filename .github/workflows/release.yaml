@@ -25,8 +25,11 @@ jobs:
       - name: Get commit hash and version of this release
         id: info
         run: |
-            echo "short-hash=$(mise exec protoc -- cargo xtask release short-hash)" >> "$GITHUB_OUTPUT"
-            echo "version=$(mise exec protoc -- cargo xtask release next-version)" >> "$GITHUB_OUTPUT"
+            set -eux
+            SHORT_HASH=$(mise exec protoc -- cargo xtask release short-hash)
+            VERSION=$(mise exec protoc -- cargo xtask release next-version)
+            echo "short-hash=${SHORT_HASH}" >> "$GITHUB_OUTPUT"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
   rust-build:
     strategy:
