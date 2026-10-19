@@ -11,7 +11,7 @@ plugins {
 
 val enableNatsLog = providers.gradleProperty("enableNatsLog")
 
-// The nightly release signs the APK with one key (.github/workflows/nightly_release.yaml) so that the launcher
+// Every release signs the APK with one key (.github/workflows/release.yaml) so that the launcher
 // can update the app on the phones: Android refuses an update signed with another key.
 // Without the variables, the release build is unsigned as before.
 val releaseKeystore = providers.environmentVariable("CAMERA_KEYSTORE_FILE")

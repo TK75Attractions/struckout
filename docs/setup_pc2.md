@@ -4,7 +4,7 @@ PC② は projector (Unity) とプロジェクターを受け持つ。projector 
 game_master (gRPC 8020) の両方につながらないと動き出さない** (`docs/projector_debug.md`)。
 game_master は PC② の Docker で動かす。
 
-nightly リリースの projector と game_master (ghcr.io のイメージ) を使うだけなら、ランチャー (`launcher/README.md`) で
+リリースの projector と game_master (ghcr.io のイメージ) を使うだけなら、ランチャー (`launcher/README.md`) で
 インストールと起動ができる。Unity も Rust も要らない。
 
 ## 用意するもの
