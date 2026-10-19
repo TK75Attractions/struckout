@@ -44,6 +44,21 @@ dir = "."
 description = "cameraで使うOpenCVをインストールする"
 raw = true
 
+[tasks."launcher:run"]
+run = "dotnet run --project src/Struckout.Launcher"
+dir = "launcher/"
+description = "ランチャーをソースから起動する"
+
+[tasks."launcher:test"]
+run = "dotnet test --solution Struckout.Launcher.slnx"
+dir = "launcher/"
+description = "ランチャーのテストを実行する"
+
+[tasks."launcher:fmt"]
+run = "dotnet format Struckout.Launcher.slnx"
+dir = "launcher/"
+description = "ランチャーの C# を整形する"
+
 [tasks."touchpanel:fmt-slint"]
 run = "find -name '*.slint' | xargs slint-lsp format --inline"
 dir = "touchpanel/ui/"

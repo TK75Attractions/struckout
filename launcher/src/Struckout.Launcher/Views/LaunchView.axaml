@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Struckout.Launcher.ViewModels"
+             x:Class="Struckout.Launcher.Views.LaunchView"
+             x:DataType="vm:LaunchViewModel">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8" Margin="8">
+    <WrapPanel Grid.Row="0" ItemSpacing="8" LineSpacing="8">
+      <Button Content="すべて起動" Command="{Binding StartCommand}" Classes="accent" />
+      <Button Content="すべて止める" Command="{Binding StopCommand}" />
+      <Button Content="設定を開く" Command="{Binding OpenConfigCommand}" />
+      <Button Content="設定を読み直す" Command="{Binding ReloadCommand}" />
+      <Button Content="ログのフォルダー" Command="{Binding OpenLogsCommand}" />
+    </WrapPanel>
+
+    <TextBlock Grid.Row="1" Classes="note" Text="{Binding ConfigPath, StringFormat='設定: {0}'}" />
+    <TextBlock Grid.Row="2" Classes="error" Text="{Binding ConfigError}" TextWrapping="Wrap"
+               IsVisible="{Binding !!ConfigError.Length}" />
+
+    <StackPanel Grid.Row="3" Spacing="2">
+      <TextBlock Text="この PC のモジュール" FontWeight="SemiBold" />
+      <ItemsControl ItemsSource="{Binding Modules}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ModuleStatusViewModel">
+            <Grid ColumnDefinitions="160,80,*" Margin="0,2">
+              <TextBlock Grid.Column="0" Text="{Binding Name}" />
+              <TextBlock Grid.Column="1" Text="{Binding State}" FontWeight="SemiBold"
+                         Classes.ok="{Binding IsOk}" Classes.error="{Binding IsError}" />
+              <TextBlock Grid.Column="2" Text="{Binding Message}" TextWrapping="Wrap" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <StackPanel Grid.Row="4" Spacing="2" IsVisible="{Binding !!Remotes.Count}">
+      <TextBlock Text="ほかの PC のモジュール" FontWeight="SemiBold" />
+      <ItemsControl ItemsSource="{Binding Remotes}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RemoteStatusViewModel">
+            <Grid ColumnDefinitions="160,160,*" Margin="0,2">
+              <TextBlock Grid.Column="0" Text="{Binding Name}" />
+              <TextBlock Grid.Column="1" Text="{Binding Host}" />
+              <TextBlock Grid.Column="2" Text="{Binding Message}" Classes.ok="{Binding IsOk}"
+                         Classes.error="{Binding IsError}" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <TextBox Grid.Row="5" Classes="log" Text="{Binding Log.Text}" x:Name="LogBox" />
+  </Grid>
+</UserControl>
