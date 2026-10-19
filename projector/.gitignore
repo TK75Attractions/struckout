@@ -66,6 +66,7 @@ sysinfo.txt
 *.aab
 *.unitypackage
 *.slnx
+/Assets/Scripts/Unity/BuildInfo.Generated.cs*
 
 # Sentry secrets
 Assets/Plugins/Sentry/SentryCliOptions.asset*
