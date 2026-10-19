@@ -4,11 +4,13 @@ import app.cash.turbine.test
 import com.taichi765.struckoutCameraApp.FakeConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
 import com.taichi765.struckoutCameraApp.network.types.InstanceState
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.just
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +86,8 @@ class NetworkManagerUnitTest {
         )
         every { tcpSessionFactory.create() } returns tcpSession
         every { tcpSession.state } returns sessionState
+        // retryTcpConnection() は、つながっていない古い TcpSession を閉じてから作り直す
+        every { tcpSession.close() } just Runs
         coEvery { dataConnection.connect() } returns DataConnectionError.TcpConnectionFailed(
             SocketException("Stub!")
         )
@@ -120,6 +124,14 @@ class NetworkManagerUnitTest {
                     assert(
                         it is InstanceState.Created
                                 && it.state.sessionState is SessionState.Connected
+                    )
+                }
+                // つながったら前回のエラーは消える
+                awaitItem().let {
+                    assert(
+                        it is InstanceState.Created
+                                && it.state.sessionState is SessionState.Connected
+                                && it.state.lastError == null
                     )
                 }
             }
