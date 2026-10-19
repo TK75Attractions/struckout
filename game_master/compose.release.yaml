@@ -1,0 +1,11 @@
+# Runs the image that .github/workflows/nightly_release.yaml publishes instead of building from source.
+# The launcher (launcher/) downloads this file with compose.yaml and compose.prod.yaml, so the PC needs
+# neither the repository nor a Rust toolchain:
+#
+#   docker compose -f compose.yaml -f compose.prod.yaml -f compose.release.yaml up
+#
+# The launcher pulls the image when it installs or updates game_master. `!reset` needs Docker Compose 2.24 or later.
+services:
+  app:
+    build: !reset null
+    image: ghcr.io/tk75attractions/game-master:nightly
