@@ -76,6 +76,14 @@ async fn run_main() -> u8 {
     };
     info!("succeed to create MySQL pool");
 
+    // A new database (the first start on a PC, or after its volume is removed) has no tables yet.
+    // The migrations are embedded, so a PC that only pulls the image doesn't need sqlx-cli.
+    info!("applying migrations");
+    if let Err(err) = sqlx::migrate!().run(&pool).await {
+        error!(?err, "failed to apply migrations");
+        return 1;
+    }
+
     info!("initializing gRPC service");
     let data_source = DataSourceImpl::new(pool);
     let game_master = GameMasterServiceImpl::new(data_source);
