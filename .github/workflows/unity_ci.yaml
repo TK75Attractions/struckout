@@ -38,7 +38,7 @@ jobs:
         with:
           targetPlatform: StandaloneWindows64
           projectPath: projector
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          gitPrivateToken: ${{ secrets.GITHUB_TOKEN }}
   test:
     runs-on: ubuntu-latest
     permissions:

@@ -129,7 +129,7 @@ jobs:
         with:
           targetPlatform: ${{ matrix.target-platform }}
           projectPath: projector
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          gitPrivateToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Determine file suffix
         id: triple
         run: |
@@ -157,8 +157,6 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
