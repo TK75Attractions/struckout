@@ -12,6 +12,8 @@ target/
 # .NET generated state
 sandbox/testTcpCLI/bin/
 sandbox/testTcpCLI/obj/
+launcher/**/bin/
+launcher/**/obj/
 
 # Local-only debug tooling.
 # tools/ は各自のローカルでだけ使うデバッグ用 GUI を置く場所。

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- LibraryImport in Platform/ProcessJob.cs -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ports are defined once in api/spec/servers.yaml and shared by every module. -->
+    <EmbeddedResource Include="../../../api/spec/servers.yaml" LogicalName="servers.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tomlyn" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Struckout.Launcher.Core.Tests" />
+  </ItemGroup>
+</Project>
