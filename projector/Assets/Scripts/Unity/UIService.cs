@@ -5,6 +5,8 @@ using System;
 using Struckout.Application.Interface;
 using Struckout.Domain.TargetDefinition;
 using VContainer;
+using UnityEngine.UI;
+using System.Globalization;
 
 namespace Struckout.Unity
 {
@@ -29,6 +31,10 @@ namespace Struckout.Unity
         private Dictionary<Target, Transform> _targetToTransform;
         [SerializeField]
         private Transform _circleUI;
+
+        [Header("Game HUD")]
+        [SerializeField] private Canvas _hudCanvas;
+        [SerializeField] private Font _displayFont;
 
         [Header("Projected Screens")]
         [SerializeField] private Sprite _backgroundSprite;
@@ -74,6 +80,9 @@ namespace Struckout.Unity
         private SpriteRenderer _idleRenderer;
         private SpriteRenderer _finishedRenderer;
         private TextMesh _finishedText;
+        private GameObject _hud;
+        private Text _scoreText;
+        private Text _remainingTimeText;
         private GamePhase _phase = GamePhase.Idle;
         private float _idleOpacity = 1f;
         private float _finishedOpacity;
@@ -92,6 +101,7 @@ namespace Struckout.Unity
             _idleRenderer = CreateFieldSprite("IdleScreen", _idleSprite, OverlaySortingOrder);
             _finishedRenderer = CreateFieldSprite("FinishedScreen", _finishedSprite, OverlaySortingOrder);
             _finishedText = CreateFinishedText();
+            CreateHud();
             SetAlpha(_idleRenderer, _idleOpacity);
             SetAlpha(_finishedRenderer, _finishedOpacity);
         }
@@ -128,10 +138,80 @@ namespace Struckout.Unity
             label.alignment = TextAlignment.Center;
             label.fontSize = 100;
             label.characterSize = 1.2f;
+            label.font = _displayFont;
             label.color = new Color(1f, 1f, 1f, 0f);
             var textRenderer = go.GetComponent<MeshRenderer>();
-            if (textRenderer != null) textRenderer.sortingOrder = OverlaySortingOrder + 1;
+            if (textRenderer != null)
+            {
+                if (_displayFont != null) textRenderer.sharedMaterial = _displayFont.material;
+                textRenderer.sortingOrder = OverlaySortingOrder + 1;
+            }
             return label;
+        }
+
+        private void CreateHud()
+        {
+            if (_hudCanvas == null || _displayFont == null)
+            {
+                Debug.LogError("[HUD] Assign the HUD Canvas and Oxanium font to UIService.");
+                return;
+            }
+
+            _hud = new GameObject("GameHud", typeof(RectTransform));
+            var root = _hud.GetComponent<RectTransform>();
+            root.SetParent(_hudCanvas.transform, false);
+            root.anchorMin = Vector2.zero;
+            root.anchorMax = Vector2.one;
+            root.offsetMin = root.offsetMax = Vector2.zero;
+
+            _scoreText = CreateHudLabel("Score", root, false, 800f);
+            _remainingTimeText = CreateHudLabel("RemainingTime", root, true, 480f);
+            SetScore(0);
+            _remainingTimeText.text = "TIME  --:--";
+            _hud.SetActive(false);
+        }
+
+        private Text CreateHudLabel(string objectName, RectTransform root, bool right, float width)
+        {
+            var panel = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+            var rect = panel.GetComponent<RectTransform>();
+            rect.SetParent(root, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(right ? 1f : 0f, 1f);
+            rect.anchoredPosition = new Vector2(right ? -48f : 48f, -36f);
+            rect.sizeDelta = new Vector2(width, 104f);
+            var background = panel.GetComponent<Image>();
+            background.color = new Color(0.015f, 0.025f, 0.05f, 0.8f);
+            background.raycastTarget = false;
+
+            var go = new GameObject("Label", typeof(RectTransform), typeof(Text));
+            var labelRect = go.GetComponent<RectTransform>();
+            labelRect.SetParent(rect, false);
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(24f, 8f);
+            labelRect.offsetMax = new Vector2(-24f, -8f);
+            var label = go.GetComponent<Text>();
+            label.font = _displayFont;
+            label.fontSize = 48;
+            label.alignment = right ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+            label.color = Color.white;
+            label.supportRichText = false;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        public void SetRemainingTime(TimeSpan remaining)
+        {
+            if (_remainingTimeText == null) return;
+            long seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
+            _remainingTimeText.text = string.Format(CultureInfo.InvariantCulture,
+                "TIME  {0:00}:{1:00}", seconds / 60, seconds % 60);
+        }
+
+        public void SetScore(uint totalScore)
+        {
+            if (_scoreText != null)
+                _scoreText.text = "SCORE  " + totalScore.ToString(CultureInfo.InvariantCulture);
         }
 
         private void Update()
@@ -164,6 +244,19 @@ namespace Struckout.Unity
         public void SetGamePhase(GamePhase phase)
         {
             _phase = phase;
+            if (_hud != null)
+            {
+                _hud.SetActive(phase != GamePhase.Idle);
+                if (phase == GamePhase.Playing)
+                {
+                    SetScore(0);
+                    _remainingTimeText.text = "TIME  --:--";
+                }
+                else if (phase == GamePhase.Finished)
+                {
+                    SetRemainingTime(TimeSpan.Zero);
+                }
+            }
             int index = 0;
             foreach (var transform in _targetToTransform.Values)
             {

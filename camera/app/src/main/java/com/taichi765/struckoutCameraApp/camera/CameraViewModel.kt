@@ -107,7 +107,7 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch {
             pcStreamer.active.collect { camera.setKeyFramePreview(it) }
         }
-        // PC から adb で「Save frame」を頼まれたとき (scripts/camera-remote.ps1)
+        // PC から adb で「Save frame」を頼まれたとき (scripts/camera_remote.py)
         viewModelScope.launch {
             remoteCommands.saveFrame.collect { requestSaveFrame() }
         }

@@ -8,13 +8,14 @@ using UnityEngine;
 
 namespace Struckout.Bootstrap
 {
-    public class GameBootstrap
+    public class GameBootstrap : IAsyncDestroy
     {
         private readonly GameRuntime _runtime;
         private readonly ISensorProvider _sensorProvider;
         private readonly IUIService _service;
         private readonly IGameMasterClient _master;
         private readonly IMainThreadDispatcher _dispatcher;
+        private RuntimeContext _context;
 
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
@@ -38,6 +39,10 @@ namespace Struckout.Bootstrap
             )
         {
             if (_service == null) throw new Exception("There are no IUIService in uiService");
+            _context = context;
+
+            // Fake の遅延購読でも、開始通知より先に初期盤面を準備する。
+            _runtime.GameSetup();
 
             context.PacketRouter.OnCollisionReceived += _sensorProvider.GetSensorData;
             _sensorProvider.OnCollisionReceived += _runtime.CollisionDetected;
@@ -46,13 +51,11 @@ namespace Struckout.Bootstrap
             // ここでは得点の送信だけを繋ぐ。
             _runtime.ScoreAdded += OnScoreAdded;
 
-            // ゲームの開始と終了は game_master のイベントストリームから来る。
-            // 残り時間 (GameTimeLimitNotify) も流れてくるが、projector と touchpanel の
-            // どちらが出すかが未決なので、まだ拾っていない。
+            // すべて同じ dispatcher を経由し、開始・HUD 更新・終了の順序を保つ。
+            _master.RemainingTimeChanged += OnRemainingTimeChanged;
+            _master.ScoreChanged += OnScoreChanged;
             _master.GameStarted += OnGameStarted;
             _master.GameFinished += OnGameFinished;
-
-            _runtime.GameSetup();
         }
 
         private void OnGameStarted(Difficulty difficulty) =>
@@ -60,6 +63,26 @@ namespace Struckout.Bootstrap
 
         private void OnGameFinished() =>
             _dispatcher.Enqueue(_runtime.FinishGame);
+
+        private void OnRemainingTimeChanged(TimeSpan remaining) =>
+            _dispatcher.Enqueue(() => _service.SetRemainingTime(remaining));
+
+        private void OnScoreChanged(uint totalScore) =>
+            _dispatcher.Enqueue(() => _service.SetScore(totalScore));
+
+        public UniTask DisposeAsync()
+        {
+            if (_context == null) return UniTask.CompletedTask;
+            _context.PacketRouter.OnCollisionReceived -= _sensorProvider.GetSensorData;
+            _sensorProvider.OnCollisionReceived -= _runtime.CollisionDetected;
+            _runtime.ScoreAdded -= OnScoreAdded;
+            _master.GameStarted -= OnGameStarted;
+            _master.GameFinished -= OnGameFinished;
+            _master.RemainingTimeChanged -= OnRemainingTimeChanged;
+            _master.ScoreChanged -= OnScoreChanged;
+            _context = null;
+            return UniTask.CompletedTask;
+        }
 
         private void OnScoreAdded(int points)
         {
