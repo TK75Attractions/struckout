@@ -41,11 +41,52 @@ impl CollisionOutput for CsvCollisionOutput {
                 .await
                 .with_context(|| "collision channel has been unexpectedly closed")
                 .unwrap();
-            file.write_all(format!("{},{},{}", coll.x, coll.y, coll.z).as_bytes())
+            // 1 行に 1 件。改行がないと、次の着弾の x がこの z の後ろにつながって読めなくなる
+            file.write_all(format!("{},{},{}\n", coll.x, coll.y, coll.z).as_bytes())
                 .await
                 .with_context(|| "failed to write collision to CSV file")
                 .unwrap();
             file.flush().await.expect("failed to flush CSV file");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn writes_one_collision_per_line() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("collisions.csv");
+        let (tx, rx) = mpsc::channel(4);
+        tokio::spawn(CsvCollisionOutput::new(&path).start(rx));
+        tx.send(CollisionPoint3D {
+            x: 0.0,
+            y: 0.5,
+            z: 1.5,
+        })
+        .await
+        .unwrap();
+        tx.send(CollisionPoint3D {
+            x: 0.0,
+            y: 1.25,
+            z: 2.0,
+        })
+        .await
+        .unwrap();
+
+        // 書き終わるのを待つ (1 件ごとに flush している)
+        let mut text = String::new();
+        for _ in 0..100 {
+            text = fs::read_to_string(&path).await.unwrap_or_default();
+            if text.lines().count() == 2 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert_eq!(text, "0,0.5,1.5\n0,1.25,2\n");
     }
 }
