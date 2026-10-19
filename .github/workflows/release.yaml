@@ -148,6 +148,103 @@ jobs:
           name: projector-${{ steps.triple.outputs.triple }}
           path: ./build/
 
+  launcher-build:
+    strategy:
+      matrix:
+        include:
+          # The suffixes are the ones of the Rust binaries above (launcher/src/Struckout.Launcher.Core/Platform/HostPlatform.cs)
+          - os: windows-2022
+            rid: win-x64
+            asset: struckout-launcher-x86_64-windows.exe
+          # Built on macOS so that the SDK signs the binary (Apple Silicon refuses unsigned ones)
+          - os: macos-14
+            rid: osx-arm64
+            asset: struckout-launcher-arm64-macos
+          - os: ubuntu-22.04
+            rid: linux-x64
+            asset: struckout-launcher-x86_64-linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .mise
+            api/spec
+            launcher
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+        with:
+          install_args: dotnet
+      - name: Publish
+        run: |
+          dotnet publish launcher/src/Struckout.Launcher -c Release -r ${{ matrix.rid }} --self-contained \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+          mkdir upload
+          case ${{ matrix.rid }} in
+            win-*) mv publish/struckout-launcher.exe upload/${{ matrix.asset }};;
+            *) mv publish/struckout-launcher upload/${{ matrix.asset }};;
+          esac
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: launcher-${{ matrix.rid }}
+          path: ./upload/
+
+  camera-build:
+    runs-on: ubuntu-latest
+    # The signing key is a secret of the repository
+    if: ${{ github.repository == 'TK75Attractions/struckout' }}
+    defaults:
+      run:
+        working-directory: camera/
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            camera
+            api/proto
+            .mise
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+        with:
+          install_args: java protoc python
+      - name: Cache OpenCV
+        id: cache-opencv
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: camera/opencv
+          key: opencv-${{ hashFiles('camera/opencv/**') }}
+      - name: Install OpenCV
+        if: ${{ steps.cache-opencv.outputs.cache-hit != 'true' }}
+        run: mise run install-opencv
+        env:
+          MISE_TASK_RUN_AUTO_INSTALL: '0'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      # The launcher updates the app with `adb install -r`, which needs the same key in every release.
+      # Create the secrets with:
+      #   keytool -genkeypair -keystore camera.jks -alias camera -keyalg RSA -keysize 4096 -validity 10000
+      #   base64 -w0 camera.jks  # CAMERA_KEYSTORE_BASE64
+      - name: Build
+        run: |
+          if [ -z "$CAMERA_KEYSTORE_BASE64" ]; then
+            echo "CAMERA_KEYSTORE_BASE64 is not set" >&2
+            exit 1
+          fi
+          export CAMERA_KEYSTORE_FILE="$RUNNER_TEMP/camera.jks"
+          echo "$CAMERA_KEYSTORE_BASE64" | base64 -d > "$CAMERA_KEYSTORE_FILE"
+          ./gradlew :app:assembleRelease
+          mkdir -p ../upload
+          mv app/build/outputs/apk/release/app-release.apk ../upload/camera.apk
+        env:
+          CAMERA_KEYSTORE_BASE64: ${{ secrets.CAMERA_KEYSTORE_BASE64 }}
+          CAMERA_KEYSTORE_PASSWORD: ${{ secrets.CAMERA_KEYSTORE_PASSWORD }}
+          CAMERA_KEY_ALIAS: ${{ secrets.CAMERA_KEY_ALIAS }}
+          CAMERA_KEY_PASSWORD: ${{ secrets.CAMERA_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: camera
+          path: ./upload/
+
   publish-game-master-image:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'Tk75Attractions/struckout' && github.ref_name == 'master' }}
@@ -193,7 +290,7 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'master' }}
-    needs: [get-version, rust-build, unity-build]
+    needs: [get-version, rust-build, unity-build, launcher-build, camera-build]
     permissions:
       contents: write
     steps:
@@ -209,10 +306,20 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           pattern: rust-*
+      - name: Download launcher artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: launcher-*
+      - name: Download camera artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: camera
+          path: camera
       - name: Create release
         run: |
           gh release create ${{ needs.get-version.outputs.version }} \
             rust-x86_64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
+            launcher-*/* camera/camera.apk \
             projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \
             projector-x86_64-linux/projector-x86_64-linux.zip
