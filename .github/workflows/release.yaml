@@ -183,7 +183,7 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'master' }}
-    needs: [rust-build, unity-build]
+    needs: [get-version, rust-build, unity-build]
     permissions:
       contents: write
     steps:
@@ -201,8 +201,7 @@ jobs:
           pattern: rust-*
       - name: Create release
         run: |
-          VERSION=$(cargo xtask release next-version)
-          gh release create $VERSION \
+          gh release create ${{ needs.get-version.outputs.version }} \
             rust-x86_64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
             projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \
