@@ -6,8 +6,8 @@ namespace Struckout.Launcher.Core.Tests;
 
 public class PlatformTests
 {
-    private static readonly Release Nightly = new(
-        "nightly",
+    private static readonly Release Latest = new(
+        "2026-10-19.0",
         DateTimeOffset.UnixEpoch,
         new[]
         {
@@ -23,7 +23,7 @@ public class PlatformTests
     [InlineData(OperatingSystemKind.Linux, CpuArchitecture.X64, "ball-tracker-x86_64-linux")]
     public void PicksTheAssetThisHostRuns(OperatingSystemKind os, CpuArchitecture architecture, string expected)
     {
-        var asset = ReleaseAssets.Pick(Nightly, new HostPlatform(os, architecture), "ball-tracker");
+        var asset = ReleaseAssets.Pick(Latest, new HostPlatform(os, architecture), "ball-tracker");
 
         Assert.Equal(expected, asset.Name);
     }
@@ -32,7 +32,7 @@ public class PlatformTests
     public void PicksArchives()
     {
         var asset = ReleaseAssets.Pick(
-            Nightly, new HostPlatform(OperatingSystemKind.Linux, CpuArchitecture.X64), "projector", ".zip");
+            Latest, new HostPlatform(OperatingSystemKind.Linux, CpuArchitecture.X64), "projector", ".zip");
 
         Assert.Equal("projector-x86_64-linux.zip", asset.Name);
     }
@@ -43,7 +43,7 @@ public class PlatformTests
     public void UnsupportedHostIsAnError(OperatingSystemKind os, CpuArchitecture architecture)
     {
         var error = Assert.Throws<LauncherException>(
-            () => ReleaseAssets.Pick(Nightly, new HostPlatform(os, architecture), "ball-tracker"));
+            () => ReleaseAssets.Pick(Latest, new HostPlatform(os, architecture), "ball-tracker"));
 
         Assert.Contains("この PC", error.Message, StringComparison.Ordinal);
     }

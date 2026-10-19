@@ -26,7 +26,7 @@ public sealed record HostPlatform(OperatingSystemKind Os, CpuArchitecture Archit
     /// Suffixes of the release assets (<c>&lt;module&gt;-&lt;suffix&gt;</c>) this host can run, preferred first.
     /// </summary>
     /// <remarks>
-    /// The names follow the "Rename binaries" step of <c>.github/workflows/nightly_release.yaml</c>.
+    /// The names follow the "Rename binaries" step of <c>.github/workflows/release.yaml</c>.
     /// Windows on Arm runs x86_64 binaries through emulation, so it falls back to them until
     /// native arm64 builds are published. macOS on Intel and Linux on Arm have no fallback.
     /// </remarks>

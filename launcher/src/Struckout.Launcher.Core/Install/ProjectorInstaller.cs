@@ -10,7 +10,7 @@ internal sealed class ProjectorInstaller(HostPlatform platform, AppPaths paths, 
     /// <summary>The player inside the zip.</summary>
     /// <remarks>
     /// The top directory is the build target that the "unity-build" job of
-    /// <c>.github/workflows/nightly_release.yaml</c> passes to game-ci/unity-builder.
+    /// <c>.github/workflows/release.yaml</c> passes to game-ci/unity-builder.
     /// </remarks>
     internal static string ExecutableInArchive(OperatingSystemKind os) => os switch
     {

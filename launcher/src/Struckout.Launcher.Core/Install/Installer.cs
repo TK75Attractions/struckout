@@ -33,9 +33,10 @@ public sealed class Installer
 
     public InstallState State { get; }
 
-    /// <exception cref="LauncherException"></exception>
-    public Task<Release> GetReleaseAsync(string tag, CancellationToken cancellationToken) =>
-        github.GetReleaseAsync(tag, cancellationToken);
+    /// <summary>The release to install: the latest one.</summary>
+    /// <exception cref="LauncherException">There is no release or GitHub can't be reached.</exception>
+    public Task<Release> GetReleaseAsync(CancellationToken cancellationToken) =>
+        github.GetLatestReleaseAsync(cancellationToken);
 
     /// <summary>
     /// Installs <paramref name="modules"/> from <paramref name="release"/>, with their prerequisites.

@@ -8,8 +8,9 @@ namespace Struckout.Launcher.Core.Modules;
 /// The compose files are the ones in <c>game_master/</c> of the release. <c>compose.release.yaml</c> replaces the
 /// build with the image published to ghcr.io, so the PC doesn't need the source.
 /// </remarks>
+/// <param name="version">The release tag, which is also the tag of the image.</param>
 public sealed class GameMasterCompose(
-    HostPlatform platform, string docker, string directory, string password, ICommandRunner runner)
+    HostPlatform platform, string docker, string directory, string version, string password, ICommandRunner runner)
 {
     /// <summary>The files under <c>game_master/</c> of the repository, in the order compose merges them.</summary>
     public static IReadOnlyList<string> Files { get; } = ["compose.yaml", "compose.prod.yaml", "compose.release.yaml"];
@@ -37,7 +38,11 @@ public sealed class GameMasterCompose(
             new CommandOptions
             {
                 WorkingDirectory = Directory,
-                Environment = new Dictionary<string, string> { ["MYSQL_ROOT_PASSWORD"] = password },
+                Environment = new Dictionary<string, string>
+                {
+                    ["GAME_MASTER_VERSION"] = version,
+                    ["MYSQL_ROOT_PASSWORD"] = password,
+                },
             },
             cancellationToken);
     }

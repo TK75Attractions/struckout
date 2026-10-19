@@ -95,8 +95,8 @@ public sealed partial class InstallViewModel : ObservableObject, IDisposable
     {
         await RunAsync(async (installer, token) =>
         {
-            release = await installer.GetReleaseAsync(GitHubClient.DefaultReleaseTag, token);
-            ReleaseText = $"リリース {release.Tag} ({ModuleItemViewModel.FormatTime(release.PublishedAt)} 公開)";
+            release = await installer.GetReleaseAsync(token);
+            ReleaseText = $"最新のリリース: {release.Tag} ({ModuleItemViewModel.FormatTime(release.PublishedAt)} 公開)";
         });
     }
 
@@ -112,7 +112,7 @@ public sealed partial class InstallViewModel : ObservableObject, IDisposable
 
         await RunAsync(async (installer, token) =>
         {
-            release ??= await installer.GetReleaseAsync(GitHubClient.DefaultReleaseTag, token);
+            release ??= await installer.GetReleaseAsync(token);
             var download = new Progress<DownloadProgress>(p =>
             {
                 IsDownloading = p.Total is > 0 && p.Received < p.Total;

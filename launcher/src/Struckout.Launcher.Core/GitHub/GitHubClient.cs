@@ -19,9 +19,6 @@ public sealed class GitHubClient(HttpClient http, string repository, GitHubCrede
     /// <summary>The repository the releases come from.</summary>
     public const string DefaultRepository = "TK75Attractions/struckout";
 
-    /// <summary>The release that <c>.github/workflows/nightly_release.yaml</c> rebuilds every night.</summary>
-    public const string DefaultReleaseTag = "nightly";
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -31,11 +28,21 @@ public sealed class GitHubClient(HttpClient http, string repository, GitHubCrede
 
     public GitHubCredential Credential { get; } = credential;
 
+    /// <summary>
+    /// The newest release that <c>.github/workflows/release.yaml</c> published (tagged like <c>2026-10-19.0</c>).
+    /// Pre-releases such as the old <c>nightly</c> are skipped.
+    /// </summary>
+    /// <exception cref="LauncherException">There is no release or GitHub can't be reached.</exception>
+    public Task<Release> GetLatestReleaseAsync(CancellationToken cancellationToken) =>
+        GetReleaseAsync("releases/latest", "最新のリリース", cancellationToken);
+
     /// <exception cref="LauncherException">The release doesn't exist or GitHub can't be reached.</exception>
-    public async Task<Release> GetReleaseAsync(string tag, CancellationToken cancellationToken)
+    public Task<Release> GetReleaseAsync(string tag, CancellationToken cancellationToken) =>
+        GetReleaseAsync($"releases/tags/{Uri.EscapeDataString(tag)}", $"リリース {tag}", cancellationToken);
+
+    private async Task<Release> GetReleaseAsync(string path, string name, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get, $"https://api.github.com/repos/{Repository}/releases/tags/{Uri.EscapeDataString(tag)}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Repository}/{path}");
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
         // Only api.github.com gets the token. HttpClient drops it on redirects to other hosts.
@@ -49,7 +56,7 @@ public sealed class GitHubClient(HttpClient http, string repository, GitHubCrede
             using var response = await http.SendAsync(request, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                throw new LauncherException($"{Repository} にリリース {tag} がありません");
+                throw new LauncherException($"{Repository} に{name}がありません");
             }
 
             if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)

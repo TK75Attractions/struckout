@@ -375,7 +375,8 @@ public sealed class Supervisor : IDisposable
                 var password = GameMasterSecret.Load(paths)
                     ?? throw new LauncherException("データベースのパスワードがありません。インストールし直してください");
                 return new GameMasterRunner(
-                    new GameMasterCompose(platform, Tool(PrerequisiteId.Docker), compose.Directory, password, runner),
+                    new GameMasterCompose(
+                        platform, Tool(PrerequisiteId.Docker), compose.Directory, compose.ReleaseTag, password, runner),
                     ports.GameMasterGrpc);
             case (ModuleId.Camera, ApkInstallation):
                 return new CameraRunner(new Adb(Tool(PrerequisiteId.Adb), runner), paths.CamerasFile, ports);

@@ -7,7 +7,7 @@ namespace Struckout.Launcher.Core.Launch;
 
 /// <summary>The camera app on the phones in <c>cameras.json</c> that are connected over adb.</summary>
 /// <remarks>
-/// The app is controlled with the broadcasts of <c>remote/RemoteControl.kt</c>, like <c>scripts/camera-remote.ps1</c>.
+/// The app is controlled with the broadcasts of <c>remote/RemoteControl.kt</c>, like <c>scripts/camera_remote.py</c>.
 /// </remarks>
 internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPorts ports) : IModuleRunner
 {

@@ -13,14 +13,14 @@ public class InstallStateTests
         var state = new InstallState();
         state.Modules[ModuleId.BallTracker] = new ExecutableInstallation
         {
-            ReleaseTag = "nightly",
+            ReleaseTag = "2026-10-19.0",
             ReleasePublishedAt = Published,
             Directory = "/data/modules/ball-tracker",
             Executable = "/data/modules/ball-tracker/ball_tracker",
         };
         state.Modules[ModuleId.Camera] = new ApkInstallation
         {
-            ReleaseTag = "nightly",
+            ReleaseTag = "2026-10-19.0",
             ReleasePublishedAt = Published,
             Directory = "/data/modules/camera",
             Package = "com.taichi765.struckoutCameraApp.highspeed",
@@ -44,7 +44,7 @@ public class InstallStateTests
         state.Prerequisites[PrerequisiteId.Ffmpeg] = new PackageManagerPrerequisite(PackageManager.HomebrewCask, "ffmpeg");
         state.Modules[ModuleId.GameMaster] = new ComposeInstallation
         {
-            ReleaseTag = "nightly",
+            ReleaseTag = "2026-10-19.0",
             ReleasePublishedAt = Published,
             Directory = "/data/modules/game-master",
         };

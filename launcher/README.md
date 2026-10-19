@@ -5,12 +5,14 @@ struckout のモジュールを PC にインストールし、依存の順に起
 
 画面は 2 つ。
 
-- **インストール**: モジュールを選んで、nightly リリースからインストール、更新、アンインストールする
+- **インストール**: モジュールを選んで、最新のリリースからインストール、更新、アンインストールする
 - **起動**: この PC で動かすモジュールを、依存の順に起動して見張る
 
 ## 入手する
 
-[nightly リリース](https://github.com/TK75Attractions/struckout/releases/tag/nightly) から、OS に合うものを 1 つダウンロードする。
+[最新のリリース](https://github.com/TK75Attractions/struckout/releases/latest) から、OS に合うものを 1 つダウンロードする。
+リリースは `.github/workflows/release.yaml` を実行するたびに作られ、`2026-10-19.0` のようなタグが付く。
+ランチャーはいつも最新のリリース (プレリリースを除く) を入れ、入れた版より新しいリリースがあれば「更新あり」と出す。
 
 | OS | ファイル |
 |---|---|
@@ -31,7 +33,7 @@ macOS と Linux では `chmod +x` してから実行する。
 | ball-tracker | リリースの `ball-tracker-<OS>` | FFmpeg |
 | touchpanel | リリースの `touchpanel-<OS>` | |
 | projector | リリースの `projector-<OS>.zip` を展開したもの | |
-| game-master | `game_master/compose*.yaml` と ghcr.io のイメージ (`docker compose pull`) | Docker |
+| game-master | リリースの `game_master/compose*.yaml` と、リリースと同じタグの ghcr.io のイメージ (`docker compose pull`) | Docker |
 | camera | リリースの `camera.apk` を、`cameras.json` にある接続中のスマホに `adb install` | Android Platform Tools |
 
 要るツールが見つからなければ入れる。Windows は winget、macOS は Homebrew、Android Platform Tools はどの OS でも Google から
@@ -91,7 +93,7 @@ flowchart LR
 | projector | `-trackerHost`、`-masterHost`、`-machineId`、`-monitor` などを付けて起動する | プロセスが動いている |
 | touchpanel | `--address`、`--machine-id` を付けて起動する | プロセスが動いている |
 
-camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera-remote.ps1` の config と同じ)。
+camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
 
 「すべて止める」かウィンドウを閉じると、起動したものを逆の順に止める。Windows の ball_tracker はウィンドウを持たない
 ので、10 秒待ってから強制終了する。
@@ -150,7 +152,7 @@ mise run launcher:fmt
 ```
 
 CI (`.github/workflows/launcher_ci.yaml`) は、整形 (`dotnet format --verify-no-changes`)、ビルド (警告はエラー)、テストを確かめる。
-配布物は `.github/workflows/nightly_release.yaml` の `launcher-build` が、自己完結の単一ファイルとして作る。
+配布物は `.github/workflows/release.yaml` の `launcher-build` が、自己完結の単一ファイルとして作る。
 
 ### camera.apk の署名
 
@@ -163,4 +165,4 @@ Android Studio から入れたアプリは鍵が違うので、初めてラン�
 
 - 動いているかは、待ち受けのポートにつながるかで確かめている。各モジュールにヘルスチェック (game_master なら gRPC の
   health checking protocol) ができたら、それを使う
-- game-master のイメージは ghcr.io のパッケージが公開されていないと取得できない
+- game-master のイメージは ghcr.io のパッケージが公開されていないと取得できない (#274)

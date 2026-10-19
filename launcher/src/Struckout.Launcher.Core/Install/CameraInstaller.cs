@@ -6,7 +6,7 @@ namespace Struckout.Launcher.Core.Install;
 /// <summary>The camera app: <c>camera.apk</c> of the release, installed on the phones in <c>cameras.json</c>.</summary>
 internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader, ICommandRunner runner) : IModuleInstaller
 {
-    /// <summary>The asset the "camera-build" job of <c>.github/workflows/nightly_release.yaml</c> uploads.</summary>
+    /// <summary>The asset the "camera-build" job of <c>.github/workflows/release.yaml</c> uploads.</summary>
     internal const string AssetName = "camera.apk";
 
     public async Task<ModuleInstallation> InstallAsync(InstallContext context, ModuleInstallation? previous)
