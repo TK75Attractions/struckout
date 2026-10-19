@@ -24,7 +24,7 @@ use crate::{
     data::Player,
 };
 
-const GAME_DURATION: SignedDuration = SignedDuration::seconds(150);
+const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
 
 #[derive(Debug)]
 pub struct Game {

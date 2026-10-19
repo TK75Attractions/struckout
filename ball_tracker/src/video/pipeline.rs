@@ -69,7 +69,11 @@ impl Pipeline {
         let (width, height) = (settings.width, settings.height);
         let camera_id = settings.camera_id;
         // GPU でデコードするときは、入力の前に方式を指定する。デコードした画像は ffmpeg が CPU 側に戻してから縮める
-        let hwaccel: Vec<&str> = options.hwaccel.as_deref().map(|name| vec!["-hwaccel", name]).unwrap_or_default();
+        let hwaccel: Vec<&str> = options
+            .hwaccel
+            .as_deref()
+            .map(|name| vec!["-hwaccel", name])
+            .unwrap_or_default();
         let mut child = Command::new(&options.ffmpeg)
             .args([
                 "-hide_banner",
@@ -129,11 +133,29 @@ impl Pipeline {
             let settings = Arc::clone(&settings);
             let snapshot_dir = options.snapshot_dir.clone();
             let detection = options.detection;
-            thread::Builder::new().name(format!("video-analyze-{camera_id}")).spawn(move || {
-                analyze_loop(camera_id, &mut stdout, width, height, &pending, &settings, snapshot_dir, detection, &out);
-            })?;
+            thread::Builder::new()
+                .name(format!("video-analyze-{camera_id}"))
+                .spawn(move || {
+                    analyze_loop(
+                        camera_id,
+                        &mut stdout,
+                        width,
+                        height,
+                        &pending,
+                        &settings,
+                        snapshot_dir,
+                        detection,
+                        &out,
+                    );
+                })?;
         }
-        info!(camera_id, width, height, hwaccel = options.hwaccel.as_deref().unwrap_or("none"), "started analyzing video");
+        info!(
+            camera_id,
+            width,
+            height,
+            hwaccel = options.hwaccel.as_deref().unwrap_or("none"),
+            "started analyzing video"
+        );
         Ok(Self {
             camera_id,
             width,
@@ -193,7 +215,10 @@ impl Pipeline {
         match input.try_send(data) {
             Ok(()) => {}
             Err(TrySendError::Full(_)) => {
-                warn!(camera_id = self.camera_id, "video decoder is falling behind; waiting for the next key frame");
+                warn!(
+                    camera_id = self.camera_id,
+                    "video decoder is falling behind; waiting for the next key frame"
+                );
                 if meta.is_some() {
                     self.pending.lock().pop_back();
                 }
@@ -237,10 +262,17 @@ fn analyze_loop(
             continue;
         };
         if let Some(dir) = snapshot_dir.take() {
-            let path = dir.join(format!("camera{camera_id}_{}.bmp", Utc::now().format("%Y%m%d-%H%M%S")));
+            let path = dir.join(format!(
+                "camera{camera_id}_{}.bmp",
+                Utc::now().format("%Y%m%d-%H%M%S")
+            ));
             match save_bmp(&path, &image, width, height) {
-                Ok(()) => info!(camera_id, path = %path.display(), "saved the first analysis image"),
-                Err(e) => warn!(camera_id, error = ?e, path = %path.display(), "failed to save the first analysis image"),
+                Ok(()) => {
+                    info!(camera_id, path = %path.display(), "saved the first analysis image")
+                }
+                Err(e) => {
+                    warn!(camera_id, error = ?e, path = %path.display(), "failed to save the first analysis image")
+                }
             }
         }
         {
@@ -251,7 +283,12 @@ fn analyze_loop(
         }
         let begin = Instant::now();
         let analyzed = analyzer.analyze(&image, meta.sensor_timestamp_ns, meta.timestamp_ms);
-        stats.add(begin.elapsed(), Utc::now() - meta.received_at, analyzed.packet.is_some(), analyzed.ignored);
+        stats.add(
+            begin.elapsed(),
+            Utc::now() - meta.received_at,
+            analyzed.packet.is_some(),
+            analyzed.ignored,
+        );
         if let Some(packet) = analyzed.packet {
             if out.blocking_send((meta.received_at, packet)).is_err() {
                 break;
@@ -305,10 +342,23 @@ struct Stats {
 
 impl Stats {
     fn new() -> Self {
-        Self { started: Instant::now(), frames: 0, with_detections: 0, ignored: 0, analysis: Duration::ZERO, delays_ms: Vec::new() }
+        Self {
+            started: Instant::now(),
+            frames: 0,
+            with_detections: 0,
+            ignored: 0,
+            analysis: Duration::ZERO,
+            delays_ms: Vec::new(),
+        }
     }
 
-    fn add(&mut self, analysis: Duration, delay: chrono::TimeDelta, detected: bool, ignored: usize) {
+    fn add(
+        &mut self,
+        analysis: Duration,
+        delay: chrono::TimeDelta,
+        detected: bool,
+        ignored: usize,
+    ) {
         self.frames += 1;
         self.with_detections += u32::from(detected);
         self.ignored += ignored;
@@ -330,7 +380,10 @@ impl Stats {
             fps = format!("{:.1}", f64::from(self.frames) / seconds),
             frames_with_detections = self.with_detections,
             ignored_detections = self.ignored,
-            analysis_ms = format!("{:.2}", self.analysis.as_secs_f64() * 1000.0 / f64::from(self.frames.max(1))),
+            analysis_ms = format!(
+                "{:.2}",
+                self.analysis.as_secs_f64() * 1000.0 / f64::from(self.frames.max(1))
+            ),
             delay_ms_p50 = percentile(0.5),
             delay_ms_p95 = percentile(0.95),
             max_delay_ms = self.delays_ms.last().copied().unwrap_or_default(),

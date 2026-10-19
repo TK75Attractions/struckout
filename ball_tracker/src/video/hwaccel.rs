@@ -40,7 +40,11 @@ pub fn select(ffmpeg: &str, requested: &str) -> Option<String> {
     for name in candidates {
         if !available.iter().any(|a| a == name) {
             if !requested.eq_ignore_ascii_case("auto") {
-                warn!(hwaccel = name, ?available, "this ffmpeg does not support the requested hwaccel; decoding on the CPU");
+                warn!(
+                    hwaccel = name,
+                    ?available,
+                    "this ffmpeg does not support the requested hwaccel; decoding on the CPU"
+                );
             }
             continue;
         }
@@ -48,15 +52,25 @@ pub fn select(ffmpeg: &str, requested: &str) -> Option<String> {
             info!(hwaccel = name, ?available, "decoding video on the GPU");
             return Some(name.to_string());
         }
-        warn!(hwaccel = name, "could not initialize the GPU decoder; trying the next one");
+        warn!(
+            hwaccel = name,
+            "could not initialize the GPU decoder; trying the next one"
+        );
     }
-    info!(?available, "no usable GPU decoder; decoding video on the CPU");
+    info!(
+        ?available,
+        "no usable GPU decoder; decoding video on the CPU"
+    );
     None
 }
 
 /// `ffmpeg -hwaccels` が並べる方式の名前。
 fn list(ffmpeg: &str) -> Vec<String> {
-    let Ok(output) = Command::new(ffmpeg).args(["-hide_banner", "-hwaccels"]).stdin(Stdio::null()).output() else {
+    let Ok(output) = Command::new(ffmpeg)
+        .args(["-hide_banner", "-hwaccels"])
+        .stdin(Stdio::null())
+        .output()
+    else {
         return Vec::new();
     };
     String::from_utf8_lossy(&output.stdout)

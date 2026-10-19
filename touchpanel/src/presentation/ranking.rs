@@ -1,6 +1,6 @@
-use tracing::debug;
+use tracing::{debug, instrument};
 
-use crate::Application;
+use crate::{Application, NavController};
 use slint::{ComponentHandle as _, Global as _};
 use stern::nav::NavDestination;
 use touchpanel_ui::{
@@ -11,7 +11,9 @@ touchpanel_ui::define_ranking_mapper! {}
 
 viewmodel_rc!(RankingViewModel, RankingAdopter);
 
+#[derive(Debug)]
 struct RankingViewModel {
+    nav_controller: NavController,
     _state: RankingStates<Mapper>,
 }
 
@@ -24,11 +26,17 @@ impl RankingViewModel {
                     .global::<touchpanel_ui::RankingAdopter>()
                     .as_weak(),
             ),
+            nav_controller: application.nav_controller.clone(),
         }
     }
 }
 
-impl RankingViewModelTrait for RankingViewModel {}
+impl RankingViewModelTrait for RankingViewModel {
+    #[instrument]
+    fn on_move_to_start_screen(&mut self) {
+        self.nav_controller.navigate(NavRoute::Start);
+    }
+}
 
 pub struct RankingDestination(
     #[allow(unused)] // just for viewmodel initialization

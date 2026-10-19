@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Struckout.Domain;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 盤面の矩形。的の配置と描画のスケールが同じ値を見ていることが前提なので、

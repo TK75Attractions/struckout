@@ -3,7 +3,7 @@ using Struckout.Application;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     public class GameRuntimeStateTests
     {

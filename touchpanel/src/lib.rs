@@ -1,9 +1,7 @@
-#![allow(dead_code, unused_variables)]
-
 use clap::Parser;
 use slint::ComponentHandle;
 use std::sync::{Arc, OnceLock};
-use stern::{PropertyHandle, WorkerThread, worker::SlintExecutor};
+use stern::{WorkerThread, worker::SlintExecutor};
 use tracing::info;
 
 use touchpanel_ui::NavRoute;
@@ -21,9 +19,6 @@ pub mod presentation;
 const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
 type NavController = stern::nav::NavController<NavRoute>;
-type NavHost = stern::nav::NavHost<NavRoute>;
-type NavHostBuilder = stern::nav::NavHostBuilder<NavRoute>;
-type NavHostBuilderError = stern::nav::NavHostBuilderError<NavRoute>;
 
 pub struct Application {
     nav_controller: NavController,
@@ -31,28 +26,6 @@ pub struct Application {
     #[allow(dead_code)] // チャンネルを生存させるために必要
     pub worker: WorkerThread<Context, SlintExecutor>,
     config: Arc<Config>,
-}
-
-impl Application {
-    fn show_backbutton_prop(&self) -> PropertyHandle<bool> {
-        PropertyHandle::new({
-            let ui_weak = self.ui.as_weak();
-            move |v| {
-                let ui = ui_weak.unwrap();
-                ui.set_show_backbutton(v);
-            }
-        })
-    }
-
-    fn show_topbar_prop(&self) -> PropertyHandle<bool> {
-        PropertyHandle::new({
-            let ui = self.ui.as_weak();
-            move |v| {
-                let ui = ui.unwrap();
-                ui.set_show_topbar(v);
-            }
-        })
-    }
 }
 
 /// Context of [`WorkerThread`]. i.e., state holded in tokio threads.
@@ -72,6 +45,7 @@ impl Context {
 
 /// CLI arguments.
 #[derive(Parser)]
+#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
 struct Cli {
     #[arg(
         short = 'a',
@@ -107,6 +81,7 @@ impl Config {
 
 pub fn run_main() {
     let cli = Cli::parse();
+
     let config = Arc::new(Config::from_cli(cli));
 
     let ui = touchpanel_ui::AppWindow::new().unwrap();

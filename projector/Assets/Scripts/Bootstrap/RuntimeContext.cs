@@ -1,5 +1,6 @@
-using Struckout.Application;
 using System.Collections.Generic;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Bootstrap
@@ -10,6 +11,7 @@ namespace Struckout.Bootstrap
         public IPacketRouter PacketRouter { get; private set; }
         public List<IAsyncDestroy> DestroyEvents { get; private set; } = new();
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public RuntimeContext(
             IPacketRouter router,
             IClientService<ProjectorPacket> client

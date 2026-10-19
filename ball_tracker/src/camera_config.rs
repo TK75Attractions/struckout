@@ -39,7 +39,14 @@ pub struct CameraEntry {
 
 impl CameraEntry {
     pub fn camera_pose(&self) -> CameraPose {
-        let [x, y, z, rotation_x_degrees, rotation_y_degrees, rotation_z_degrees] = self.pose;
+        let [
+            x,
+            y,
+            z,
+            rotation_x_degrees,
+            rotation_y_degrees,
+            rotation_z_degrees,
+        ] = self.pose;
         CameraPose {
             x,
             y,
@@ -72,14 +79,17 @@ pub struct CameraConfig {
 
 impl CameraConfig {
     pub fn load(path: &Path) -> anyhow::Result<Self> {
-        let text = std::fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+        let text = std::fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
         Self::parse(&text).with_context(|| format!("failed to parse {}", path.display()))
     }
 
     pub fn parse(text: &str) -> anyhow::Result<Self> {
         // Windows のツールで保存した JSON は先頭に BOM が付くことがある
         let file: CameraConfigFile = serde_json::from_str(text.trim_start_matches('\u{feff}'))?;
-        Ok(Self { entries: file.cameras })
+        Ok(Self {
+            entries: file.cameras,
+        })
     }
 
     /// 書いた順。添え字がそのまま camera_id になる。

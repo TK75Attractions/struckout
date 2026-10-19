@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Struckout.Domain;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 物理座標 (m) から描画座標への変換。

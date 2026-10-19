@@ -1,6 +1,6 @@
 use slint::{ComponentHandle, Global, SharedString, ToSharedString};
 use stern::{
-    PropertyHandle, WorkerThread,
+    WorkerThread,
     nav::NavDestination,
     worker::{ForegroundExecutor, SlintExecutor},
 };
@@ -33,8 +33,6 @@ pub struct NameInputViewModel<C, E> {
     state: NameInputFirstStates<Mapper>,
     /// Token to cancel request to game-master.
     gm_cancel_tok: Option<CancellationToken>,
-    show_topbar_prop: PropertyHandle<bool>,
-    show_backbutton_prop: PropertyHandle<bool>,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -80,8 +78,6 @@ impl NameInputViewModel<Context, SlintExecutor> {
                     .as_weak(),
             ),
             gm_cancel_tok: None,
-            show_topbar_prop: application.show_topbar_prop(),
-            show_backbutton_prop: application.show_backbutton_prop(),
         }
     }
 }
@@ -233,10 +229,6 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
         let NavRoute::NameInputFirst = route else {
             panic!("matched variant should be given");
         };
-
-        let vm = self.0.borrow();
-        vm.show_topbar_prop.set(true);
-        vm.show_backbutton_prop.set(true);
     }
 
     fn route(&self) -> NavRouteKind {
@@ -359,8 +351,6 @@ mod tests {
     impl NameInputScreenTest {
         pub fn new(cx: MockPlayerRepository) -> Self {
             let route = Rc::new(RefCell::new(UiNavRoute::Start));
-            let show_topbar = Rc::new(RefCell::new(false));
-            let show_backbutton = Rc::new(RefCell::new(false));
 
             let nav_controller = NavController::new(NavRoute::Start, {
                 let route = Rc::clone(&route);
@@ -376,14 +366,6 @@ mod tests {
                 worker: worker.clone(),
                 state,
                 gm_cancel_tok: None,
-                show_topbar_prop: PropertyHandle::new(move |new| {
-                    let mut guard = show_topbar.borrow_mut();
-                    *guard = new;
-                }),
-                show_backbutton_prop: PropertyHandle::new(move |new| {
-                    let mut guard = show_backbutton.borrow_mut();
-                    *guard = new;
-                }),
             };
             Self { route, worker, vm }
         }

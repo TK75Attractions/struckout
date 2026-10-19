@@ -94,17 +94,11 @@ impl GameResultProvider for Context {
     }
 }
 
-pub struct ScoreDestination {
-    worker: WorkerThread<Context, SlintExecutor>,
-    viewmodel: ScoreViewModelRc,
-}
+pub struct ScoreDestination(ScoreViewModelRc);
 
 impl ScoreDestination {
     pub fn new(application: &Application) -> Self {
-        Self {
-            worker: application.worker.clone(),
-            viewmodel: ScoreViewModelRc::new(application),
-        }
+        Self(ScoreViewModelRc::new(application))
     }
 }
 
@@ -115,7 +109,7 @@ impl NavDestination<NavRoute> for ScoreDestination {
             panic!("matched variant should be given");
         };
 
-        self.viewmodel.borrow().show_result(*game_id);
+        self.0.borrow().show_result(*game_id);
     }
 
     fn route(&self) -> NavRouteKind {

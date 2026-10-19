@@ -15,11 +15,9 @@ use tokio_stream::StreamExt;
 use tonic::{Response, Status};
 use tracing::{instrument, trace};
 
-use crate::data::remaining_time::DisplayableRemainingTime;
+use crate::{GAME_MASTER_GRPC_PORT, data::remaining_time::DisplayableRemainingTime};
 
 use struckout_proto::types::{MachineId, PlayerId};
-
-const GAME_MASTER_GRPC_PORT: &str = env!("TOUCHPANEL_GAME_MASTER_GRPC_PORT");
 
 mod private {
     pub trait Sealed {}
@@ -513,7 +511,7 @@ mod tests {
     struct FakeGrpcClient {}
 
     impl InternalGrpcClient for FakeGrpcClient {
-        async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        async fn connect<D>(_dst: D) -> Result<Self, tonic::transport::Error>
         where
             D: TryInto<tonic::transport::Endpoint>,
             D::Error: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
@@ -523,14 +521,14 @@ mod tests {
 
         async fn add_player(
             &mut self,
-            request: impl tonic::IntoRequest<AddPlayerRequest>,
+            _request: impl tonic::IntoRequest<AddPlayerRequest>,
         ) -> Result<Response<AddPlayerResponse>, Status> {
             todo!()
         }
 
         async fn start_game(
             &mut self,
-            request: impl tonic::IntoRequest<StartGameRequest>,
+            _request: impl tonic::IntoRequest<StartGameRequest>,
         ) -> Result<
             Response<
                 impl Stream<Item = Result<StartGameResponse, Status>> + Unpin + Send + Sync + 'static,
@@ -564,14 +562,14 @@ mod tests {
 
         async fn get_game_result(
             &mut self,
-            request: impl tonic::IntoRequest<GetGameResultRequest>,
+            _request: impl tonic::IntoRequest<GetGameResultRequest>,
         ) -> Result<Response<GetGameResultResponse>, Status> {
             unimplemented!()
         }
 
         async fn validate_player_name(
             &mut self,
-            request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
+            _request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
         ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
             unimplemented!()
         }

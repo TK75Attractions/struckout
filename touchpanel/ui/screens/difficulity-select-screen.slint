@@ -2,7 +2,15 @@ import { Button } from "std-widgets.slint";
 import {
     SquareButton,
     TwoColorOutlinedButton,
+    CornerButton,
+    Corner,
 } from "../components/button.slint";
+import {
+    Fonts,
+    Outline,
+    StruckoutPalette,
+    FontSettings,
+} from "../styling.slint";
 
 enum Difficulity { Normal, Hard, VeryHard }
 
@@ -13,48 +21,69 @@ global Adopter {
     callback start-game();
 }
 
-component DifficulityButton {
-    in property <string> text;
-    in property <bool> highlighted;
-    callback clicked();
-
-    Button {
-        text: root.text;
-        primary: root.highlighted;
-
-        clicked => {
-            root.clicked();
-        }
-    }
-}
-
-
 export component DifficulitySelectScreen inherits Rectangle {
+    private property <length> comp_button_font_size: 24px;
+    private property <length> comp_margin_lr: 40px;
+    private property <length> comp_margin_tb: 10px;
+
+    pure function difficulty-text(difficulty: Difficulity) -> string {
+        if difficulty == Difficulity.Normal {
+            return "的が緩やかに動く";
+        } else if difficulty == Difficulity.Hard {
+            return "的が激しめに動く";
+        } else if difficulty == Difficulity.VeryHard {
+            return "的が激しく動く";
+        }
+        return "UNKNOWN DIFFICULTY";
+    }
+
     VerticalLayout {
+        alignment: LayoutAlignment.space-between;
         padding-top: 16px;
 
         VerticalLayout {
-            DifficulityButton {
-                text: "NORMAL";
-                highlighted: Adopter.selected-difficulity == Difficulity.Normal;
-
-                clicked => {
-                    Adopter.select-difficulity(Difficulity.Normal);
+            alignment: LayoutAlignment.stretch;
+            // spacing: 12px;
+            height: 75%;
+            cont1 := Rectangle {
+                TwoColorOutlinedButton {
+                    font-family: Fonts.oxanium;
+                    font-size: root.comp_button_font_size;
+                    layout-lr: root.comp_margin_lr;
+                    layout-tb: root.comp_margin_tb;
+                    text: "NORMAL";
+                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
+                    emphasize: Adopter.selected-difficulity == Difficulity.Normal;
+                    clicked => {
+                        Adopter.select-difficulity(Difficulity.Normal);
+                    }
                 }
             }
 
-            Rectangle {
+            cont2 := Rectangle {
                 TwoColorOutlinedButton {
+                    font-family: Fonts.oxanium;
+                    font-size: root.comp_button_font_size;
+                    layout-lr: root.comp_margin_lr;
+                    layout-tb: root.comp_margin_tb;
                     text: "HARD";
+                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
+                    emphasize: Adopter.selected-difficulity == Difficulity.Hard;
                     clicked => {
                         Adopter.select-difficulity(Difficulity.Hard);
                     }
                 }
             }
 
-            Rectangle {
+            cont3 := Rectangle {
                 TwoColorOutlinedButton {
+                    font-family: Fonts.oxanium;
+                    font-size: root.comp_button_font_size;
+                    layout-lr: root.comp_margin_lr;
+                    layout-tb: root.comp_margin_tb;
                     text: "VERY HARD";
+                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
+                    emphasize: Adopter.selected-difficulity == Difficulity.VeryHard;
                     clicked => {
                         Adopter.select-difficulity(Difficulity.VeryHard);
                     }
@@ -62,11 +91,37 @@ export component DifficulitySelectScreen inherits Rectangle {
             }
         }
 
-        HorizontalLayout {
-            alignment: LayoutAlignment.end;
+        Rectangle {
+            height: 25%;
 
-            SquareButton {
-                text: "Start";
+            VerticalLayout {
+                width: 40%;
+                padding-bottom: 16px;
+                padding-top: 16px;
+
+                Rectangle {
+                    border-width: Outline.level1;
+                    border-color: StruckoutPalette.ref_primary_60;
+
+                    Text {
+                        text: difficulty-text(Adopter.selected-difficulity);
+                        color: StruckoutPalette.ref_primary_90;
+                        font-size: FontSettings.body-large.font-size;
+                        font-weight: FontSettings.body-large.font-weight;
+                        font-family: Fonts.note-sans-jp;
+                    }
+                }
+            }
+
+            CornerButton {
+                x: parent.width - self.width;
+                y: parent.height - self.height;
+                height: 100%;
+                width: self.preferred-width * 1.5;
+                text: "START";
+                font-family: Fonts.oxanium;
+                font-size: root.comp_button_font_size;
+                corner: Corner.RightBottom;
                 filled: true;
                 clicked => {
                     Adopter.start-game();

@@ -8,6 +8,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  cancel-in-progress: true
+  group: nightly-release
+
 jobs:
   rust-build:
     strategy:
@@ -20,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-deps: 0
           sparse-checkout: |
             .cargo
             .mise
@@ -41,9 +46,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
       - name: Build
-        run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel
-      
-      - name: Reame binaries
+        run: SQLX_OFFLINE=true mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel --features sentry
+
+      - name: Rename binaries
         id: triple
         run: |
           mkdir upload
@@ -54,9 +59,9 @@ jobs:
               mv target/release/touchpanel.exe upload/touchpanel-x86_64-windows
               ;;
             "macos-14")
-              echo "triple=aarch64-macos" >> "$GITHUB_OUTPUT"
-              mv target/release/ball_tracker upload/ball-tracker-aarch64-macos
-              mv target/release/touchpanel upload/touchpanel-aarch64-macos
+              echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
+              mv target/release/ball_tracker upload/ball-tracker-arm64-macos
+              mv target/release/touchpanel upload/touchpanel-arm64-macos
               ;;
             "ubuntu-22.04")
               echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
@@ -106,7 +111,7 @@ jobs:
             "StandaloneWindows64")
               echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT";;
             "StandaloneOSX")
-              echo "triple=aarch64-macos" >> "$GITHUB_OUTPUT";;
+              echo "triple=arm64-macos" >> "$GITHUB_OUTPUT";;
             "StandaloneLinux64")
               echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT";;
             *)
@@ -116,7 +121,45 @@ jobs:
         with:
           name: projector-${{ steps.triple.outputs.triple }}
           path: ./build/
-  
+
+  publish-game-master-image:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'Tk75Attractions/struckout' && github.ref_name == 'master' }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/game-master
+          tags: type=raw,value=nightly
+      - name: Build and push game-master image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./game_master/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=game-master
+          cache-to: type=gha,mode=max,scope=game-master
+
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'master' }}
@@ -138,14 +181,14 @@ jobs:
           pattern: rust-*
       - name: Remove old release
         # continue even when there's no previous release
-        run: gh release delete nightly -y --cleanup-tag || true 
-        env: 
+        run: gh release delete nightly -y --cleanup-tag || true
+        env:
           GH_TOKEN: ${{ github.token }}
       - name: Create release
         run: |
           gh release create nightly --notes "nightly release" \
-            rust-x86_64-windows/* rust-x86_64-linux/* rust-aarch64-macos/* \
-            projector-aarch64-macos/projector-aarch64-macos.zip \
+            rust-x86_64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
+            projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \
             projector-x86_64-linux/projector-x86_64-linux.zip
         env:

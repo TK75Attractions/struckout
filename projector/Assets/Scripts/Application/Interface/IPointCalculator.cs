@@ -1,6 +1,6 @@
-using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface IPointCalculator
     {

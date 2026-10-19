@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// Size が直径であることを固定する。

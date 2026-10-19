@@ -1,12 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Struckout.Application;
+using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.Fake
 {
     /// <summary>
     /// game_master のかわり。接続直後に一度だけ GameStarted を流し、

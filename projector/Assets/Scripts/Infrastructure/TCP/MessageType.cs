@@ -1,4 +1,4 @@
-namespace Tk75Attractions.Struckout.V1
+namespace Struckout.Infrastructure.TCP
 {
     public enum MessageType
     {

@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-using Struckout.Application;
+using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Infrastructure;
 using UnityEngine;

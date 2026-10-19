@@ -1,8 +1,8 @@
-using Struckout.Application;
-using Struckout.Domain;
 using System.Collections.Generic;
+using Struckout.Application.Interface;
+using Struckout.Domain.TargetDefinition;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.Fake
 {
     public class FakeTargetGenerator : ITargetGenerator
     {

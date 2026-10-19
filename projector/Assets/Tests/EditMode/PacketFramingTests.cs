@@ -4,7 +4,7 @@ using Google.Protobuf;
 using NUnit.Framework;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// ball_tracker から来るパケットのフレーミング。LE u32 の長さ + protobuf 本体。

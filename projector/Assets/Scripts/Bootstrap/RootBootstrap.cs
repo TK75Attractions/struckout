@@ -1,6 +1,7 @@
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System;
+using JetBrains.Annotations;
 using VContainer.Unity;
 using Struckout.Domain;
 
@@ -12,6 +13,8 @@ namespace Struckout.Bootstrap
 
         private NetworkBootstrap _networkBootstrap;
         private GameBootstrap _gameBootstrap;
+        
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public RootBootstrap(
             NetworkBootstrap networkBootstrap,
             GameBootstrap gameBootstrap,

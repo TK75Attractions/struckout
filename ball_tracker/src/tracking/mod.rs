@@ -157,7 +157,10 @@ where
     ///
     /// `now` は [`CameraFrame`] の時刻と同じ時計 (この PC の時計) で渡す。録画を解析し直すとき
     /// (`bin/replay_video.rs`) は、[`Self::start`] の代わりにこれと [`Self::update_frame`] を直接呼ぶ。
-    pub fn poll_collisions(&mut self, now: DateTime<Utc>) -> (Vec<CollisionPoint3D>, TrackingEventsDto) {
+    pub fn poll_collisions(
+        &mut self,
+        now: DateTime<Utc>,
+    ) -> (Vec<CollisionPoint3D>, TrackingEventsDto) {
         let mut events = Vec::new();
         let collisions = self.take_due_collisions(now, &mut events);
         self.expire(now, &mut events);
@@ -267,7 +270,8 @@ where
         }
         for diagnostics in diagnostics {
             self.watch_residual(diagnostics.residual_rms);
-            if let (Some(auto_trim), Some(right)) = (&self.auto_trim, self.camera_locs.rightmost()) {
+            if let (Some(auto_trim), Some(right)) = (&self.auto_trim, self.camera_locs.rightmost())
+            {
                 auto_trim.observe(right.value(), &diagnostics);
             }
             events.push(TrackingEventBodyDto::ThrowDiagnostics(diagnostics));

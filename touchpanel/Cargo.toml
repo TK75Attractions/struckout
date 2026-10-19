@@ -58,4 +58,4 @@ mockall = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }
-struckout-yaml = { workspace = true }
+struckout-utils = { workspace = true }

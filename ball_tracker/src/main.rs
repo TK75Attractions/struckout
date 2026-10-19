@@ -23,6 +23,7 @@ use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _
 const SENTRY_DSN: &str = env!("SENTRY_DSN");
 
 #[derive(Parser)]
+#[command(version = concat!(env!("ST_COMMIT_DATE"), " (",env!("ST_COMMIT_SHORT_HASH"),")"))]
 struct Cli {
     #[arg(value_enum, long = "input", help = "detectionをどこから受け取るか")]
     detection_input: DetectionInputKind,
@@ -34,7 +35,11 @@ struct Cli {
     #[arg(short = 'c', long = "csv_path")]
     csv_path: Option<PathBuf>,
     /// 右のカメラ (位置の y が大きいほう) の時刻に足す補正 (ms)。estimate_time_offset.py で求める
-    #[arg(long = "time-trim-ms", default_value_t = 0.0, allow_negative_numbers = true)]
+    #[arg(
+        long = "time-trim-ms",
+        default_value_t = 0.0,
+        allow_negative_numbers = true
+    )]
     time_trim_ms: f64,
     /// 画像の上端の行と下端の行の露光開始の時刻の差 (ms)。指定すると、カメラが知らせた値の代わりに使う
     #[arg(long = "rolling-shutter-skew-ms", allow_negative_numbers = true)]
@@ -293,8 +298,14 @@ async fn run_main() {
         snapshot_dir: cli.video_snapshot_dir.clone(),
         record_dir: cli.video_record_dir.clone(),
     });
-    let detection_input =
-        DetectionInputImpl::new(cli.detection_input, camera_locs.clone(), clock, video, cameras).await;
+    let detection_input = DetectionInputImpl::new(
+        cli.detection_input,
+        camera_locs.clone(),
+        clock,
+        video,
+        cameras,
+    )
+    .await;
     let collision_output = CollisionOutputImpl::new(&cli).await;
     let event_logger = EventLoggerImpl::new(&cli);
 

@@ -4,15 +4,17 @@ on:
   push: 
     branches: master
     paths: 
-      - struckoutCameraApp/**
+      - camera/**
       - api/proto/**
       - .github/workflows/android_ci.yaml
+      - .mise/**
   pull_request:
     branches: master
     paths:
-      - struckoutCameraApp/**
+      - camera/**
       - api/proto/**
       - .github/workflows/android_ci.yaml
+      - .mise/**
   workflow_dispatch: 
 
 jobs:
@@ -21,19 +23,28 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: struckoutCameraApp/
+        working-directory: camera/
     steps:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            struckoutCameraApp
+            camera
             api/proto
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+            .mise
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          install_args: java protoc python
+      - name: Cache OpenCV
+        id: cache-opencv
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: camera/opencv
+          key: opencv-${{ hashFiles('camera/opencv/**') }}
+      - name: Install OpenCV
+        if: ${{ steps.cache-opencv.outputs.cache-hit != 'true' }}
+        run: mise run install-opencv
+        env:
+          MISE_TASK_RUN_AUTO_INSTALL: '0'
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - name: Install protoc
-        run: sudo apt install -y protobuf-compiler
       - name: check
         run: ./gradlew :app:check

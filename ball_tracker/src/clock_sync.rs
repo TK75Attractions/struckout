@@ -154,7 +154,10 @@ impl ClockSync {
         let offset_ns = (((t2 as i128 - t1 as i128) + (t3 as i128 - t4 as i128)) / 2) as i64;
         let round_trip_ns = (t4 - t1) - (t3 - t2);
         if round_trip_ns < 0 {
-            warn!(camera_id, round_trip_ns, "ignored an implausible time sync response");
+            warn!(
+                camera_id,
+                round_trip_ns, "ignored an implausible time sync response"
+            );
             return;
         }
         let mut state = self.state.lock();
@@ -192,7 +195,11 @@ impl ClockSync {
     /// していないカメラでは「撮影時刻 + そのカメラの撮影から受信までの最短の時間」になる。
     /// どちらもフレームの時刻が受信時刻の少し前にそろうので、追跡は予測した着弾時刻を今の時刻と
     /// そのまま比べられる。時刻が壊れているフレームは `None` を返す。
-    pub fn frame(&self, received_at: DateTime<Utc>, packet: DetectionsPacket) -> Option<CameraFrame> {
+    pub fn frame(
+        &self,
+        received_at: DateTime<Utc>,
+        packet: DetectionsPacket,
+    ) -> Option<CameraFrame> {
         let mut state = self.state.lock();
         let captured_at = Self::capture_time(&mut state, received_at, &packet);
         let time = match captured_at {
@@ -413,7 +420,10 @@ const AUTO_TRIM_LIMIT_MS: f64 = 30.0;
 
 impl AutoTimeTrim {
     pub fn new(apply: bool) -> Self {
-        Self { apply, state: Mutex::new(AutoTrimState::default()) }
+        Self {
+            apply,
+            state: Mutex::new(AutoTrimState::default()),
+        }
     }
 
     /// 右のカメラ `camera_id` のフレームの時刻に足す補正。
@@ -439,15 +449,25 @@ impl AutoTimeTrim {
         let Some(&left) = cameras.iter().find(|&&id| id != right) else {
             return;
         };
-        let enough_rays = diagnostics.rays.values().all(|&count| count >= AUTO_TRIM_MIN_RAYS) && cameras.len() == 2;
+        let enough_rays = diagnostics
+            .rays
+            .values()
+            .all(|&count| count >= AUTO_TRIM_MIN_RAYS)
+            && cameras.len() == 2;
         let shift = diagnostics.best_time_shift_ms;
         let at_edge = !TIME_SHIFT_INTERIOR.contains(&shift);
         let mut state = self.state.lock();
         if state.pair != Some((left, right)) {
             if state.pair.is_some() {
-                info!(left, right, "cameras changed; restarting the automatic time trim");
+                info!(
+                    left,
+                    right, "cameras changed; restarting the automatic time trim"
+                );
             }
-            *state = AutoTrimState { pair: Some((left, right)), ..Default::default() };
+            *state = AutoTrimState {
+                pair: Some((left, right)),
+                ..Default::default()
+            };
         }
         if !enough_rays || at_edge || diagnostics.best_residual_rms > AUTO_TRIM_MAX_RESIDUAL {
             return;
@@ -492,7 +512,13 @@ mod auto_trim_tests {
     use super::*;
     use crate::tracking::ThrowDiagnosticsDto;
 
-    fn throw(left: u32, right: u32, shift_ms: i64, rays: usize, residual: f64) -> ThrowDiagnosticsDto {
+    fn throw(
+        left: u32,
+        right: u32,
+        shift_ms: i64,
+        rays: usize,
+        residual: f64,
+    ) -> ThrowDiagnosticsDto {
         ThrowDiagnosticsDto {
             track_id: serde_json::from_str("1").unwrap(),
             rays: BTreeMap::from([(left, rays), (right, rays)]),
@@ -511,7 +537,9 @@ mod auto_trim_tests {
         let trim = AutoTimeTrim::new(true);
         // 本当に必要な補正は +8 ms。補正をかけるたびに、残るずれはそのぶん小さくなる
         let truth = 8.0;
-        let noise = [1.0, -2.0, 0.0, 3.0, -1.0, 2.0, -3.0, 0.0, 1.0, -1.0, 0.0, 2.0];
+        let noise = [
+            1.0, -2.0, 0.0, 3.0, -1.0, 2.0, -3.0, 0.0, 1.0, -1.0, 0.0, 2.0,
+        ];
         for (i, n) in noise.iter().enumerate() {
             let shift = (truth - ms(&trim, 1) + n).round() as i64;
             trim.observe(1, &throw(0, 1, shift, 10, 0.01));
@@ -519,7 +547,11 @@ mod auto_trim_tests {
                 assert_eq!(ms(&trim, 1), 0.0, "no trim before enough throws");
             }
         }
-        assert!((ms(&trim, 1) - truth).abs() < 1.5, "trim {} should approach {truth}", ms(&trim, 1));
+        assert!(
+            (ms(&trim, 1) - truth).abs() < 1.5,
+            "trim {} should approach {truth}",
+            ms(&trim, 1)
+        );
         // 左のカメラには補正をかけない
         assert_eq!(ms(&trim, 0), 0.0);
     }

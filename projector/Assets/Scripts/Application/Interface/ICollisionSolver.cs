@@ -1,8 +1,8 @@
 using System.Collections.Generic;
+using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.V1;
-using Struckout.Domain;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface ICollisionSolver
     {

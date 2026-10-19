@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     /// <summary>
     /// game_master との通信。gRPC で話す。

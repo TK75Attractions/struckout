@@ -1,6 +1,8 @@
 using Struckout.Domain;
 using System.Collections.Generic;
 using System;
+using Struckout.Application.Interface;
+using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.V1;
 
 namespace Struckout.Application

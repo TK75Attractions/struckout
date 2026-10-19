@@ -2,7 +2,7 @@ using System;
 using NUnit.Framework;
 using Struckout.Domain;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 実行中の調整画面 (F2) が使う、2 点からの係数の計算と、逆変換・値の写し。

@@ -1,5 +1,6 @@
 using System;
-using Struckout.Application;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
@@ -18,6 +19,7 @@ namespace Struckout.Infrastructure
 
         public event Action<CollisionPoint> OnCollisionReceived;
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public SensorProvider(CollisionCoordinateTransform transform)
         {
             _transform = transform ?? throw new ArgumentNullException(nameof(transform));

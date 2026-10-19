@@ -1,5 +1,6 @@
 using UnityEngine;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 
 namespace Struckout.Unity
 {

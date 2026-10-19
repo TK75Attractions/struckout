@@ -58,7 +58,10 @@ impl Recorder {
             let _ = video.flush();
             info!(camera_id, path = %packets_path.display(), "finished recording the video stream");
         })?;
-        Ok(Self { tx: Some(tx), worker: Some(worker) })
+        Ok(Self {
+            tx: Some(tx),
+            worker: Some(worker),
+        })
     }
 
     /// 受け取ったパケットを 1 件書く。
@@ -92,7 +95,9 @@ pub struct RecordingReader {
 
 impl RecordingReader {
     pub fn open(path: &Path) -> std::io::Result<Self> {
-        Ok(Self { reader: BufReader::with_capacity(1 << 20, File::open(path)?) })
+        Ok(Self {
+            reader: BufReader::with_capacity(1 << 20, File::open(path)?),
+        })
     }
 }
 
@@ -144,7 +149,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let t0 = DateTime::from_timestamp_nanos(1_792_000_000_123_456_789);
         let config = VideoStreamPacket {
-            data: Some(video_stream_packet::Data::Config(VideoStreamConfig { camera_id: 3, ..Default::default() })),
+            data: Some(video_stream_packet::Data::Config(VideoStreamConfig {
+                camera_id: 3,
+                ..Default::default()
+            })),
         };
         let frame = VideoStreamPacket {
             data: Some(video_stream_packet::Data::Frame(VideoFrame {
@@ -162,7 +170,13 @@ mod tests {
         let paths = recordings_in(dir.path()).unwrap();
         assert_eq!(paths.len(), 1);
         let packets = read_recording(&paths[0]).unwrap();
-        assert_eq!(packets, vec![(t0, config), (t0 + chrono::TimeDelta::milliseconds(8), frame)]);
+        assert_eq!(
+            packets,
+            vec![
+                (t0, config),
+                (t0 + chrono::TimeDelta::milliseconds(8), frame)
+            ]
+        );
         let h264 = std::fs::read(paths[0].with_extension("h264")).unwrap();
         assert_eq!(h264, vec![0, 0, 0, 1, 0x65, 7]);
     }

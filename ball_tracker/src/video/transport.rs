@@ -5,8 +5,8 @@
 
 use chrono::{DateTime, Utc};
 use struckout_proto::{
-    DetectionsPacket, ReadPacketError, VideoStreamConfig, VideoStreamPacket, VideoStreamServerPacket, read_packet,
-    video_stream_packet, write_packet,
+    DetectionsPacket, ReadPacketError, VideoStreamConfig, VideoStreamPacket,
+    VideoStreamServerPacket, read_packet, video_stream_packet, write_packet,
 };
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -16,7 +16,7 @@ use tracing::{info, warn};
 
 use super::{VideoOptions, analysis::AnalysisSettings, pipeline::Pipeline, recorder::Recorder};
 
-pub const VIDEO_ADDR_DEFAULT: &str = "0.0.0.0:5052";
+pub const VIDEO_ADDR_DEFAULT: &str = concat!("0.0.0.0:", env!("CAMERA_VIDEO_PORT"));
 
 pub struct VideoTransport {
     listener: TcpListener,
@@ -26,7 +26,10 @@ pub struct VideoTransport {
 impl VideoTransport {
     /// 5052 番で待ち受ける。
     pub async fn new(options: VideoOptions) -> std::io::Result<Self> {
-        info!(port = VIDEO_ADDR_DEFAULT, "trying to bind port for `VideoTransport`");
+        info!(
+            port = VIDEO_ADDR_DEFAULT,
+            "trying to bind port for `VideoTransport`"
+        );
         let listener = TcpListener::bind(VIDEO_ADDR_DEFAULT).await?;
         info!("succeed to bind port for `VideoTransport`");
         Ok(Self { listener, options })
@@ -39,7 +42,11 @@ impl VideoTransport {
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection in VideoTransport");
-                    tokio::spawn(handle_connection(stream, self.options.clone(), packet_tx.clone()));
+                    tokio::spawn(handle_connection(
+                        stream,
+                        self.options.clone(),
+                        packet_tx.clone(),
+                    ));
                 }
                 Err(e) => warn!(error = ?e, "failed to accept a connection in VideoTransport"),
             }
@@ -81,7 +88,9 @@ async fn handle_connection(
         {
             match Recorder::create(dir, config.camera_id, received_at) {
                 Ok(created) => recorder = Some(created),
-                Err(e) => warn!(error = ?e, dir = %dir.display(), "failed to start recording the video stream"),
+                Err(e) => {
+                    warn!(error = ?e, dir = %dir.display(), "failed to start recording the video stream")
+                }
             }
         }
         if let Some(recorder) = &recorder {
@@ -116,7 +125,11 @@ fn apply_config(
     let settings = match AnalysisSettings::from_config(config) {
         Ok(settings) => settings,
         Err(e) => {
-            warn!(camera_id = config.camera_id, error = e, "ignored an invalid VideoStreamConfig");
+            warn!(
+                camera_id = config.camera_id,
+                error = e,
+                "ignored an invalid VideoStreamConfig"
+            );
             return pipeline;
         }
     };
@@ -126,12 +139,19 @@ fn apply_config(
         }
     }
     if config.mime_type != "video/avc" {
-        warn!(camera_id = config.camera_id, mime_type = config.mime_type, "unsupported video format");
+        warn!(
+            camera_id = config.camera_id,
+            mime_type = config.mime_type,
+            "unsupported video format"
+        );
         return None;
     }
     info!(
         camera_id = config.camera_id,
-        video = format!("{}x{} {}fps", config.video_width, config.video_height, config.frame_rate),
+        video = format!(
+            "{}x{} {}fps",
+            config.video_width, config.video_height, config.frame_rate
+        ),
         analysis = format!("{}x{}", settings.width, settings.height),
         "received video stream config"
     );

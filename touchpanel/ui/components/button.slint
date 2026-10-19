@@ -10,7 +10,7 @@ import {
 import { Palette } from "std-widgets.slint";
 
 
-export component Ripple inherits Rectangle {
+component Ripple inherits Rectangle {
     in property <length> ripple-x;
     in property <length> ripple-y;
     in property <bool> active;
@@ -38,7 +38,7 @@ export component Ripple inherits Rectangle {
 }
 
 // A touch area that also represents a visual state.
-export component StateLayer inherits TouchArea {
+component StateLayer inherits TouchArea {
     in property <bool> focusable;
     in property <brush> checked-background;
     in property <brush> ripple-color;
@@ -110,10 +110,14 @@ component MaterialButtonBase {
     in property <bool> checkable;
     in property <brush> text-color;
     in property <float> text-opacity;
+    in property <string> font-family;
+    in property <length> font-size;
     in property <bool> colorize-icon;
     in property <bool> enabled <=> state-layer.enabled;
     in property <length> layout-padding-left;
     in property <length> layout-padding-right;
+    in property <length> layout-padding-top;
+    in property <length> layout-padding-bottom;
     out property <bool> has-focus <=> state-layer.has-focus;
     out property <bool> pressed <=> state-layer.pressed;
     in-out property <bool> checked;
@@ -138,8 +142,8 @@ component MaterialButtonBase {
         spacing: 8px;
         padding-left: root.layout-padding-left;
         padding-right: root.layout-padding-right;
-        padding-top: 5px;
-        padding-bottom: 5px;
+        padding-top: root.layout-padding-top;
+        padding-bottom: root.layout-padding-bottom;
 
         if root.icon.width > 0 && root.icon.height > 0: Image {
             source <=> root.icon;
@@ -157,6 +161,8 @@ component MaterialButtonBase {
             vertical-alignment: center;
             horizontal-alignment: center;
             font-weight: FontSettings.label-large.font-weight;
+            font-size: root.font-size;
+            font-family: root.font-family;
             accessible-role: none;
 
             animate color {
@@ -167,20 +173,32 @@ component MaterialButtonBase {
     }
 }
 
-
 export component TwoColorOutlinedButton {
     in property <string> text <=> base.text;
+    in property <string> font-family <=> base.font-family;
+    in property <length> font-size <=> base.font-size;
     in property <bool> enabled <=> base.enabled;
     in property <bool> checkable;
     in property <image> icon <=> base.icon;
     in property <length> icon-size <=> base.icon-size;
     in property <bool> colorize-icon <=> base.colorize-icon;
+    in property <bool> emphasize;
+    in property <length> layout-lr: 24px;
+    in property <length> layout-tb: 5px;
+
     out property <bool> has-focus: base.has-focus;
     out property <bool> pressed: self.enabled && base.pressed;
     in-out property <bool> checked;
-    private property <brush> comp_outline: @conic-gradient(StruckoutPalette.ref_secondary_60 0deg, StruckoutPalette.ref_secondary_60 60deg, StruckoutPalette.ref_primary_60 60deg, StruckoutPalette.ref_primary_60 240deg, StruckoutPalette.ref_secondary_60 240deg,);
-    private property <brush> comp_container: StruckoutPalette.ref_grey_10;
+
+    private property <brush> comp_outline_1: StruckoutPalette.ref_secondary_70;
+    private property <brush> comp_outline_2: StruckoutPalette.ref_primary_70;
+    private property <brush> comp_outline: @conic-gradient(comp_outline_1 0deg, comp_outline_1 60deg, comp_outline_2 60deg, comp_outline_2 240deg, comp_outline_1 240deg,);
+    private property <brush> comp_container: StruckoutPalette.ref_grey_0;
     private property <brush> comp_text: StruckoutPalette.ref_grey_80;
+    private property <brush> comp_container_emphasize_1: StruckoutPalette.ref_secondary_70;
+    private property <brush> comp_container_emphasize_2: StruckoutPalette.ref_primary_70;
+    private property <brush> comp_container_emphasize: @conic-gradient(comp_container_emphasize_1 0deg, comp_container_emphasize_1 60deg, comp_container_emphasize_2 60deg, comp_container_emphasize_2 240deg, comp_container_emphasize_1 240deg,);
+    private property <brush> comp_text_emphasize: StruckoutPalette.ref_grey_0;
 
     callback clicked;
 
@@ -217,18 +235,20 @@ export component TwoColorOutlinedButton {
         border-radius: 20px;
         border-color: comp_outline;
         border-width: Outline.level2;
-        background: comp_container;
-        drop-shadow-color: comp_container;
+        background: root.emphasize ? comp_container_emphasize : comp_container;
+        drop-shadow-color: root.emphasize ? comp_container_emphasize : comp_container;
         drop-shadow-blur: Elevation.level0;
         drop-shadow-offset-y: 1px;
     }
 
     layout := HorizontalLayout {
         base := MaterialButtonBase {
-            layout-padding-left: 24px;
-            layout-padding-right: 24px;
+            layout-padding-left: root.layout-lr;
+            layout-padding-right: root.layout-lr;
+            layout-padding-top: root.layout-tb;
+            layout-padding-bottom: root.layout-tb;
             border-radius: background.border-radius;
-            text-color: comp_text;
+            text-color: root.emphasize ? comp_text_emphasize : comp_text;
             text-opacity: 1.0;
 
             clicked => {
@@ -288,6 +308,137 @@ export component SquareButton {
             layout-padding-left: 24px;
             layout-padding-right: 24px;
             border-radius: background.border-radius;
+            text-color: root.filled ? StruckoutPalette.on-primary : Palette.control-foreground;
+            text-opacity: 1.0;
+            colorize-icon: true;
+
+            clicked => {
+                root.clicked();
+            }
+        }
+    }
+}
+
+export enum Corner {
+    LeftTop,
+    RightBottom,
+}
+
+export component CornerButton {
+    in property <string> text <=> base.text;
+    in property <string> font-family <=> base.font-family;
+    in property <length> font-size <=> base.font-size;
+    in property <bool> enabled <=> base.enabled;
+    in property <image> icon <=> base.icon;
+    in property <length> icon-size <=> base.icon-size;
+    in property <bool> filled;
+    in property <Corner> corner;
+    out property <bool> has-focus: base.has-focus;
+    out property <bool> pressed: self.enabled && base.pressed;
+
+    callback clicked;
+
+    private property <float> streamline-percent: 0.3;
+
+    min-height: max(40px, layout.min-height);
+    min-width: max(40px, layout.min-width);
+    forward-focus: base;
+
+    accessible-role: button;
+    accessible-enabled: root.enabled;
+    accessible-label: root.text;
+    accessible-action-default => {
+        if (root.enabled) {
+            base.clicked();
+        }
+    }
+
+    states [
+        disabled when !root.enabled: {
+            background.background: Palette.foreground-alt;
+            background.opacity: 0.12;
+            base.text-opacity: 0.38;
+            base.text-color: Palette.control-foreground;
+        }
+    ]
+
+    background := Rectangle {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        drop-shadow-color: transparent;
+        drop-shadow-blur: Elevation.level0;
+        drop-shadow-offset-y: 1px;
+    }
+
+    if root.corner == Corner.RightBottom: background-rb := Path {
+        fill: root.filled ? StruckoutPalette.primary : Palette.control-background;
+        width: 100%;
+        height: 100%;
+        MoveTo {
+            x: 0;
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: root.width / 1px;
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: root.width / 1px;
+            y: 0;
+        }
+
+        LineTo {
+            x: (root.width / 1px) * root.streamline-percent;
+            y: 0;
+        }
+
+        LineTo {
+            x: 0;
+            y: root.height / 1px;
+        }
+
+        Close { }
+    }
+
+    if root.corner == Corner.LeftTop: background-lt := Path {
+        fill: root.filled ? StruckoutPalette.primary : Palette.control-background;
+        width: 100%;
+        height: 100%;
+        MoveTo {
+            x: 0;
+            y: 0;
+        }
+
+        LineTo {
+            x: 0;
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: (root.width / 1px) * (1 - root.streamline-percent);
+            y: root.height / 1px;
+        }
+
+        LineTo {
+            x: root.width / 1px;
+            y: 0;
+        }
+
+        LineTo {
+            x: 0;
+            y: 0;
+        }
+
+        Close { }
+    }
+
+    layout := HorizontalLayout {
+        base := MaterialButtonBase {
+            layout-padding-left: 24px;
+            layout-padding-right: 24px;
             text-color: root.filled ? StruckoutPalette.on-primary : Palette.control-foreground;
             text-opacity: 1.0;
             colorize-icon: true;

@@ -1,8 +1,9 @@
 using NUnit.Framework;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 using Struckout.Infrastructure;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 点数の決め方を固定する。

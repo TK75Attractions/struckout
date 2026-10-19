@@ -1,6 +1,8 @@
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
 using System;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
 
@@ -16,6 +18,7 @@ namespace Struckout.Bootstrap
         private RuntimeContext _context;
 
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GameBootstrap(
             GameRuntime runtime,
             ISensorProvider sensorProvider,

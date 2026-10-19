@@ -6,22 +6,23 @@
 - [参考リンク](#参考リンク)
 
 ## ディレクトリ構造
+[docs/architecture.png](./docs/architecture.png)も参照されたし。
 ### 各種モジュール
-- `ball_tracker`(Rust): カメラからボールの二次元座標を継続的に受け取り、それらを組み合わせて三次元座標を特定し、三次元座標の推移から的のどの部分にボールがあたったか判定し、それを`projector`に送る。
-- `game_master` (Rust): 合計得点やランキングなどを管理する。データは現時点ではSQLiteに保存しているが将来的にはMySQLにするかも。今の所タッチパネルのUIとランキング管理が同じプログラムだが、筐体を複数にすることを考えると単一のgame_masterをSSoT(Single Source Of True)にして、touchpanelがそれに接続するという形のほうがいいかも。ゲームのセッション管理もgame_master側にしたい。
+- `ball-tracker`(Rust): カメラからボールの二次元座標を継続的に受け取り、それらを組み合わせて三次元座標を特定し、三次元座標の推移から的のどの部分にボールがあたったか判定し、それを`projector`に送る。
+- `game-master` (Rust): 合計得点やランキングなどを管理する。MySQLをデータベースとして使っている。
+- `touchpanel` (Rust/Slint): タッチパネルのUI。game-masterにゲームスタートのリクエストをしたりprojectorがgame-masterに送った点数を取得したり。
 - `projector` (C#/Unity): ball_trackerから的にあたった場所を受け取り、`projector`が持っている的の座標と照合し何点入るか計算する。入る点数をgame_masterに通知する。
-- `struckoutCameraApp(camera)` (Kotlin): 二次元座標をカメラから取得して`ball_tracker`に送信する。
+- `camera` (Kotlin): 二次元座標をカメラから取得して`ball_tracker`に送信する。
 
 ### その他
 - `.cargo`: cargo(Rustでnpmにあたるもの)の設定。
+- `.mise`: mise(ツールやタスク、スクリプトの管理に使っているもの)の設定。
 - `.github`: GitHubの設定。
 - `api`: protobufの定義やモジュール間で共有するやつを置いておく場所。
 - `docs`: メモとかを置いておく場所。
 - `migrations`: sqlxで使うデータベースのマイグレーションスクリプトを置いておく場所。
-- `mcu`: 後で消す
 - `sandbox`: 雑多なプログラムを置いておく場所。
-- `stern`: 私が作っているSlintを拡張するGUIフレームワーク。
-- `xtask`: package.jsonのscriptsの豪華版みたいなもん。
+- `xtask`: package.jsonのscriptsの豪華版みたいなもん。複雑なスクリプトはPowerShellとかbash、PythonではなくRustで書いてここに置いてほしい。
 
 ## 環境構築
 1. miseをインストールする
@@ -30,6 +31,8 @@ https://mise.jdx.dev/getting-started.html
 1. 必要なツールなどをmiseでインストールする
 ```shell
 mise install
+# cameraをビルドする場合のみ必要
+mise run install-opencv
 
 # bashの場合
 eval "$(mise activate)"
@@ -41,7 +44,7 @@ eval "$(mise activate)"
 - Docker
 `game-master`の起動、開発に使う。
 - [Android Studio](https://developer.android.com/studio?hl=ja)
-`camera`の開発・運用に使う。Visual StudioのAndroid版のようなものと思って良い。
+`camera`の開発・Androidデバイスとの接続に使う。Visual StudioのAndroid版のようなものと思って良い。
 - [Unity]
 `projector`の開発に使う。
 

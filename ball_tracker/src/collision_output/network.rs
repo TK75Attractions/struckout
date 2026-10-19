@@ -16,7 +16,7 @@ use tracing::{error, info, warn};
 
 use crate::{collision_output::CollisionOutput, types::CollisionPoint3D};
 
-const PROJECTOR_ADDR: &str = "0.0.0.0:5000";
+const PROJECTOR_ADDR: &str = concat!("0.0.0.0:", env!("PROJECTOR_PORT"));
 /// 書き込みの遅い projector のために、ためておける着弾の数。超えたぶんはその projector には送らない
 const PROJECTOR_BUF: usize = 16;
 
@@ -75,14 +75,22 @@ impl CollisionOutput for NetworkCollisionOutput {
                 })),
             };
             if packet_tx.send(packet).is_err() {
-                warn!(y = coll.y, z = coll.z, "no projector is connected; dropped a collision");
+                warn!(
+                    y = coll.y,
+                    z = coll.z,
+                    "no projector is connected; dropped a collision"
+                );
             }
         }
     }
 }
 
 /// 1 台の projector に送り続ける。切れたら終わる。
-async fn serve_projector(stream: TcpStream, addr: SocketAddr, mut packet_rx: broadcast::Receiver<ProjectorPacket>) {
+async fn serve_projector(
+    stream: TcpStream,
+    addr: SocketAddr,
+    mut packet_rx: broadcast::Receiver<ProjectorPacket>,
+) {
     if let Err(e) = stream.set_nodelay(true) {
         warn!(error = ?e, "failed to set TCP_NODELAY");
     }
@@ -123,10 +131,11 @@ mod tests {
     use super::*;
 
     async fn next_point(stream: &mut TcpStream) -> (f64, f64) {
-        let packet: ProjectorPacket = tokio::time::timeout(Duration::from_secs(2), read_packet(stream))
-            .await
-            .expect("no collision arrived")
-            .unwrap();
+        let packet: ProjectorPacket =
+            tokio::time::timeout(Duration::from_secs(2), read_packet(stream))
+                .await
+                .expect("no collision arrived")
+                .unwrap();
         match packet.payload {
             Some(projector_packet::Payload::Point(point)) => (point.x, point.y),
             other => panic!("unexpected packet {other:?}"),
@@ -139,7 +148,9 @@ mod tests {
 
     #[tokio::test]
     async fn sends_to_every_projector_and_survives_one_leaving() {
-        let output = NetworkCollisionOutput::bind_to("127.0.0.1:0").await.unwrap();
+        let output = NetworkCollisionOutput::bind_to("127.0.0.1:0")
+            .await
+            .unwrap();
         let addr = output.local_addr().unwrap();
         let (tx, rx) = mpsc::channel(4);
         tokio::spawn(output.start(rx));

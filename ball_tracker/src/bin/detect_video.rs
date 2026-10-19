@@ -48,7 +48,10 @@ fn main() -> anyhow::Result<()> {
         .arg(&cli.video)
         .args([
             "-vf",
-            &format!("select='between(n\\,{}\\,{})',scale={w}:{h}:flags=area", cli.first, cli.last),
+            &format!(
+                "select='between(n\\,{}\\,{})',scale={w}:{h}:flags=area",
+                cli.first, cli.last
+            ),
             "-fps_mode",
             "passthrough",
             "-f",

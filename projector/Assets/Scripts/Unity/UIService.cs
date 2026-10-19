@@ -1,8 +1,9 @@
 using UnityEngine;
 using Struckout.Domain;
-using Struckout.Application;
 using System.Collections.Generic;
 using System;
+using Struckout.Application.Interface;
+using Struckout.Domain.TargetDefinition;
 using VContainer;
 using UnityEngine.UI;
 using System.Globalization;
@@ -225,12 +226,11 @@ namespace Struckout.Unity
             SetAlpha(_idleRenderer, _idleOpacity);
             SetAlpha(_finishedRenderer, _finishedOpacity);
 
-            if (_finishedText != null)
-            {
-                var color = _finishedText.color;
-                color.a = _finishedOpacity;
-                _finishedText.color = color;
-            }
+            if (!_finishedText) return;
+            
+            var color = _finishedText.color;
+            color.a = _finishedOpacity;
+            _finishedText.color = color;
         }
 
         private static void SetAlpha(SpriteRenderer renderer, float alpha)
@@ -282,7 +282,7 @@ namespace Struckout.Unity
             Transform trans;
             if (target == null) return;
             if (_targetToTransform == null) throw new InvalidOperationException("UIService is not initialized.");
-            if (_targetToTransform.TryGetValue(target, out var _)) return;
+            if (_targetToTransform.ContainsKey(target)) return;
 
             switch (target.Type)
             {

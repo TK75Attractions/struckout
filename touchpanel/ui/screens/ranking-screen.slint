@@ -1,8 +1,37 @@
-global Adopter { }
+import { CornerButton, Corner } from "../components/button.slint";
+import { Icons } from "../icons.slint";
+
+global Adopter {
+    callback move-to-start-screen();
+}
 
 export component RankingScreen {
-    Text {
-        text: "らんきんぐ";
+    private property <length> comp_button_font_size: 24px;
+
+    HorizontalLayout {
+        cross-axis-alignment: CrossAxisAlignment.end;
+
+        VerticalLayout {
+            height: 100%;
+            Rectangle {
+                width: 70%;
+                Text {
+                    text: "らんきんぐ";
+                }
+            }
+        }
+
+        CornerButton {
+            width: 28%;
+            height: 24%;
+            corner: Corner.RightBottom;
+            filled: true;
+            font-size: root.comp_button_font_size;
+            icon: Icons.home;
+            clicked => {
+                Adopter.move-to-start-screen();
+            }
+        }
     }
 }
 
