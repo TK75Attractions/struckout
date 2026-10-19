@@ -1,6 +1,7 @@
 package com.taichi765.struckoutCameraApp.recording
 
 import app.cash.turbine.test
+import com.taichi765.struckoutCameraApp.MainDispatcherExtension
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader
 import com.taichi765.struckoutCameraApp.network.LocalDetectionUploader.ConnectionError
 import com.taichi765.struckoutCameraApp.proto.detectionsPacket
@@ -15,8 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -24,7 +23,7 @@ import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@ExtendWith(MockKExtension::class)
+@ExtendWith(MockKExtension::class, MainDispatcherExtension::class)
 class LocalDataViewModelUnitTest {
 
     @Test
@@ -49,15 +48,11 @@ class LocalDataViewModelUnitTest {
         )
 
         // Assert
-        backgroundScope.launch {
-            viewModel.connectionStatus.test {
-                assert(awaitItem() is ConnectionStatus.NoAttempts)
+        viewModel.connectionStatus.test {
+            assert(awaitItem() is ConnectionStatus.NoAttempts)
 
-                assert(awaitItem() is ConnectionStatus.Connected)
-            }
+            assert(awaitItem() is ConnectionStatus.Connected)
         }
-
-        runCurrent()
     }
 
     @Test
@@ -83,28 +78,24 @@ class LocalDataViewModelUnitTest {
         )
 
         // Assert
-        backgroundScope.launch {
-            viewModel.connectionStatus.test {
-                assert(awaitItem() is ConnectionStatus.NoAttempts)
+        viewModel.connectionStatus.test {
+            assert(awaitItem() is ConnectionStatus.NoAttempts)
 
-                awaitItem().let {
-                    assert(it is ConnectionStatus.Error && it.error is ConnectionError.TcpConnection)
-                }
-
-                assert(awaitItem() is ConnectionStatus.Connected)
+            awaitItem().let {
+                assert(it is ConnectionStatus.Error && it.error is ConnectionError.TcpConnection)
             }
-        }
-        runCurrent()
 
-        // Arrange 2
-        coEvery { localDetectionUploader.connect() } coAnswers {
-            delay(100.milliseconds)
-            isConnected.value = true
-            null
+            // Arrange 2
+            coEvery { localDetectionUploader.connect() } coAnswers {
+                delay(100.milliseconds)
+                isConnected.value = true
+                null
+            }
+            // Act 2
+            viewModel.connect()
+
+            assert(awaitItem() is ConnectionStatus.Connected)
         }
-        // Act 2
-        viewModel.connect()
-        runCurrent()
     }
 
     @Test
@@ -128,19 +119,16 @@ class LocalDataViewModelUnitTest {
         )
 
         // Assert
-        backgroundScope.launch {
-            viewModel.connectionStatus.test {
-                assert(awaitItem() is ConnectionStatus.NoAttempts)
-                assert(awaitItem() is ConnectionStatus.Connected)
-                assert(awaitItem() is ConnectionStatus.NoAttempts)
-                assert(awaitItem() is ConnectionStatus.Connected)
-            }
-        }
-        runCurrent()
+        viewModel.connectionStatus.test {
+            assert(awaitItem() is ConnectionStatus.NoAttempts)
+            assert(awaitItem() is ConnectionStatus.Connected)
 
-        // Act
-        isConnected.value = false
-        runCurrent()
+            // Act
+            isConnected.value = false
+
+            assert(awaitItem() is ConnectionStatus.NoAttempts)
+            assert(awaitItem() is ConnectionStatus.Connected)
+        }
     }
 
     @Test
@@ -172,18 +160,14 @@ class LocalDataViewModelUnitTest {
             localDetectionUploader = localDetectionUploader
         )
 
-        backgroundScope.launch {
-            viewModel.uploadStatus.test {
-                assert(awaitItem() is UploadStatus.NotStarted)
+        viewModel.uploadStatus.test {
+            assert(awaitItem() is UploadStatus.NotStarted)
 
-                assert(awaitItem() is UploadStatus.InProgress)
+            viewModel.uploadLocalDetections()
 
-                assert(awaitItem() is UploadStatus.Succeed)
-            }
+            assert(awaitItem() is UploadStatus.InProgress)
+
+            assert(awaitItem() is UploadStatus.Succeed)
         }
-        runCurrent()
-
-        viewModel.uploadLocalDetections()
-        runCurrent()
     }
 }
