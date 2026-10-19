@@ -1,6 +1,14 @@
+# Production runs the image that .github/workflows/release.yaml publishes, tagged with the version of the release,
+# so the PC needs neither the source nor a Rust toolchain (the launcher downloads only compose.yaml and this file):
+#
+#   GAME_MASTER_VERSION=2026-10-19.0 docker compose -f compose.yaml -f compose.prod.yaml up
+#
+# Use compose.dev.yaml to run a build of the working tree. `!reset` needs Docker Compose 2.24 or later.
 name: game-master-prod
 services:
   app:
+    build: !reset null
+    image: ghcr.io/tk75attractions/game-master:${GAME_MASTER_VERSION:?set it to the version of the release}
     environment:
       - MYSQL_DATABASE=main_prod
   db:

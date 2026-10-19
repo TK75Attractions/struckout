@@ -16,8 +16,9 @@ raw = true
 [tasks.prod]
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_PROD docker compose -f compose.yaml -f compose.prod.yaml up"
 dir = "{{ config_root }}"
-description = "Start a production server of game-master using docker-compose"
+description = "Start a production server of game-master with the image of a release (GAME_MASTER_VERSION)"
 env.MYSQL_ROOT_PASSWORD_PROD = { required = true, redact = true }
+env.GAME_MASTER_VERSION = { required = true }
 raw = true
 
 [tasks.db]
