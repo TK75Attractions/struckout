@@ -30,6 +30,8 @@ jobs:
             VERSION=$(mise exec protoc -- cargo xtask release next-version)
             echo "short-hash=${SHORT_HASH}" >> "$GITHUB_OUTPUT"
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   rust-build:
     strategy:
