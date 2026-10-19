@@ -11,6 +11,11 @@ plugins {
 
 val enableNatsLog = providers.gradleProperty("enableNatsLog")
 
+// The nightly release signs the APK with one key (.github/workflows/nightly_release.yaml) so that the launcher
+// can update the app on the phones: Android refuses an update signed with another key.
+// Without the variables, the release build is unsigned as before.
+val releaseKeystore = providers.environmentVariable("CAMERA_KEYSTORE_FILE")
+
 android {
     namespace = "com.taichi765.struckoutCameraApp"
     compileSdk {
@@ -32,12 +37,26 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseKeystore.isPresent) {
+            create("release") {
+                storeFile = file(releaseKeystore.get())
+                storePassword = providers.environmentVariable("CAMERA_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("CAMERA_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("CAMERA_KEY_PASSWORD").get()
+            }
+        }
+    }
+
     buildTypes {
         debug {
             buildConfigField("boolean", "ENABLE_NATS_LOG", enableNatsLog.orElse("false").get())
         }
 
         release {
+            if (releaseKeystore.isPresent) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
