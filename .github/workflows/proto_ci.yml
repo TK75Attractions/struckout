@@ -8,7 +8,8 @@ on:
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
       - buf.gen.*.yaml
-      - .mise/config.toml
+      - mise.toml
+      - mise.lock
       - .github/workflows/proto_ci.yml
   pull_request:
     branches: master
@@ -17,7 +18,8 @@ on:
       - projector/Assets/Scripts/ProtoBuf/Generated/**
       - sandbox/testTcpCLI/Network/Protocol/Generated/**
       - buf.gen.*.yaml
-      - .mise/config.toml
+      - mise.toml
+      - mise.lock
       - .github/workflows/proto_ci.yml
   workflow_dispatch:
 

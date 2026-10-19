@@ -1,0 +1,38 @@
+[tools]
+"cargo:slint-viewer" = "latest"
+"cargo:slint-lsp" = "latest"
+
+[tasks."fmt-slint"]
+run = "find -name '*.slint' | xargs slint-lsp format --inline"
+dir = "{{ config_root }}/ui"
+description = "touchpanelのslintファイルを整形する"
+
+[tasks."new"]
+run = '''
+cargo xtask --verbose new
+'''
+dir = "{{ config_root }}"
+description = "Create new screen in touchpanel"
+
+[tasks."view"]
+run = [
+    '''
+        JSON='{"nav-route": "UiNavRoute.{{ usage.screen_name }}"'
+        if [ "${usage_show_topbar:-false}" = "true" ]; then
+            JSON="${JSON},\"show-topbar\": true";
+        fi
+        if [ "${usage_show_backbutton:-false}" = "true" ]; then
+            JSON="${JSON},\"show-backbutton\": true";
+        fi
+        JSON="${JSON}}"
+        echo $JSON > ../.states/data.json
+    ''',
+    "../../slint/target/debug/slint-viewer --style 'struckout' --auto-reload --load-data ../.states/data.json ui/app-window.slint"
+]
+usage = '''
+    arg "<screen-name>" help="Name of screen to show"
+    flag "--show-topbar" help="TopBarを表示する"
+    flag "--show-backbutton" help="戻るボタンを表示する"
+'''
+dir = "{{ config_root }}"
+description = "touchpanelの画面を表示する"

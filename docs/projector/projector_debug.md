@@ -185,7 +185,7 @@ start したあとに projector を繋ぐと開始を取りこぼす。
 ## 4. 本物の game_master を使う
 
 ```bash
-mise run game-master:dev   # docker compose (app + MySQL)
+mise run //game_master:dev   # docker compose (app + MySQL)
 ```
 
 > **既知の問題**: `game_master/compose.yaml` が公開しているのは `8080:8080` だが、
@@ -231,8 +231,8 @@ gRPC のチャネルは遅延接続なので、game_master は後から立てて
 自動生成するが、**C# だけは生成結果をコミットしている**。手で protoc を叩かないこと。
 
 ```bash
-mise run proto          # 生成してコミット対象を更新
-mise run proto:check    # ズレていないかだけ確認 (exit 1 で失敗)
+mise run //api:proto          # 生成してコミット対象を更新
+mise run //api:proto:check    # ズレていないかだけ確認 (exit 1 で失敗)
 ```
 
 `mise run` はタスク実行前に未導入ツールを入れようとして dotnet で失敗することがある。

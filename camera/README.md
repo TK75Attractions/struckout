@@ -30,7 +30,7 @@
 
 ## ビルド
 
-`protoc` と JDK が要る (リポジトリのルートで `mise install`)。
+`protoc` と JDK が要る (`camera`ディレクトリで `mise install`)。
 
 ```bash
 ./gradlew :app:assembleDebug

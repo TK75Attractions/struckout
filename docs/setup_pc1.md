@@ -121,13 +121,14 @@ ARM64 の Windows では x64 版がエミュレーションで動く。2026-10-1
 git clone https://github.com/TK75Attractions/struckout.git
 cd struckout
 mise trust
-mise install rust protoc java
+mise -C ball_tracker install rust protoc
+mise -C camera install java protoc
 ```
 
 既定ブランチは `master` (以前の `main` は改名された)。
 
-`mise install` を引数なしで実行しない。`.mise/config.toml` には PC① に不要なツールも
-並んでおり、dotnet は Windows で失敗し、`cargo:*` はソースからのビルドで長くかかる。
+上記は必要なツールだけを指定して導入する。通常の開発では対象モジュールで`mise install`を使う。
+共通の.NET SDKも継承されるため、Windowsでその導入が難しい場合は上記の明示指定を使う。
 
 | ツール | 用途 |
 |---|---|
@@ -141,7 +142,7 @@ mise install rust protoc java
 
 ```powershell
 $env:SQLX_OFFLINE = 'true'
-mise exec rust protoc -- cargo build --release --locked -p ball_tracker
+mise -C ball_tracker exec rust protoc -- cargo build --release --locked -p ball_tracker
 ```
 
 初回は依存クレートの取得で時間がかかる。成功すると
@@ -236,7 +237,7 @@ mise exec java protoc -- .\gradlew.bat installDebug
 Android Studio の Run ボタンで入れる場合も、`protoc` が PATH に無いとビルドが失敗する。
 
 OpenCV はリポジトリに含まれているので、別途入れる必要はない
-(`.mise/tasks/install-opencv.sh` は使わない)。
+(`mise run //camera:install-opencv`は使わない)。
 
 ## 6. `adb reverse` を張る
 
@@ -252,7 +253,7 @@ adb devices | Select-String "\tdevice$" | ForEach-Object {
 }
 ```
 
-Git Bash が使えるなら `mise run adb-reverse` でも同じ (`scripts/adb-reverse.sh`)。
+Git Bash が使えるなら `mise run //camera:adb-reverse` でも同じ (`scripts/adb-reverse.sh`)。
 
 **USB を抜き差ししたとき、PC やスマホを再起動したときは張り直す。**
 確認は `adb -s <シリアル> reverse --list`。
@@ -485,7 +486,7 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 | `camera clock` の `fallback` が `true` | センサー時刻が時刻合わせと合わない。`timestamp_source` を見る。KYV45 の時計の種類は未確認 (`docs/ball_detection_plan_3_time_sync_calibration.md` の U-1) |
 | projector を再起動した | そのままでよい。ball_tracker は、いつつないだ projector にも送る |
 | ビルドで `link.exe` や `kernel32.lib` が見つからない | 1.2 の Windows SDK / C++ ツールが入っていない |
-| `protoc` が見つからない | `mise exec rust protoc -- ...` を付け忘れている |
+| `protoc` が見つからない | `mise -C ball_tracker exec rust protoc -- ...` を付け忘れている |
 
 ## 11. 既知の問題
 

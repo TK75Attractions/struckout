@@ -1,0 +1,13 @@
+[tools]
+java = "temurin-21"
+
+[tasks.install-opencv]
+run = "python3 scripts/install_opencv.py"
+dir = "{{ config_root }}"
+description = "cameraで使うOpenCVをインストールする"
+raw = true
+
+[tasks.adb-reverse]
+run = "bash ../scripts/adb-reverse.sh"
+dir = "{{ config_root }}"
+description = "接続されたそれぞれのデバイスに対し'adb reverse'を実行する"

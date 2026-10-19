@@ -16,7 +16,7 @@
 
 ### その他
 - `.cargo`: cargo(Rustでnpmにあたるもの)の設定。
-- `.mise`: mise(ツールやタスク、スクリプトの管理に使っているもの)の設定。
+- `.mise`: miseのmonorepo設定と共通タスク。各モジュールのツール・タスクは各ディレクトリの`mise.toml`で管理している。
 - `.github`: GitHubの設定。
 - `api`: protobufの定義やモジュール間で共有するやつを置いておく場所。
 - `docs`: メモとかを置いておく場所。
@@ -28,16 +28,35 @@
 1. miseをインストールする
 https://mise.jdx.dev/getting-started.html
 
-1. 必要なツールなどをmiseでインストールする
+1. mise 2026.10.3以降を使い、ルートで設定を信頼する
 ```shell
-mise install
-# cameraをビルドする場合のみ必要
-mise run install-opencv
+mise trust
 
 # bashの場合
-eval "$(mise activate)"
+eval "$(mise activate bash)"
 # PowerShellの場合
 (&mise activate pwsh) | Out-String | Invoke-Expression
+```
+
+1. 開発するモジュールに移動して必要なツールをインストールする
+```shell
+cd camera
+mise install
+mise run install-opencv
+```
+
+`mise install`は現在のモジュールと親の設定だけを読み込む。他のモジュールの
+sqlx-cliやSlintなどはインストールしない。共通の.NET SDKとgrpcurlは全モジュールで継承する。
+ツール・タスクの配置とローカル設定は[開発環境](docs/development_environment.md)を参照。
+
+ルートや別モジュールからはパスでタスクを指定できる。
+```shell
+mise run //camera:install-opencv
+mise run //game_master:dev
+mise run //touchpanel:fmt-slint
+mise run //api:proto
+mise run //api:proto:check
+mise tasks ls --all
 ```
 
 1. 手動でインストールするもの
