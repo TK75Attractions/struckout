@@ -44,7 +44,7 @@ jobs:
   rust-build:
     strategy:
       matrix:
-        os: ["windows-2022", "macos-14", "ubuntu-22.04"]
+        os: ["windows-2022", "windows-11-arm", "macos-14", "ubuntu-22.04"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -92,6 +92,11 @@ jobs:
               mv target/release/ball_tracker.exe upload/ball-tracker-x86_64-windows
               mv target/release/touchpanel.exe upload/touchpanel-x86_64-windows
               ;;
+            "windows-11-arm")
+              echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
+              mv target/release/ball_tracker.exe upload/ball-tracker-arm64-windows
+              mv target/release/touchpanel.exe upload/touchpanel-arm64-windows
+              ;;
             "macos-14")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release/ball_tracker upload/ball-tracker-arm64-macos
@@ -116,10 +121,19 @@ jobs:
     needs: [get-version]
     strategy:
       matrix:
-        target-platform:
-          - StandaloneWindows64
-          - StandaloneLinux64
-          - StandaloneOSX
+        include:
+          - target-platform: StandaloneWindows64
+            triple: x86_64-windows
+            build-method: ""
+          - target-platform: StandaloneWindows64
+            triple: arm64-windows
+            build-method: Editor.ReleaseBuild.BuildWindowsArm64
+          - target-platform: StandaloneLinux64
+            triple: x86_64-linux
+            build-method: ""
+          - target-platform: StandaloneOSX
+            triple: arm64-macos
+            build-method: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -133,9 +147,9 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: projector/Library
-          key: Library-${{ matrix.target-platform }}-${{ hashFiles('projector/Assets/**', 'projector/Packages/**', 'projector/ProjectSettings/**') }}
+          key: Library-${{ matrix.triple }}-${{ hashFiles('projector/Assets/**', 'projector/Packages/**', 'projector/ProjectSettings/**') }}
           restore-keys: |
-            Library-${{ matrix.target-platform }}-
+            Library-${{ matrix.triple }}-
       - uses: game-ci/unity-builder@eb1b9fba120c6e62c9fb7a7a81d6c107ce004c45 # v6.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -143,24 +157,12 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: ${{ matrix.target-platform }}
+          buildMethod: ${{ matrix.build-method }}
           projectPath: projector
           gitPrivateToken: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine file suffix
-        id: triple
-        run: |
-          case ${{ matrix.target-platform }} in
-            "StandaloneWindows64")
-              echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT";;
-            "StandaloneOSX")
-              echo "triple=arm64-macos" >> "$GITHUB_OUTPUT";;
-            "StandaloneLinux64")
-              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT";;
-            *)
-              exit 1;;
-          esac
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: projector-${{ steps.triple.outputs.triple }}
+          name: projector-${{ matrix.triple }}
           path: ./build/
 
   launcher-build:
@@ -335,10 +337,11 @@ jobs:
       - name: Create release
         run: |
           gh release create ${{ needs.get-version.outputs.version }} \
-            rust-x86_64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
+            rust-x86_64-windows/* rust-arm64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
             launcher-*/* camera/camera.apk \
             projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \
+            projector-arm64-windows/projector-arm64-windows.zip \
             projector-x86_64-linux/projector-x86_64-linux.zip
         env:
           GH_TOKEN: ${{ github.token }}

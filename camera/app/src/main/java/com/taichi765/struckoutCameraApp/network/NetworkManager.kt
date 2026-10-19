@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -106,21 +107,20 @@ class NetworkManager @Inject constructor(
     /**
      * 検出の送り先が Network のあいだ、ball_tracker とのつながりを保つ。切れたり、ball_tracker がまだ動いて
      * いなかったりしたら、[RETRY_INTERVAL_MILLIS] おきにつなぎ直す。PC 側をいつ起動・再起動してもよい。
+     * 送り先が Network に切り替わったら、[RETRY_INTERVAL_MILLIS] を待たずにすぐつなぐ。
      */
     private suspend fun superviseTcpSession() {
         while (true) {
-            if (configRepository.detectionOutputKind.value == DetectionOutputKind.NETWORK) {
-                retryTcpConnection()
-            }
+            configRepository.detectionOutputKind.first { it == DetectionOutputKind.NETWORK }
+            retryTcpConnection()
             delay(RETRY_INTERVAL_MILLIS)
         }
     }
 
     private suspend fun superviseDataConnection() {
         while (true) {
-            if (configRepository.detectionOutputKind.value == DetectionOutputKind.NETWORK) {
-                retryDataConnection()
-            }
+            configRepository.detectionOutputKind.first { it == DetectionOutputKind.NETWORK }
+            retryDataConnection()
             delay(RETRY_INTERVAL_MILLIS)
         }
     }
