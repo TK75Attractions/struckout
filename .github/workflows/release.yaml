@@ -173,6 +173,9 @@ jobs:
           - os: windows-2022
             rid: win-x64
             asset: struckout-launcher-x86_64-windows.exe
+          - os: windows-11-arm
+            rid: win-arm64
+            asset: struckout-launcher-arm64-windows.exe
           # Built on macOS so that the SDK signs the binary (Apple Silicon refuses unsigned ones)
           - os: macos-14
             rid: osx-arm64

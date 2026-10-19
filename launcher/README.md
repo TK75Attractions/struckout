@@ -16,7 +16,8 @@ struckout のモジュールを PC にインストールし、依存の順に起
 
 | OS | ファイル |
 |---|---|
-| Windows (x64、Arm は x64 のエミュレーションで動く) | `struckout-launcher-x86_64-windows.exe` |
+| Windows (x64) | `struckout-launcher-x86_64-windows.exe` |
+| Windows (Arm) | `struckout-launcher-arm64-windows.exe` |
 | macOS (Apple シリコン) | `struckout-launcher-arm64-macos` |
 | Linux (x64) | `struckout-launcher-x86_64-linux` |
 

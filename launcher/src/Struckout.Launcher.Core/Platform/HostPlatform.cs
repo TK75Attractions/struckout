@@ -27,8 +27,8 @@ public sealed record HostPlatform(OperatingSystemKind Os, CpuArchitecture Archit
     /// </summary>
     /// <remarks>
     /// The names follow the "Rename binaries" step of <c>.github/workflows/release.yaml</c>.
-    /// Windows on Arm runs x86_64 binaries through emulation, so it falls back to them until
-    /// native arm64 builds are published. macOS on Intel and Linux on Arm have no fallback.
+    /// Windows on Arm runs x86_64 binaries through emulation, so it falls back to them for the releases
+    /// before arm64 builds were published. macOS on Intel and Linux on Arm have no fallback.
     /// </remarks>
     public IReadOnlyList<string> ReleaseAssetSuffixes => (Os, Architecture) switch
     {
