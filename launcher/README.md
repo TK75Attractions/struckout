@@ -22,7 +22,7 @@ struckout のモジュールを PC にインストールし、依存の順に起
 
 macOS と Linux では `chmod +x` してから実行する。
 
-ソースから動かすときは `mise run launcher:run`。
+ソースから動かすときは `mise run //launcher:run`。
 
 ## インストール
 
@@ -147,8 +147,8 @@ launcher/
 ```
 
 ```bash
-mise run launcher:test
-mise run launcher:fmt
+mise run //launcher:test
+mise run //launcher:fmt
 ```
 
 CI (`.github/workflows/launcher_ci.yaml`) は、整形 (`dotnet format --verify-no-changes`)、ビルド (警告はエラー)、テストを確かめる。
