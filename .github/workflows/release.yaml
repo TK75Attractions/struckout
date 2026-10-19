@@ -129,6 +129,7 @@ jobs:
         with:
           targetPlatform: ${{ matrix.target-platform }}
           projectPath: projector
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Determine file suffix
         id: triple
         run: |
