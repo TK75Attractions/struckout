@@ -3,59 +3,62 @@ name = "touchpanel"
 version = "0.1.0"
 edition = { workspace = true }
 
-[features]
-sentry = ["dep:sentry"]
-
 [dependencies]
-struckout-proto = { workspace = true }
 stern = { workspace = true }
+struckout-proto = { workspace = true }
 touchpanel-ui = { path = "./ui/" }
 
-tokio = { workspace = true, features = [
-    "rt-multi-thread",
-    "sync",
-    "net",
-    "time",
-    "io-util",
-    "macros",
-    "test-util",
-] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-futures-util = { workspace = true }
-backon = { workspace = true }
-tokio-stream = { workspace = true, features = ["sync"] }
 async-stream = { workspace = true }
-tokio-util = { workspace = true }
+backon = { workspace = true }
+futures-util = { workspace = true }
 parking_lot = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
+sentry = { workspace = true, optional = true }
+tokio = {
+  workspace = true,
+  features = [
+    "io-util",
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "sync",
+    "test-util",
+    "time",
+  ]
+}
+tokio-stream = { workspace = true, features = ["sync"] }
+tokio-util = { workspace = true }
 tonic = { workspace = true }
 tonic-prost = { workspace = true }
-sentry = { workspace = true, optional = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
-thiserror = { workspace = true }
 anyhow = { workspace = true }
-itertools = { workspace = true }
-derive_more = { workspace = true, features = ["debug"] }
+clap = { workspace = true, features = ["derive", "string"] }
 derive-getters = { workspace = true, features = ["auto_copy_getters"] }
+derive_more = { workspace = true, features = ["debug"] }
+enum_dispatch = { workspace = true }
+itertools = { workspace = true }
 pastey = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tempfile = { workspace = true }
-time = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
-enum_dispatch = { workspace = true }
-clap = { workspace = true, features = ["derive", "string"] }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
 
 i-slint-core = { workspace = true }
 slint = { workspace = true }
 
 [dev-dependencies]
 i-slint-backend-testing = { workspace = true }
-rstest = { workspace = true }
 mockall = { workspace = true }
+rstest = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }
 struckout-utils = { workspace = true }
+
+[features]
+sentry = ["dep:sentry"]

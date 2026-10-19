@@ -3,38 +3,28 @@ name = "game_master"
 version = "0.1.0"
 edition.workspace = true
 
-[features]
-sentry = ["dep:sentry"]
-
 [dependencies]
 struckout-proto = { workspace = true }
 
-tonic = { workspace = true }
+backon = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util", "signal"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "test-util"] }
 tokio-stream = { workspace = true, features = ["sync"] }
-backon = { workspace = true }
+tonic = { workspace = true }
 
 anyhow = { workspace = true }
-thiserror = { workspace = true }
-derive_more = { workspace = true, features = ["from","into"] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+clap = { workspace = true, features = ["derive", "string"] }
+derive_more = { workspace = true, features = ["from", "into"] }
+parking_lot = { workspace = true }
 sentry = { workspace = true, optional = true }
 serde = { workspace = true }
+thiserror = { workspace = true }
 time = { workspace = true }
-parking_lot = { workspace = true }
-clap = { workspace = true, features = ["derive", "string"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
-sqlx = { workspace = true, features = [
-    "mysql",
-    "runtime-tokio",
-    "tls-rustls",
-    "migrate",
-    "sqlx-toml",
-    "time"]
-}
+sqlx = { workspace = true, features = ["migrate", "mysql", "runtime-tokio", "sqlx-toml", "time", "tls-rustls"] }
 toml = { workspace = true }
 
 [dev-dependencies]
@@ -42,3 +32,6 @@ testcontainers-modules = { workspace = true, features = ["mysql"] }
 
 [build-dependencies]
 struckout-utils = { workspace = true }
+
+[features]
+sentry = ["dep:sentry"]

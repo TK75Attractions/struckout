@@ -27,8 +27,8 @@ dir = "{{ config_root }}"
 # grpc_csharp_plugin は buf.gen.game-master.yaml が BSR の remote plugin を使うので、
 # ローカルに用意するものは buf と protoc だけ。
 run = [
-    "buf generate --template buf.gen.ball-tracker.yaml",
-    "buf generate --template buf.gen.game-master.yaml",
+  "buf generate --template buf.gen.ball-tracker.yaml",
+  "buf generate --template buf.gen.game-master.yaml",
 ]
 description = "Generate the committed C# from api/proto"
 

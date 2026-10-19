@@ -3,42 +3,49 @@ name = "xtask"
 version = "0.1.0"
 edition = { workspace = true }
 
-[features]
-sqlite = ["dep:sqlx"]
-
 [dependencies]
-prost = { workspace = true }
-tokio = { workspace = true, features = [
-    "net",
-    "rt-multi-thread",
-    "macros",
-    "sync",
-    "io-util",
-    "time",
-] }
-clap = { workspace = true, features = ["derive"] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 bytes = { workspace = true }
-sqlx = { workspace = true, features = [
-    "runtime-tokio",
-    "sqlite",
-    "macros",
-    "sqlx-toml",
-], optional = true }
+clap = { workspace = true, features = ["derive"] }
 dirs = { workspace = true }
-i-slint-compiler = { workspace = true }
-tempfile = { workspace = true }
+git2 = "0.21.0"
 heck = { workspace = true }
+i-slint-compiler = { workspace = true }
+octocrab = { workspace = true }
+prost = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-git2 = "0.21.0"
-octocrab = { workspace = true }
+sqlx = {
+  workspace = true,
+  features = [
+    "macros",
+    "runtime-tokio",
+    "sqlite",
+    "sqlx-toml",
+  ],
+  optional = true
+}
+tempfile = { workspace = true }
+thiserror = { workspace = true }
 time = { workspace = true, features = ["macros"] }
+tokio = {
+  workspace = true,
+  features = [
+    "io-util",
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "sync",
+    "time",
+  ]
+}
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 struckout-proto = { workspace = true }
 
 [build-dependencies]
 prost-build = { workspace = true }
+
+[features]
+sqlite = ["dep:sqlx"]

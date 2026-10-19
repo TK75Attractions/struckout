@@ -16,7 +16,7 @@ description = "Create new screen in touchpanel"
 
 [tasks."view"]
 run = [
-    '''
+  '''
         JSON='{"nav-route": "UiNavRoute.{{ usage.screen_name }}"'
         if [ "${usage_show_topbar:-false}" = "true" ]; then
             JSON="${JSON},\"show-topbar\": true";
@@ -27,7 +27,7 @@ run = [
         JSON="${JSON}}"
         echo $JSON > ../.states/data.json
     ''',
-    "../../slint/target/debug/slint-viewer --style 'struckout' --auto-reload --load-data ../.states/data.json ui/app-window.slint"
+  "../../slint/target/debug/slint-viewer --style 'struckout' --auto-reload --load-data ../.states/data.json ui/app-window.slint",
 ]
 usage = '''
     arg "<screen-name>" help="Name of screen to show"
