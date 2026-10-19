@@ -32,6 +32,9 @@ namespace Editor
             if (report.summary.result != BuildResult.Succeeded)
                 throw new BuildFailedException($"Windows ARM64 build failed: {report.summary.result}");
 
+            // カスタムのビルドメソッドを使っている場合Build Resultを正しく出力しないとgame-ciのバリデーションで落とされる
+            // https://github.com/game-ci/cli/blob/v0.1.72/src/model/unity/build-validation/unity-build-validation.ts
+            Console.WriteLine("Build succeeded!");
             EditorApplication.Exit(0);
         }
     }

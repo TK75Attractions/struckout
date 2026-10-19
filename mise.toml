@@ -7,6 +7,12 @@ lockfile = true
 
 [settings]
 lockfile = true
+lockfile_platforms = [
+  "linux-x64",
+  "windows-x64",
+  "windows-arm64",
+  "macos-arm64",
+]
 
 [tools]
 dotnet = "10"
@@ -17,17 +23,17 @@ protoc = "35.1"
 buf = "latest"
 
 [tasks."proto"]
-dir = "{{ config_root }}/.."
+dir = "{{ config_root }}"
 # grpc_csharp_plugin は buf.gen.game-master.yaml が BSR の remote plugin を使うので、
 # ローカルに用意するものは buf と protoc だけ。
 run = [
-    "buf generate --template buf.gen.ball-tracker.yaml",
-    "buf generate --template buf.gen.game-master.yaml",
+  "buf generate --template buf.gen.ball-tracker.yaml",
+  "buf generate --template buf.gen.game-master.yaml",
 ]
 description = "Generate the committed C# from api/proto"
 
 [tasks."proto:check"]
-dir = "{{ config_root }}/.."
+dir = "{{ config_root }}"
 depends = ["proto"]
 run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
 description = "Check the committed C# matches api/proto (regenerates in place)"

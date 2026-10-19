@@ -3,10 +3,6 @@ name = "ball_tracker"
 version = "0.1.0"
 edition = { workspace = true }
 
-[features]
-input-sqlite = []
-sentry = ["dep:sentry"]
-
 [dependencies]
 struckout-proto = { workspace = true }
 
@@ -16,43 +12,53 @@ tracktor = "0.4.1"
 prost = { workspace = true }
 prost-types = { workspace = true, features = ["chrono"] }
 
-tokio = { workspace = true, features = [
+backon = { workspace = true }
+futures-util = { workspace = true }
+parking_lot = { workspace = true }
+sentry = { workspace = true, optional = true }
+tokio = {
+  workspace = true,
+  features = [
+    "io-util",
+    "macros",
     "net",
     "rt-multi-thread",
-    "macros",
     "sync",
-    "io-util",
     "time",
-] }
+  ]
+}
+tokio-stream = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["json"] }
-sentry = { workspace = true, optional = true }
-futures-util = { workspace = true }
-backon = { workspace = true }
-tokio-stream = { workspace = true }
-parking_lot = { workspace = true }
 
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 approx = { workspace = true }
 bytes = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
-rand = { workspace = true }
-uuid = { workspace = true, features = ["v4"] }
+dirs = { workspace = true }
 itertools = { workspace = true }
-tempfile = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-dirs = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 
 clap = { workspace = true, features = ["derive", "string"] }
-sqlx = { workspace = true, features = [
-    "sqlite",
-    "runtime-tokio",
+sqlx = {
+  workspace = true,
+  features = [
     "migrate",
+    "runtime-tokio",
+    "sqlite",
     "sqlx-toml",
-] }
+  ]
+}
 
 [build-dependencies]
 prost-build = { workspace = true }
 struckout-utils = { workspace = true }
+
+[features]
+input-sqlite = []
+sentry = ["dep:sentry"]

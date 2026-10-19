@@ -11,8 +11,8 @@ slint = { workspace = true }
 stern = { workspace = true }
 struckout-proto = { workspace = true }
 
-strum = { workspace = true }
 derive_more = { workspace = true }
+strum = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }
