@@ -18,11 +18,15 @@ jobs:
       version: ${{ steps.info.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          install_args: protoc
       - name: Get commit hash and version of this release
         id: info
         run: |
-            echo "short-hash=$(cargo xtask release short-hash)" >> "$GITHUB_OUTPUT"
-            echo "version=$(cargo xtask release next-version)" >> "$GITHUB_OUTPUT"
+            echo "short-hash=$(mise exec protoc -- cargo xtask release short-hash)" >> "$GITHUB_OUTPUT"
+            echo "version=$(mise exec protoc -- cargo xtask release next-version)" >> "$GITHUB_OUTPUT"
 
   rust-build:
     strategy:
