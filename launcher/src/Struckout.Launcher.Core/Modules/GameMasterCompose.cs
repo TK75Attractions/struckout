@@ -5,7 +5,7 @@ namespace Struckout.Launcher.Core.Modules;
 
 /// <summary>Runs <c>docker compose</c> for the game_master that the installer set up.</summary>
 /// <remarks>
-/// The compose files are the ones in <c>game_master/</c> of the release. <c>compose.release.yaml</c> replaces the
+/// The compose files are the ones in <c>game_master/</c> of the release. <c>compose.prod.yaml</c> replaces the
 /// build with the image published to ghcr.io, so the PC doesn't need the source.
 /// </remarks>
 /// <param name="version">The release tag, which is also the tag of the image.</param>
@@ -13,7 +13,7 @@ public sealed class GameMasterCompose(
     HostPlatform platform, string docker, string directory, string version, string password, ICommandRunner runner)
 {
     /// <summary>The files under <c>game_master/</c> of the repository, in the order compose merges them.</summary>
-    public static IReadOnlyList<string> Files { get; } = ["compose.yaml", "compose.prod.yaml", "compose.release.yaml"];
+    public static IReadOnlyList<string> Files { get; } = ["compose.yaml", "compose.prod.yaml"];
 
     /// <summary>
     /// Separate from the projects of <c>mise run game-master:*</c> so that a development PC keeps its database.
