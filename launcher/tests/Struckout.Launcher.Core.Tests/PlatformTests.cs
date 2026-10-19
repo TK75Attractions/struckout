@@ -13,7 +13,7 @@ public class PlatformTests
         {
             "ball-tracker-arm64-macos", "ball-tracker-x86_64-linux", "ball-tracker-x86_64-windows",
             "projector-arm64-macos.zip", "projector-x86_64-linux.zip", "projector-x86_64-windows.zip",
-        }.Select(name => new ReleaseAsset(name, new Uri($"https://example.com/{name}"), 1)).ToList());
+        }.Select(name => new ReleaseAsset(name, new Uri($"https://example.com/{name}"), 1, null)).ToList());
 
     [Theory]
     [InlineData(OperatingSystemKind.Windows, CpuArchitecture.X64, "ball-tracker-x86_64-windows")]

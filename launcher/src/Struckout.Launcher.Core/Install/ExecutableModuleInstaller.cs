@@ -14,7 +14,7 @@ internal sealed class ExecutableModuleInstaller(
         var directory = paths.ModuleDirectory(id.Slug());
         var executable = Path.Combine(directory, platform.ExecutableName(binaryName));
         context.Log.Report($"{id.Slug()}: {asset.Name} をダウンロードします");
-        await downloader.DownloadAsync(asset.DownloadUrl, executable, context.Download, context.CancellationToken);
+        await ReleaseAssets.DownloadAsync(downloader, asset, executable, context);
         if (!OperatingSystem.IsWindows())
         {
             File.SetUnixFileMode(

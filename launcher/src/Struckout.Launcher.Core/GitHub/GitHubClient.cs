@@ -3,10 +3,12 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Struckout.Launcher.Core.Platform;
 
 namespace Struckout.Launcher.Core.GitHub;
 
-public sealed record ReleaseAsset(string Name, Uri DownloadUrl, long Size);
+/// <param name="Digest">The hash GitHub computed when the asset was uploaded. Null for old assets.</param>
+public sealed record ReleaseAsset(string Name, Uri DownloadUrl, long Size, Sha256Digest? Digest);
 
 public sealed record Release(string Tag, DateTimeOffset PublishedAt, IReadOnlyList<ReleaseAsset> Assets)
 {
@@ -72,13 +74,16 @@ public sealed class GitHubClient(HttpClient http, string repository, GitHubCrede
             return new Release(
                 dto.TagName,
                 dto.PublishedAt,
-                dto.Assets.Select(a => new ReleaseAsset(a.Name, new Uri(a.BrowserDownloadUrl), a.Size)).ToList());
+                dto.Assets
+                    .Select(a => new ReleaseAsset(
+                        a.Name, new Uri(a.BrowserDownloadUrl), a.Size, Sha256Digest.ParseGitHub(a.Digest)))
+                    .ToList());
         }
         catch (HttpRequestException e)
         {
             throw new LauncherException($"GitHub からリリースの情報を取れません: {e.Message}", e);
         }
-        catch (JsonException e)
+        catch (Exception e) when (e is JsonException or FormatException)
         {
             throw new LauncherException($"GitHub のリリースの情報を読めません: {e.Message}", e);
         }
@@ -114,5 +119,6 @@ public sealed class GitHubClient(HttpClient http, string repository, GitHubCrede
     private sealed record AssetDto(
         [property: JsonRequired] string Name,
         [property: JsonRequired] string BrowserDownloadUrl,
-        [property: JsonRequired] long Size);
+        [property: JsonRequired] long Size,
+        string? Digest);
 }

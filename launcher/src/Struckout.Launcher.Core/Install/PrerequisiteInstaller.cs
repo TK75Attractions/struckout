@@ -115,7 +115,8 @@ public sealed class PrerequisiteInstaller(
             case PlatformToolsDownload(var url):
                 log.Report($"{name}: {url} からダウンロードします");
                 var archive = Path.Combine(paths.ToolsDirectory, "platform-tools.zip");
-                await downloader.DownloadAsync(url, archive, null, cancellationToken);
+                // Google publishes no hash for the "latest" archive, so this relies on HTTPS alone.
+                await downloader.DownloadAsync(url, archive, expected: null, progress: null, cancellationToken);
                 var directory = locator.DownloadedPlatformTools;
                 if (Directory.Exists(directory))
                 {

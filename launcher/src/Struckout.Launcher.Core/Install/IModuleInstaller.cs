@@ -51,4 +51,17 @@ internal static class ReleaseAssets
         throw new LauncherException(
             $"リリース {release.Tag} に、この PC ({platform.Os}, {platform.Architecture}) で動く {slug} がありません");
     }
+
+    /// <summary>
+    /// Downloads <paramref name="asset"/> and checks that it has the hash GitHub reported, so that a broken or
+    /// tampered file is never installed.
+    /// </summary>
+    /// <exception cref="LauncherException">GitHub reports no hash, or the download failed or doesn't match.</exception>
+    public static Task DownloadAsync(
+        HttpDownloader downloader, ReleaseAsset asset, string destination, InstallContext context)
+    {
+        var digest = asset.Digest ?? throw new LauncherException(
+            $"リリース {context.Release.Tag} の {asset.Name} にハッシュが無いので、壊れていないか確かめられません");
+        return downloader.DownloadAsync(asset.DownloadUrl, destination, digest, context.Download, context.CancellationToken);
+    }
 }
