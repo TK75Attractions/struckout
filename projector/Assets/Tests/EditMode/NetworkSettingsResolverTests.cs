@@ -4,7 +4,7 @@ using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Infrastructure;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 接続先の解決。優先順位は コマンドライン &gt; 環境変数 &gt; Inspector。

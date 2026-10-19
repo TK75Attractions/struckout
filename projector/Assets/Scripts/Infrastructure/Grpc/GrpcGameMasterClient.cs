@@ -4,15 +4,15 @@ using System.Threading.Tasks;
 using Cysharp.Net.Http;
 using Grpc.Core;
 using Grpc.Net.Client;
-using Struckout.Application;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
-
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
 using Event = Tk75Attractions.Struckout.V1.Event;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.Grpc
 {
     /// <summary>
     /// game_master (tonic) への gRPC クライアント。
@@ -40,8 +40,11 @@ namespace Struckout.Infrastructure
 
         public event Action<Difficulty> GameStarted;
         public event Action GameFinished;
+        public event Action<TimeSpan> RemainingTimeChanged;
+        public event Action<uint> ScoreChanged;
         public event Action ConnectionLost;
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GrpcGameMasterClient(NetworkSettings settings)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -177,6 +180,7 @@ namespace Struckout.Infrastructure
                     break;
 
                 case Event.EventDataOneofCase.GameFinished:
+                    if (_gameId != received.GameId) break;
                     // これ以降 game_master は running_games から外すので、
                     // 得点を送っても NotFound で弾かれる。手元でも送信を止める。
                     _gameId = null;
@@ -184,9 +188,26 @@ namespace Struckout.Infrastructure
                     break;
 
                 case Event.EventDataOneofCase.GameTimeLimitNotify:
-                    // 毎秒届く。残り時間を projector と touchpanel のどちらが出すかが
-                    // 未決なので、今は捨てている。projector で出すと決まったら
-                    // IGameMasterClient にイベントを足してここから流す。
+                    if (_gameId != received.GameId) break;
+                    var remaining = received.GameTimeLimitNotify.Remaining;
+                    if (remaining == null) break;
+
+                    TimeSpan remainingTime;
+                    try
+                    {
+                        remainingTime = remaining.ToTimeSpan();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        Debug.LogWarning("[GameMaster] received an invalid remaining duration; ignored.");
+                        break;
+                    }
+                    RemainingTimeChanged?.Invoke(remainingTime);
+                    break;
+
+                case Event.EventDataOneofCase.GameScoreChanged:
+                    if (_gameId != received.GameId) break;
+                    ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
                     break;
 
                 default:

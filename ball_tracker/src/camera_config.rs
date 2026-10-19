@@ -5,7 +5,7 @@
 //! - 位置と向きは、スマホが送ってくる値ではなく、ここに書いた値を使う
 //! - 位置と向き、焦点距離、検出の範囲をスマホに送り、スマホの設定に入れてもらう
 //!
-//! ので、開く順番も、スマホの設定が消えることも気にしなくてよい。`device_id` は `scripts/camera-remote.ps1 config`
+//! ので、開く順番も、スマホの設定が消えることも気にしなくてよい。`device_id` は `scripts/camera_remote.py config`
 //! が端末から聞いて書き込む。
 
 use std::path::Path;
@@ -85,7 +85,7 @@ impl CameraConfig {
     }
 
     pub fn parse(text: &str) -> anyhow::Result<Self> {
-        // PowerShell で書いた JSON は先頭に BOM が付くことがある
+        // Windows のツールで保存した JSON は先頭に BOM が付くことがある
         let file: CameraConfigFile = serde_json::from_str(text.trim_start_matches('\u{feff}'))?;
         Ok(Self {
             entries: file.cameras,

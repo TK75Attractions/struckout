@@ -1,8 +1,7 @@
+using System;
 using Tk75Attractions.Struckout.V1;
 
-using System;
-
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     public interface IPacketRouter
     {

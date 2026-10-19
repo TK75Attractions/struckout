@@ -1,7 +1,11 @@
 using Struckout.Application;
+using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Infrastructure;
 using Struckout.Bootstrap;
+using Struckout.Infrastructure.Fake;
+using Struckout.Infrastructure.Grpc;
+using Struckout.Infrastructure.TCP;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;

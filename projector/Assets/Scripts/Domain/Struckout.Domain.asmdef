@@ -1,6 +1,6 @@
 {
     "name": "Struckout.Domain",
-    "rootNamespace": "",
+    "rootNamespace": "Struckout",
     "references": [
         "GUID:1dc54d70efa73714f925e602e943cd30"
     ],

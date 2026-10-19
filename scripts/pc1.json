@@ -1,9 +1,9 @@
 {
   "description": [
-    "scripts/run-pc1.ps1 が ball_tracker に渡す設定。値の意味は docs/setup_pc1.md の起動オプションの表。",
+    "scripts/run_pc1.py が ball_tracker に渡す設定。値の意味は docs/setup_pc1.md の起動オプションの表。",
     "2026-10-16 の実験 (recordings/2026-10-16_experiment_3) で、その場の精度が二乗平均 1.29 cm だった設定。",
     "output: network は projector に送る。csv は projector なしで試すとき。",
-    "record_video: 受け取った動画を残す (2 台で 1 時間に約 45 GB)。稼働中は false にし、実験のときは run-pc1.ps1 -Record で残す。"
+    "record_video: 受け取った動画を残す (2 台で 1 時間に約 45 GB)。稼働中は false にし、実験のときは run_pc1.py --record で残す。"
   ],
   "output": "network",
   "report_delay_ms": 150,

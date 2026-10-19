@@ -16,7 +16,6 @@ UserSettings/
 # =========================
 
 .vs/
-.idea/
 .gradle/
 
 *.csproj
@@ -54,22 +53,10 @@ Thumbs.db
 desktop.ini
 
 # =========================
-# JetBrains Rider
-# =========================
-
-.idea/
-
-# =========================
 # Crash Reports
 # =========================
 
 sysinfo.txt
-
-# =========================
-# Unity Package Cache
-# =========================
-
-Packages/packages-lock.json
 
 # =========================
 # Generated Files

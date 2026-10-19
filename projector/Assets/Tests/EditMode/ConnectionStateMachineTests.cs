@@ -2,7 +2,7 @@ using System;
 using NUnit.Framework;
 using Struckout.Domain;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     public class ConnectionStateMachineTests
     {

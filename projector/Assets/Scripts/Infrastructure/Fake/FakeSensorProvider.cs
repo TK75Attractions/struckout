@@ -1,8 +1,8 @@
 using System;
-using Struckout.Application;
+using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Infrastructure
+namespace Struckout.Infrastructure.Fake
 {
     public class FakeSensorProvider : ISensorProvider
     {

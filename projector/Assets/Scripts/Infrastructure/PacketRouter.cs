@@ -1,7 +1,6 @@
 using Tk75Attractions.Struckout.V1;
-
-using Struckout.Application;
 using System;
+using Struckout.Application.Interface;
 using UnityEngine;
 
 

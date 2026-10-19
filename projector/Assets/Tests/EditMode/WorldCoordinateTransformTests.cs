@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Struckout.Domain;
 
-namespace Struckout.Tests
+namespace Struckout.Tests.Tests.EditMode
 {
     /// <summary>
     /// 盤面の描画座標 (px) からワールド座標 (unit) への変換。

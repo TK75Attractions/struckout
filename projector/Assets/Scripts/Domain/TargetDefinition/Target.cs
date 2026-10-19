@@ -1,6 +1,6 @@
 using System.Threading;
 
-namespace Struckout.Domain
+namespace Struckout.Domain.TargetDefinition
 {
     /// <summary>
     /// 的。

@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Tk75Attractions.Struckout.V1;
 
-namespace Struckout.Application
+namespace Struckout.Application.Interface
 {
     /// <summary>
     /// game_master との通信。gRPC で話す。
@@ -25,6 +25,12 @@ namespace Struckout.Application
         /// GameStarted と同じく受信スレッドから飛ぶ。
         /// </summary>
         event Action GameFinished;
+
+        /// <summary>サーバーの残り時間。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
+        event Action<TimeSpan> RemainingTimeChanged;
+
+        /// <summary>サーバーの累計得点。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
+        event Action<uint> ScoreChanged;
 
         /// <summary>イベント購読が切れた。</summary>
         event Action ConnectionLost;

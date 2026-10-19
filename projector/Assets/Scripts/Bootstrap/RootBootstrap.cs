@@ -1,6 +1,7 @@
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using System;
+using JetBrains.Annotations;
 using VContainer.Unity;
 using Struckout.Domain;
 
@@ -12,6 +13,8 @@ namespace Struckout.Bootstrap
 
         private NetworkBootstrap _networkBootstrap;
         private GameBootstrap _gameBootstrap;
+        
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public RootBootstrap(
             NetworkBootstrap networkBootstrap,
             GameBootstrap gameBootstrap,
@@ -31,13 +34,15 @@ namespace Struckout.Bootstrap
         private async UniTask Initialize()
         {
             _runtimeContext.AddDestroyEvent(_networkBootstrap);
+            _runtimeContext.AddDestroyEvent(_gameBootstrap);
+
+            await _gameBootstrap.Initialize(_runtimeContext);
 
             NetworkConnectionResult result = await _networkBootstrap.Initialize();
 
             switch (result)
             {
                 case NetworkConnectionResult.Success:
-                    await _gameBootstrap.Initialize(_runtimeContext);
                     break;
                 case NetworkConnectionResult.ClientConnectFailed:
                     throw new Exception("Client connect failed");

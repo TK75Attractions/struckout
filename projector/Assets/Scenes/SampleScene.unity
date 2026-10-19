@@ -378,6 +378,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.UIService
   _circleUI: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
+  _hudCanvas: {fileID: 637544012}
+  _displayFont: {fileID: 12800000, guid: 88c57f85fb174101a0fdba227a9b60b8, type: 3}
   _backgroundSprite: {fileID: 21300000, guid: d024158e449411e459fe04b45ca3cddc, type: 3}
   _idleSprite: {fileID: 21300000, guid: 75479ef23d330034f8d65accde54221a, type: 3}
   _finishedSprite: {fileID: 21300000, guid: 5abc6990bc639e04c83de7bf85d601b7, type: 3}
@@ -606,7 +608,7 @@ RectTransform:
   m_GameObject: {fileID: 637544009}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}

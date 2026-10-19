@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
+using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
 
@@ -24,6 +27,7 @@ namespace Struckout.Application
         
         private readonly GameRuntimeState _state = new();
 
+        [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GameRuntime(
             ICollisionSolver collisionSolver,
             IPointCalculator pointCalculator,

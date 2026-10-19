@@ -1,15 +1,24 @@
 {
   "description": [
-    "scripts/run-pc2.ps1 の設定。tracker_host には PC① の名前 (PC① の run-pc1.ps1 が表示する) か IP を書く。",
-    "monitor はプロジェクターをつないだ画面の番号 (1 から)。collision_transform は着弾位置の係数のファイル (空なら projector の既定)。"
+    "scripts/run_pc2.py の設定。tracker_host には PC① の名前 (PC① の run_pc1.py が表示する) か IP を書く。",
+    "monitor はプロジェクターをつないだ画面の番号 (1 から)。collision_transform は着弾位置の係数のファイル (空なら projector の既定)。",
+    "projector_exe と unity_editor は OS ごと (windows / linux / macos) に書く。"
   ],
   "tracker_host": "172.20.10.2",
   "master_host": "127.0.0.1",
   "machine_id": 1,
   "monitor": 2,
   "fullscreen": true,
-  "projector_exe": "projector/Builds/Windows/StruckOut.exe",
-  "unity_editor": "C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Unity.exe",
+  "projector_exe": {
+    "windows": "projector/Builds/Windows/StruckOut.exe",
+    "linux": "projector/Builds/Linux/StruckOut.x86_64",
+    "macos": "projector/Builds/macOS/StruckOut.app"
+  },
+  "unity_editor": {
+    "windows": "C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Unity.exe",
+    "linux": "~/Unity/Hub/Editor/6000.5.2f1/Editor/Unity",
+    "macos": "/Applications/Unity/Hub/Editor/6000.5.2f1/Unity.app/Contents/MacOS/Unity"
+  },
   "collision_transform": "",
   "game_master": true
 }
