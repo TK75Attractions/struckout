@@ -24,9 +24,9 @@ namespace Struckout.Infrastructure.Fake
         private const float FieldMaxY = 2f;
 
         private const int IntervalMilliseconds = 1000;
-        
+
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public FakeClientService(){}
+        public FakeClientService() { }
 
         public event Action<ProjectorPacket> OnReceived;
 

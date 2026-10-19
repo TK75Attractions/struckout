@@ -24,7 +24,7 @@ namespace Struckout.Application
         /// game_master (session.rs) は cur_score += score としているので、累計ではなく差分を流す。
         /// </summary>
         public event Action<int> ScoreAdded;
-        
+
         private readonly GameRuntimeState _state = new();
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]

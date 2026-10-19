@@ -18,7 +18,7 @@ namespace Struckout.Domain
         };
 
         public static ConnectionState Transition(ConnectionState from, ConnectionState to)
-            => CanTransition(from, to) ? to : throw new ArgumentException($"Can't transition from { from } to { to }");
+            => CanTransition(from, to) ? to : throw new ArgumentException($"Can't transition from {from} to {to}");
 
         private static bool CanTransition(ConnectionState from, ConnectionState to) => _transitions[from].Contains(to);
     }

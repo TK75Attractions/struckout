@@ -38,7 +38,7 @@ namespace Struckout.Bootstrap
             RuntimeContext context
             )
         {
-            if(_service == null) throw new Exception("There are no IUIService in uiService");
+            if (_service == null) throw new Exception("There are no IUIService in uiService");
             _context = context;
 
             // Fake の遅延購読でも、開始通知より先に初期盤面を準備する。

@@ -24,7 +24,7 @@ namespace Struckout.Infrastructure
             foreach (var tar in targets)
             {
                 // ReSharper disable once InvertIf
-                if(IsWithinTarget(collisionPoint, tar))
+                if (IsWithinTarget(collisionPoint, tar))
                 {
                     target = tar;
                     break;

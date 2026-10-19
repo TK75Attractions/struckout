@@ -42,14 +42,14 @@ namespace Struckout.Infrastructure
 
         public Target GenerateTarget(TargetType type, IReadOnlyList<Target> targets)
         {
-            
+
             float maxX = 0f;
             float maxY = 0f;
             float maxScore = 0f;
-            for(int i = 1; i < 200; i++)
+            for (int i = 1; i < 200; i++)
             {
-                float x = RadicalInverse(i, 2)*_xSize;
-                float y = RadicalInverse(i, 3)*_ySize;
+                float x = RadicalInverse(i, 2) * _xSize;
+                float y = RadicalInverse(i, 3) * _ySize;
 
                 var score = GetScore(x, y, targets);
                 if (maxScore < score)
@@ -59,7 +59,7 @@ namespace Struckout.Infrastructure
                     maxScore = score;
                 }
             }
-            if(targets.Count == 0) return GenerateTarget(type, maxX, maxY, 500);
+            if (targets.Count == 0) return GenerateTarget(type, maxX, maxY, 500);
             return GenerateTarget(type, maxX, maxY, (float)maxScore);
         }
 
@@ -133,9 +133,9 @@ namespace Struckout.Infrastructure
         private float GetScore(float x, float y, IReadOnlyList<Target> targets)
         {
             float score = float.MaxValue;
-            foreach(var target in targets)
+            foreach (var target in targets)
             {
-                var tempScore = GetScore(x,y, target);
+                var tempScore = GetScore(x, y, target);
                 score = MathF.Min(score, tempScore);
             }
             return score;
@@ -143,7 +143,7 @@ namespace Struckout.Infrastructure
 
         private float GetScore(float x, float y, Target targets)
         {
-            var score = MathF.Sqrt((x-targets.Coordinate.X)*(x-targets.Coordinate.X) + (y-targets.Coordinate.Y)*(y-targets.Coordinate.Y)) - targets.Radius;
+            var score = MathF.Sqrt((x - targets.Coordinate.X) * (x - targets.Coordinate.X) + (y - targets.Coordinate.Y) * (y - targets.Coordinate.Y)) - targets.Radius;
             score = MathF.Min(score, x);
             score = MathF.Min(score, y);
             score = MathF.Min(score, _xSize - x);
@@ -154,7 +154,7 @@ namespace Struckout.Infrastructure
         private float RadicalInverse(int index, int baseValue)
         {
             float result = 0.0f;
-            float f = 1f/baseValue;
+            float f = 1f / baseValue;
 
             while (index > 0)
             {
