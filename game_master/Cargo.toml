@@ -12,6 +12,7 @@ prost-types = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "test-util"] }
 tokio-stream = { workspace = true, features = ["sync"] }
 tonic = { workspace = true }
+tonic-health = { workspace = true }
 
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive", "string"] }
