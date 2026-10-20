@@ -339,7 +339,7 @@ jobs:
           path: camera
       - name: Create release
         run: |
-          gh release create ${{ needs.get-version.outputs.version }} --generete-notes \
+          gh release create ${{ needs.get-version.outputs.version }} --generate-notes \
             rust-x86_64-windows/* rust-arm64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
             launcher-*/* camera/camera.apk \
             projector-arm64-macos/projector-arm64-macos.zip \
