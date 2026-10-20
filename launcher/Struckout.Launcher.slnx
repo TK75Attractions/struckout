@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Struckout.Launcher.Core/Struckout.Launcher.Core.csproj" />
+    <Project Path="src/Struckout.Launcher/Struckout.Launcher.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Struckout.Launcher.Core.Tests/Struckout.Launcher.Core.Tests.csproj" />
+  </Folder>
+</Solution>

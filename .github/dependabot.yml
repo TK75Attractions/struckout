@@ -25,3 +25,7 @@ updates:
     directory: "/game_master"
     schedule:
       interval: weekly
+  - package-ecosystem: nuget
+    directory: "/launcher"
+    schedule:
+      interval: weekly

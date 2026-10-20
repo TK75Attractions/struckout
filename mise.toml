@@ -2,7 +2,7 @@ min_version = "2026.10.3"
 monorepo_root = true
 
 [monorepo]
-config_roots = ["camera", "game_master", "touchpanel"]
+config_roots = ["camera", "game_master", "launcher", "touchpanel"]
 lockfile = true
 
 [settings]

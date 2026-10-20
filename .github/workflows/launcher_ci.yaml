@@ -1,0 +1,49 @@
+name: Launcher CI
+
+on:
+  push:
+    branches: master
+    paths:
+      - launcher/**
+      - api/spec/**
+      - mise.toml
+      - mise.lock
+      - .github/workflows/launcher_ci.yaml
+  pull_request:
+    branches: master
+    paths:
+      - launcher/**
+      - api/spec/**
+      - mise.toml
+      - mise.lock
+      - .github/workflows/launcher_ci.yaml
+  workflow_dispatch:
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: launcher/
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            api/spec
+            launcher
+            mise.toml
+            mise.lock
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+        with:
+          working_directory: launcher
+          install_args: dotnet
+      - name: Check format
+        run: dotnet format Struckout.Launcher.slnx --verify-no-changes
+      - name: Build
+        run: dotnet build Struckout.Launcher.slnx
+      - name: Run tests
+        run: dotnet test --solution Struckout.Launcher.slnx

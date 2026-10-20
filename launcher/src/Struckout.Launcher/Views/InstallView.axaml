@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Struckout.Launcher.ViewModels"
+             x:Class="Struckout.Launcher.Views.InstallView"
+             x:DataType="vm:InstallViewModel">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8" Margin="8">
+    <StackPanel Grid.Row="0" Spacing="2">
+      <TextBlock Text="{Binding ReleaseText}" FontWeight="SemiBold" />
+      <TextBlock Classes="note" Text="{Binding CredentialText}" />
+      <TextBlock Classes="note" Text="{Binding InstallDirectory, StringFormat='インストール先: {0}'}" />
+      <TextBlock Classes="note" Text="{Binding ConfigDirectory, StringFormat='設定: {0}'}" />
+    </StackPanel>
+
+    <ItemsControl Grid.Row="1" ItemsSource="{Binding Modules}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ModuleItemViewModel">
+          <Grid ColumnDefinitions="Auto,160,*,Auto" Margin="0,2">
+            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" />
+            <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" />
+            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+              <TextBlock Classes="note" Text="{Binding Prerequisites}" IsVisible="{Binding !!Prerequisites.Length}" />
+            </StackPanel>
+            <TextBlock Grid.Column="3" Text="{Binding Status}" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Classes.ok="{Binding IsInstalled}" />
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <StackPanel Grid.Row="2" Spacing="4">
+      <TextBlock Classes="note"
+                 Text="足りないツール (Docker Desktop、FFmpeg) は winget か Homebrew で入れ、Android Platform Tools は Google からダウンロードします。インストールすると、それぞれの利用規約に同意したことになります。Linux の Docker と FFmpeg は、ディストリビューションの手順で先に入れてください。" />
+      <WrapPanel ItemSpacing="8" LineSpacing="8">
+        <Button Content="インストール / 更新" Command="{Binding InstallCommand}" Classes="accent" />
+        <Button Content="アンインストール" Command="{Binding UninstallCommand}" />
+        <CheckBox Content="game-master のデータベース (ランキング) も消す" IsChecked="{Binding DeleteDatabase}" />
+        <Button Content="リリースを確かめる" Command="{Binding RefreshCommand}" />
+        <Button Content="中止" Command="{Binding CancelCommand}" />
+      </WrapPanel>
+    </StackPanel>
+
+    <ProgressBar Grid.Row="3" Value="{Binding DownloadPercent}" IsVisible="{Binding IsDownloading}" />
+
+    <TextBox Grid.Row="4" Classes="log" Text="{Binding Log.Text}" x:Name="LogBox" />
+  </Grid>
+</UserControl>

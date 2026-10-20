@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Struckout.Launcher.ViewModels"
+        xmlns:views="using:Struckout.Launcher.Views"
+        x:Class="Struckout.Launcher.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="struckout ランチャー"
+        Width="980" Height="720" MinWidth="720" MinHeight="520">
+  <TabControl Margin="8">
+    <TabItem Header="起動">
+      <views:LaunchView DataContext="{Binding Launch}" />
+    </TabItem>
+    <TabItem Header="インストール">
+      <views:InstallView DataContext="{Binding Install}" />
+    </TabItem>
+  </TabControl>
+</Window>

@@ -13,6 +13,7 @@
 - `touchpanel` (Rust/Slint): タッチパネルのUI。game-masterにゲームスタートのリクエストをしたりprojectorがgame-masterに送った点数を取得したり。
 - `projector` (C#/Unity): ball_trackerから的にあたった場所を受け取り、`projector`が持っている的の座標と照合し何点入るか計算する。入る点数をgame_masterに通知する。
 - `camera` (Kotlin): 二次元座標をカメラから取得して`ball_tracker`に送信する。
+- `launcher` (C#/Avalonia): 上のモジュールを GitHub Releases などからインストールし、依存の順に起動する。使い方は [launcher/README.md](./launcher/README.md)。
 
 ### その他
 - `.cargo`: cargo(Rustでnpmにあたるもの)の設定。

@@ -1,0 +1,2 @@
+# Keep LF everywhere, like the rest of the repository (dotnet format checks it in CI).
+* text=auto eol=lf

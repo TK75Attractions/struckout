@@ -1,0 +1,16 @@
+# dotnet comes from the mise.toml at the root of the repository.
+
+[tasks."run"]
+run = "dotnet run --project src/Struckout.Launcher"
+dir = "{{ config_root }}"
+description = "ランチャーをソースから起動する"
+
+[tasks."test"]
+run = "dotnet test --solution Struckout.Launcher.slnx"
+dir = "{{ config_root }}"
+description = "ランチャーのテストを実行する"
+
+[tasks."fmt"]
+run = "dotnet format Struckout.Launcher.slnx"
+dir = "{{ config_root }}"
+description = "ランチャーの C# を整形する"
