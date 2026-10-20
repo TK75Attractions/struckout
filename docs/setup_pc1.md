@@ -183,7 +183,7 @@ starting TCP listener
 | `--report-delay-ms <ms>` | 着弾を、予測した着弾時刻の何 ms 後に報告するか (負なら前、既定 -30)。撮影から届くまでの遅れ以上にすると、着弾の直前の視線を使えて精度が上がる。描画はそのぶん遅れる (`recordings/2026-10-16_experiment/notes.md`) |
 | `--cameras` | スマホごとの設定 (`scripts/cameras.json`)。`device_id` で端末を見分け、つないだ順によらず書いた順の camera_id (0, 1, ...) を振る。位置と向きは、スマホが送る値ではなくここに書いた値を使い、焦点距離などと一緒にスマホにも送る (6.1) |
 | `--auto-time-trim` | 右のカメラの時刻の補正を、報告した投球 (直近 9 球の中央値) から自動で決めて `--time-trim-ms` に足す。付けないときは決めた値をログに出すだけ。カメラの向きを較正してから使う (向きがずれていると、その誤差まで時刻で吸収する) |
-| `--video-hwaccel <方式>` | 動画のデコードに使う GPU。既定の `auto` は、その PC で使えるものを選ぶ (Windows は `d3d11va`→`cuda`→`qsv`→`dxva2`)。`none` で CPU。選んだ方式は起動時のログ (`decoding video on the GPU`) に出る。検出の結果は CPU と同じ。**電源につないだ状態での遅れはまだ確かめていない**。おかしければ `none` に戻す |
+| `--video-hwaccel <方式>` | 動画のデコードに使う GPU。既定の `auto` は、その PC で使えるものを選ぶ (Windows は `d3d11va`→`cuda`→`qsv`→`dxva2`)。`none` で CPU。選んだ方式は起動時のログ (`decoding video on the GPU`) に出る。検出の結果は CPU と同じ。2026-10-19 に Ryzen 7 6800U の PC で電源につないで測ると (`d3d11va`)、受け取ってから解析し終えるまでの遅れは中央値 23 ms。おかしければ `none` に戻す |
 | `--detection-center <box|centroid>` | PC で解析するとき、視線を作る検出の位置。`box` は枠の中心を整数に切り捨てる (カメラアプリと同じ、既定)、`centroid` は前景の画素の重心。2026-10-16 の録画で centroid のほうが少しよかった (1.66 → 1.52 cm) |
 | `--edge-detections <keep|drop|extrapolate>` | PC で解析するとき、画像の端に接した検出 (ボールが欠けている) の扱い。`keep` はそのまま (既定)、`drop` は捨てる (報告できない球が出る)、`extrapolate` は欠けていない向きの幅を直径とみなして中心を推定する。2026-10-16 の録画で、extrapolate は視線どうしの食い違いを 0.96 → 0.60 cm に減らし、報告できない球は出なかった |
 
@@ -353,6 +353,23 @@ ball_tracker は、projector には的の面の上の位置 `(y, z)` を送る (
 
 ## 9. 起動する
 
+### 起動する前に: PC① の電源と温度 (2026-10-19 から)
+
+PC① は、熱や充電でクロックが落ちると、動画の処理が 120fps に追いつかなくなる。先に足りなくなるのは ffmpeg
+(デコードと縮小) の見込み。受け取ってから解析し終えるまでの遅れが 0.5 秒を超えると、そのあいだの着弾は出ない。
+次の条件をそろえてから起動する (2026-10-19 に Ryzen 7 6800U の PC で確かめた)。
+
+- 電源につなぐ。バッテリーでは ffmpeg のデコードが約 75fps しか出ない (`run_pc1.py` が警告する)
+- 急速充電と重ねない。電池が減っているときは先に充電を済ませるか、充電を止めておく (ASUS の PC なら MyASUS の
+  電池の設定)。充電と重なって 0.4 GHz まで落ちたことがある
+- ファンモードをパフォーマンスにする (ASUS の PC なら、レジストリの `QuietFan` が 2 になる)
+- 冷えた状態から始める。ビルドやベンチマークなど重い作業のあとは、5 分ほど置いてから起動する。温まった状態から
+  始めた回では、途中で 95 °C、0.65〜1.6 GHz まで落ち、1〜3 分おきに遅れが 0.2〜0.8 秒に伸びた
+- 動かしているあいだは、ほかに重い作業をしない
+
+この条件で録画を実際の速さで流した試験は、3 回 (59 分、20 分、20 分) とも遅れずに追いついた (解析は 1 枚
+1.35 ms、遅れは中央値 23 ms で、そのうち約 22 ms は ffmpeg の中)。追いつかなくなったときの見分け方は 10 章。
+
 ### いちばん簡単な起動 (2026-10-16 から)
 
 スマホ 2 台を USB でつなぎ、PC① で次の 1 つを実行する。PC② では `scripts/run_pc2.py` を実行する (`docs/setup_pc2.md`)。
@@ -436,9 +453,10 @@ ball_tracker にオプションを足すときは `--` のあとに書く (`pyth
    | 項目 | 正常なとき |
    |---|---|
    | `fps` | 120 前後 (カメラ画面の「エンコード」と同じくらい) |
-   | `analysis_ms` | 1 枚の解析。8 ms 以内 (2026-10-15 にこの PC で 3.8 ms) |
+   | `analysis_ms` | 1 枚の解析。8 ms 以内 (2026-10-19 に Ryzen 7 6800U の PC で 1.35 ms) |
    | `max_delay_ms` | 受け取ってから解析し終えるまでの最大。数十 ms (60fps の録画で 51〜60 ms)。500 ms を超えると着弾が出なくなる |
-   | `queued` | デコード待ちのフレーム。数枚 |
+   | `queued` | 受け取って、まだ解析していないフレーム。数枚 |
+   | `wait_ms`、`ffmpeg_ms_p50` など | 段ごとの時間。読み方は `ball_tracker/README.md` |
 
    初回は `--video-snapshot-dir` を付けて起動し、保存された BMP (PC がデコードした画像) と、アプリの
    `Save frame` で保存した画像の**向きが同じ**か確かめる。上下や左右が反転していると方向ベクトルが狂う。
@@ -481,7 +499,7 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 | `its device_id is not in --cameras` | `cameras.json` にその端末の `device_id` が無い。`python scripts/camera_remote.py config` を実行する。それまでは、つないだ順の番号 (2 から) と、スマホが送る位置を使う |
 | カメラ画面が `検出: この端末で解析` のまま | `adb reverse --list` に 5052 があるか、設定の出力先が `Network` で TCP がつながっているか (カメラの番号が要る)、ball_tracker を `--no-video-analysis` で起動していないか。ball_tracker のログに `accepted new connection in VideoTransport` が出ているか |
 | `failed to start ffmpeg` | ffmpeg が PATH に無い。`--ffmpeg` で場所を渡す (1.4) |
-| `video analysis` の `fps` が 120 に届かない、`max_delay_ms` が大きい | PC① の処理が追いついていない。`analysis_ms` (1 枚の解析) が 8 ms を超えるなら PC① が遅い。`falling behind` が出ていれば、送信か ffmpeg が詰まっている |
+| `video analysis` の `fps` が 120 に届かない、`max_delay_ms` が大きい | PC① の処理が追いついていない。`queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が追いついていない。どちらも、クロックが落ちていないか (9 章の「起動する前に」) を先に疑う。`falling behind` が出ていれば、送信か ffmpeg が詰まっている |
 | アプリを開き直したら `camera_id` が 2, 3 ... になった | ball_tracker を `--cameras` なしで起動したか、その端末の `device_id` が `cameras.json` に無い。`--cameras` のないときの番号は接続のたびに増え、前の接続の位置も残るので、2 台の組み合わせを誤るおそれがある |
 | 検知が届かない | スマホがカメラ画面になっているか、画面が消えていないか |
 | 衝突が出ない | `-j` を付けて起動し、`events_*` を見る。`SeedDiagnostics` にトラックを作れなかった理由 (`RejectReason`) が残る。`SuppressedCollision` は、直前の報告に近い、またはほかのトラックのほうがボールらしいとして見送ったもの |
