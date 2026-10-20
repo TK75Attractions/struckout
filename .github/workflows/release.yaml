@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
         with:
           install_args: protoc
       - name: Get commit hash and version of this release
@@ -67,7 +67,7 @@ jobs:
             touchpanel
             xtask
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - uses: jdx/mise-action@b90b6cbe247d74ecfb150e2f246c091da4d5174f
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
         with:
           install_args: protoc
       - name: Install fontconfig for Linux
