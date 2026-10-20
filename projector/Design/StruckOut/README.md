@@ -1,6 +1,6 @@
 # STRUCK OUT projector design kit
 
-The supplied `reference_logo.jpg` defines this kit's visual language: a black field, sharp white geometry, electric blue and bright yellow slashes. Images were generated with the built-in ChatGPT image tool from that reference.
+The supplied `reference_logo.jpg` defines this kit's visual language: a black field, sharp white geometry, electric blue and bright yellow slashes. Existing raster images were generated with the built-in ChatGPT image tool from that reference.
 
 ## Deliverables
 
@@ -11,6 +11,9 @@ The supplied `reference_logo.jpg` defines this kit's visual language: a black fi
 | `../../Assets/Art/StruckOut/hit_scored.png` | 1254 × 1254, transparent | Bright scoring impact. |
 | `../../Assets/Art/StruckOut/hit_missed.png` | 1254 × 1254, transparent | Quiet diamond miss marker. |
 | `../../Assets/Art/StruckOut/hit_ignored.png` | 1254 × 1254, transparent | Inactive-session impact marker. |
+| `../../Assets/Art/StruckOut/anchor.png` | 1254 × 1254, transparent | Anchor sprite. Source: `anchor.svg`. |
+| `../../Assets/Art/StruckOut/pocket_watch_face.png` | 1254 × 1254, transparent | Pocket watch body without the hand. The dial center is the canvas center. Source: `pocket_watch_face.svg`. |
+| `../../Assets/Art/StruckOut/pocket_watch_hand.png` | 1254 × 1254, transparent | The hand alone, pointing to 12. Place it at the same position and size as the face and rotate it around the sprite center (the default pivot). Source: `pocket_watch_hand.svg`. |
 | `idle_concept.png` / `../../Assets/Art/StruckOut/idle_screen.png` | 1672 × 941 | Projector standby composition with the logo, imported as the live idle screen. |
 | `playing_concept.png` | 1672 × 941 | Example of four targets on the field. The actual target positions are generated at runtime. |
 | `finished_concept.png` / `../../Assets/Art/StruckOut/finished_screen.png` | 1672 × 941 | Finished-state composition with a clear area for live text, imported as the live finish screen. |
@@ -40,3 +43,15 @@ The original logo is kept separately as `reference_logo.jpg`. Targets, impact ef
 6. **Ignored impact:** One transparent compact white angular bracket with a yellow diagonal slash. Neutral, visually distinct from scored and missed impacts.
 7. **Idle composition:** The supplied STRUCK OUT logo large and centered on the black arena, with faint dormant ring hints. Leave blank space for an editable Unity instruction; add no new text.
 8. **Finished composition:** Same frame with dimmed target-ring hints and a bold empty central title zone outlined by white, blue and yellow brackets. Leave all words and score to Unity.
+
+## SVG sources
+
+The anchor and pocket watch images are SVG files written by `generate_svg.py` (`python generate_svg.py`), which computes the shapes so that the face and the hand share the canvas center. Edit the script rather than the SVG files.
+
+Export each SVG to `../../Assets/Art/StruckOut/` with a transparent screenshot of headless Chromium or Chrome (`chrome.exe` on Windows), run in this directory:
+
+```sh
+chromium --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
+  --default-background-color=00000000 --window-size=1254,1254 \
+  --screenshot=../../Assets/Art/StruckOut/anchor.png "file://$PWD/anchor.svg"
+```

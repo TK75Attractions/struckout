@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254">
+  <!-- Continuous shank, thick curved arms and outward flukes. -->
+  <g id="anchor-body">
+    <path d="M582 260 L672 260 L672 1121.9 A484 484 0 0 0 1046.2 882 L944 820 L1194 760 L1106.8 917 A554 554 0 0 1 147.2 917 L60 760 L310 820 L207.8 882 A484 484 0 0 0 582 1121.9 Z" fill="#FFFFFF" stroke="#000000" stroke-width="10" stroke-linejoin="round"/>
+  </g>
+  <!-- Mirrored arm sectors with ten-pixel black seams. -->
+  <g id="anchor-accents">
+    <path d="M60 760 L310 820 L207.8 882 A484 484 0 0 0 422.5 1078.7 L392.9 1142.1 A554 554 0 0 1 147.2 917 Z" fill="#0A6CFF" stroke="#000000" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M1194 760 L944 820 L1046.2 882 A484 484 0 0 1 831.5 1078.7 L861.1 1142.1 A554 554 0 0 0 1106.8 917 Z" fill="#FFF200" stroke="#000000" stroke-width="10" stroke-linejoin="round"/>
+  </g>
+  <!-- Unbroken stock sits in front of the shank. -->
+  <g id="anchor-stock">
+    <path d="M60 380 L1194 380 L1164 450 L90 450 Z" fill="#FFFFFF" stroke="#000000" stroke-width="10" stroke-linejoin="round"/>
+  </g>
+  <!-- Clean annulus; the shank never enters its opening. -->
+  <g id="anchor-ring">
+    <circle cx="627" cy="170" r="85" fill="none" stroke="#000000" stroke-width="60"/>
+    <circle cx="627" cy="170" r="85" fill="none" stroke="#FFFFFF" stroke-width="50"/>
+  </g>
+</svg>
