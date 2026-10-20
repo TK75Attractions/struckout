@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Serialization;
 
 namespace Struckout.Domain
 {
@@ -22,30 +23,30 @@ namespace Struckout.Domain
         /// <summary>
         /// 的の大きさごとの点数。
         ///
-        /// 直径が <see cref="SizeTier.MaxDiameter"/> 以下の段のうち、
+        /// 直径が <see cref="maxDiameter"/> 以下の段のうち、
         /// いちばん小さい段が選ばれる。Inspector で並べ替えても結果は変わらない。
         /// </summary>
         [Serializable]
         public class SizeTier
         {
             /// <summary>この段が受け持つ直径の上限。</summary>
-            public float MaxDiameter;
+            [FormerlySerializedAs("MaxDiameter")] public float maxDiameter;
 
             /// <summary>この段に当たったときの点数。</summary>
-            public int Points;
+            [FormerlySerializedAs("Points")] public int points;
         }
 
         /// <summary>
         /// 仮の値。段を一つだけにすれば「当たれば一律で何点」にもできる。
         /// </summary>
-        public SizeTier[] Tiers =
+        [FormerlySerializedAs("Tiers")] public SizeTier[] tiers =
         {
-            new() { MaxDiameter = 150f, Points = 5 },
-            new() { MaxDiameter = 300f, Points = 3 },
+            new() { maxDiameter = 150f, points = 5 },
+            new() { maxDiameter = 300f, points = 3 },
         };
 
         /// <summary>どの段にも収まらない大きな的の点数。</summary>
-        public int DefaultPoints = 1;
+        [FormerlySerializedAs("DefaultPoints")] public int defaultPoints = 1;
 
         /// <summary>
         /// <paramref name="diameter"/> の的に当たったときの点数を返す。
@@ -55,21 +56,21 @@ namespace Struckout.Domain
         /// </summary>
         public int PointsFor(float diameter)
         {
-            int points = DefaultPoints;
+            int points = defaultPoints;
 
-            if (Tiers != null)
+            if (tiers != null)
             {
                 float best = float.PositiveInfinity;
-                foreach (var tier in Tiers)
+                foreach (var tier in tiers)
                 {
                     if (tier == null) continue;
-                    if (diameter > tier.MaxDiameter) continue;
+                    if (diameter > tier.maxDiameter) continue;
 
                     // 収まる段のうち、いちばん狭い段を採る。
-                    if (tier.MaxDiameter < best)
+                    if (tier.maxDiameter < best)
                     {
-                        best = tier.MaxDiameter;
-                        points = tier.Points;
+                        best = tier.maxDiameter;
+                        points = tier.points;
                     }
                 }
             }
@@ -78,6 +79,6 @@ namespace Struckout.Domain
         }
 
         public override string ToString() =>
-            $"tiers={(Tiers == null ? 0 : Tiers.Length)} default={DefaultPoints}";
+            $"tiers={(tiers == null ? 0 : tiers.Length)} default={defaultPoints}";
     }
 }

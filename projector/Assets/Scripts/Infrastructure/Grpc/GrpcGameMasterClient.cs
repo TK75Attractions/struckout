@@ -54,7 +54,7 @@ namespace Struckout.Infrastructure.Grpc
         {
             if (_channel != null) return Task.FromResult(true);
 
-            var address = $"http://{_settings.MasterHost}:{_settings.MasterPort}";
+            var address = $"http://{_settings.masterHost}:{_settings.masterPort}";
 
             try
             {
@@ -76,7 +76,7 @@ namespace Struckout.Infrastructure.Grpc
             _listenCancellation = new CancellationTokenSource();
             _listenTask = ListenEventsAsync(_listenCancellation.Token);
 
-            Debug.Log($"[GameMaster] listening for events on {address} as machine {_settings.MachineId}");
+            Debug.Log($"[GameMaster] listening for events on {address} as machine {_settings.machineId}");
             return Task.FromResult(true);
         }
 
@@ -102,7 +102,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 try
                 {
-                    var request = new ListenEventsRequest { MachineId = (uint)_settings.MachineId };
+                    var request = new ListenEventsRequest { MachineId = (uint)_settings.machineId };
                     using var call = _client.ListenEvents(request, cancellationToken: token);
 
                     // 応答のヘッダーが届いたら、つながっている。イベントはゲームが動くまで来ない
@@ -240,7 +240,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 await _client.AddScoreAsync(new AddScoreRequest
                 {
-                    MachineId = (uint)_settings.MachineId,
+                    MachineId = (uint)_settings.machineId,
                     GameId = gameId,
                     ScoreToAdd = (uint)scoreToAdd,
                 });

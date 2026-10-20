@@ -168,8 +168,8 @@ namespace Struckout.Tests.Tests.EditMode
 
             foreach (var target in targets)
             {
-                Assert.That(target.Coordinate.X, Is.InRange(0f, field.Width));
-                Assert.That(target.Coordinate.Y, Is.InRange(0f, field.Height));
+                Assert.That(target.Coordinate.X, Is.InRange(0f, field.width));
+                Assert.That(target.Coordinate.Y, Is.InRange(0f, field.height));
             }
         }
 
@@ -186,8 +186,8 @@ namespace Struckout.Tests.Tests.EditMode
             {
                 var destination = generator.PickRelocation(moved, targets);
 
-                Assert.That(destination.X, Is.InRange(moved.Radius, field.Width - moved.Radius));
-                Assert.That(destination.Y, Is.InRange(moved.Radius, field.Height - moved.Radius));
+                Assert.That(destination.X, Is.InRange(moved.Radius, field.width - moved.Radius));
+                Assert.That(destination.Y, Is.InRange(moved.Radius, field.height - moved.Radius));
             }
         }
     }

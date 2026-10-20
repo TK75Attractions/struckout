@@ -10,60 +10,69 @@ using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 using Tk75Attractions.Struckout.V1;
+using UnityEngine.Serialization;
 
 namespace Struckout.Unity
 {
     public class GameLifetimeScope : LifetimeScope
     {
-        [SerializeField]
-        private UIService _uiService;
-        [SerializeField]
-        private MainThreadDispatcher _dispatcher;
+        [FormerlySerializedAs("_uiService")] [SerializeField]
+        private UIService uiService;
+        [FormerlySerializedAs("_dispatcher")] [SerializeField]
+        private MainThreadDispatcher dispatcher;
 
+        [FormerlySerializedAs("_targetParent")]
         [SerializeField]
         [Tooltip("的とマーカーを置く親。Canvas ではなくワールド空間の Transform。")]
-        private Transform _targetParent;
+        private Transform targetParent;
 
+        [FormerlySerializedAs("_fieldCamera")]
         [SerializeField]
         [Tooltip("盤面がちょうど収まるようにカメラを合わせる。")]
-        private FieldCamera _fieldCamera;
+        private FieldCamera fieldCamera;
 
+        [FormerlySerializedAs("_field")]
         [SerializeField]
         [Tooltip("的を置ける盤面の広さ (px)。的の配置と描画のスケールがこれを共有する。")]
-        private FieldBounds _field = new();
+        private FieldBounds field = new();
 
+        [FormerlySerializedAs("_pixelsPerUnit")]
         [SerializeField]
         [Tooltip("ワールド 1 unit あたりの盤面ピクセル数。カメラの表示範囲はここから導かれる。")]
-        private float _pixelsPerUnit = 100f;
+        private float pixelsPerUnit = 100f;
 
+        [FormerlySerializedAs("_networkSettings")]
         [SerializeField]
         [Tooltip("Fake にすると ball_tracker / game_master なしで起動できる。コマンドライン引数と環境変数で上書きできる。")]
-        private NetworkSettings _networkSettings = new();
+        private NetworkSettings networkSettings = new();
 
+        [FormerlySerializedAs("_collisionTransform")]
         [SerializeField]
         [Tooltip("ball_tracker から届く物理座標 (m) を的の描画座標に直す係数。実測して合わせること。")]
-        private CollisionCoordinateTransform _collisionTransform = new();
+        private CollisionCoordinateTransform collisionTransform = new();
 
+        [FormerlySerializedAs("_gameSettings")]
         [SerializeField]
         [Tooltip("的の数とクールダウン時間。")]
-        private GameSettings _gameSettings = new();
+        private GameSettings gameSettings = new();
 
+        [FormerlySerializedAs("_scoreSettings")]
         [SerializeField]
         [Tooltip("的の大きさごとの点数。まだ仮の値なので、決まったらここで差し替える。")]
-        private ScoreSettings _scoreSettings = new();
+        private ScoreSettings scoreSettings = new();
 
         protected override void Configure(IContainerBuilder builder)
         {
-            var networkSettings = NetworkSettingsResolver.Resolve(_networkSettings);
+            var networkSettings = NetworkSettingsResolver.Resolve(this.networkSettings);
             builder.RegisterInstance(networkSettings);
 
             // 物理座標 -> 描画座標 の係数。SensorProvider が使う。
             // 書き出したプレイヤーでも変えられるよう、設定ファイルがあれば Inspector の値を上書きする。
             // 実行中は F2 の調整画面 (CollisionCalibrationPanel) で同じインスタンスを書き換え、ファイルに保存できる。
             var inspectorCollisionTransform = new CollisionCoordinateTransform();
-            inspectorCollisionTransform.CopyFrom(_collisionTransform);
+            inspectorCollisionTransform.CopyFrom(collisionTransform);
             var collisionTransformPath = CollisionTransformStore.ResolvePath();
-            if (CollisionTransformStore.TryLoadInto(_collisionTransform, collisionTransformPath, out var collisionTransformError))
+            if (CollisionTransformStore.TryLoadInto(collisionTransform, collisionTransformPath, out var collisionTransformError))
             {
                 Debug.Log($"[Collision] loaded {collisionTransformPath}");
             }
@@ -76,8 +85,8 @@ namespace Struckout.Unity
                 Debug.Log($"[Collision] {collisionTransformPath} not found; using the Inspector values");
             }
 
-            Debug.Log($"[Collision] transform {_collisionTransform}");
-            builder.RegisterInstance(_collisionTransform);
+            Debug.Log($"[Collision] transform {collisionTransform}");
+            builder.RegisterInstance(collisionTransform);
             builder.RegisterBuildCallback(container =>
             {
                 var panel = new GameObject("CollisionCalibrationPanel").AddComponent<CollisionCalibrationPanel>();
@@ -91,34 +100,34 @@ namespace Struckout.Unity
 
             // 盤面の広さは的の配置 (TargetGenerator) と描画 (WorldCoordinateTransform) の
             // 両方が使う。片方だけ変えられないよう、同じインスタンスを配る。
-            builder.RegisterInstance(_field);
+            builder.RegisterInstance(field);
 
-            var world = new WorldCoordinateTransform(_field, _pixelsPerUnit);
+            var world = new WorldCoordinateTransform(field, pixelsPerUnit);
             Debug.Log($"[Field] {world}");
             builder.RegisterInstance(world);
 
-            Debug.Log($"[Game] {_gameSettings}");
-            builder.RegisterInstance(_gameSettings);
+            Debug.Log($"[Game] {gameSettings}");
+            builder.RegisterInstance(gameSettings);
 
-            Debug.Log($"[Score] {_scoreSettings}");
-            builder.RegisterInstance(_scoreSettings);
+            Debug.Log($"[Score] {scoreSettings}");
+            builder.RegisterInstance(scoreSettings);
 
-            if (networkSettings.Mode == NetworkMode.Fake)
+            if (networkSettings.mode == NetworkMode.Fake)
             {
                 builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
                 builder.Register<IGameMasterClient, FakeGameMasterClient>(Lifetime.Singleton);
             }
             else
             {
-                builder.Register<IClientService<ProjectorPacket>, TCPClientBase<ProjectorPacket>>(Lifetime.Singleton);
+                builder.Register<IClientService<ProjectorPacket>, TcpClientBase<ProjectorPacket>>(Lifetime.Singleton);
                 builder.Register<IGameMasterClient, GrpcGameMasterClient>(Lifetime.Singleton);
             }
 
             builder.Register<IMessageParser<ProjectorPacket>, ProjectorPacketParser>(Lifetime.Singleton);
             builder.Register<IPacketRouter, PacketRouter>(Lifetime.Singleton);
-            builder.RegisterComponent(_uiService).As<IUIService>();
-            builder.RegisterComponent(_dispatcher).As<IMainThreadDispatcher>();
-            if (_fieldCamera != null) builder.RegisterComponent(_fieldCamera);
+            builder.RegisterComponent(uiService).As<IUIService>();
+            builder.RegisterComponent(dispatcher).As<IMainThreadDispatcher>();
+            if (fieldCamera != null) builder.RegisterComponent(fieldCamera);
             else Debug.LogWarning("FieldCamera is not assigned; the camera will not match the field.");
             builder.Register<GameRuntime>(Lifetime.Singleton);
 
@@ -132,7 +141,7 @@ namespace Struckout.Unity
             builder.Register<RuntimeContext>(Lifetime.Singleton);
 
             builder.RegisterInstance(
-                new UIRoot(_targetParent)
+                new UIRoot(targetParent)
             );
 
             builder.RegisterEntryPoint<RootBootstrap>();

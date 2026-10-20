@@ -15,7 +15,7 @@ namespace Struckout.Tests.Tests.EditMode
     public class ScoreSettingsTests
     {
         private static ScoreSettings.SizeTier Tier(float maxDiameter, int points) =>
-            new() { MaxDiameter = maxDiameter, Points = points };
+            new() { maxDiameter = maxDiameter, points = points };
 
         private static Target Circle(float diameter) =>
             new(new TargetCoordinate(0f, 0f), TargetType.Circle, diameter);
@@ -25,8 +25,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var settings = new ScoreSettings
             {
-                Tiers = new[] { Tier(100f, 5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(100f, 5) },
+                defaultPoints = 1,
             };
 
             Assert.That(settings.PointsFor(50f), Is.EqualTo(5));
@@ -37,8 +37,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var settings = new ScoreSettings
             {
-                Tiers = new[] { Tier(100f, 5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(100f, 5) },
+                defaultPoints = 1,
             };
 
             Assert.That(settings.PointsFor(100f), Is.EqualTo(5));
@@ -49,8 +49,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var settings = new ScoreSettings
             {
-                Tiers = new[] { Tier(100f, 5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(100f, 5) },
+                defaultPoints = 1,
             };
 
             Assert.That(settings.PointsFor(101f), Is.EqualTo(1));
@@ -61,8 +61,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var settings = new ScoreSettings
             {
-                Tiers = new[] { Tier(300f, 3), Tier(150f, 5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(300f, 3), Tier(150f, 5) },
+                defaultPoints = 1,
             };
 
             Assert.That(settings.PointsFor(100f), Is.EqualTo(5), "150 の段が 300 の段より優先される");
@@ -74,13 +74,13 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var ascending = new ScoreSettings
             {
-                Tiers = new[] { Tier(150f, 5), Tier(300f, 3) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(150f, 5), Tier(300f, 3) },
+                defaultPoints = 1,
             };
             var descending = new ScoreSettings
             {
-                Tiers = new[] { Tier(300f, 3), Tier(150f, 5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(300f, 3), Tier(150f, 5) },
+                defaultPoints = 1,
             };
 
             foreach (var diameter in new[] { 100f, 200f, 400f })
@@ -95,7 +95,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 段が無ければ既定の点数になる()
         {
-            var settings = new ScoreSettings { Tiers = null, DefaultPoints = 7 };
+            var settings = new ScoreSettings { tiers = null, defaultPoints = 7 };
 
             Assert.That(settings.PointsFor(100f), Is.EqualTo(7));
         }
@@ -118,8 +118,8 @@ namespace Struckout.Tests.Tests.EditMode
             // 得点は差分として game_master に送られ、プロトコル上は符号なし。
             var settings = new ScoreSettings
             {
-                Tiers = new[] { Tier(100f, -5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(100f, -5) },
+                defaultPoints = 1,
             };
 
             Assert.That(settings.PointsFor(50f), Is.EqualTo(0));
@@ -130,8 +130,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var settings = new ScoreSettings
             {
-                Tiers = new[] { Tier(100f, 5) },
-                DefaultPoints = 1,
+                tiers = new[] { Tier(100f, 5) },
+                defaultPoints = 1,
             };
             var calculator = new PointCalculator(settings);
 

@@ -47,28 +47,28 @@ namespace Struckout.Infrastructure
 
             // Inspector で空にされていたり、シーンに値が入っていなかったりしたときの保険。
             var defaults = new NetworkSettings();
-            if (string.IsNullOrWhiteSpace(settings.TrackerHost)) settings.TrackerHost = defaults.TrackerHost;
-            if (string.IsNullOrWhiteSpace(settings.MasterHost)) settings.MasterHost = defaults.MasterHost;
-            if (settings.TrackerPort <= 0) settings.TrackerPort = defaults.TrackerPort;
-            if (settings.MasterPort <= 0) settings.MasterPort = defaults.MasterPort;
+            if (string.IsNullOrWhiteSpace(settings.trackerHost)) settings.trackerHost = defaults.trackerHost;
+            if (string.IsNullOrWhiteSpace(settings.masterHost)) settings.masterHost = defaults.masterHost;
+            if (settings.trackerPort <= 0) settings.trackerPort = defaults.trackerPort;
+            if (settings.masterPort <= 0) settings.masterPort = defaults.masterPort;
 
-            settings.Mode = ResolveMode(commandLine, environment, settings.Mode);
+            settings.mode = ResolveMode(commandLine, environment, settings.mode);
 
-            settings.TrackerHost = ResolveString(commandLine, environment, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.TrackerHost);
-            settings.TrackerPort = ResolveInt(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.TrackerPort);
+            settings.trackerHost = ResolveString(commandLine, environment, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.trackerHost);
+            settings.trackerPort = ResolveInt(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.trackerPort);
 
-            settings.MasterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.MasterHost);
-            settings.MasterPort = ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.MasterPort);
+            settings.masterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.masterHost);
+            settings.masterPort = ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.masterPort);
 
             // 号機番号は ListenEvents の絞り込みキーになったので、筐体ごとに
             // 別ビルドを作らずに変えられる必要がある。負の値は uint に載らないので弾く。
-            settings.MachineId = Math.Max(
+            settings.machineId = Math.Max(
                 0,
-                ResolveInt(commandLine, environment, "machineId", "STRUCKOUT_MACHINE_ID", settings.MachineId));
+                ResolveInt(commandLine, environment, "machineId", "STRUCKOUT_MACHINE_ID", settings.machineId));
 
-            settings.ConnectAttempts = Math.Max(
+            settings.connectAttempts = Math.Max(
                 1,
-                ResolveInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.ConnectAttempts));
+                ResolveInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.connectAttempts));
 
             return settings;
         }

@@ -46,7 +46,7 @@ namespace Struckout.Application
         public void GameSetup()
         {
             // 個数は変えない。撃たれた的は消えず、別の場所へ移動する。
-            _state.AddTargets(_targetGenerator, _settings.InitialTargetCount, TargetType.Circle);
+            _state.AddTargets(_targetGenerator, _settings.initialTargetCount, TargetType.Circle);
             UpdateUI();
         }
 

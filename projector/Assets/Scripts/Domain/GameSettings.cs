@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Serialization;
 
 namespace Struckout.Domain
 {
@@ -9,8 +10,8 @@ namespace Struckout.Domain
     public class GameSettings
     {
         /// <summary>初期配置する的の数。</summary>
-        public int InitialTargetCount = 4;
+        [FormerlySerializedAs("InitialTargetCount")] public int initialTargetCount = 4;
 
-        public override string ToString() => $"targets={InitialTargetCount}";
+        public override string ToString() => $"targets={initialTargetCount}";
     }
 }

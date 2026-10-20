@@ -24,8 +24,8 @@ namespace Struckout.Infrastructure
         public TargetGenerator(FieldBounds field = null)
         {
             field ??= new FieldBounds();
-            _xSize = field.Width;
-            _ySize = field.Height;
+            _xSize = field.width;
+            _ySize = field.height;
         }
         public IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> existTarget)
         {
@@ -114,11 +114,11 @@ namespace Struckout.Infrastructure
             return clearance;
         }
 
-        public Target GenerateTarget(TargetType type, float X, float Y, float size)
+        public Target GenerateTarget(TargetType type, float x, float y, float size)
         {
             TargetCoordinate coordinate = new(
-                X,
-                Y
+                x,
+                y
             );
 
             Target target = new(

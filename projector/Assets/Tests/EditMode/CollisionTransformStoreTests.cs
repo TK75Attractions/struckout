@@ -61,13 +61,13 @@ namespace Struckout.Tests.Tests.EditMode
             var path = Path.Combine(_directory, "sub", CollisionTransformStore.FileName);
             var saved = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 905.5f,
-                PixelsPerMetreY = 880.25f,
-                OriginX = 410f,
-                OriginY = -1350f,
-                FlipX = true,
-                SwapAxes = false,
-                LogConversions = true,
+                pixelsPerMetreX = 905.5f,
+                pixelsPerMetreY = 880.25f,
+                originX = 410f,
+                originY = -1350f,
+                flipX = true,
+                swapAxes = false,
+                logConversions = true,
             };
 
             CollisionTransformStore.Save(saved, path);
@@ -76,19 +76,19 @@ namespace Struckout.Tests.Tests.EditMode
 
             Assert.That(ok, Is.True, error);
             Assert.That(loaded.ToString(), Is.EqualTo(saved.ToString()));
-            Assert.That(loaded.LogConversions, Is.True);
+            Assert.That(loaded.logConversions, Is.True);
         }
 
         [Test]
         public void ファイルが無ければ何も変えない()
         {
-            var target = new CollisionCoordinateTransform { OriginX = 123f };
+            var target = new CollisionCoordinateTransform { originX = 123f };
 
             bool ok = CollisionTransformStore.TryLoadInto(target, Path.Combine(_directory, "none.json"), out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(error, Is.Null);
-            Assert.That(target.OriginX, Is.EqualTo(123f));
+            Assert.That(target.originX, Is.EqualTo(123f));
         }
 
         [Test]
@@ -97,13 +97,13 @@ namespace Struckout.Tests.Tests.EditMode
             Directory.CreateDirectory(_directory);
             var path = Path.Combine(_directory, CollisionTransformStore.FileName);
             File.WriteAllText(path, "{ \"PixelsPerMetreX\": -900, \"OriginX\": 5 }");
-            var target = new CollisionCoordinateTransform { OriginX = 123f };
+            var target = new CollisionCoordinateTransform { originX = 123f };
 
             bool ok = CollisionTransformStore.TryLoadInto(target, path, out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(error, Is.Not.Null);
-            Assert.That(target.OriginX, Is.EqualTo(123f), "おかしな値なら Inspector の値のまま");
+            Assert.That(target.originX, Is.EqualTo(123f), "おかしな値なら Inspector の値のまま");
         }
 
         [Test]
@@ -111,8 +111,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var loaded = CollisionTransformStore.FromJson("{ \"OriginX\": 5 }");
 
-            Assert.That(loaded.OriginX, Is.EqualTo(5f));
-            Assert.That(loaded.PixelsPerMetreX, Is.EqualTo(new CollisionCoordinateTransform().PixelsPerMetreX));
+            Assert.That(loaded.originX, Is.EqualTo(5f));
+            Assert.That(loaded.pixelsPerMetreX, Is.EqualTo(new CollisionCoordinateTransform().pixelsPerMetreX));
         }
     }
 }

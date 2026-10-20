@@ -31,7 +31,7 @@ namespace Struckout.Infrastructure
 
             var (x, y) = _transform.ToRenderSpace(point.X, point.Y);
 
-            if (_transform.LogConversions)
+            if (_transform.logConversions)
             {
                 Debug.Log($"[Collision] ({point.X:F3}, {point.Y:F3}) m -> ({x:F1}, {y:F1})");
             }

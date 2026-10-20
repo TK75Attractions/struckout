@@ -31,7 +31,7 @@ namespace Struckout.Infrastructure
                 }
             }
 
-            if (_transform != null && _transform.LogConversions)
+            if (_transform != null && _transform.logConversions)
             {
                 LogDecision(collisionPoint, targets, target);
             }

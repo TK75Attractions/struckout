@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Serialization;
 
 namespace Struckout.Domain
 {
@@ -17,26 +18,26 @@ namespace Struckout.Domain
     [Serializable]
     public class FieldBounds
     {
-        public float Width = 1920f;
-        public float Height = 1080f;
+        [FormerlySerializedAs("Width")] public float width = 1920f;
+        [FormerlySerializedAs("Height")] public float height = 1080f;
 
         public FieldBounds() { }
 
         public FieldBounds(float width, float height)
         {
-            Width = width;
-            Height = height;
+            this.width = width;
+            this.height = height;
         }
 
-        public float CentreX => Width / 2f;
-        public float CentreY => Height / 2f;
+        public float CentreX => width / 2f;
+        public float CentreY => height / 2f;
 
         /// <summary>盤面の縦横比。0 除算を避けるため高さが 0 以下なら 1 を返す。</summary>
-        public float Aspect => Height <= 0f ? 1f : Width / Height;
+        public float Aspect => height <= 0f ? 1f : width / height;
 
         public bool Contains(float x, float y) =>
-            x >= 0f && x <= Width && y >= 0f && y <= Height;
+            x >= 0f && x <= width && y >= 0f && y <= height;
 
-        public override string ToString() => $"field={Width}x{Height}";
+        public override string ToString() => $"field={width}x{height}";
     }
 }
