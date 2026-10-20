@@ -1,4 +1,4 @@
-use std::{ffi::OsString, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(feature = "input-sqlite")]
 use ball_tracker::detection_input::SqliteDetectionInput;
@@ -16,46 +16,46 @@ use ball_tracker::{
 };
 use chrono::{Local, TimeDelta};
 use clap::{Parser, ValueEnum};
+use serde::Deserialize;
 use tokio::sync::mpsc;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::config_file::ConfigLocation;
+use crate::config::{Config, ConfigLocation};
 
-mod config_file;
+mod config;
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
 #[derive(Parser)]
-#[command(version = version(), args_override_self = true)]
+#[command(version = version())]
+/// どの引数も、設定ファイル (--config) に書いておける。両方にあれば、コマンドラインのほうを使う
+// 既定値は、設定ファイルと共通にするため Config の Default にまとめている
 struct Cli {
     /// 設定ファイル (YAML) の場所。既定は <設定のフォルダー>/struckout/ball-tracker/config.yaml。
-    /// キーは長いオプション名で、同じ引数はコマンドラインのほうが優先される (README を参照)
+    /// キーは長いオプション名と同じ (README を参照)
     #[arg(long = "config")]
-    #[expect(dead_code, reason = "parse_cli() reads it before parsing Cli")]
     config: Option<PathBuf>,
-    #[arg(value_enum, long = "input", help = "detectionをどこから受け取るか")]
-    detection_input: DetectionInputKind,
-    #[arg(value_enum, long = "output", help = "collisionをどこに送信するか")]
-    collision_output: CollisionOutputKind,
+    /// detectionをどこから受け取るか。コマンドラインか設定ファイルのどちらかで必ず指定する
+    #[arg(value_enum, long = "input")]
+    detection_input: Option<DetectionInputKind>,
+    /// collisionをどこに送信するか。コマンドラインか設定ファイルのどちらかで必ず指定する
+    #[arg(value_enum, long = "output")]
+    collision_output: Option<CollisionOutputKind>,
     /// JSONに追跡結果を出力する
     #[arg(short = 'j', long = "json")]
     output_to_json: bool,
     #[arg(short = 'c', long = "csv_path")]
     csv_path: Option<PathBuf>,
-    /// 右のカメラ (位置の y が大きいほう) の時刻に足す補正 (ms)。estimate_time_offset.py で求める
-    #[arg(
-        long = "time-trim-ms",
-        default_value_t = 0.0,
-        allow_negative_numbers = true
-    )]
-    time_trim_ms: f64,
+    /// 右のカメラ (位置の y が大きいほう) の時刻に足す補正 (ms)。estimate_time_offset.py で求める [既定: 0]
+    #[arg(long = "time-trim-ms", allow_negative_numbers = true)]
+    time_trim_ms: Option<f64>,
     /// 画像の上端の行と下端の行の露光開始の時刻の差 (ms)。指定すると、カメラが知らせた値の代わりに使う
     #[arg(long = "rolling-shutter-skew-ms", allow_negative_numbers = true)]
     rolling_shutter_skew_ms: Option<f64>,
-    /// カメラから動画を受け取って解析するときに使う ffmpeg (PATH にあれば名前だけでよい)
-    #[arg(long = "ffmpeg", default_value = "ffmpeg")]
-    ffmpeg: String,
+    /// カメラから動画を受け取って解析するときに使う ffmpeg (PATH にあれば名前だけでよい) [既定: ffmpeg]
+    #[arg(long = "ffmpeg")]
+    ffmpeg: Option<String>,
     /// カメラから動画を受け取らない (5052 番で待ち受けない)。カメラは自分で解析する
     #[arg(long = "no-video-analysis")]
     no_video_analysis: bool,
@@ -66,24 +66,25 @@ struct Cli {
     #[arg(long = "video-record-dir")]
     video_record_dir: Option<PathBuf>,
     /// 着弾を、予測した着弾時刻の何 ms 後に報告するか (負なら前)。遅らせるほど着弾位置が正確になるが、
-    /// 的への描画がそのぶん遅れる
-    #[arg(long = "report-delay-ms", default_value_t = -30.0, allow_negative_numbers = true)]
-    report_delay_ms: f64,
+    /// 的への描画がそのぶん遅れる [既定: -30]
+    #[arg(long = "report-delay-ms", allow_negative_numbers = true)]
+    report_delay_ms: Option<f64>,
     /// 右のカメラの時刻の補正を、報告した投球から自動で決めて、--time-trim-ms に足す。付けないときは、
     /// 決めた値をログに出すだけ。カメラの位置と向きが合っているときだけ使うこと
     #[arg(long = "auto-time-trim")]
     auto_time_trim: bool,
     /// カメラから受け取った動画のデコードに使う GPU の方式 (ffmpeg の -hwaccel)。auto はその PC で使えるものを
-    /// 選ぶ (Windows は d3d11va、cuda、qsv、dxva2 の順)。none は CPU。d3d11va などの名前も指定できる
-    #[arg(long = "video-hwaccel", default_value = "auto")]
-    video_hwaccel: String,
+    /// 選ぶ (Windows は d3d11va、cuda、qsv、dxva2 の順)。none は CPU。d3d11va などの名前も指定できる [既定: auto]
+    #[arg(long = "video-hwaccel")]
+    video_hwaccel: Option<String>,
     /// PC で解析するとき、視線を作る検出の位置。box は枠の中心 (カメラアプリと同じ)、centroid は前景の画素の重心
-    #[arg(long = "detection-center", default_value = "box")]
-    detection_center: video::analysis::DetectionCenter,
+    /// [既定: box]
+    #[arg(long = "detection-center")]
+    detection_center: Option<video::analysis::DetectionCenter>,
     /// PC で解析するとき、画像の端に接した検出 (ボールが欠けている) の扱い。keep はそのまま (カメラアプリと同じ)、
-    /// drop は捨てる、extrapolate は欠けていない向きの幅から中心を推定する
-    #[arg(long = "edge-detections", default_value = "keep")]
-    edge_detections: video::analysis::EdgeDetections,
+    /// drop は捨てる、extrapolate は欠けていない向きの幅から中心を推定する [既定: keep]
+    #[arg(long = "edge-detections")]
+    edge_detections: Option<video::analysis::EdgeDetections>,
     /// カメラ用スマホごとの設定 (scripts/cameras.json)。書いた端末は、つないだ順によらず書いた順の camera_id
     /// (0, 1, ...) になり、ここに書いた位置と向きを使う。位置と向き、焦点距離、検出の範囲はスマホにも送る
     #[arg(long = "cameras")]
@@ -106,7 +107,8 @@ fn millis(value: f64) -> TimeDelta {
     TimeDelta::nanoseconds((value * 1e6).round() as i64)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 enum DetectionInputKind {
     /// TCP経由 (camera)
     Network,
@@ -115,7 +117,8 @@ enum DetectionInputKind {
     Sqlite,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 enum CollisionOutputKind {
     /// TCP経由 (projector)
     Network,
@@ -175,14 +178,20 @@ impl CollisionOutput for CollisionOutputImpl {
 }
 
 impl CollisionOutputImpl {
-    async fn new(cli: &Cli) -> Self {
-        match &cli.collision_output {
+    async fn new(config: &Config) -> Self {
+        match config
+            .collision_output
+            .expect("Config::apply_cli() makes sure that it is set")
+        {
             CollisionOutputKind::Network => {
                 Self::Network(NetworkCollisionOutput::bind().await.unwrap())
             }
             CollisionOutputKind::Csv => {
                 // OPTIM: 無駄なclone
-                let path = cli.csv_path.clone().unwrap_or_else(|| csv_path_default());
+                let path = config
+                    .csv_path
+                    .clone()
+                    .unwrap_or_else(|| csv_path_default());
                 Self::Csv(CsvCollisionOutput::new(path))
             }
         }
@@ -207,8 +216,8 @@ enum EventLoggerImpl {
 }
 
 impl EventLoggerImpl {
-    fn new(cli: &Cli) -> Self {
-        if cli.output_to_json {
+    fn new(config: &Config) -> Self {
+        if config.output_to_json {
             Self::Json(JsonEventLogger::new(json_log_output_dir()))
         //}else if  {
         //    Self::Sentry(SentryEventLogger::new())
@@ -277,13 +286,13 @@ fn main() {
 }
 
 async fn run_main() {
-    let cli = parse_cli();
+    let config = load_config();
 
     let camera_locs = Arc::new(CameraLocationStore::new());
-    let cameras = cli.cameras.as_ref().map(|path| {
-        let config = CameraConfig::load(path).unwrap();
+    let cameras = config.cameras.as_ref().map(|path| {
+        let camera_config = CameraConfig::load(path).unwrap();
         // 位置は最初から分かっているので、つなぐ前から入れておく (左右もこれで決まる)
-        for (camera_id, entry) in config.entries().iter().enumerate() {
+        for (camera_id, entry) in camera_config.entries().iter().enumerate() {
             tracing::info!(
                 camera_id,
                 name = entry.name,
@@ -294,125 +303,72 @@ async fn run_main() {
             );
             camera_locs.insert(CameraId::new(camera_id as u32), entry.camera_pose());
         }
-        Arc::new(config)
+        Arc::new(camera_config)
     });
 
-    let auto_trim = Arc::new(AutoTimeTrim::new(cli.auto_time_trim));
+    let auto_trim = Arc::new(AutoTimeTrim::new(config.auto_time_trim));
     let clock = Arc::new(
         ClockSync::new(
             camera_locs.clone(),
             ClockSyncOptions {
-                time_trim: millis(cli.time_trim_ms),
-                rolling_shutter_skew: cli.rolling_shutter_skew_ms.map(millis),
+                time_trim: millis(config.time_trim_ms),
+                rolling_shutter_skew: config.rolling_shutter_skew_ms.map(millis),
             },
         )
         .with_auto_trim(auto_trim.clone()),
     );
 
-    let video = (!cli.no_video_analysis).then(|| VideoOptions {
-        hwaccel: video::hwaccel::select(&cli.ffmpeg, &cli.video_hwaccel),
+    let video = (!config.no_video_analysis).then(|| VideoOptions {
+        hwaccel: video::hwaccel::select(&config.ffmpeg, &config.video_hwaccel),
         detection: video::analysis::DetectionOptions {
-            center: cli.detection_center,
-            edge: cli.edge_detections,
+            center: config.detection_center,
+            edge: config.edge_detections,
         },
-        ffmpeg: cli.ffmpeg.clone(),
-        snapshot_dir: cli.video_snapshot_dir.clone(),
-        record_dir: cli.video_record_dir.clone(),
+        ffmpeg: config.ffmpeg.clone(),
+        snapshot_dir: config.video_snapshot_dir.clone(),
+        record_dir: config.video_record_dir.clone(),
     });
     let detection_input = DetectionInputImpl::new(
-        cli.detection_input,
+        config
+            .detection_input
+            .expect("Config::apply_cli() makes sure that it is set"),
         camera_locs.clone(),
         clock,
         video,
         cameras,
     )
     .await;
-    let collision_output = CollisionOutputImpl::new(&cli).await;
-    let event_logger = EventLoggerImpl::new(&cli);
+    let collision_output = CollisionOutputImpl::new(&config).await;
+    let event_logger = EventLoggerImpl::new(&config);
 
     let app = Application::new(
         detection_input,
         collision_output,
         camera_locs.clone(),
         event_logger,
-        millis(cli.report_delay_ms),
+        millis(config.report_delay_ms),
         auto_trim,
     );
 
     app.run().await.unwrap();
 }
 
-/// コマンドライン引数に、設定ファイルから作った引数を足して解釈する
-fn parse_cli() -> Cli {
-    let args = std::env::args_os().collect::<Vec<_>>();
-    let location = ConfigLocation::from_args(&args);
-    let config_args = match location.as_ref().map(config_file::load_args).transpose() {
-        Ok(config_args) => config_args.flatten(),
-        Err(error) => {
-            eprintln!("{error}");
-            std::process::exit(2);
-        }
-    };
-    let loaded = config_args.is_some();
-    Cli::try_parse_from(merge_args(args, config_args.unwrap_or_default())).unwrap_or_else(|error| {
-        let _ = error.print();
-        if let (Some(location), true) = (location, loaded)
-            && error.use_stderr()
-        {
-            eprintln!(
-                "(設定ファイル {} の中身も引数として読んでいます)",
-                location.path().display()
-            );
-        }
-        std::process::exit(error.exit_code());
-    })
+/// 設定ファイルを読み、コマンドライン引数で上書きする。誤りがあれば、理由を出して終える
+fn load_config() -> Config {
+    let cli = Cli::parse();
+    let config = ConfigLocation::new(cli.config.clone())
+        .map_or_else(
+            || Ok(Config::default()),
+            |location| Config::from_file(&location),
+        )
+        .unwrap_or_else(|error| exit_with(&error));
+    config
+        .apply_cli(cli)
+        .unwrap_or_else(|error| exit_with(&error))
 }
 
-/// 設定ファイルの引数を、プログラム名のすぐ後ろ (コマンドラインの引数より前) に置く。
-/// `args_override_self` で後の値が勝つので、同じ引数はコマンドラインのほうが優先される
-fn merge_args(args: Vec<OsString>, config_args: Vec<OsString>) -> Vec<OsString> {
-    let mut args = args.into_iter();
-    args.next()
-        .into_iter()
-        .chain(config_args)
-        .chain(args)
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn os_args(args: &[&str]) -> Vec<OsString> {
-        args.iter().map(OsString::from).collect()
-    }
-
-    #[test]
-    fn command_line_overrides_config_file() {
-        let cli = Cli::try_parse_from(merge_args(
-            os_args(&[
-                "ball_tracker",
-                "--output",
-                "network",
-                "--report-delay-ms",
-                "10",
-            ]),
-            os_args(&["--input=network", "--output=csv", "--report-delay-ms=-30"]),
-        ))
-        .unwrap();
-        assert_eq!(cli.detection_input, DetectionInputKind::Network);
-        assert_eq!(cli.collision_output, CollisionOutputKind::Network);
-        assert_eq!(cli.report_delay_ms, 10.0);
-    }
-
-    #[test]
-    fn config_file_can_give_required_arguments() {
-        let cli = Cli::try_parse_from(merge_args(
-            os_args(&["ball_tracker"]),
-            os_args(&["--input=network", "--output=csv", "--json"]),
-        ))
-        .unwrap();
-        assert_eq!(cli.collision_output, CollisionOutputKind::Csv);
-        assert!(cli.output_to_json);
-    }
+/// clap が引数の誤りで終えるときと同じく、終了コード 2 で終える
+fn exit_with(error: &dyn std::error::Error) -> ! {
+    eprintln!("{error}");
+    std::process::exit(2);
 }

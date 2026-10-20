@@ -5,7 +5,8 @@ use struckout_proto::{Detection, DetectionsPacket, VideoStreamConfig};
 use super::tracker::{Blob, ObjectTracker, Rect, TrackerParams};
 
 /// 検出から視線を作るときの、検出の位置の取り方。カメラアプリとは関係なく、PC の解析だけで使う。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum DetectionCenter {
     /// 枠の中心を整数に切り捨てる (カメラアプリと同じ)
     #[default]
@@ -27,7 +28,8 @@ impl std::str::FromStr for DetectionCenter {
 }
 
 /// 画像の端に接した検出 (ボールの一部が画像の外にあり、枠や重心がボールの中心からずれている) の扱い。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum EdgeDetections {
     /// そのまま使う (カメラアプリと同じ)
     #[default]

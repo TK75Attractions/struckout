@@ -7,7 +7,8 @@
 - Windows: `%APPDATA%\struckout\ball-tracker\config.yaml`
 - macOS: `~/Library/Application Support/struckout/ball-tracker/config.yaml`
 
-キーには長いオプション名 (`--` を除く) を使います。文字列や数値は値に、真偽値 `true` はフラグに、`false` と `null` は未指定になります。
+キーには長いオプション名 (`--` を除く) を使います。書かなかった項目は既定値になり、知らないキーはエラーになります。
+`--json` のようなフラグは `true` / `false` で書きます。
 
 ```yaml
 input: network
@@ -17,6 +18,7 @@ json: true
 ```
 
 設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
+ただし、設定ファイルで `true` にしたフラグを、コマンドラインから無効にすることはできません。
 
 ## アルゴリズムの説明
 ### フレームの時刻をそろえる
