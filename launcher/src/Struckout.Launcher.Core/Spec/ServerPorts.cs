@@ -14,7 +14,8 @@ public sealed record ServerPorts(
     int BallTrackerProjector,
     int BallTrackerCameraControl,
     int BallTrackerCameraData,
-    int BallTrackerCameraVideo)
+    int BallTrackerCameraVideo,
+    int BallTrackerHealth)
 {
     private static readonly Lazy<ServerPorts> FromSpec = new(LoadEmbedded);
 
@@ -42,7 +43,8 @@ public sealed record ServerPorts(
             Port(spec, "ball-tracker", "projector"),
             Port(spec, "ball-tracker", "camera-ctrl"),
             Port(spec, "ball-tracker", "camera-data"),
-            Port(spec, "ball-tracker", "camera-video"));
+            Port(spec, "ball-tracker", "camera-video"),
+            Port(spec, "ball-tracker", "health"));
     }
 
     private static int Port(SpecFile spec, string server, string endpoint)

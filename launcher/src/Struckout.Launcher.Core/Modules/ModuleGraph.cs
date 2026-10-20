@@ -2,30 +2,44 @@ using Struckout.Launcher.Core.Spec;
 
 namespace Struckout.Launcher.Core.Modules;
 
-/// <summary><paramref name="Target"/> has to accept connections on <paramref name="Ports"/>.</summary>
-public sealed record Dependency(ModuleId Target, IReadOnlyList<int> Ports);
+/// <summary><paramref name="Target"/> must report SERVING on <paramref name="HealthPort"/> before its dependents start.</summary>
+public sealed record Dependency(ModuleId Target, int HealthPort);
 
 /// <summary>Which module connects to which, as drawn in <c>docs/architecture.mmd</c>.</summary>
 public static class ModuleGraph
 {
     public static IReadOnlyList<Dependency> DependenciesOf(ModuleId id, ServerPorts ports) => id switch
     {
-        ModuleId.Camera => [new(ModuleId.BallTracker, [ports.BallTrackerCameraControl, ports.BallTrackerCameraData])],
+        ModuleId.Camera => [DependencyOf(ModuleId.BallTracker, ports)],
         ModuleId.Projector =>
         [
-            new(ModuleId.BallTracker, [ports.BallTrackerProjector]),
-            new(ModuleId.GameMaster, [ports.GameMasterGrpc]),
+            DependencyOf(ModuleId.BallTracker, ports),
+            DependencyOf(ModuleId.GameMaster, ports),
         ],
-        ModuleId.Touchpanel => [new(ModuleId.GameMaster, [ports.GameMasterGrpc])],
+        ModuleId.Touchpanel => [DependencyOf(ModuleId.GameMaster, ports)],
         ModuleId.BallTracker or ModuleId.GameMaster => [],
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 
-    /// <summary>The ports that are open while the module is up. Empty for the modules that only connect.</summary>
+    /// <summary>The gRPC health port for readiness checks. Client-only modules have none.</summary>
+    public static int? HealthPortOf(ModuleId id, ServerPorts ports) => id switch
+    {
+        ModuleId.GameMaster => ports.GameMasterGrpc,
+        ModuleId.BallTracker => ports.BallTrackerHealth,
+        ModuleId.Camera or ModuleId.Projector or ModuleId.Touchpanel => null,
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
+    };
+
+    private static Dependency DependencyOf(ModuleId target, ServerPorts ports) =>
+        new(target, HealthPortOf(target, ports)
+            // guaranteed by DependenciesOf: only server modules are dependencies
+            ?? throw new InvalidOperationException("a dependency should have a health endpoint"));
+
+    /// <summary>Ports checked for conflicts before starting a module. Empty for client-only modules.</summary>
     public static IReadOnlyList<int> PortsServedBy(ModuleId id, ServerPorts ports) => id switch
     {
         ModuleId.BallTracker =>
-            [ports.BallTrackerProjector, ports.BallTrackerCameraControl, ports.BallTrackerCameraData],
+            [ports.BallTrackerProjector, ports.BallTrackerCameraControl, ports.BallTrackerCameraData, ports.BallTrackerHealth],
         ModuleId.GameMaster => [ports.GameMasterGrpc],
         ModuleId.Camera or ModuleId.Projector or ModuleId.Touchpanel => [],
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),

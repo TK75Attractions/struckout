@@ -32,11 +32,25 @@ public class ModuleGraphTests
         {
             foreach (var dependency in ModuleGraph.DependenciesOf(id, ServerPorts.Spec))
             {
-                Assert.All(
-                    dependency.Ports,
-                    port => Assert.Contains(port, ModuleGraph.PortsServedBy(dependency.Target, ServerPorts.Spec)));
+                Assert.Equal(ModuleGraph.HealthPortOf(dependency.Target, ServerPorts.Spec), dependency.HealthPort);
+                Assert.Contains(dependency.HealthPort, ModuleGraph.PortsServedBy(dependency.Target, ServerPorts.Spec));
             }
         }
+    }
+
+    [Fact]
+    public void HealthPortsMatchTheServers()
+    {
+        var ports = ServerPorts.Spec;
+
+        Assert.Equal(ports.GameMasterGrpc, ModuleGraph.HealthPortOf(ModuleId.GameMaster, ports));
+        Assert.Equal(ports.BallTrackerHealth, ModuleGraph.HealthPortOf(ModuleId.BallTracker, ports));
+        Assert.Null(ModuleGraph.HealthPortOf(ModuleId.Projector, ports));
+        Assert.Null(ModuleGraph.HealthPortOf(ModuleId.Touchpanel, ports));
+        Assert.Null(ModuleGraph.HealthPortOf(ModuleId.Camera, ports));
+        Assert.Equal(
+            new Dependency(ModuleId.BallTracker, ports.BallTrackerHealth),
+            Assert.Single(ModuleGraph.DependenciesOf(ModuleId.Camera, ports)));
     }
 
     [Fact]
