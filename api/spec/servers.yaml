@@ -21,6 +21,10 @@ servers:
       type: tcp
       port: 5052
 
+    health:
+      type: grpc
+      port: 5080
+
   xtask-sync:
     camera:
       type: tcp
