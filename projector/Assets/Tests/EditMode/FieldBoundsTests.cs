@@ -17,8 +17,8 @@ namespace Struckout.Tests.Tests.EditMode
             var field = new FieldBounds();
 
             // CollisionCoordinateTransform の既定が x[-1,1]m -> 0〜1920 を前提にしている。
-            Assert.That(field.Width, Is.EqualTo(1920f).Within(Tolerance));
-            Assert.That(field.Height, Is.EqualTo(1080f).Within(Tolerance));
+            Assert.That(field.width, Is.EqualTo(1920f).Within(Tolerance));
+            Assert.That(field.height, Is.EqualTo(1080f).Within(Tolerance));
         }
 
         [Test]

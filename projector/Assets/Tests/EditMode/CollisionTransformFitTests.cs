@@ -23,10 +23,10 @@ namespace Struckout.Tests.Tests.EditMode
 
             AssertMapsTo(transform, (0.10, 1.80), Render1);
             AssertMapsTo(transform, (1.10, 2.40), Render2);
-            Assert.That(transform.PixelsPerMetreX, Is.EqualTo(960.0).Within(Tolerance));
-            Assert.That(transform.PixelsPerMetreY, Is.EqualTo(900.0).Within(Tolerance));
-            Assert.That(transform.FlipX, Is.False);
-            Assert.That(transform.FlipY, Is.False);
+            Assert.That(transform.pixelsPerMetreX, Is.EqualTo(960.0).Within(Tolerance));
+            Assert.That(transform.pixelsPerMetreY, Is.EqualTo(900.0).Within(Tolerance));
+            Assert.That(transform.flipX, Is.False);
+            Assert.That(transform.flipY, Is.False);
         }
 
         [Test]
@@ -37,10 +37,10 @@ namespace Struckout.Tests.Tests.EditMode
             // 盤面の左下の点が、実際には右上に映っていた
             transform.FitTwoPoints(Render1, (1.10, 2.40), Render2, (0.10, 1.80));
 
-            Assert.That(transform.FlipX, Is.True);
-            Assert.That(transform.FlipY, Is.True);
-            Assert.That(transform.PixelsPerMetreX, Is.GreaterThan(0f));
-            Assert.That(transform.PixelsPerMetreY, Is.GreaterThan(0f));
+            Assert.That(transform.flipX, Is.True);
+            Assert.That(transform.flipY, Is.True);
+            Assert.That(transform.pixelsPerMetreX, Is.GreaterThan(0f));
+            Assert.That(transform.pixelsPerMetreY, Is.GreaterThan(0f));
             AssertMapsTo(transform, (1.10, 2.40), Render1);
             AssertMapsTo(transform, (0.10, 1.80), Render2);
         }
@@ -48,11 +48,11 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void SwapAxes_のままでも二点に写る()
         {
-            var transform = new CollisionCoordinateTransform { SwapAxes = true };
+            var transform = new CollisionCoordinateTransform { swapAxes = true };
 
             transform.FitTwoPoints(Render1, (0.10, 1.80), Render2, (1.10, 2.40));
 
-            Assert.That(transform.SwapAxes, Is.True);
+            Assert.That(transform.swapAxes, Is.True);
             AssertMapsTo(transform, (0.10, 1.80), Render1);
             AssertMapsTo(transform, (1.10, 2.40), Render2);
         }
@@ -76,13 +76,13 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var transform = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 870f,
-                PixelsPerMetreY = 910f,
-                OriginX = 120f,
-                OriginY = -1500f,
-                FlipX = flipX,
-                FlipY = flipY,
-                SwapAxes = swap,
+                pixelsPerMetreX = 870f,
+                pixelsPerMetreY = 910f,
+                originX = 120f,
+                originY = -1500f,
+                flipX = flipX,
+                flipY = flipY,
+                swapAxes = swap,
             };
 
             var (rx, ry) = transform.ToRenderSpace(0.37, 2.21);
@@ -97,21 +97,21 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var source = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 1f,
-                PixelsPerMetreY = 2f,
-                OriginX = 3f,
-                OriginY = 4f,
-                FlipX = true,
-                FlipY = true,
-                SwapAxes = true,
-                LogConversions = true,
+                pixelsPerMetreX = 1f,
+                pixelsPerMetreY = 2f,
+                originX = 3f,
+                originY = 4f,
+                flipX = true,
+                flipY = true,
+                swapAxes = true,
+                logConversions = true,
             };
             var target = new CollisionCoordinateTransform();
 
             target.CopyFrom(source);
 
             Assert.That(target.ToString(), Is.EqualTo(source.ToString()));
-            Assert.That(target.LogConversions, Is.True);
+            Assert.That(target.logConversions, Is.True);
         }
 
         private static void AssertMapsTo(

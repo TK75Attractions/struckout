@@ -5,7 +5,7 @@ namespace Struckout.Domain
 {
     public static class ConnectionStateMachine
     {
-        private static readonly Dictionary<ConnectionState, HashSet<ConnectionState>> _transitions =
+        private static readonly Dictionary<ConnectionState, HashSet<ConnectionState>> Transitions =
         new()
         {
             // Connected -> Failed は「通信中に切れた」。
@@ -20,6 +20,6 @@ namespace Struckout.Domain
         public static ConnectionState Transition(ConnectionState from, ConnectionState to)
             => CanTransition(from, to) ? to : throw new ArgumentException($"Can't transition from {from} to {to}");
 
-        private static bool CanTransition(ConnectionState from, ConnectionState to) => _transitions[from].Contains(to);
+        private static bool CanTransition(ConnectionState from, ConnectionState to) => Transitions[from].Contains(to);
     }
 }

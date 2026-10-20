@@ -7,6 +7,7 @@ using Struckout.Domain.TargetDefinition;
 using VContainer;
 using UnityEngine.UI;
 using System.Globalization;
+using UnityEngine.Serialization;
 
 namespace Struckout.Unity
 {
@@ -29,51 +30,60 @@ namespace Struckout.Unity
         private const int MarkerSortingOrder = 150;
 
         private Dictionary<Target, Transform> _targetToTransform;
-        [SerializeField]
-        private Transform _circleUI;
+        [FormerlySerializedAs("_circleUI")] [SerializeField]
+        private Transform circleUI;
 
+        [FormerlySerializedAs("_hudCanvas")]
         [Header("Game HUD")]
-        [SerializeField] private Canvas _hudCanvas;
-        [SerializeField] private Font _displayFont;
+        [SerializeField] private Canvas hudCanvas;
+        [FormerlySerializedAs("_displayFont")] [SerializeField] private Font displayFont;
 
+        [FormerlySerializedAs("_backgroundSprite")]
         [Header("Projected Screens")]
-        [SerializeField] private Sprite _backgroundSprite;
-        [SerializeField] private Sprite _idleSprite;
-        [SerializeField] private Sprite _finishedSprite;
-        [SerializeField, Min(0f)] private float _screenFadeSeconds = 0.55f;
+        [SerializeField] private Sprite backgroundSprite;
+        [FormerlySerializedAs("_idleSprite")] [SerializeField] private Sprite idleSprite;
+        [FormerlySerializedAs("_finishedSprite")] [SerializeField] private Sprite finishedSprite;
+        [FormerlySerializedAs("_screenFadeSeconds")] [SerializeField, Min(0f)] private float screenFadeSeconds = 0.55f;
 
+        [FormerlySerializedAs("_scoredImpactSprite")]
         [Header("Impact Sprites")]
-        [SerializeField] private Sprite _scoredImpactSprite;
-        [SerializeField] private Sprite _missedImpactSprite;
-        [SerializeField] private Sprite _ignoredImpactSprite;
-        [SerializeField, Min(1f)] private float _scoredImpactSize = 280f;
-        [SerializeField, Min(1f)] private float _missedImpactSize = 170f;
-        [SerializeField, Min(1f)] private float _ignoredImpactSize = 150f;
+        [SerializeField] private Sprite scoredImpactSprite;
+        [FormerlySerializedAs("_missedImpactSprite")] [SerializeField] private Sprite missedImpactSprite;
+        [FormerlySerializedAs("_ignoredImpactSprite")] [SerializeField] private Sprite ignoredImpactSprite;
+        [FormerlySerializedAs("_scoredImpactSize")] [SerializeField, Min(1f)] private float scoredImpactSize = 280f;
+        [FormerlySerializedAs("_missedImpactSize")] [SerializeField, Min(1f)] private float missedImpactSize = 170f;
+        [FormerlySerializedAs("_ignoredImpactSize")] [SerializeField, Min(1f)] private float ignoredImpactSize = 150f;
 
+        [FormerlySerializedAs("_collisionMarkerUI")]
         [Header("Collision Marker")]
         [SerializeField]
         [Tooltip("独自の着弾演出 Prefab。未設定なら結果別の画像で演出する。")]
-        private Transform _collisionMarkerUI;
+        private Transform collisionMarkerUI;
 
+        [FormerlySerializedAs("_showCollisionMarkers")]
         [SerializeField]
         [Tooltip("off にすると着弾位置を表示しない。")]
-        private bool _showCollisionMarkers = true;
+        private bool showCollisionMarkers = true;
 
+        [FormerlySerializedAs("_collisionMarkerSize")]
         [SerializeField]
         [Tooltip("マーカーの大きさ。的と同じ盤面ピクセルで指定する。")]
-        private float _collisionMarkerSize = 48f;
+        private float collisionMarkerSize = 48f;
 
+        [FormerlySerializedAs("_hitColor")]
         [SerializeField]
         [Tooltip("的に当たって得点したとき。")]
-        private Color _hitColor = new(1f, 0.95f, 0f, 0.9f);
+        private Color hitColor = new(1f, 0.95f, 0f, 0.9f);
 
+        [FormerlySerializedAs("_ignoredColor")]
         [SerializeField]
         [Tooltip("ゲームが始まっていないので判定しなかったとき。")]
-        private Color _ignoredColor = new(1f, 1f, 1f, 0.9f);
+        private Color ignoredColor = new(1f, 1f, 1f, 0.9f);
 
+        [FormerlySerializedAs("_missColor")]
         [SerializeField]
         [Tooltip("どの的にも当たらなかったとき。")]
-        private Color _missColor = new(0f, 0.35f, 1f, 0.9f);
+        private Color missColor = new(0f, 0.35f, 1f, 0.9f);
 
         private UIRoot _uiRoot;
         private WorldCoordinateTransform _world;
@@ -97,9 +107,9 @@ namespace Struckout.Unity
             _world = world;
             _targetToTransform = new();
 
-            CreateFieldSprite("ArenaBackground", _backgroundSprite, BackgroundSortingOrder);
-            _idleRenderer = CreateFieldSprite("IdleScreen", _idleSprite, OverlaySortingOrder);
-            _finishedRenderer = CreateFieldSprite("FinishedScreen", _finishedSprite, OverlaySortingOrder);
+            CreateFieldSprite("ArenaBackground", backgroundSprite, BackgroundSortingOrder);
+            _idleRenderer = CreateFieldSprite("IdleScreen", idleSprite, OverlaySortingOrder);
+            _finishedRenderer = CreateFieldSprite("FinishedScreen", finishedSprite, OverlaySortingOrder);
             _finishedText = CreateFinishedText();
             CreateHud();
             SetAlpha(_idleRenderer, _idleOpacity);
@@ -117,8 +127,8 @@ namespace Struckout.Unity
             renderer.sortingOrder = sortingOrder;
 
             // 画面比率に関係なく、論理盤面と同じ矩形を覆う。
-            float width = _world.ToWorldLength(_world.Field.Width);
-            float height = _world.ToWorldLength(_world.Field.Height);
+            float width = _world.ToWorldLength(_world.Field.width);
+            float height = _world.ToWorldLength(_world.Field.height);
             go.transform.localScale = new Vector3(
                 width / sprite.bounds.size.x,
                 height / sprite.bounds.size.y,
@@ -128,7 +138,7 @@ namespace Struckout.Unity
 
         private TextMesh CreateFinishedText()
         {
-            if (_finishedSprite == null) return null;
+            if (finishedSprite == null) return null;
 
             var go = new GameObject("FinishedMessage", typeof(TextMesh));
             go.transform.SetParent(transform, false);
@@ -138,12 +148,12 @@ namespace Struckout.Unity
             label.alignment = TextAlignment.Center;
             label.fontSize = 100;
             label.characterSize = 1.2f;
-            label.font = _displayFont;
+            label.font = displayFont;
             label.color = new Color(1f, 1f, 1f, 0f);
             var textRenderer = go.GetComponent<MeshRenderer>();
             if (textRenderer != null)
             {
-                if (_displayFont != null) textRenderer.sharedMaterial = _displayFont.material;
+                if (displayFont != null) textRenderer.sharedMaterial = displayFont.material;
                 textRenderer.sortingOrder = OverlaySortingOrder + 1;
             }
             return label;
@@ -151,7 +161,7 @@ namespace Struckout.Unity
 
         private void CreateHud()
         {
-            if (_hudCanvas == null || _displayFont == null)
+            if (hudCanvas == null || displayFont == null)
             {
                 Debug.LogError("[HUD] Assign the HUD Canvas and Oxanium font to UIService.");
                 return;
@@ -161,7 +171,7 @@ namespace Struckout.Unity
 
             _hud = new GameObject("GameHud", typeof(RectTransform));
             var root = _hud.GetComponent<RectTransform>();
-            root.SetParent(_hudCanvas.transform, false);
+            root.SetParent(hudCanvas.transform, false);
             root.anchorMin = Vector2.zero;
             root.anchorMax = Vector2.one;
             root.offsetMin = root.offsetMax = Vector2.zero;
@@ -177,13 +187,13 @@ namespace Struckout.Unity
         {
             var go = new GameObject("BuildInfo", typeof(RectTransform), typeof(Text));
             var rect = go.GetComponent<RectTransform>();
-            rect.SetParent(_hudCanvas.transform, false);
+            rect.SetParent(hudCanvas.transform, false);
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0f);
             rect.anchoredPosition = new Vector2(-24f, 16f);
             rect.sizeDelta = new Vector2(700f, 40f);
 
             var label = go.GetComponent<Text>();
-            label.font = _displayFont;
+            label.font = displayFont;
             label.fontSize = 22;
             label.alignment = TextAnchor.MiddleRight;
             label.color = new Color(1f, 1f, 1f, 0.55f);
@@ -212,7 +222,7 @@ namespace Struckout.Unity
             labelRect.offsetMin = new Vector2(24f, 8f);
             labelRect.offsetMax = new Vector2(-24f, -8f);
             var label = go.GetComponent<Text>();
-            label.font = _displayFont;
+            label.font = displayFont;
             label.fontSize = 48;
             label.alignment = right ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
             label.color = Color.white;
@@ -239,9 +249,9 @@ namespace Struckout.Unity
         {
             if (_world == null) return;
 
-            float step = _screenFadeSeconds <= 0f
+            float step = screenFadeSeconds <= 0f
                 ? 1f
-                : Time.deltaTime / _screenFadeSeconds;
+                : Time.deltaTime / screenFadeSeconds;
             _idleOpacity = Mathf.MoveTowards(_idleOpacity, _phase == GamePhase.Idle ? 1f : 0f, step);
             _finishedOpacity = Mathf.MoveTowards(_finishedOpacity, _phase == GamePhase.Finished ? 1f : 0f, step);
             SetAlpha(_idleRenderer, _idleOpacity);
@@ -308,13 +318,13 @@ namespace Struckout.Unity
             switch (target.Type)
             {
                 case TargetType.Circle:
-                    if (_circleUI == null)
+                    if (circleUI == null)
                     {
                         Debug.LogError("CircleUI is null");
                         return;
                     }
 
-                    if (!TryInstantiateTargetUI<CircleTargetUI>(_circleUI, out var transform))
+                    if (!TryInstantiateTargetUI<CircleTargetUI>(circleUI, out var transform))
                     {
                         Debug.LogError("CircleTargetUI is null");
                         return;
@@ -351,7 +361,7 @@ namespace Struckout.Unity
 
         public void ShowCollisionMarker(float x, float y, CollisionResult result)
         {
-            if (!_showCollisionMarkers) return;
+            if (!showCollisionMarkers) return;
             if (_uiRoot == null || _uiRoot.TargetRoot == null)
             {
                 Debug.LogWarning("UIRoot is not ready; cannot show a collision marker.");
@@ -360,34 +370,34 @@ namespace Struckout.Unity
 
             var colour = result switch
             {
-                CollisionResult.Scored => _hitColor,
-                CollisionResult.Ignored => _ignoredColor,
-                _ => _missColor,
+                CollisionResult.Scored => hitColor,
+                CollisionResult.Ignored => ignoredColor,
+                _ => missColor,
             };
 
             var sprite = result switch
             {
-                CollisionResult.Scored => _scoredImpactSprite,
-                CollisionResult.Ignored => _ignoredImpactSprite,
-                _ => _missedImpactSprite,
+                CollisionResult.Scored => scoredImpactSprite,
+                CollisionResult.Ignored => ignoredImpactSprite,
+                _ => missedImpactSprite,
             };
             float size = result switch
             {
-                CollisionResult.Scored => _scoredImpactSize,
-                CollisionResult.Ignored => _ignoredImpactSize,
-                _ => _missedImpactSize,
+                CollisionResult.Scored => scoredImpactSize,
+                CollisionResult.Ignored => ignoredImpactSize,
+                _ => missedImpactSize,
             };
 
             Transform marker;
-            if (_collisionMarkerUI != null)
+            if (collisionMarkerUI != null)
             {
                 // 差し替えた Prefab は見た目も寿命もその Prefab の責任。
                 // こちらから CollisionMarker を足すと、独自のアニメーションを途中で潰しかねない。
-                marker = Instantiate(_collisionMarkerUI, _uiRoot.TargetRoot);
+                marker = Instantiate(collisionMarkerUI, _uiRoot.TargetRoot);
             }
             else
             {
-                marker = CreateSpriteMarker(sprite, sprite == null ? _collisionMarkerSize : size,
+                marker = CreateSpriteMarker(sprite, sprite == null ? collisionMarkerSize : size,
                     sprite == null ? colour : Color.white, result);
             }
 

@@ -28,11 +28,11 @@ namespace Struckout.Infrastructure.Fake
         public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
             => new(100f, 100f);
 
-        public Target GenerateTarget(TargetType type, float X, float Y, float size)
+        public Target GenerateTarget(TargetType type, float x, float y, float size)
         {
             TargetCoordinate coordinate = new(
-                X,
-                Y
+                x,
+                y
             );
             Target target = new(
                 coordinate,

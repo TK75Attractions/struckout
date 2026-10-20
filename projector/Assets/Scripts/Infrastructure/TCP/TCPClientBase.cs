@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Struckout.Infrastructure.TCP
 {
-    public class TCPClientBase<T> : IClientService<T>
+    public class TcpClientBase<T> : IClientService<T>
     {
         ConnectionState _state = ConnectionState.Disconnected;
         private string _host;
@@ -24,7 +24,7 @@ namespace Struckout.Infrastructure.TCP
         public event Action ConnectionLost;
         private Task _receiveTask;
         private readonly IMessageParser<T> _parser;
-        private bool isRegister = false;
+        private bool _isRegister = false;
         private readonly SemaphoreSlim _slim = new(1, 1);
         private readonly SemaphoreSlim _sendSlim = new(1, 1);
         private const double MaxRetryDelaySeconds = 5;
@@ -32,7 +32,7 @@ namespace Struckout.Infrastructure.TCP
         private ConnectionState Transit(ConnectionState to) => _state = ConnectionStateMachine.Transition(_state, to);
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public TCPClientBase(IMessageParser<T> parser)
+        public TcpClientBase(IMessageParser<T> parser)
         {
             _parser = parser;
         }
@@ -41,7 +41,7 @@ namespace Struckout.Infrastructure.TCP
         {
             _host = host;
             _port = port;
-            isRegister = true;
+            _isRegister = true;
         }
 
         public async Task<bool> ConnectAsync()
@@ -51,7 +51,7 @@ namespace Struckout.Infrastructure.TCP
             try
             {
                 Transit(ConnectionState.Connecting);
-                if (!isRegister)
+                if (!_isRegister)
                 {
                     Transit(ConnectionState.Failed);
                     throw new Exception("Haven't been register port");

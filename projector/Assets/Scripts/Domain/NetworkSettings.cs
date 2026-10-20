@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Serialization;
 
 namespace Struckout.Domain
 {
@@ -14,15 +15,15 @@ namespace Struckout.Domain
     [Serializable]
     public class NetworkSettings
     {
-        public NetworkMode Mode = NetworkMode.Real;
+        [FormerlySerializedAs("Mode")] public NetworkMode mode = NetworkMode.Real;
 
         /// <summary>ball_tracker (collision の送り元)。</summary>
-        public string TrackerHost = "127.0.0.1";
-        public int TrackerPort = 5000;
+        [FormerlySerializedAs("TrackerHost")] public string trackerHost = "127.0.0.1";
+        [FormerlySerializedAs("TrackerPort")] public int trackerPort = 5000;
 
         /// <summary>game_master。gRPC (h2c) でつなぐ。</summary>
-        public string MasterHost = "127.0.0.1";
-        public int MasterPort = 8020;
+        [FormerlySerializedAs("MasterHost")] public string masterHost = "127.0.0.1";
+        [FormerlySerializedAs("MasterPort")] public int masterPort = 8020;
 
         /// <summary>
         /// この筐体の号機番号。AddScore と ListenEvents の両方に必要。
@@ -32,23 +33,23 @@ namespace Struckout.Domain
         /// 採番する仕組みが game_master に無い (machines テーブルも無い) ため、
         /// 各筐体で人間が設定する。誰がどう決めるかは未決。
         /// </summary>
-        public int MachineId = 1;
+        [FormerlySerializedAs("MachineId")] public int machineId = 1;
 
         /// <summary>接続を試す回数。1 なら再試行しない。失敗するたびに指数バックオフで待つ。</summary>
-        public int ConnectAttempts = 5;
+        [FormerlySerializedAs("ConnectAttempts")] public int connectAttempts = 5;
 
         public NetworkSettings Clone() => new()
         {
-            Mode = Mode,
-            TrackerHost = TrackerHost,
-            TrackerPort = TrackerPort,
-            MasterHost = MasterHost,
-            MasterPort = MasterPort,
-            MachineId = MachineId,
-            ConnectAttempts = ConnectAttempts,
+            mode = mode,
+            trackerHost = trackerHost,
+            trackerPort = trackerPort,
+            masterHost = masterHost,
+            masterPort = masterPort,
+            machineId = machineId,
+            connectAttempts = connectAttempts,
         };
 
         public override string ToString() =>
-            $"mode={Mode} tracker={TrackerHost}:{TrackerPort} master={MasterHost}:{MasterPort} machine={MachineId} attempts={ConnectAttempts}";
+            $"mode={mode} tracker={trackerHost}:{trackerPort} master={masterHost}:{masterPort} machine={machineId} attempts={connectAttempts}";
     }
 }

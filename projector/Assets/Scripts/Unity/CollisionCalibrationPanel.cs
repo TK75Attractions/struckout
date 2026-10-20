@@ -108,16 +108,16 @@ namespace Struckout.Unity
             GUILayout.Label("矢印: 原点を 1 px / Ctrl+矢印: 1 m あたりを 0.5% (Shift で 10 倍)");
             GUILayout.Label("入力欄に打ったあとは Esc で抜けると矢印キーが効く");
 
-            _ppmX = NumberField("1 m あたり 横 (px)", _ppmX, v => _transform.PixelsPerMetreX = v, positive: true);
-            _ppmY = NumberField("1 m あたり 縦 (px)", _ppmY, v => _transform.PixelsPerMetreY = v, positive: true);
-            _originX = NumberField("原点 横 (px)", _originX, v => _transform.OriginX = v);
-            _originY = NumberField("原点 縦 (px)", _originY, v => _transform.OriginY = v);
+            _ppmX = NumberField("1 m あたり 横 (px)", _ppmX, v => _transform.pixelsPerMetreX = v, positive: true);
+            _ppmY = NumberField("1 m あたり 縦 (px)", _ppmY, v => _transform.pixelsPerMetreY = v, positive: true);
+            _originX = NumberField("原点 横 (px)", _originX, v => _transform.originX = v);
+            _originY = NumberField("原点 縦 (px)", _originY, v => _transform.originY = v);
             GUILayout.BeginHorizontal();
-            _transform.FlipX = GUILayout.Toggle(_transform.FlipX, "横を反転");
-            _transform.FlipY = GUILayout.Toggle(_transform.FlipY, "縦を反転");
-            _transform.SwapAxes = GUILayout.Toggle(_transform.SwapAxes, "縦横を入れ替え");
+            _transform.flipX = GUILayout.Toggle(_transform.flipX, "横を反転");
+            _transform.flipY = GUILayout.Toggle(_transform.flipY, "縦を反転");
+            _transform.swapAxes = GUILayout.Toggle(_transform.swapAxes, "縦横を入れ替え");
             GUILayout.EndHorizontal();
-            _transform.LogConversions = GUILayout.Toggle(_transform.LogConversions, "変換をログに出す");
+            _transform.logConversions = GUILayout.Toggle(_transform.logConversions, "変換をログに出す");
 
             GUILayout.Space(8);
             _showCheckPoints = GUILayout.Toggle(_showCheckPoints, "板の 4 隅と中央に印を出す (確かめ用)");
@@ -170,13 +170,13 @@ namespace Struckout.Unity
             if (e.control)
             {
                 float factor = 1f + 0.005f * big;
-                if (dx != 0) _transform.PixelsPerMetreX *= dx > 0 ? factor : 1f / factor;
-                if (dy != 0) _transform.PixelsPerMetreY *= dy > 0 ? factor : 1f / factor;
+                if (dx != 0) _transform.pixelsPerMetreX *= dx > 0 ? factor : 1f / factor;
+                if (dy != 0) _transform.pixelsPerMetreY *= dy > 0 ? factor : 1f / factor;
             }
             else
             {
-                _transform.OriginX += dx * big;
-                _transform.OriginY += dy * big;
+                _transform.originX += dx * big;
+                _transform.originY += dy * big;
             }
 
             RefreshFields();
@@ -198,10 +198,10 @@ namespace Struckout.Unity
 
         private void RefreshFields()
         {
-            _ppmX = Format(_transform.PixelsPerMetreX);
-            _ppmY = Format(_transform.PixelsPerMetreY);
-            _originX = Format(_transform.OriginX);
-            _originY = Format(_transform.OriginY);
+            _ppmX = Format(_transform.pixelsPerMetreX);
+            _ppmY = Format(_transform.pixelsPerMetreY);
+            _originX = Format(_transform.originX);
+            _originY = Format(_transform.originY);
         }
 
         private static string Format(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);

@@ -51,9 +51,9 @@ namespace Struckout.Bootstrap
             _client.ConnectionLost += OnTrackerConnectionLost;
             _master.ConnectionLost += OnMasterConnectionLost;
 
-            _client.RegisterPort(_settings.TrackerHost, _settings.TrackerPort);
+            _client.RegisterPort(_settings.trackerHost, _settings.trackerPort);
 
-            bool isSuccessfullyClientConnect = await _client.ConnectRetryAsync(_settings.ConnectAttempts);
+            bool isSuccessfullyClientConnect = await _client.ConnectRetryAsync(_settings.connectAttempts);
             if (!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
 
             // gRPC のチャネルは遅延接続なので、ここで失敗するのはチャネルを作れないときだけ。

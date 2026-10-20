@@ -44,7 +44,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void FlipX_は原点をまたいで左右を反転する()
         {
-            var transform = new CollisionCoordinateTransform { FlipX = true };
+            var transform = new CollisionCoordinateTransform { flipX = true };
 
             var (x, y) = transform.ToRenderSpace(1.0, 1.0);
 
@@ -55,7 +55,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void FlipY_は原点をまたいで上下を反転する()
         {
-            var transform = new CollisionCoordinateTransform { FlipY = true };
+            var transform = new CollisionCoordinateTransform { flipY = true };
 
             var (x, y) = transform.ToRenderSpace(0.0, 1.0);
 
@@ -66,7 +66,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void SwapAxes_は入力の縦横を入れ替えてから変換する()
         {
-            var transform = new CollisionCoordinateTransform { SwapAxes = true };
+            var transform = new CollisionCoordinateTransform { swapAxes = true };
 
             var (x, y) = transform.ToRenderSpace(2.0, 0.0);
 
@@ -78,7 +78,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void SwapAxes_と_Flip_は併用できる()
         {
-            var transform = new CollisionCoordinateTransform { SwapAxes = true, FlipX = true };
+            var transform = new CollisionCoordinateTransform { swapAxes = true, flipX = true };
 
             var (x, _) = transform.ToRenderSpace(0.0, 1.0);
 
@@ -93,10 +93,10 @@ namespace Struckout.Tests.Tests.EditMode
             // px/m を縦横で揃えれば円が楕円にならない。
             var transform = new CollisionCoordinateTransform
             {
-                PixelsPerMetreX = 900f,
-                PixelsPerMetreY = 900f,
-                OriginX = 0f,
-                OriginY = -450f,
+                pixelsPerMetreX = 900f,
+                pixelsPerMetreY = 900f,
+                originX = 0f,
+                originY = -450f,
             };
 
             var (left, bottom) = transform.ToRenderSpace(0.0, 0.5);

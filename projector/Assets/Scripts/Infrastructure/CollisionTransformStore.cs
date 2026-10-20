@@ -84,7 +84,7 @@ namespace Struckout.Infrastructure
         {
             var result = new CollisionCoordinateTransform();
             JsonUtility.FromJsonOverwrite(json, result);
-            if (!(result.PixelsPerMetreX > 0f) || !(result.PixelsPerMetreY > 0f))
+            if (!(result.pixelsPerMetreX > 0f) || !(result.pixelsPerMetreY > 0f))
             {
                 throw new ArgumentException(
                     $"PixelsPerMetreX and PixelsPerMetreY must be positive (use FlipX / FlipY to reverse an axis): {result}");

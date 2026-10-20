@@ -34,67 +34,67 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 上書きが無ければ_Inspector_の値が使われる()
         {
-            var inspector = new NetworkSettings { TrackerHost = "10.0.0.1", TrackerPort = 6000 };
+            var inspector = new NetworkSettings { trackerHost = "10.0.0.1", trackerPort = 6000 };
 
             var result = Resolve(inspector);
 
-            Assert.That(result.TrackerHost, Is.EqualTo("10.0.0.1"));
-            Assert.That(result.TrackerPort, Is.EqualTo(6000));
+            Assert.That(result.trackerHost, Is.EqualTo("10.0.0.1"));
+            Assert.That(result.trackerPort, Is.EqualTo(6000));
         }
 
         [Test]
         public void 環境変数は_Inspector_より優先される()
         {
-            var inspector = new NetworkSettings { TrackerHost = "10.0.0.1" };
+            var inspector = new NetworkSettings { trackerHost = "10.0.0.1" };
 
             var result = Resolve(inspector, env: Env("STRUCKOUT_TRACKER_HOST", "192.168.0.10"));
 
-            Assert.That(result.TrackerHost, Is.EqualTo("192.168.0.10"));
+            Assert.That(result.trackerHost, Is.EqualTo("192.168.0.10"));
         }
 
         [Test]
         public void コマンドラインは環境変数より優先される()
         {
-            var inspector = new NetworkSettings { TrackerHost = "10.0.0.1" };
+            var inspector = new NetworkSettings { trackerHost = "10.0.0.1" };
 
             var result = Resolve(
                 inspector,
                 args: Args("trackerHost", "172.16.0.5"),
                 env: Env("STRUCKOUT_TRACKER_HOST", "192.168.0.10"));
 
-            Assert.That(result.TrackerHost, Is.EqualTo("172.16.0.5"));
+            Assert.That(result.trackerHost, Is.EqualTo("172.16.0.5"));
         }
 
         [Test]
         public void ネットワークモードを大文字小文字を問わず解釈する()
         {
-            Assert.That(Resolve(args: Args("networkMode", "fake")).Mode, Is.EqualTo(NetworkMode.Fake));
-            Assert.That(Resolve(args: Args("networkMode", "REAL")).Mode, Is.EqualTo(NetworkMode.Real));
+            Assert.That(Resolve(args: Args("networkMode", "fake")).mode, Is.EqualTo(NetworkMode.Fake));
+            Assert.That(Resolve(args: Args("networkMode", "REAL")).mode, Is.EqualTo(NetworkMode.Real));
         }
 
         [Test]
         public void 解釈できない値は_Inspector_の値に戻す()
         {
-            var inspector = new NetworkSettings { Mode = NetworkMode.Fake, TrackerPort = 5000 };
+            var inspector = new NetworkSettings { mode = NetworkMode.Fake, trackerPort = 5000 };
 
             var result = Resolve(
                 inspector,
                 args: Args("networkMode", "somethingElse", "trackerPort", "notANumber"));
 
-            Assert.That(result.Mode, Is.EqualTo(NetworkMode.Fake));
-            Assert.That(result.TrackerPort, Is.EqualTo(5000));
+            Assert.That(result.mode, Is.EqualTo(NetworkMode.Fake));
+            Assert.That(result.trackerPort, Is.EqualTo(5000));
         }
 
         [Test]
         public void Inspector_が空でも既定値で補われる()
         {
-            var inspector = new NetworkSettings { TrackerHost = "", MasterHost = null, TrackerPort = 0 };
+            var inspector = new NetworkSettings { trackerHost = "", masterHost = null, trackerPort = 0 };
 
             var result = Resolve(inspector);
 
-            Assert.That(result.TrackerHost, Is.EqualTo("127.0.0.1"));
-            Assert.That(result.MasterHost, Is.EqualTo("127.0.0.1"));
-            Assert.That(result.TrackerPort, Is.EqualTo(5000));
+            Assert.That(result.trackerHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(result.masterHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(result.trackerPort, Is.EqualTo(5000));
         }
 
         [Test]
@@ -102,17 +102,17 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var result = Resolve(args: Args("connectAttempts", "0"));
 
-            Assert.That(result.ConnectAttempts, Is.EqualTo(1));
+            Assert.That(result.connectAttempts, Is.EqualTo(1));
         }
 
         [Test]
         public void 元の設定を書き換えない()
         {
-            var inspector = new NetworkSettings { TrackerHost = "10.0.0.1" };
+            var inspector = new NetworkSettings { trackerHost = "10.0.0.1" };
 
             Resolve(inspector, args: Args("trackerHost", "172.16.0.5"));
 
-            Assert.That(inspector.TrackerHost, Is.EqualTo("10.0.0.1"),
+            Assert.That(inspector.trackerHost, Is.EqualTo("10.0.0.1"),
                 "Inspector の値をそのまま書き換えると、シーンの設定が実行時に汚れる");
         }
     }

@@ -30,7 +30,7 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
-        public void 盤面のYは上向きのまま反転しない()
+        public void 盤面のyは上向きのまま反転しない()
         {
             var world = new WorldCoordinateTransform();
 
@@ -134,7 +134,7 @@ namespace Struckout.Tests.Tests.EditMode
             // 0 を通すと以降すべてが 0 除算になるので、ここで止める。
             var world = new WorldCoordinateTransform(new FieldBounds(), 0f);
 
-            Assert.That(world.PixelsPerUnit, Is.EqualTo(100f).Within(Tolerance));
+            Assert.That(world.pixelsPerUnit, Is.EqualTo(100f).Within(Tolerance));
         }
 
         [Test]

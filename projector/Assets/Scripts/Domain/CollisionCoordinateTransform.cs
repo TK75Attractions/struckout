@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Serialization;
 
 namespace Struckout.Domain
 {
@@ -22,37 +23,37 @@ namespace Struckout.Domain
     public class CollisionCoordinateTransform
     {
         /// <summary>1 m あたりの描画座標。</summary>
-        public float PixelsPerMetreX = 960f;
-        public float PixelsPerMetreY = 540f;
+        [FormerlySerializedAs("PixelsPerMetreX")] public float pixelsPerMetreX = 960f;
+        [FormerlySerializedAs("PixelsPerMetreY")] public float pixelsPerMetreY = 540f;
 
         /// <summary>物理座標の原点 (0, 0) が描画座標のどこに来るか。</summary>
-        public float OriginX = 960f;
-        public float OriginY = 0f;
+        [FormerlySerializedAs("OriginX")] public float originX = 960f;
+        [FormerlySerializedAs("OriginY")] public float originY = 0f;
 
         /// <summary>軸の向きが逆だったとき用。</summary>
-        public bool FlipX = false;
-        public bool FlipY = false;
+        [FormerlySerializedAs("FlipX")] public bool flipX = false;
+        [FormerlySerializedAs("FlipY")] public bool flipY = false;
 
         /// <summary>
         /// 縦横が入れ替わっていたとき用。
         /// ball_tracker は CollisionPoint に、的の面に沿った横方向 (世界座標の y) と
         /// 高さ (世界座標の z) を詰めるので、通常は使わない。
         /// </summary>
-        public bool SwapAxes = false;
+        [FormerlySerializedAs("SwapAxes")] public bool swapAxes = false;
 
         /// <summary>変換前後の値をログに出す。係数を合わせ込むとき用。</summary>
-        public bool LogConversions = false;
+        [FormerlySerializedAs("LogConversions")] public bool logConversions = false;
 
         /// <summary>物理座標 (m) → 描画座標。</summary>
         public (double X, double Y) ToRenderSpace(double physicalX, double physicalY)
         {
-            if (SwapAxes)
+            if (swapAxes)
             {
                 (physicalX, physicalY) = (physicalY, physicalX);
             }
 
-            double x = OriginX + (FlipX ? -physicalX : physicalX) * PixelsPerMetreX;
-            double y = OriginY + (FlipY ? -physicalY : physicalY) * PixelsPerMetreY;
+            double x = originX + (flipX ? -physicalX : physicalX) * pixelsPerMetreX;
+            double y = originY + (flipY ? -physicalY : physicalY) * pixelsPerMetreY;
 
             return (x, y);
         }
@@ -60,11 +61,11 @@ namespace Struckout.Domain
         /// <summary>描画座標 → 物理座標 (m)。<see cref="ToRenderSpace"/> の逆。</summary>
         public (double X, double Y) ToPhysical(double renderX, double renderY)
         {
-            double x = (renderX - OriginX) / PixelsPerMetreX;
-            double y = (renderY - OriginY) / PixelsPerMetreY;
-            if (FlipX) x = -x;
-            if (FlipY) y = -y;
-            if (SwapAxes)
+            double x = (renderX - originX) / pixelsPerMetreX;
+            double y = (renderY - originY) / pixelsPerMetreY;
+            if (flipX) x = -x;
+            if (flipY) y = -y;
+            if (swapAxes)
             {
                 (x, y) = (y, x);
             }
@@ -74,14 +75,14 @@ namespace Struckout.Domain
 
         /// <summary>
         /// 盤面の 2 点 (描画座標) が、実際には物理座標 (m) のどこに映ったかから、係数を決め直す。
-        /// 2 点が横にも縦にも離れていること。軸の向きが逆なら <see cref="FlipX"/> / <see cref="FlipY"/> を立てる。
-        /// <see cref="SwapAxes"/> はそのまま使う。
+        /// 2 点が横にも縦にも離れていること。軸の向きが逆なら <see cref="flipX"/> / <see cref="flipY"/> を立てる。
+        /// <see cref="swapAxes"/> はそのまま使う。
         /// </summary>
         public void FitTwoPoints(
             (double X, double Y) render1, (double X, double Y) measured1,
             (double X, double Y) render2, (double X, double Y) measured2)
         {
-            if (SwapAxes)
+            if (swapAxes)
             {
                 measured1 = (measured1.Y, measured1.X);
                 measured2 = (measured2.Y, measured2.X);
@@ -89,12 +90,12 @@ namespace Struckout.Domain
 
             var (originX, scaleX, flipX) = FitAxis(render1.X, measured1.X, render2.X, measured2.X, "x");
             var (originY, scaleY, flipY) = FitAxis(render1.Y, measured1.Y, render2.Y, measured2.Y, "y");
-            OriginX = originX;
-            PixelsPerMetreX = scaleX;
-            FlipX = flipX;
-            OriginY = originY;
-            PixelsPerMetreY = scaleY;
-            FlipY = flipY;
+            this.originX = originX;
+            pixelsPerMetreX = scaleX;
+            this.flipX = flipX;
+            this.originY = originY;
+            pixelsPerMetreY = scaleY;
+            this.flipY = flipY;
         }
 
         private static (float Origin, float Scale, bool Flip) FitAxis(
@@ -118,18 +119,18 @@ namespace Struckout.Domain
         public void CopyFrom(CollisionCoordinateTransform other)
         {
             if (other == null) throw new ArgumentNullException(nameof(other));
-            PixelsPerMetreX = other.PixelsPerMetreX;
-            PixelsPerMetreY = other.PixelsPerMetreY;
-            OriginX = other.OriginX;
-            OriginY = other.OriginY;
-            FlipX = other.FlipX;
-            FlipY = other.FlipY;
-            SwapAxes = other.SwapAxes;
-            LogConversions = other.LogConversions;
+            pixelsPerMetreX = other.pixelsPerMetreX;
+            pixelsPerMetreY = other.pixelsPerMetreY;
+            originX = other.originX;
+            originY = other.originY;
+            flipX = other.flipX;
+            flipY = other.flipY;
+            swapAxes = other.swapAxes;
+            logConversions = other.logConversions;
         }
 
         public override string ToString() =>
-            $"scale=({PixelsPerMetreX}, {PixelsPerMetreY}) px/m origin=({OriginX}, {OriginY}) " +
-            $"flip=({FlipX}, {FlipY}) swap={SwapAxes}";
+            $"scale=({pixelsPerMetreX}, {pixelsPerMetreY}) px/m origin=({originX}, {originY}) " +
+            $"flip=({flipX}, {flipY}) swap={swapAxes}";
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Struckout.Unity
 {
@@ -16,15 +17,16 @@ namespace Struckout.Unity
     [RequireComponent(typeof(SpriteRenderer))]
     public class CollisionMarker : MonoBehaviour
     {
+        [FormerlySerializedAs("_lifetimeSeconds")]
         [SerializeField]
         [Tooltip("表示してから消えるまでの秒数。")]
-        private float _lifetimeSeconds = 1.0f;
+        private float lifetimeSeconds = 1.0f;
 
-        [SerializeField]
-        private float _startScale = 0.6f;
+        [FormerlySerializedAs("_startScale")] [SerializeField]
+        private float startScale = 0.6f;
 
-        [SerializeField]
-        private float _endScale = 1.6f;
+        [FormerlySerializedAs("_endScale")] [SerializeField]
+        private float endScale = 1.6f;
 
         private SpriteRenderer _renderer;
         private Vector3 _baseScale = Vector3.one;
@@ -44,9 +46,9 @@ namespace Struckout.Unity
 
         public void Configure(float lifetimeSeconds, float startScale, float endScale, float rotationDegrees)
         {
-            _lifetimeSeconds = lifetimeSeconds;
-            _startScale = startScale;
-            _endScale = endScale;
+            this.lifetimeSeconds = lifetimeSeconds;
+            this.startScale = startScale;
+            this.endScale = endScale;
             _rotationDegrees = rotationDegrees;
             _baseScale = transform.localScale;
             if (_renderer == null) _renderer = GetComponent<SpriteRenderer>();
@@ -59,9 +61,9 @@ namespace Struckout.Unity
         {
             _elapsed += Time.deltaTime;
 
-            float progress = _lifetimeSeconds <= 0f
+            float progress = lifetimeSeconds <= 0f
                 ? 1f
-                : Mathf.Clamp01(_elapsed / _lifetimeSeconds);
+                : Mathf.Clamp01(_elapsed / lifetimeSeconds);
 
             Apply(progress);
 
@@ -71,7 +73,7 @@ namespace Struckout.Unity
         private void Apply(float progress)
         {
             float eased = 1f - (1f - progress) * (1f - progress);
-            transform.localScale = _baseScale * Mathf.Lerp(_startScale, _endScale, eased);
+            transform.localScale = _baseScale * Mathf.Lerp(startScale, endScale, eased);
             transform.localRotation = Quaternion.Euler(0f, 0f, _rotationDegrees * eased);
 
             if (_renderer != null)
