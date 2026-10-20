@@ -1,3 +1,23 @@
+## 設定ファイル
+
+既定では、次の場所にある `config.yaml` を読み込みます。`--config PATH` または `--config=PATH` で別のファイルを指定できます。
+明示したファイルがない場合はエラーになり、既定のファイルがない場合は設定ファイルなしで起動します。
+
+- Linux: `~/.config/struckout/ball-tracker/config.yaml`
+- Windows: `%APPDATA%\struckout\ball-tracker\config.yaml`
+- macOS: `~/Library/Application Support/struckout/ball-tracker/config.yaml`
+
+キーには長いオプション名 (`--` を除く) を使います。文字列や数値は値に、真偽値 `true` はフラグに、`false` と `null` は未指定になります。
+
+```yaml
+input: network
+output: network
+report-delay-ms: -30
+json: true
+```
+
+設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
+
 ## アルゴリズムの説明
 ### フレームの時刻をそろえる
 カメラの時計は PC とも互いにも合っておらず、進み方も少し違う (実機で 2 台の差が 1.4 秒、1 分に 3ms ずつ変化)。

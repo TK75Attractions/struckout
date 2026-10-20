@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{ffi::OsString, path::PathBuf, sync::Arc};
 
 #[cfg(feature = "input-sqlite")]
 use ball_tracker::detection_input::SqliteDetectionInput;
@@ -19,12 +19,21 @@ use clap::{Parser, ValueEnum};
 use tokio::sync::mpsc;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
+use crate::config_file::ConfigLocation;
+
+mod config_file;
+
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
 #[derive(Parser)]
-#[command(version = version())]
+#[command(version = version(), args_override_self = true)]
 struct Cli {
+    /// 設定ファイル (YAML) の場所。既定は <設定のフォルダー>/struckout/ball-tracker/config.yaml。
+    /// キーは長いオプション名で、同じ引数はコマンドラインのほうが優先される (README を参照)
+    #[arg(long = "config")]
+    #[expect(dead_code, reason = "parse_cli() reads it before parsing Cli")]
+    config: Option<PathBuf>,
     #[arg(value_enum, long = "input", help = "detectionをどこから受け取るか")]
     detection_input: DetectionInputKind,
     #[arg(value_enum, long = "output", help = "collisionをどこに送信するか")]
@@ -268,7 +277,7 @@ fn main() {
 }
 
 async fn run_main() {
-    let cli = Cli::parse();
+    let cli = parse_cli();
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = cli.cameras.as_ref().map(|path| {
@@ -331,4 +340,79 @@ async fn run_main() {
     );
 
     app.run().await.unwrap();
+}
+
+/// コマンドライン引数に、設定ファイルから作った引数を足して解釈する
+fn parse_cli() -> Cli {
+    let args = std::env::args_os().collect::<Vec<_>>();
+    let location = ConfigLocation::from_args(&args);
+    let config_args = match location.as_ref().map(config_file::load_args).transpose() {
+        Ok(config_args) => config_args.flatten(),
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(2);
+        }
+    };
+    let loaded = config_args.is_some();
+    Cli::try_parse_from(merge_args(args, config_args.unwrap_or_default())).unwrap_or_else(|error| {
+        let _ = error.print();
+        if let (Some(location), true) = (location, loaded)
+            && error.use_stderr()
+        {
+            eprintln!(
+                "(設定ファイル {} の中身も引数として読んでいます)",
+                location.path().display()
+            );
+        }
+        std::process::exit(error.exit_code());
+    })
+}
+
+/// 設定ファイルの引数を、プログラム名のすぐ後ろ (コマンドラインの引数より前) に置く。
+/// `args_override_self` で後の値が勝つので、同じ引数はコマンドラインのほうが優先される
+fn merge_args(args: Vec<OsString>, config_args: Vec<OsString>) -> Vec<OsString> {
+    let mut args = args.into_iter();
+    args.next()
+        .into_iter()
+        .chain(config_args)
+        .chain(args)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn os_args(args: &[&str]) -> Vec<OsString> {
+        args.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn command_line_overrides_config_file() {
+        let cli = Cli::try_parse_from(merge_args(
+            os_args(&[
+                "ball_tracker",
+                "--output",
+                "network",
+                "--report-delay-ms",
+                "10",
+            ]),
+            os_args(&["--input=network", "--output=csv", "--report-delay-ms=-30"]),
+        ))
+        .unwrap();
+        assert_eq!(cli.detection_input, DetectionInputKind::Network);
+        assert_eq!(cli.collision_output, CollisionOutputKind::Network);
+        assert_eq!(cli.report_delay_ms, 10.0);
+    }
+
+    #[test]
+    fn config_file_can_give_required_arguments() {
+        let cli = Cli::try_parse_from(merge_args(
+            os_args(&["ball_tracker"]),
+            os_args(&["--input=network", "--output=csv", "--json"]),
+        ))
+        .unwrap();
+        assert_eq!(cli.collision_output, CollisionOutputKind::Csv);
+        assert!(cli.output_to_json);
+    }
 }
