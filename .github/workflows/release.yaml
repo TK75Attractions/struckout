@@ -21,14 +21,14 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
       - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
         with:
-          install_args: protoc
+          install_args: protoc mold
       - name: Get commit hash and version of this release
         id: info
         run: |
             set -eux
-            SHORT_HASH=$(mise exec protoc -- cargo xtask release short-hash)
-            VERSION=$(mise exec protoc -- cargo xtask release next-version)
-            mise exec protoc -- cargo xtask release projector-build-info \
+            SHORT_HASH=$(mise exec protoc mold -- cargo xtask release short-hash)
+            VERSION=$(mise exec protoc mold -- cargo xtask release next-version)
+            mise exec protoc mold -- cargo xtask release projector-build-info \
               --version "${VERSION}" \
               --short-hash "${SHORT_HASH}"
             echo "short-hash=${SHORT_HASH}" >> "$GITHUB_OUTPUT"
@@ -69,7 +69,7 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
       - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
         with:
-          install_args: protoc
+          install_args: protoc mold
       - name: Install fontconfig for Linux
         if: ${{ matrix.os == 'ubuntu-22.04' }}
         run: |
@@ -80,7 +80,7 @@ jobs:
             SQLX_OFFLINE=true \
             ST_COMMIT_SHORT_HASH=${{ needs.get-version.outputs.short-hash }} \
             ST_VERSION=${{ needs.get-version.outputs.version }} \
-            mise exec protoc -- cargo build --release -p ball_tracker -p touchpanel --features sentry
+            mise exec protoc mold -- cargo build --release -p ball_tracker -p touchpanel --features sentry
 
       - name: Rename binaries
         id: triple
