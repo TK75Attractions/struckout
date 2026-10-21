@@ -29,6 +29,7 @@ sqlx = { workspace = true, features = ["migrate", "mysql", "runtime-tokio", "sql
 toml = { workspace = true }
 
 [dev-dependencies]
+dtor = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["mysql"] }
 
 [build-dependencies]

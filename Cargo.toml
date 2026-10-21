@@ -72,6 +72,7 @@ stern = { git = "https://github.com/Tk75Attractions/stern" }
 mockall = "0.15.0"
 rstest = "0.27.0"
 # dev-dependencies
+dtor = { version = "1.0.6", default-features = false }
 testcontainers-modules = "0.15.0"
 
 [profile.dev.package.slint]
