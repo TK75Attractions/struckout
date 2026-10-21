@@ -86,14 +86,14 @@ flowchart LR
   touchpanel --> game-master
 ```
 
-この PC のモジュールに依存するモジュールは、依存先が応答する (待ち受けのポートにつながる) まで待ってから起動する。
+この PC のモジュールに依存するモジュールは、依存先の gRPC ヘルスチェックが `SERVING` になるまで待ってから起動する。
 3 分たっても応答しなければ起動しない。ほかの PC のモジュールは待たない (どのモジュールも、切れたら自分でつなぎ直す) が、
-つながるかどうかを画面に出す。ポートは `api/spec/servers.yaml` をビルドのときに埋め込んだもの。
+ヘルスチェックの結果を画面に出す。ポートは `api/spec/servers.yaml` をビルドのときに埋め込んだもの。
 
 | モジュール | 起動のしかた | 動いているかの確かめ方 |
 |---|---|---|
-| ball-tracker | `--input network --cameras cameras.json --ffmpeg ...` で起動し、出力をログに書く | プロセスが動いていて、5000、6060、5050 番が開いている |
-| game-master | `docker compose up --detach` (Windows と macOS では Docker Desktop も起動する) | 8020 番が開いている |
+| ball-tracker | `--input network --cameras cameras.json --ffmpeg ...` で起動し、出力をログに書く | プロセスが動いていて、5080 番の gRPC ヘルスチェックが `SERVING` |
+| game-master | `docker compose up --detach` (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
 | camera | 各スマホに `adb reverse` (6060、5050、5052)、`cameras.json` の設定を送り、アプリを開く | アプリのプロセスが動いている |
 | projector | `-trackerHost`、`-masterHost`、`-machineId`、`-monitor` などを付けて起動する | プロセスが動いている |
 | touchpanel | `--address`、`--machine-id` を付けて起動する | プロセスが動いている |
@@ -168,6 +168,5 @@ Android Studio から入れたアプリは鍵が違うので、初めてラン�
 
 ### 制約
 
-- 動いているかは、待ち受けのポートにつながるかで確かめている。各モジュールにヘルスチェック (game_master なら gRPC の
-  health checking protocol) ができたら、それを使う
+- projector と touchpanel にはヘルスチェックが無いので、プロセスが動いているかだけで確かめている
 - game-master のイメージは ghcr.io のパッケージが公開されていないと取得できない (#274)

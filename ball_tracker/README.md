@@ -20,6 +20,16 @@ json: true
 設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
 ただし、設定ファイルで `true` にしたフラグを、コマンドラインから無効にすることはできません。
 
+## ヘルスチェック
+ランチャーが状態を確かめられるように、5080 番 (`api/spec/servers.yaml` の `ball-tracker.health`) で gRPC の health checking protocol に答える。
+入出力の準備が終わり、処理を始める直前に `SERVING` になる。それまでは `NOT_SERVING`。
+5080 番を開けないとき (ほかの ball_tracker が動いているなど) は、エラーのログを出して、ヘルスチェックなしで動き続ける。
+
+reflection には対応していないので、grpcurl で確かめるときは [health.proto](https://github.com/grpc/grpc-proto/blob/master/grpc/health/v1/health.proto) を渡す。
+```sh
+grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto health.proto localhost:5080 grpc.health.v1.Health/Check
+```
+
 ## アルゴリズムの説明
 ### フレームの時刻をそろえる
 カメラの時計は PC とも互いにも合っておらず、進み方も少し違う (実機で 2 台の差が 1.4 秒、1 分に 3ms ずつ変化)。
