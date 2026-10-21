@@ -59,11 +59,15 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
       - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
         with:
-          install_args: protoc mold
+          install_args: protoc mold python
       - name: Install fontconfig
         run: |
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
+      - name: Run custom lints
+        run: mise run //game-master:lint
+        env:
+          MISE_TASK_RUN_AUTO_INSTALL: '0'
       - name: Run check
         run: |
           SQLX_OFFLINE=true mise exec protoc mold -- cargo check --all-targets -p touchpanel -p ball_tracker -p game_master
