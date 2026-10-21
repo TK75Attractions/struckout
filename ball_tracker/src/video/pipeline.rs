@@ -321,7 +321,9 @@ fn save_bmp(path: &Path, rgb: &[u8], width: usize, height: usize) -> std::io::Re
     bytes.extend_from_slice(&[0; 16]);
     // BMP は下の行から、画素は BGR の順
     for y in (0..height).rev() {
-        for pixel in rgb[y * width * 3..(y + 1) * width * 3].chunks_exact(3) {
+        let (chunks, remainder) = rgb[y * width * 3..(y + 1) * width * 3].as_chunks::<3>();
+        debug_assert!(remainder.is_empty());
+        for pixel in chunks {
             bytes.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
         }
         bytes.resize(bytes.len() + row - width * 3, 0);

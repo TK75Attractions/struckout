@@ -15,7 +15,6 @@ pub enum TriangulationError {
     IntersectionBehindCamera,
 }
 
-#[must_use]
 pub fn triangulate(
     camera_pose_1: CameraPose,
     orientation_1: Vector3<f64>,

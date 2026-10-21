@@ -83,9 +83,7 @@ impl CameraLocationStore {
     pub fn new() -> Self {
         Self(RwLock::new(HashMap::new()))
     }
-}
 
-impl CameraLocationStore {
     fn get(&self, id: CameraId) -> Option<CameraPose> {
         self.0.read().get(&id).cloned()
     }
@@ -105,5 +103,11 @@ impl CameraLocationStore {
             .iter()
             .max_by(|a, b| a.1.y.total_cmp(&b.1.y))
             .map(|(id, _)| *id)
+    }
+}
+
+impl Default for CameraLocationStore {
+    fn default() -> Self {
+        Self::new()
     }
 }
