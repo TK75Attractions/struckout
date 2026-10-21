@@ -52,6 +52,7 @@ usage = '''
 run = "cargo sqlx prepare -- --all-targets"
 dir = "{{ config_root }}"
 description = "game-masterのクエリ検証用メタデータを生成する"
+raw = true
 
 [tasks.compose]
 run = "docker compose -f compose.yaml -f compose.dev.yaml"
