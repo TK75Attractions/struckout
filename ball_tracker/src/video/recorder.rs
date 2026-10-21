@@ -22,8 +22,14 @@ use struckout_proto::{VideoStreamPacket, video_stream_packet};
 use tracing::{info, warn};
 
 pub struct Recorder {
-    tx: Option<Sender<(i64, Vec<u8>, Option<Vec<u8>>)>>,
+    tx: Option<Sender<RecorderPacketData>>,
     worker: Option<thread::JoinHandle<()>>,
+}
+
+struct RecorderPacketData {
+    received_ns: i64,
+    video_packet: Vec<u8>,
+    h264: Option<Vec<u8>>,
 }
 
 impl Recorder {
@@ -36,10 +42,10 @@ impl Recorder {
         let mut packets = BufWriter::with_capacity(1 << 20, File::create(&packets_path)?);
         let mut video = BufWriter::with_capacity(1 << 20, File::create(&video_path)?);
         info!(camera_id, path = %packets_path.display(), "recording the video stream");
-        let (tx, rx) = std_mpsc::channel::<(i64, Vec<u8>, Option<Vec<u8>>)>();
+        let (tx, rx) = std_mpsc::channel::<RecorderPacketData>();
         let worker = thread::Builder::new().name(format!("video-record-{camera_id}")).spawn(move || {
             let mut failed = false;
-            while let Ok((received_ns, bytes, h264)) = rx.recv() {
+            while let Ok(RecorderPacketData{received_ns, video_packet:bytes, h264}) = rx.recv() {
                 if failed {
                     continue;
                 }
@@ -72,7 +78,11 @@ impl Recorder {
         };
         let received_ns = received_at.timestamp_nanos_opt().unwrap_or_default();
         if let Some(tx) = &self.tx {
-            let _ = tx.send((received_ns, packet.encode_to_vec(), h264));
+            let _ = tx.send(RecorderPacketData {
+                received_ns,
+                video_packet: packet.encode_to_vec(),
+                h264,
+            });
         }
     }
 }
