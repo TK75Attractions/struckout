@@ -16,10 +16,17 @@ pub use service::GameMasterServiceImpl;
 use crate::data::{GameRecord, Player};
 
 pub trait DataSource: Clone + Send + Sync + 'static {
-    fn insert_game(
+    fn insert_game_single(
         &self,
         machine_id: MachineId,
         player_id: PlayerId,
+        started_at: UtcDateTime,
+        difficulty: Difficulty,
+    ) -> impl Future<Output = Result<GameId, sqlx::Error>> + Send;
+
+    fn insert_game_multi(
+        &self,
+        player_ids: [PlayerId; 2],
         started_at: UtcDateTime,
         difficulty: Difficulty,
     ) -> impl Future<Output = Result<GameId, sqlx::Error>> + Send;

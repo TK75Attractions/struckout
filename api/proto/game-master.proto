@@ -11,10 +11,17 @@ enum Difficulty {
   DIFFICULTY_VERYHARD = 3;
 }
 
+enum GameMode {
+    GAME_MODE_UNSPECIFIED = 0;
+    GAME_MODE_SINGLE = 1;
+    GAME_MODE_MULTI = 2;
+}
+
 message StartGameRequest {
   uint32 machine_id = 1;
   Difficulty difficulty = 2;
   uint32 player_id = 3;
+  GameMode mode = 4;
 }
 
 message StartGameResponse {
@@ -92,7 +99,6 @@ message Event {
 
   message GameFinished {}
 
-  uint32 machine_id = 1;
   uint32 game_id = 2;
 
   oneof event_data {

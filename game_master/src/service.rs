@@ -3,7 +3,7 @@ use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 use parking_lot::RwLock;
 use struckout_proto::{
     self, AddPlayerRequest, AddPlayerResponse, AddScoreRequest, AddScoreResponse, Difficulty,
-    GetGameResultRequest, GetGameResultResponse, GetPlayerRequest, GetPlayerResponse,
+    GameMode, GetGameResultRequest, GetGameResultResponse, GetPlayerRequest, GetPlayerResponse,
     ListenEventsRequest, ListenEventsResponse, StartGameRequest, StartGameResponse,
     ValidatePlayerNameRequest, ValidatePlayerNameResponse,
     game_master_service_server::GameMasterService,
@@ -97,6 +97,7 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
 #[derive(Clone)]
 pub struct GameMasterServiceImpl<D> {
     running_games: Arc<RwLock<HashMap<GameId, Game>>>,
+    pending_multiplay: Arc<RwLock<Option<(GameId, MachineId)>>>,
     data_source: D,
     event_tx: broadcast::Sender<Event>,
 }
@@ -109,6 +110,7 @@ where
         let (event_tx, _) = broadcast::channel(32);
         Self {
             running_games: Default::default(),
+            pending_multiplay: Arc::new(RwLock::new(None)),
             data_source,
             event_tx,
         }
@@ -170,6 +172,24 @@ where
             "received start_game request"
         );
         let req = req.into_inner();
+        let mode: GameMode = req
+            .mode
+            .try_into()
+            .map_err(|e: prost::UnknownEnumValue| Status::invalid_argument(e.to_string()))?;
+        match mode {
+            GameMode::Unspecified => {
+                return Err(Status::invalid_argument("game_mode is not specified"));
+            }
+            GameMode::Single => (),
+            GameMode::Multi => {
+                let guard = self.pending_multiplay.read();
+                match *guard {
+                    Some((game_id, another_machine_id)) => todo!(),
+                    None => todo!(),
+                }
+            }
+        }
+
         let machine_id = req.machine_id.into();
         let started_at = UtcDateTime::now();
         let difficulty: Difficulty = req
@@ -180,7 +200,7 @@ where
         // TODO: more detailed error
         let game_id = self
             .data_source
-            .insert_game(machine_id, req.player_id.into(), started_at, difficulty)
+            .insert_game_single(machine_id, req.player_id.into(), started_at, difficulty)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -353,7 +373,6 @@ async fn pass_events_through_by_game_id(
     while let Some(ev) = events.next().await {
         let data = ev.data.map(|v| StartGameResponse {
             event: Some(struckout_proto::Event {
-                machine_id: ev.machine_id.into_inner(),
                 game_id: ev.game_id.into_inner(),
                 event_data: Some(v.into()),
             }),
@@ -376,7 +395,6 @@ async fn pass_events_through_by_machine_id(
     while let Some(ev) = events.next().await {
         let data = ev.data.map(|v| ListenEventsResponse {
             event: Some(struckout_proto::Event {
-                machine_id: ev.machine_id.into_inner(),
                 game_id: ev.game_id.into_inner(),
                 event_data: Some(v.into()),
             }),
@@ -429,7 +447,7 @@ mod tests {
     }
 
     impl DataSource for StubDataSource {
-        async fn insert_game(
+        async fn insert_game_single(
             &self,
             _machine_id: MachineId,
             _player_id: PlayerId,
@@ -437,6 +455,15 @@ mod tests {
             _difficulty: Difficulty,
         ) -> Result<GameId, sqlx::Error> {
             Ok(self.game_id)
+        }
+
+        async fn insert_game_multi(
+            &self,
+            _player_ids: [PlayerId; 2],
+            _started_at: UtcDateTime,
+            _difficulty: Difficulty,
+        ) -> Result<GameId, sqlx::Error> {
+            todo!()
         }
 
         async fn complete_game(&self, _game_id: GameId, _score: u32) -> Result<(), sqlx::Error> {
@@ -506,6 +533,7 @@ mod tests {
             machine_id: machine_id.into(),
             player_id: ds.player_id.into(),
             difficulty: difficulty.into(),
+            mode: GameMode::Single.into(),
         });
         service.start_game(req).await.expect("should succeed");
 
@@ -538,6 +566,7 @@ mod tests {
                 machine_id: machine_id.into_inner(),
                 player_id: ds.player_id.into_inner(),
                 difficulty,
+                mode: GameMode::Single.into(),
             })
         };
         let stream = service.start_game(req).await.expect("should succeed");
@@ -549,7 +578,6 @@ mod tests {
         };
         let Some(struckout_proto::Event {
             game_id: ev_game_id,
-            machine_id: ev_machine_id,
             event_data: Some(EventData::GameStarted(started)),
         }) = started.event
         else {
@@ -560,14 +588,12 @@ mod tests {
             let difficulty: i32 = difficulty.into();
             assert_eq!(started.difficulty, difficulty);
         }
-        assert_eq!(ev_machine_id, machine_id.into_inner());
 
         // Assert: TimeLimitNotify
         let finished = loop {
             let resp = stream.next().await.unwrap();
             let resp = resp.expect("should not have error");
             let ev = resp.event.unwrap();
-            assert_eq!(ev.machine_id, machine_id.into_inner());
             assert_eq!(ev.game_id, ds.game_id.into_inner());
             let ev = ev.event_data.unwrap();
             let EventData::GameTimeLimitNotify(notify) = ev else {
@@ -597,6 +623,7 @@ mod tests {
                 machine_id: machine_id.into_inner(),
                 player_id: ds.player_id.into_inner(),
                 difficulty,
+                mode: GameMode::Single.into(),
             })
         };
         let stream = service.start_game(req).await.expect("should succeed");
@@ -640,6 +667,7 @@ mod tests {
                 machine_id: machine_id_to_listen.into_inner(),
                 difficulty: difficulty.into(),
                 player_id: ds.player_id.into_inner(),
+                mode: GameMode::Single.into(),
             }))
             .await
             .unwrap();
@@ -648,6 +676,7 @@ mod tests {
                 machine_id: machine_id_to_ignore.into_inner(),
                 difficulty: difficulty.into(),
                 player_id: ds.player_id.into_inner(),
+                mode: GameMode::Single.into(),
             }))
             .await
             .unwrap();
@@ -656,7 +685,6 @@ mod tests {
             let resp = stream.next().await.unwrap();
             let resp = resp.expect("should not have error");
             let ev = resp.event.unwrap();
-            assert_eq!(ev.machine_id, machine_id_to_listen.into_inner());
             if let EventData::GameFinished(_) = ev.event_data.unwrap() {
                 break;
             }
