@@ -59,3 +59,9 @@ run = "docker compose -f compose.yaml -f compose.dev.yaml"
 dir = "{{ config_root }}"
 description = "game-master-devのサービスを操作する"
 raw = true
+
+[tasks.lint]
+run = "python3 scripts/lint_query_macro.py"
+dir = "{{ config_root }}"
+description = "カスタムのリントを実行する"
+raw = true
