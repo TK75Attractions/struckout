@@ -100,13 +100,12 @@ struct Cli {
 
 fn version() -> String {
     if let Some(version) = option_env!("ST_VERSION") {
-        format!(
-            "{} ({})",
-            version,
-            option_env!("ST_COMMIT_SHORT_HASH").unwrap()
-        )
+        let Some(short_hash) = option_env!("ST_COMMIT_SHORT_HASH") else {
+            unreachable!("ST_COMMIT_SHORT_HASH should always exist when ST_VERSOPM is provided")
+        };
+        format!("{} ({})", version, short_hash)
     } else {
-        format!("no version")
+        "no version".to_string()
     }
 }
 
@@ -195,10 +194,7 @@ impl CollisionOutputImpl {
             }
             CollisionOutputKind::Csv => {
                 // OPTIM: 無駄なclone
-                let path = config
-                    .csv_path
-                    .clone()
-                    .unwrap_or_else(|| csv_path_default());
+                let path = config.csv_path.clone().unwrap_or_else(csv_path_default);
                 Self::Csv(CsvCollisionOutput::new(path))
             }
         }

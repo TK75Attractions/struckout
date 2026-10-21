@@ -34,11 +34,14 @@ type GameMasterServer = GameMasterServiceServer<GameMasterServiceImpl<DataSource
 #[command(version = version())]
 struct Cli {}
 
-fn version()->String{
-    if let Some(version) = option_env!("ST_VERSION"){
-        format!("{} ({})", version, option_env!("ST_COMMIT_SHORT_HASH").unwrap())
+fn version() -> String {
+    if let Some(version) = option_env!("ST_VERSION") {
+        let Some(short_hash) = option_env!("ST_COMMIT_SHORT_HASH") else {
+            unreachable!("ST_COMMIT_SHORT_HASH should always exist when ST_VERSOPM is provided")
+        };
+        format!("{} ({})", version, short_hash)
     } else {
-        format!("no version")
+        "no version".to_string()
     }
 }
 

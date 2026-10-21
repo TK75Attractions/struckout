@@ -1,7 +1,7 @@
 use clap::Parser;
 use slint::ComponentHandle;
 use std::sync::{Arc, OnceLock};
-use stern::{worker::SlintExecutor, WorkerThread};
+use stern::{WorkerThread, worker::SlintExecutor};
 use tracing::info;
 
 use touchpanel_ui::NavRoute;
@@ -59,13 +59,12 @@ struct Cli {
 
 fn version() -> String {
     if let Some(version) = option_env!("ST_VERSION") {
-        format!(
-            "{} ({})",
-            version,
-            option_env!("ST_COMMIT_SHORT_HASH").unwrap()
-        )
+        let Some(short_hash) = option_env!("ST_COMMIT_SHORT_HASH") else {
+            unreachable!("ST_COMMIT_SHORT_HASH should always exist when ST_VERSOPM is provided")
+        };
+        format!("{} ({})", version, short_hash)
     } else {
-        format!("no version")
+        "no version".to_string()
     }
 }
 
