@@ -1,6 +1,6 @@
 use sqlx::{MySql, Pool};
 use struckout_proto::{
-    Difficulty,
+    Difficulty, GameMode,
     types::{GameId, MachineId, PlayerId},
 };
 use time::{PlainDateTime, UtcDateTime};
@@ -11,6 +11,9 @@ use crate::{
 
 const STATUS_FINISHED: &str = "finished";
 const STATUS_RUNNING: &str = "running";
+
+const MODE_SINGLE: &str = "single";
+const MODE_MULTI: &str = "multi";
 
 #[derive(Clone)]
 pub struct DataSourceImpl {
@@ -55,7 +58,7 @@ impl DataSource for DataSourceImpl {
     /// support [`UtcDateTime`].
     ///
     /// See also: [https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html#time]
-    async fn insert_game(
+    async fn insert_game_single(
         &self,
         machine_id: MachineId,
         player_id: PlayerId,
@@ -68,16 +71,56 @@ impl DataSource for DataSourceImpl {
         let res = sqlx::query!(
             "INSERT INTO games (
                 machine_id,
-                player_id,
+                player_id_1,
                 started_at ,
                 difficulty,
-                status
-            ) VALUES (?, ?, ?, ?, ?)",
+                status,
+                mode
+            ) VALUES (?, ?, ?, ?, ?, ?)",
             machine_id,
             player_id,
             started_at,
             difficulty.to_mysql_enum(),
             STATUS_RUNNING,
+            MODE_SINGLE
+        )
+        .execute(&self.pool)
+        .await?;
+        let last_insert_id: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
+        Ok(last_insert_id.into())
+    }
+
+    /// Inserts new game into database.
+    ///
+    /// `started_at` takes [`UtcDateTime`] because it is clearly defined as UTC time and not local time,
+    /// but in the function it will be converted to [`PlainDateTime`] since `sqlx`'s MySQL type mapping does not
+    /// support [`UtcDateTime`].
+    ///
+    /// See also: [https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html#time]
+    async fn insert_game_multi(
+        &self,
+        player_ids: [PlayerId; 2],
+        started_at: UtcDateTime,
+        difficulty: Difficulty,
+    ) -> Result<GameId, sqlx::Error> {
+        let player_id_1: u32 = player_ids[0].into();
+        let player_id_2: u32 = player_ids[1].into();
+        let started_at = PlainDateTime::new(started_at.date(), started_at.time());
+        let res = sqlx::query!(
+            "INSERT INTO games (
+                player_id_1,
+                player_id_2,
+                started_at,
+                difficulty,
+                status,
+                mode
+            ) VALUES (?, ?, ?, ?, ?, ?)",
+            player_id_1,
+            player_id_2,
+            started_at,
+            difficulty.to_mysql_enum(),
+            STATUS_RUNNING,
+            MODE_MULTI,
         )
         .execute(&self.pool)
         .await?;
@@ -203,6 +246,27 @@ impl MySqlEnum for Difficulty {
     }
 }
 
+impl MySqlEnum for GameMode {
+    fn to_mysql_enum(&self) -> Option<&str> {
+        match self {
+            GameMode::Unspecified => None,
+            GameMode::Single => Some(MODE_SINGLE),
+            GameMode::Multi => Some(MODE_MULTI),
+        }
+    }
+
+    fn from_mysql_enum(s: &str) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        match s {
+            MODE_SINGLE => Some(GameMode::Single),
+            MODE_MULTI => Some(GameMode::Multi),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,16 +329,45 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn insert_game_succeeds() {
+    async fn insert_game_single_succeeds() {
         let (_container, pool) = init_mysql().await;
         let ds = DataSourceImpl::new(pool);
 
         let player_id = ds.add_player("Bob").await.expect("failed to insert player");
 
         let game_id = ds
-            .insert_game(
+            .insert_game_single(
                 MachineId::new(0),
                 player_id,
+                time::UtcDateTime::new(
+                    Date::from_calendar_date(2026, Month::September, 6).unwrap(),
+                    Time::from_hms(12, 41, 23).unwrap(),
+                ),
+                Difficulty::Normal,
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(game_id, GameId::new(1));
+    }
+
+    #[tokio::test]
+    async fn insert_game_multi_succeeds() {
+        let (_container, pool) = init_mysql().await;
+        let ds = DataSourceImpl::new(pool);
+
+        let player_id_1 = ds
+            .add_player("Charles")
+            .await
+            .expect("failed to insert player");
+        let player_id_2 = ds
+            .add_player("David")
+            .await
+            .expect("failed to insert player");
+
+        let game_id = ds
+            .insert_game_multi(
+                [player_id_1, player_id_2],
                 time::UtcDateTime::new(
                     Date::from_calendar_date(2026, Month::September, 6).unwrap(),
                     Time::from_hms(12, 41, 23).unwrap(),
@@ -295,7 +388,7 @@ mod tests {
         let player_id = ds.add_player("Bob").await.unwrap();
 
         let game_id = ds
-            .insert_game(
+            .insert_game_single(
                 MachineId::new(0),
                 player_id,
                 time::UtcDateTime::new(
