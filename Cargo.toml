@@ -57,6 +57,7 @@ prost = "0.14.3"
 prost-build = "0.14.3"
 prost-types = "0.14.4"
 tonic = "0.14.6"
+tonic-health = "0.14.6"
 tonic-prost = "0.14.6"
 tonic-prost-build = "0.14.6"
 

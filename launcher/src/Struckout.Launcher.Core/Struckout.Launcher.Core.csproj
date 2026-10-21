@@ -10,6 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.HealthCheck" />
+    <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Tomlyn" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>

@@ -17,7 +17,14 @@ use ball_tracker::{
 use chrono::{Local, TimeDelta};
 use clap::{Parser, ValueEnum};
 use tokio::sync::mpsc;
-use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use tracing_subscriber::{
+    Layer as _,
+    filter::{LevelFilter, Targets},
+    layer::SubscriberExt as _,
+    util::SubscriberInitExt as _,
+};
+
+mod health;
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
@@ -244,7 +251,17 @@ fn main() {
             .traces_sample_rate(1.0),
     );
 
-    let reg = tracing_subscriber::registry().with(tracing_subscriber::fmt::layer());
+    // ランチャーは 1 秒ごとにヘルスを問い合わせる。そのたびに HTTP/2 の TRACE のログが大量に出ないよう、通信の層は INFO までにする
+    let transport_logs = Targets::new()
+        .with_default(LevelFilter::TRACE)
+        .with_targets([
+            ("h2", LevelFilter::INFO),
+            ("hyper", LevelFilter::INFO),
+            ("tower", LevelFilter::INFO),
+            ("tonic", LevelFilter::INFO),
+        ]);
+    let reg = tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_filter(transport_logs));
     #[cfg(feature = "sentry")]
     let reg = reg.with(sentry::integrations::tracing::layer());
     reg.init();
@@ -269,6 +286,8 @@ fn main() {
 
 async fn run_main() {
     let cli = Cli::parse();
+
+    let health_reporter = health::start().await;
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = cli.cameras.as_ref().map(|path| {
@@ -330,5 +349,10 @@ async fn run_main() {
         auto_trim,
     );
 
+    if let Some(reporter) = health_reporter {
+        reporter
+            .set_service_status("", tonic_health::ServingStatus::Serving)
+            .await;
+    }
     app.run().await.unwrap();
 }

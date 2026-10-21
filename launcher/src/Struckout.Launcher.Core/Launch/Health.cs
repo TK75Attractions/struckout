@@ -1,4 +1,7 @@
 using System.Net.Sockets;
+using Grpc.Core;
+using Grpc.Health.V1;
+using Grpc.Net.Client;
 
 namespace Struckout.Launcher.Core.Launch;
 
@@ -23,8 +26,39 @@ public sealed record Health(HealthKind Kind, string Message)
     public static Health Exited(string message) => new(HealthKind.Exited, message);
 }
 
-// TODO: Ask the modules themselves once they have health check endpoints (the gRPC health checking
-// protocol for game_master). An open port only tells that the process is listening.
+/// <summary>Checks readiness reported by the module, rather than just an open port.</summary>
+public static class GrpcHealthProbe
+{
+    public static async Task<Health> CheckAsync(string host, int port, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(1));
+        using var channel = GrpcChannel.ForAddress(new UriBuilder("http", host, port).Uri,
+            new GrpcChannelOptions { ThrowOperationCanceledOnCancellation = true });
+        var client = new Grpc.Health.V1.Health.HealthClient(channel);
+        try
+        {
+            using var call = client.CheckAsync(new HealthCheckRequest { Service = "" }, cancellationToken: timeout.Token);
+            var response = await call.ResponseAsync;
+            return FromStatus(host, port, response.Status);
+        }
+        catch (RpcException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Health.Down($"{host}:{port} につながりません");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Health.Down($"{host}:{port} につながりません");
+        }
+    }
+
+    internal static Health FromStatus(string host, int port, HealthCheckResponse.Types.ServingStatus status) =>
+        status == HealthCheckResponse.Types.ServingStatus.Serving
+            ? Health.Up()
+            : Health.Down($"{host}:{port} は準備ができていません ({status})");
+}
 
 /// <summary>Whether a server accepts TCP connections.</summary>
 public static class TcpProbe
@@ -47,19 +81,5 @@ public static class TcpProbe
         {
             return false;
         }
-    }
-
-    /// <summary>Up if every port is open, otherwise Down naming the first closed one.</summary>
-    public static async Task<Health> CheckAsync(string host, IReadOnlyList<int> ports, CancellationToken cancellationToken)
-    {
-        foreach (var port in ports)
-        {
-            if (!await IsOpenAsync(host, port, cancellationToken))
-            {
-                return Health.Down($"{host}:{port} につながりません");
-            }
-        }
-
-        return Health.Up();
     }
 }

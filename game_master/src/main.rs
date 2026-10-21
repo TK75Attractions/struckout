@@ -7,10 +7,19 @@ use struckout_proto::game_master_service_server::GameMasterServiceServer;
 
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
-use tokio::signal::unix::{self, SignalKind};
+use tokio::{
+    signal::unix::{self, SignalKind},
+    time::Duration,
+};
 use tonic::transport::Server;
+use tonic_health::server::health_reporter;
 use tracing::{debug, error, info};
-use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use tracing_subscriber::{
+    Layer as _,
+    filter::{LevelFilter, Targets},
+    layer::SubscriberExt as _,
+    util::SubscriberInitExt as _,
+};
 
 const ENV_MYSQL_ROOT_PASSWORD: &str = "MYSQL_ROOT_PASSWORD";
 const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
@@ -18,6 +27,8 @@ const ENV_MYSQL_DB_NAME: &str = "MYSQL_DATABASE";
 const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
+
+type GameMasterServer = GameMasterServiceServer<GameMasterServiceImpl<DataSourceImpl>>;
 
 #[derive(Parser)]
 #[command(version = version())]
@@ -40,7 +51,17 @@ fn main() -> std::process::ExitCode {
             .traces_sample_rate(1.0),
     );
 
-    let reg = tracing_subscriber::registry().with(tracing_subscriber::fmt::layer());
+    // The launcher checks the health every second. Keep the HTTP/2 layers from logging every frame of it.
+    let transport_logs = Targets::new()
+        .with_default(LevelFilter::TRACE)
+        .with_targets([
+            ("h2", LevelFilter::INFO),
+            ("hyper", LevelFilter::INFO),
+            ("tower", LevelFilter::INFO),
+            ("tonic", LevelFilter::INFO),
+        ]);
+    let reg = tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_filter(transport_logs));
     #[cfg(feature = "sentry")]
     let reg = reg.with(sentry::integrations::tracing::layer());
     reg.init();
@@ -85,6 +106,14 @@ async fn run_main() -> u8 {
     }
 
     info!("initializing gRPC service");
+    let (health_reporter, health_service) = health_reporter();
+    let health_task = tokio::spawn({
+        let pool = pool.clone();
+        game_master::health::monitor_database::<GameMasterServer, _, _>(
+            health_reporter,
+            move || is_database_available(pool.clone()),
+        )
+    });
     let data_source = DataSourceImpl::new(pool);
     let game_master = GameMasterServiceImpl::new(data_source);
     let addr = format!("0.0.0.0:{}", GRPC_PORT)
@@ -99,11 +128,13 @@ async fn run_main() -> u8 {
             _ = term.recv() => (),
         }
     };
-    match Server::builder()
+    let result = Server::builder()
         .add_service(GameMasterServiceServer::new(game_master))
+        .add_service(health_service)
         .serve_with_shutdown(addr, sig)
-        .await
-    {
+        .await;
+    health_task.abort();
+    match result {
         Ok(_) => (),
         Err(err) => {
             error!(?err, "an error occured");
@@ -111,6 +142,16 @@ async fn run_main() -> u8 {
         }
     };
     return 0;
+}
+
+/// Whether the database answers within 2 seconds.
+async fn is_database_available(pool: Pool<MySql>) -> bool {
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        sqlx::query("SELECT 1").execute(&pool),
+    )
+    .await
+    .is_ok_and(|result| result.is_ok())
 }
 
 #[derive(Debug, Error)]
