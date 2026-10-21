@@ -134,7 +134,8 @@ fn apply_config(
         }
     };
     if let Some(pipeline) = pipeline {
-        if pipeline.update_settings(settings.clone()) {
+        let updated = pipeline.update_settings(settings.clone());
+        if updated {
             return Some(pipeline);
         }
     }

@@ -19,7 +19,7 @@ internal sealed class GameMasterRunner(GameMasterCompose compose, int grpcPort) 
     }
 
     public Task<Health> CheckAsync(CancellationToken cancellationToken) =>
-        TcpProbe.CheckAsync("127.0.0.1", [grpcPort], cancellationToken);
+        GrpcHealthProbe.CheckAsync("127.0.0.1", grpcPort, cancellationToken);
 
     public async Task StopAsync(IProgress<string> log, CancellationToken cancellationToken)
     {

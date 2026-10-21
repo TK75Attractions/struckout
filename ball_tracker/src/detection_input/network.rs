@@ -67,10 +67,10 @@ impl NetworkDetectionInput {
     ) -> Result<Self, NetworkDetectionInputCreationError> {
         let data_transport = DataTransport::new()
             .await
-            .map_err(|e| NetworkDetectionInputCreationError::Data(e))?;
+            .map_err(NetworkDetectionInputCreationError::Data)?;
         let tcp_transport = TcpTransport::new(camera_locs, clock.clone(), cameras)
             .await
-            .map_err(|e| NetworkDetectionInputCreationError::Tcp(e))?;
+            .map_err(NetworkDetectionInputCreationError::Tcp)?;
         let video_transport = match video {
             Some(video) => Some(
                 VideoTransport::new(video)

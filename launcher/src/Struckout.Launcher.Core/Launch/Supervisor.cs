@@ -203,15 +203,14 @@ public sealed class Supervisor : IDisposable
         var remotes = config.Modules
             .SelectMany(id => ModuleGraph.DependenciesOf(id, ports))
             .Where(d => !config.Modules.Contains(d.Target))
-            .GroupBy(d => d.Target)
-            .Select(g => (Target: g.Key, Ports: g.SelectMany(d => d.Ports).Distinct().Order().ToList()))
-            .OrderBy(r => r.Target)
+            .DistinctBy(d => d.Target)
+            .OrderBy(d => d.Target)
             .ToList();
         var results = new List<RemoteStatus>();
-        foreach (var (target, targetPorts) in remotes)
+        foreach (var (target, healthPort) in remotes)
         {
             var host = config.HostOf(target);
-            results.Add(new RemoteStatus(target, host, await TcpProbe.CheckAsync(host, targetPorts, cancellationToken)));
+            results.Add(new RemoteStatus(target, host, await GrpcHealthProbe.CheckAsync(host, healthPort, cancellationToken)));
         }
 
         return results;
@@ -238,7 +237,7 @@ public sealed class Supervisor : IDisposable
                     return $"{dependency.Target.Slug()} が起動していないので起動しません";
                 }
 
-                if ((await TcpProbe.CheckAsync("127.0.0.1", dependency.Ports, cancellationToken)).Kind == HealthKind.Up)
+                if ((await GrpcHealthProbe.CheckAsync("127.0.0.1", dependency.HealthPort, cancellationToken)).Kind == HealthKind.Up)
                 {
                     break;
                 }
@@ -344,12 +343,14 @@ public sealed class Supervisor : IDisposable
                     ["--input", "network", .. output, "--cameras", paths.CamerasFile, "--ffmpeg", Tool(PrerequisiteId.Ffmpeg),
                         .. config.BallTracker.ExtraArguments],
                     ModuleGraph.PortsServedBy(id, ports),
+                    ModuleGraph.HealthPortOf(id, ports),
                     logFile);
             case (ModuleId.Touchpanel, ExecutableInstallation executable):
                 return new ProcessModuleRunner(
                     id, platform, runner, executable.Executable,
                     ["--address", config.HostOf(ModuleId.GameMaster), "--machine-id", machineId],
                     [],
+                    ModuleGraph.HealthPortOf(id, ports),
                     logFile);
             case (ModuleId.Projector, ExecutableInstallation executable):
                 // The arguments are read by Infrastructure/NetworkSettingsResolver.cs and CollisionTransformStore.cs
@@ -370,14 +371,17 @@ public sealed class Supervisor : IDisposable
                     arguments.AddRange(["-collisionTransform", transform]);
                 }
 
-                return new ProcessModuleRunner(id, platform, runner, executable.Executable, arguments, [], null);
+                return new ProcessModuleRunner(
+                    id, platform, runner, executable.Executable, arguments, [], ModuleGraph.HealthPortOf(id, ports), null);
             case (ModuleId.GameMaster, ComposeInstallation compose):
                 var password = GameMasterSecret.Load(paths)
                     ?? throw new LauncherException("データベースのパスワードがありません。インストールし直してください");
                 return new GameMasterRunner(
                     new GameMasterCompose(
                         platform, Tool(PrerequisiteId.Docker), compose.Directory, compose.ReleaseTag, password, runner),
-                    ports.GameMasterGrpc);
+                    ModuleGraph.HealthPortOf(id, ports)
+                        // guaranteed by the game-master case
+                        ?? throw new InvalidOperationException("game-master should have a health endpoint"));
             case (ModuleId.Camera, ApkInstallation):
                 return new CameraRunner(new Adb(Tool(PrerequisiteId.Adb), runner), paths.CamerasFile, ports);
             default:

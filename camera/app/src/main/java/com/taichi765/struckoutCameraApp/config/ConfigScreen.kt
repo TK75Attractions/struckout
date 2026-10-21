@@ -79,6 +79,7 @@ fun ConfigScreenRoute(
 
 
     ConfigScreen(
+        version = viewModel.version,
         recordingModeEnabled = editingState.recodingModeEnabled,
         connectionFailed = savedState.detectionOutputKind == DetectionOutputKind.NETWORK && !savedState.tcpIsConnected,
         x = x,
@@ -151,6 +152,7 @@ private fun textToDetectionOutputKind(text: String): DetectionOutputKind? {
 
 @Composable
 private fun ConfigScreen(
+    version: String,
     recordingModeEnabled: Boolean,
     connectionFailed: Boolean,
     showDiscardDialog: Boolean,
@@ -208,6 +210,12 @@ private fun ConfigScreen(
             DetectionAreaInput(ignoredLeft, ignoredTop, ignoredRight, ignoredBottom)
 
             ConfirmButton(onClick = onApplyChanges)
+
+            Text(
+                text = version,
+                modifier = Modifier.padding(8.dp),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 
@@ -488,6 +496,7 @@ private fun DummyConfigScreen(
     ignoredBottom: TextFieldState = TextFieldState()
 ) {
     ConfigScreen(
+        version = "no version",
         recordingModeEnabled = recordingModeEnabled,
         connectionFailed = connectionFailed,
         showDiscardDialog = showDiscardDialog,
