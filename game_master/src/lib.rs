@@ -13,6 +13,7 @@ pub use data::DataSourceImpl;
 pub mod health;
 mod services;
 pub use services::{GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
+mod session;
 
 use crate::data::{GameRecord, Player};
 

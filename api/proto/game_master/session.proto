@@ -22,9 +22,7 @@ message StartSessionRequest {
   uint32 player_id = 3;
 }
 
-message StartSessionResponse {
-  Event event = 1;
-}
+message StartSessionResponse {}
 
 message ListenEventsRequest {
   uint32 machine_id = 1;
@@ -87,21 +85,32 @@ message SetSessionReadyRequest {}
 message SetSessionReadyResponse {}
 
 message Event {
+  message TutorialStarted {}
+
+  message TutorialNavigatedToPrevious {}
+
+  message TutorialNavigatedToNext {}
+
+  message DifficultyChanged {}
+
   message GameStarted {
     Difficulty difficulty = 1;
+    uint32 game_id = 2;
   }
 
   message GameTimeLimitNotify {
     google.protobuf.Duration remaining = 1;
+    uint32 game_id = 2;
   }
 
   message GameScoreChanged {
     uint32 total_score = 1;
+    uint32 game_id = 2;
   }
 
-  message GameFinished {}
-
-  uint32 game_id = 2;
+  message GameFinished {
+    uint32 game_id = 2;
+  }
 
   oneof event_data {
     GameStarted game_started = 3;
@@ -124,7 +133,7 @@ message Event {
 service GameMasterSessionService {
   // Used by `touchpanel`.
   // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
-  rpc StartSession(StartSessionRequest) returns (stream StartSessionResponse);
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
 
   // Sets difficulty to the session. Used by `touchpanel`.
   rpc SetSessionDifficulty(SetSessionDifficultyRequest) returns (SetSessionDifficultyResponse);
