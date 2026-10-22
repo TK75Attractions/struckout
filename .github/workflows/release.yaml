@@ -217,7 +217,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-version]
     # The signing key is a secret of the repository
-    if: ${{ github.repository == 'TK75Attractions/struckout' }}
+    if: ${{ github.repository == 'TK75Attractions/struckout' && github.ref_name == 'master' }}
     defaults:
       run:
         working-directory: camera/
@@ -301,7 +301,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./game_master/Dockerfile
+          file: ./game_master/docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
