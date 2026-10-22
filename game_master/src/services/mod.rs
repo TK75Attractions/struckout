@@ -1,7 +1,7 @@
 mod player;
 pub use player::GameMasterPlayerServiceImpl;
 
-use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
+use std::{pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
 use struckout_proto::{
@@ -58,9 +58,10 @@ where
     ) {
         complete_rx.recv().await.expect("complete channel closed");
         let score = {
-            let guard = self.running_games.read();
-            let game = guard.get(&game_id).unwrap(); // guaranteed to exist
-            game.score
+            let sessions = self.sessions.read();
+            sessions
+                .score(machine_id)
+                .expect("it is guaranteed the session exist and is in right state")
         };
         let res = self.data_source.complete_game(game_id, score).await;
         if let Err(e) = res {
