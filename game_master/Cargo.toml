@@ -16,7 +16,7 @@ tonic-health = { workspace = true }
 
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive", "string"] }
-derive_more = { workspace = true, features = ["from", "into"] }
+derive_more = { workspace = true, features = ["from", "into", "debug"] }
 parking_lot = { workspace = true }
 sentry = { workspace = true, optional = true }
 serde = { workspace = true }

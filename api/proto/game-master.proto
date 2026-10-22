@@ -12,19 +12,17 @@ enum Difficulty {
 }
 
 enum GameMode {
-    GAME_MODE_UNSPECIFIED = 0;
-    GAME_MODE_SINGLE = 1;
-    GAME_MODE_MULTI = 2;
+  GAME_MODE_UNSPECIFIED = 0;
+  GAME_MODE_SINGLE = 1;
+  GAME_MODE_MULTI = 2;
 }
 
-message StartGameRequest {
+message StartSessionRequest {
   uint32 machine_id = 1;
-  Difficulty difficulty = 2;
   uint32 player_id = 3;
-  GameMode mode = 4;
 }
 
-message StartGameResponse {
+message StartSessionResponse {
   Event event = 1;
 }
 
@@ -65,7 +63,7 @@ message ValidatePlayerNameRequest {
 }
 
 message ValidatePlayerNameResponse {
-  message Ok{}
+  message Ok {}
 
   message AlreadyUsed {}
 
@@ -84,6 +82,35 @@ message GetPlayerResponse {
   string player_name = 2;
 }
 
+message StartTutorialRequest {
+  uint32 machine_id = 1;
+}
+
+message StartTutorialResponse {}
+
+message GoPreviousTutorialRequest {
+  uint32 machine_id = 1;
+}
+
+message GoPreviousTutorialResponse {}
+
+message GoNextTutorialRequest {
+  uint32 machine_id = 1;
+}
+
+message GoNextTutorialResponse {}
+
+
+message SetSessionDifficultyRequest {
+  Difficulty difficulty = 1;
+}
+
+message SetSessionDifficultyResponse {}
+
+message SetSessionReadyRequest {}
+
+message SetSessionReadyResponse {}
+
 message Event {
   message GameStarted {
     Difficulty difficulty = 1;
@@ -94,7 +121,7 @@ message Event {
   }
 
   message GameScoreChanged {
-      uint32 total_score = 1;
+    uint32 total_score = 1;
   }
 
   message GameFinished {}
@@ -110,12 +137,36 @@ message Event {
 }
 
 // Service provided by `game_master`.
+//
+// ## Single-play
+// | game-master |
+// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready |
+//
+// ## Multi-play
+// | game-master | ------------------------------------------------------------------------------------------------ GameStarted |
+// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession ----- SetSessionPlayer -- SetSessionDifficulty ------ Ready ----- |
+// |  machine 2  | ----- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready
 service GameMasterService {
   rpc AddPlayer(AddPlayerRequest) returns (AddPlayerResponse);
 
   // Used by `touchpanel`.
   // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
-  rpc StartGame(StartGameRequest) returns (stream StartGameResponse);
+  rpc StartSession(StartSessionRequest) returns (stream StartSessionResponse);
+
+  // Sets difficulty to the session. Used by `touchpanel`.
+  rpc SetSessionDifficulty(SetSessionDifficultyRequest) returns (SetSessionDifficultyResponse);
+
+  // Sets readiness to the session. Used by `touchpanel`.
+  rpc SetSessionReady(SetSessionReadyRequest) returns (SetSessionReadyResponse);
+
+  // Starts tutorial on the specified machine. Used by `touchpanel`.
+  rpc StartTutorial(StartTutorialRequest) returns (StartTutorialResponse);
+
+  // Navigates to the previous tutorial. Used by `touchpanel`.
+  rpc GoPreviousTutorial(GoPreviousTutorialRequest) returns (GoPreviousTutorialResponse);
+
+  // Navigates to the next tutorial. Used by `touchpanel`.
+  rpc GoNextTutorial(GoNextTutorialRequest) returns (GoNextTutorialResponse);
 
   // Notify events occured in game_master.
   rpc ListenEvents(ListenEventsRequest) returns (stream ListenEventsResponse);
