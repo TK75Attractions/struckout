@@ -1,6 +1,6 @@
 //! Session management
 
-use struckout_macros::EnumAsInnerMut;
+use struckout_macros::{EnumAsInner, EnumAsInnerMut};
 use struckout_proto::{
     Difficulty, GameMode,
     types::{MachineId, PlayerId},
@@ -182,7 +182,7 @@ impl Default for Sessions {
 }
 
 /// Session data for a specific machine.
-#[derive(Debug, Clone, strum::Display, EnumAsInnerMut)]
+#[derive(Debug, Clone, EnumAsInner, EnumAsInnerMut)]
 pub enum MachineSession {
     ConfiguringGameMode {
         machine_id: MachineId,
