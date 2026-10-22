@@ -16,6 +16,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["io-util"] }
 tonic = { workspace = true }
 tonic-prost = { workspace = true }
+strum = { workspace = true, features = ["derive"] }
 
 [build-dependencies]
 tonic-prost-build = { workspace = true }

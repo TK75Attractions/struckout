@@ -5,7 +5,7 @@ use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
 use struckout_proto::{
-    self, AddScoreRequest, AddScoreResponse, Difficulty, GameMode, GetGameResultRequest,
+    self, AddScoreRequest, AddScoreResponse, Difficulty, GetGameResultRequest,
     GetGameResultResponse, GoNextTutorialRequest, GoNextTutorialResponse,
     GoPreviousTutorialRequest, GoPreviousTutorialResponse, ListenEventsRequest,
     ListenEventsResponse, SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
@@ -14,7 +14,6 @@ use struckout_proto::{
     game_master_session_service_server::GameMasterSessionService,
     types::{GameId, MachineId, PlayerId},
 };
-use thiserror::Error;
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::{
@@ -24,14 +23,13 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{DataSource, DataSourceImpl, GetGameResultError};
+use crate::{DataSource, DataSourceImpl, GetGameResultError, session::Sessions};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
 
 /// Implementation of [`GameMasterSessionService`].
 #[derive(derive_more::Debug, Clone)]
 pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
-    running_games: Arc<RwLock<HashMap<GameId, Game>>>,
     sessions: Arc<RwLock<Sessions>>,
     #[debug(skip)]
     data_source: D,
@@ -45,7 +43,6 @@ where
     pub fn new(data_source: D) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
-            running_games: Default::default(),
             sessions: Default::default(),
             data_source,
             event_tx,
@@ -94,14 +91,11 @@ impl<D> GameMasterSessionService for GameMasterSessionServiceImpl<D>
 where
     D: DataSource,
 {
-    type StartSessionStream =
-        Pin<Box<dyn Stream<Item = Result<StartSessionResponse, Status>> + Send>>;
-
     #[instrument]
     async fn start_session(
         &self,
         req: Request<StartSessionRequest>,
-    ) -> Result<Response<Self::StartSessionStream>, Status> {
+    ) -> Result<Response<StartSessionResponse>, Status> {
         trace!(
             remote_addr = ?req.remote_addr(),
             "received start_session request"
@@ -109,96 +103,31 @@ where
         let req = req.into_inner();
         let machine_id: MachineId = req.machine_id.into();
         let player_id: PlayerId = req.player_id.into();
-        match mode {
-            GameMode::Unspecified => {
-                return Err(Status::invalid_argument("game_mode is not specified"));
-            }
-            GameMode::Single => {
-                let mut sessions = self.sessions.read();
-                if let Some(ms) = sessions.get(machine_id) {
-                    return Err(Status::failed_precondition(format!(
-                        "a session already started on {}: {:?}",
-                        machine_id, ms
-                    )));
-                }
-                if sessions.includes_multiplay() {
-                    return Err(Status::failed_precondition(format!(
-                        "multiplay session is started on another machine"
-                    )));
-                }
-                let opt = sessions.0.insert(
-                    machine_id,
-                    MachineSession {
-                        player_id,
-                        mode: None,
-                        difficulty: None,
-                    },
-                );
-                debug_assert!(opt.is_none());
-            }
-            GameMode::Multi => {
-                let mut sessions = self.sessions.write();
-            }
+        {
+            let mut sessions = self.sessions.write();
+            sessions
+                .insert(machine_id, player_id)
+                .map_err(|e| Status::failed_precondition(e.to_string()))?;
         }
 
-        let machine_id = req.machine_id.into();
-        let started_at = UtcDateTime::now();
-        let difficulty: Difficulty = req
-            .difficulty
-            .try_into()
-            .map_err(|e: prost::UnknownEnumValue| Status::invalid_argument(e.to_string()))?;
-
-        // TODO: more detailed error
-        let game_id = self
-            .data_source
-            .insert_game_single(machine_id, req.player_id.into(), started_at, difficulty)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        self.running_games.write().insert(game_id, Game::new());
-
-        // subscribe on events before sending `GameStarted`.
-        let event_rx = self.event_tx.subscribe();
-        if self
-            .event_tx
-            .send(Event {
-                game_id,
-                machine_id,
-                data: Ok(SuccessfulEvent::GameStarted { difficulty }),
-            })
-            .is_err()
-        {
-            warn!("all receiver has been dropped");
-        };
-
-        // channel to send gRPC stream.
-        let (stream_tx, stream_rx) = mpsc::channel(32);
-        let (complete_tx, complete_rx) = mpsc::channel(16);
-
-        tokio::spawn(game_timer(
-            machine_id,
-            game_id,
-            self.event_tx.clone(),
-            complete_tx,
-        ));
-        // pass events through stream
-        tokio::spawn(pass_events_through_by_game_id(game_id, event_rx, stream_tx));
-        // handle game completion
-        tokio::spawn(
-            self.clone()
-                .handle_game_completion(game_id, machine_id, complete_rx),
-        );
-
-        let out_stream = ReceiverStream::new(stream_rx);
-        Ok(Response::new(
-            Box::pin(out_stream) as Self::StartSessionStream
-        ))
+        Ok(Response::new(StartSessionResponse {}))
     }
 
     async fn set_session_difficulty(
         &self,
-        _req: Request<SetSessionDifficultyRequest>,
+        req: Request<SetSessionDifficultyRequest>,
     ) -> Result<Response<SetSessionDifficultyResponse>, Status> {
+        let req = req.into_inner();
+        let SetSessionDifficultyRequest {
+            difficulty,
+            machine_id,
+        } = req;
+        let difficulty: Difficulty = difficulty.try_into().map_err();
+        let machine_id = machine_id.into();
+
+        {
+            let mut sessions = self.sessions.write();
+        }
         todo!()
     }
 
@@ -297,31 +226,48 @@ where
 
     async fn set_session_ready(
         &self,
-        _req: Request<SetSessionReadyRequest>,
+        req: Request<SetSessionReadyRequest>,
     ) -> Result<Response<SetSessionReadyResponse>, Status> {
-        todo!()
-    }
-}
+        let req = req.into_inner();
 
-/// Filters events from `event_rx` by `game_id` and pass it through the response stream.
-#[instrument(skip(event_rx, stream_tx))]
-async fn pass_events_through_by_game_id(
-    game_id: GameId,
-    event_rx: broadcast::Receiver<Event>,
-    stream_tx: mpsc::Sender<Result<StartSessionResponse, Status>>,
-) {
-    let events = BroadcastStream::new(event_rx);
-    let mut events = events
-        .map(|v| v.expect("broadcast channel lagged"))
-        .filter(|ev| ev.game_id == game_id);
-    while let Some(ev) = events.next().await {
-        let data = ev.data.map(|v| StartSessionResponse {
-            event: Some(struckout_proto::Event {
-                game_id: ev.game_id.into_inner(),
-                event_data: Some(v.into()),
-            }),
-        });
-        stream_tx.send(data).await.expect("receiver dropped");
+        let started_at = UtcDateTime::now();
+
+        // TODO: more detailed error
+        let game_id = self
+            .data_source
+            .insert_game_single(machine_id, req.player_id.into(), started_at, difficulty)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        self.running_games.write().insert(game_id, Game::new());
+
+        if self
+            .event_tx
+            .send(Event {
+                game_id,
+                machine_id,
+                data: Ok(SuccessfulEvent::GameStarted { difficulty }),
+            })
+            .is_err()
+        {
+            warn!("all receiver has been dropped");
+        };
+
+        let (complete_tx, complete_rx) = mpsc::channel(16);
+
+        tokio::spawn(game_timer(
+            machine_id,
+            game_id,
+            self.event_tx.clone(),
+            complete_tx,
+        ));
+
+        // handle game completion
+        tokio::spawn(
+            self.clone()
+                .handle_game_completion(game_id, machine_id, complete_rx),
+        );
+        todo!()
     }
 }
 
@@ -372,107 +318,6 @@ async fn game_timer(
         interval.tick().await;
     }
     complete_tx.send(()).await.expect("complete channel closed");
-}
-
-#[derive(Debug)]
-pub struct Game {
-    score: u32,
-}
-
-impl Game {
-    pub fn new() -> Self {
-        Self { score: 0 }
-    }
-}
-
-impl Default for Game {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Sessions((Option<MachineSession>, Option<MachineSession>));
-
-#[derive(Debug, Error)]
-enum SessionError {
-    #[error("there are active sessions on all slots")]
-    SessionExhausted(()),
-}
-
-impl Sessions {
-    fn new() -> Self {
-        Self((None, None))
-    }
-
-    /// Returns whether there is a session with multiplay mode.
-    fn includes_multiplay(&self) -> bool {
-        todo!()
-    }
-
-    /// Returns the session with given machine id.
-    fn get(&self, machine_id: MachineId) -> Option<&MachineSession> {
-        if let Some(ms) = &self.0.0
-            && ms.machine_id == machine_id
-        {
-            Some(ms)
-        } else if let Some(ms) = &self.0.1
-            && ms.machine_id == machine_id
-        {
-            Some(ms)
-        } else {
-            None
-        }
-    }
-
-    /// Inserts new session.
-    ///
-    /// If session slots are exhausted, [`SessionError::SessionExhausted`] is returned.
-    ///
-    /// If another existing session's mode is [`GameMode::Multi`], newly-created session's mode will be automatically
-    /// set to [`GameMode::Multi`].
-    fn insert(&mut self, machine_id: MachineId, player_id: PlayerId) -> Result<(), SessionError> {
-        if let Some(prev) = &self.0.0 {
-            if self.0.1.is_some() {
-                return Err(SessionError::SessionExhausted(()));
-            } else {
-                let mut new_session = MachineSession {
-                    machine_id,
-                    player_id,
-                    mode: None,
-                    difficulty: None,
-                };
-                if prev.mode.is_some_and(|mode| mode == GameMode::Multi) {
-                    new_session.mode = Some(GameMode::Multi);
-                }
-                self.0.1 = Some(new_session);
-                Ok(())
-            }
-        } else {
-            self.0.0 = Some(MachineSession {
-                machine_id,
-                player_id,
-                mode: None,
-                difficulty: None,
-            });
-            Ok(())
-        }
-    }
-}
-
-impl Default for Sessions {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Session data for a specific machine.
-#[derive(Debug, Clone)]
-struct MachineSession {
-    machine_id: MachineId,
-    player_id: PlayerId,
-    mode: Option<GameMode>,
-    difficulty: Option<Difficulty>,
 }
 
 // Events which occur in the service, including errors.
@@ -784,10 +629,5 @@ mod tests {
                 break;
             }
         }
-    }
-
-    #[test]
-    fn sessions_insert() {
-        todo!()
     }
 }
