@@ -16,6 +16,12 @@ macro_rules! id_new_type {
                 <$new_type as Into<$inner_type>>::into(self)
             }
         }
+
+        impl ::std::fmt::Display for $new_type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
     };
 }
 
