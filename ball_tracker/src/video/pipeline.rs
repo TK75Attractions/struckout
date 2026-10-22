@@ -1,8 +1,8 @@
-//! 1 台のカメラの動画を ffmpeg でデコード・縮小し、解析して、検出を送り出す。
+//! 1 台のカメラの動画を ffmpeg でデコードし、Rust で縮小・RGB 変換・解析して、検出を送り出す。
 //!
 //! スレッドは 2 本使う。
 //! - 書き込み: 受け取った H.264 を ffmpeg の標準入力に書く
-//! - 解析: ffmpeg の標準出力から縮小した画像を読み、[`Analyzer`] にかける
+//! - 解析: ffmpeg の標準出力から NV12 を読み、縮小・RGB 変換して、[`Analyzer`] にかける
 //!
 //! ffmpeg の出力には時刻が付かないので、フレームは書いた順に出てくるものとして、書いたときの時刻を順に割り当てる。
 //! カメラアプリは B フレームを使わない (デコードの順と表示の順が同じ) ので、この対応は崩れない。
@@ -32,6 +32,7 @@ use tracing::{info, warn};
 use super::{
     VideoOptions,
     analysis::{AnalysisSettings, Analyzer},
+    decode::{DecodeLayout, ffmpeg_args},
 };
 
 /// ffmpeg に書く前にためておけるフレームの数 (120fps で 2 秒)。超えたら次のキーフレームまで捨てる。
@@ -211,46 +212,9 @@ impl Pipeline {
     ) -> std::io::Result<Self> {
         let (width, height) = (settings.width, settings.height);
         let camera_id = settings.camera_id;
-        // GPU でデコードするときは、入力の前に方式を指定する。デコードした画像は ffmpeg が CPU 側に戻してから縮める
-        let hwaccel: Vec<&str> = options
-            .hwaccel
-            .as_deref()
-            .map(|name| vec!["-hwaccel", name])
-            .unwrap_or_default();
+        let layout = DecodeLayout::from_settings(&settings);
         let mut child = Command::new(&options.ffmpeg)
-            .args([
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                // 遅れは 60fps の入力で 40ms 前後 (2026-10-15 に測った)。どれも測って決めた:
-                // - low_delay がないと、並べ替えに備えて 250ms ほどためる
-                // - probesize を小さくすると、最初のフレームが出るまでが 0.9 秒から 0.08 秒になる
-                // - "-fflags nobuffer" は付けない。付けると 1 秒 (60 フレーム) 遅れたまま戻らない
-                "-flags",
-                "low_delay",
-                "-probesize",
-                "32768",
-                // フレーム単位の並列化は、その枚数ぶん出てくるのが遅れるので使わない
-                "-threads",
-                "1",
-            ])
-            .args(&hwaccel)
-            .args([
-                "-f",
-                "h264",
-                "-i",
-                "pipe:0",
-                // アプリの GPU での縮小 (2x2 の平均) に近い
-                "-vf",
-                &format!("scale={width}:{height}:flags=area"),
-                "-fps_mode",
-                "passthrough",
-                "-f",
-                "rawvideo",
-                "-pix_fmt",
-                "rgb24",
-                "pipe:1",
-            ])
+            .args(ffmpeg_args(&settings, options.hwaccel.as_deref()))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -281,6 +245,7 @@ impl Pipeline {
                         &mut stdout,
                         width,
                         height,
+                        layout,
                         &queue,
                         &settings,
                         snapshot_dir,
@@ -309,12 +274,17 @@ impl Pipeline {
         })
     }
 
-    /// 解析画像の大きさが同じなら、設定 (範囲、視線の計算) だけ差し替える。違えば `false` を返す。
+    /// 動画と解析画像の大きさが同じなら、設定 (範囲、視線の計算) だけ差し替える。違えば `false` を返す。
     pub fn update_settings(&self, settings: AnalysisSettings) -> bool {
-        if settings.width != self.width || settings.height != self.height {
+        let mut current = self.settings.lock();
+        if settings.width != self.width
+            || settings.height != self.height
+            || settings.video_width != current.video_width
+            || settings.video_height != current.video_height
+        {
             return false;
         }
-        *self.settings.lock() = settings;
+        *current = settings;
         true
     }
 
@@ -451,6 +421,7 @@ fn analyze_loop(
     stdout: &mut impl Read,
     width: usize,
     height: usize,
+    layout: DecodeLayout,
     queue: &FrameQueue,
     settings: &Mutex<AnalysisSettings>,
     mut snapshot_dir: Option<PathBuf>,
@@ -459,10 +430,11 @@ fn analyze_loop(
 ) {
     let mut analyzer = Analyzer::new(settings.lock().clone()).with_options(detection);
     let mut image = vec![0u8; width * height * 3];
+    let mut nv12 = vec![0u8; layout.frame_bytes()];
     let mut stats = Stats::new();
     loop {
         let read_begin = Instant::now();
-        if stdout.read_exact(&mut image).is_err() {
+        if stdout.read_exact(&mut nv12).is_err() {
             break;
         }
         let decoded = Instant::now();
@@ -488,6 +460,9 @@ fn analyze_loop(
             stats.log_if_due(camera_id, queue);
             continue;
         }
+        let convert_begin = Instant::now();
+        layout.convert(&nv12, &mut image);
+        stats.converting += convert_begin.elapsed();
         if let Some(dir) = snapshot_dir.take() {
             let path = dir.join(format!(
                 "camera{camera_id}_{}.bmp",
@@ -566,11 +541,12 @@ struct Stats {
     with_detections: u32,
     ignored: usize,
     analysis: Duration,
+    converting: Duration,
     /// 受け取ってから解析し終えるまで (デコードの待ちを含む)。フレームごと (ms)
     delays_ms: Vec<i64>,
     /// 受け取ってから ffmpeg に書き始めるまで。フレームごと
     inputs: Vec<Duration>,
-    /// ffmpeg に書き始めてから、縮小した画像を読み終えるまで。フレームごと。解析が遅れて ffmpeg の出力が
+    /// ffmpeg に書き始めてから、NV12 を読み終えるまで。フレームごと。解析が遅れて ffmpeg の出力が
     /// 詰まっているあいだも含む
     decodes: Vec<Duration>,
     /// 解析のスレッドが ffmpeg の出力を待っていた時間の合計
@@ -589,6 +565,7 @@ impl Stats {
             with_detections: 0,
             ignored: 0,
             analysis: Duration::ZERO,
+            converting: Duration::ZERO,
             delays_ms: Vec::new(),
             inputs: Vec::new(),
             decodes: Vec::new(),
@@ -648,6 +625,7 @@ impl Stats {
             frames_with_detections = self.with_detections,
             ignored_detections = self.ignored,
             analysis_ms = mean_ms(self.analysis),
+            convert_ms = mean_ms(self.converting),
             delay_ms_p50 = percentile(&self.delays_ms, 0.5),
             delay_ms_p95 = percentile(&self.delays_ms, 0.95),
             max_delay_ms = self.delays_ms.last().copied().unwrap_or_default(),

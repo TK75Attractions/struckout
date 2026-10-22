@@ -5,7 +5,7 @@
 //! ```
 //!
 //! 録画の `--skip` 枚目から `--frames` 枚を、その場の PC 解析と同じ ffmpeg の設定でデコードして、メモリに置く。
-//! そのあと解析だけを `--rounds` 回くり返し、1 フレームあたりの時間を出す。デコードの時間は含まない。
+//! そのあと変換と解析を `--rounds` 回くり返し、それぞれの時間を出す。デコードの時間は含まない。
 //! 途中の区間はデコードし直すと時間がかかる (数分) ので、`--cache` を付けると、デコードした画像をそのファイルに
 //! 書き、次からはそれを読む。
 //!
@@ -26,6 +26,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use ball_tracker::video::{
     analysis::{AnalysisSettings, Analyzer, DetectionCenter, DetectionOptions, EdgeDetections},
+    decode::{DecodeLayout, ffmpeg_args},
     recorder::RecordingReader,
 };
 use clap::Parser;
@@ -38,7 +39,7 @@ struct Cli {
     /// 読み飛ばすフレームの数 (投球のある区間から測るため)
     #[arg(long, default_value_t = 0)]
     skip: usize,
-    /// 測るフレームの数 (640x360 で 1 枚 0.7 MB をメモリに置く)
+    /// 測るフレームの数 (1280x720 の NV12 で 1 枚 1.4 MB をメモリに置く)
     #[arg(long, default_value_t = 600)]
     frames: usize,
     /// 解析をくり返す回数
@@ -54,16 +55,26 @@ struct Cli {
     cache: Option<PathBuf>,
 }
 
-/// 録画の一部を、その場の PC 解析と同じ大きさと画素の形式 (RGB) にデコードする。`--cache` があれば使う。
+/// 録画の一部を、その場の PC 解析と同じ NV12 にデコードする。`--cache` があれば使う。
 fn load(cli: &Cli) -> Result<(AnalysisSettings, Vec<Vec<u8>>)> {
     let Some(cache) = &cli.cache else {
         return decode(cli);
     };
     if cache.exists() {
         let settings = read_settings(cli)?;
-        let size = settings.width * settings.height * 3;
+        let size = DecodeLayout::from_settings(&settings).frame_bytes();
         let bytes =
             std::fs::read(cache).with_context(|| format!("cannot read {}", cache.display()))?;
+        let header = cache_header(&settings, cli.skip);
+        let Some(bytes) = bytes.strip_prefix(header.as_slice()) else {
+            bail!(
+                "{}: NV12 キャッシュの形式・サイズ・開始位置が違います。別のパスで作り直してください",
+                cache.display()
+            );
+        };
+        if bytes.is_empty() {
+            bail!("{}: NV12 キャッシュが空です", cache.display());
+        }
         if bytes.len() % size != 0 {
             bail!(
                 "{}: the size does not match {}x{} frames",
@@ -80,9 +91,27 @@ fn load(cli: &Cli) -> Result<(AnalysisSettings, Vec<Vec<u8>>)> {
         return Ok((settings, images));
     }
     let (settings, images) = decode(cli)?;
-    std::fs::write(cache, images.concat())
-        .with_context(|| format!("cannot write {}", cache.display()))?;
+    let mut bytes = cache_header(&settings, cli.skip);
+    for image in &images {
+        bytes.extend_from_slice(image);
+    }
+    std::fs::write(cache, bytes).with_context(|| format!("cannot write {}", cache.display()))?;
     Ok((settings, images))
+}
+
+/// 旧 RGB キャッシュの誤読と、サイズや開始位置の違うキャッシュの使い回しを防ぐ。
+fn cache_header(settings: &AnalysisSettings, skip: usize) -> Vec<u8> {
+    let mut bytes = b"BTNV12\0\x01".to_vec();
+    for value in [
+        settings.video_width,
+        settings.video_height,
+        settings.width,
+        settings.height,
+        skip,
+    ] {
+        bytes.extend_from_slice(&(value as u64).to_le_bytes());
+    }
+    bytes
 }
 
 /// 録画の最初の設定。
@@ -110,24 +139,9 @@ fn decode(cli: &Cli) -> Result<(AnalysisSettings, Vec<Vec<u8>>)> {
             None => {}
         }
     };
-    let (width, height) = (settings.width, settings.height);
+    let layout = DecodeLayout::from_settings(&settings);
     let mut child = Command::new(&cli.ffmpeg)
-        .args([
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-f",
-            "h264",
-            "-i",
-            "pipe:0",
-        ])
-        .args([
-            "-vf",
-            &format!("scale={width}:{height}:flags=area"),
-            "-fps_mode",
-            "passthrough",
-        ])
-        .args(["-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"])
+        .args(ffmpeg_args(&settings, None))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -151,7 +165,7 @@ fn decode(cli: &Cli) -> Result<(AnalysisSettings, Vec<Vec<u8>>)> {
         Ok(())
     });
     let mut images = Vec::with_capacity(cli.frames);
-    let mut image = vec![0u8; width * height * 3];
+    let mut image = vec![0u8; layout.frame_bytes()];
     let mut decoded = 0;
     while images.len() < cli.frames && stdout.read_exact(&mut image).is_ok() {
         if decoded >= cli.skip {
@@ -194,6 +208,7 @@ fn fingerprint(hash: &mut u64, frame: usize, packet: &DetectionsPacket) {
 
 struct Round {
     times: Vec<Duration>,
+    converting: Duration,
     frames_with_detections: usize,
     detections: usize,
     fingerprint: u64,
@@ -208,13 +223,19 @@ fn run_round(settings: &AnalysisSettings, images: &[Vec<u8>]) -> Round {
     let mut analyzer = Analyzer::new(settings.clone()).with_options(options);
     let mut round = Round {
         times: Vec::with_capacity(images.len()),
+        converting: Duration::ZERO,
         frames_with_detections: 0,
         detections: 0,
         fingerprint: 0xcbf2_9ce4_8422_2325,
     };
+    let layout = DecodeLayout::from_settings(settings);
+    let mut rgb = vec![0; settings.width * settings.height * 3];
     for (i, image) in images.iter().enumerate() {
+        let convert_begin = Instant::now();
+        layout.convert(image, &mut rgb);
+        round.converting += convert_begin.elapsed();
         let begin = Instant::now();
-        let analyzed = analyzer.analyze(image, i as i64, i as i64);
+        let analyzed = analyzer.analyze(&rgb, i as i64, i as i64);
         round.times.push(begin.elapsed());
         if let Some(packet) = analyzed.packet {
             round.frames_with_detections += 1;
@@ -256,10 +277,11 @@ fn main() -> Result<()> {
         let ms = |d: Duration| d.as_secs_f64() * 1000.0;
         let mean = times.iter().map(|&d| ms(d)).sum::<f64>() / times.len() as f64;
         let pick = |p: f64| ms(times[((times.len() - 1) as f64 * p).round() as usize]);
+        let convert_ms = results.iter().map(|r| ms(r.converting)).sum::<f64>() / times.len() as f64;
         let first = &results[0];
         println!(
-            "{round} 回目 ({} スレッド): 平均 {mean:.2} ms、中央値 {:.2} ms、95% {:.2} ms、最大 {:.2} ms / フレーム \
-             (検出のあるフレーム {}、検出 {}、指紋 {:016x})",
+            "{round} 回目 ({} スレッド): 解析 平均 {mean:.2} ms、中央値 {:.2} ms、95% {:.2} ms、最大 {:.2} ms / フレーム \
+             (変換 {convert_ms:.3} ms / フレーム、検出のあるフレーム {}、検出 {}、指紋 {:016x})",
             cli.threads,
             pick(0.5),
             pick(0.95),
