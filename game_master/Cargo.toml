@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 struckout-proto = { workspace = true }
+struckout-macros = { workspace = true }
 
 backon = { workspace = true }
 prost = { workspace = true }

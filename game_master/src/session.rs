@@ -1,5 +1,6 @@
 //! Session management
 
+use struckout_macros::EnumAsInnerMut;
 use struckout_proto::{
     Difficulty, GameMode,
     types::{MachineId, PlayerId},
@@ -181,7 +182,7 @@ impl Default for Sessions {
 }
 
 /// Session data for a specific machine.
-#[derive(Debug, Clone, strum::Display)]
+#[derive(Debug, Clone, strum::Display, EnumAsInnerMut)]
 pub enum MachineSession {
     ConfiguringGameMode {
         machine_id: MachineId,
@@ -219,31 +220,6 @@ impl MachineSession {
             MachineSession::ConfiguringGameMode { player_id, .. } => *player_id,
             MachineSession::ConfiguringDifficulty { player_id, .. } => *player_id,
             MachineSession::Running { player_id, .. } => *player_id,
-        }
-    }
-
-    /// Returns mutable reference of each fields of [`MachineSession::ConfiguringDifficulty`]
-    /// if `self` is [`MachineSession::ConfiguringDifficulty`], otherwise `Err(actual_state)`.
-    fn as_configuring_difficulty_mut(
-        &mut self,
-    ) -> Result<
-        (
-            &mut MachineId,
-            &mut PlayerId,
-            &mut GameMode,
-            &mut Option<Difficulty>,
-        ),
-        &'static str,
-    > {
-        match self {
-            MachineSession::ConfiguringGameMode { .. } => Err("ConfiguringGameMode"),
-            MachineSession::ConfiguringDifficulty {
-                machine_id,
-                player_id,
-                mode,
-                difficulty,
-            } => Ok((machine_id, player_id, mode, difficulty)),
-            MachineSession::Running { .. } => Err("Running"),
         }
     }
 }

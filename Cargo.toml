@@ -5,6 +5,7 @@ members = [
   "api/rust/utils",
   "ball_tracker",
   "game_master",
+  "macros",
   "touchpanel",
   "touchpanel/ui",
   "xtask",
@@ -16,6 +17,7 @@ edition = "2024"
 [workspace.dependencies]
 struckout-proto = { path = "./api/rust/proto" }
 struckout-utils = { path = "./api/rust/utils" }
+struckout-macros = { path = "./macros/" }
 
 async-stream = "0.3.6"
 backon = "1.6.0"
@@ -69,9 +71,14 @@ slint = { git = "https://github.com/Tk75Attractions/slint" }
 slint-build = { git = "https://github.com/Tk75Attractions/slint" }
 stern = { git = "https://github.com/Tk75Attractions/stern" }
 
+# proc-macro
+syn = "3.0.9"
+quote = "1.0.47"
+proc-macro2 = "1.0.107"
+
+# dev-dependencies
 mockall = "0.15.0"
 rstest = "0.27.0"
-# dev-dependencies
 dtor = { version = "1.0.6", default-features = false }
 testcontainers-modules = "0.15.0"
 
