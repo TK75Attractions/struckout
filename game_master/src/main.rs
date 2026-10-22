@@ -2,8 +2,11 @@ use std::ffi::OsStr;
 
 use backon::{ExponentialBuilder, Retryable as _};
 use clap::Parser;
-use game_master::{DataSourceImpl, GameMasterServiceImpl};
-use struckout_proto::game_master_service_server::GameMasterServiceServer;
+use game_master::{DataSourceImpl, GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
+use struckout_proto::{
+    game_master_player_service_server::GameMasterPlayerServiceServer,
+    game_master_session_service_server::GameMasterSessionServiceServer,
+};
 
 use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
@@ -11,7 +14,7 @@ use tokio::{
     signal::unix::{self, SignalKind},
     time::Duration,
 };
-use tonic::transport::Server;
+use tonic::{server::NamedService as _, transport::Server};
 use tonic_health::server::health_reporter;
 use tracing::{debug, error, info};
 use tracing_subscriber::{
@@ -28,7 +31,8 @@ const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
-type GameMasterServer = GameMasterServiceServer<GameMasterServiceImpl<DataSourceImpl>>;
+type SessionServer = GameMasterSessionServiceServer<GameMasterSessionServiceImpl>;
+type PlayerServer = GameMasterSessionServiceServer<GameMasterPlayerServiceImpl>;
 
 #[derive(Parser)]
 #[command(version = version())]
@@ -112,13 +116,13 @@ async fn run_main() -> u8 {
     let (health_reporter, health_service) = health_reporter();
     let health_task = tokio::spawn({
         let pool = pool.clone();
-        game_master::health::monitor_database::<GameMasterServer, _, _>(
+        game_master::health::monitor_database(
             health_reporter,
+            vec![SessionServer::NAME, PlayerServer::NAME],
             move || is_database_available(pool.clone()),
         )
     });
     let data_source = DataSourceImpl::new(pool);
-    let game_master = GameMasterServiceImpl::new(data_source);
     let addr = format!("0.0.0.0:{}", GRPC_PORT)
         .parse()
         .expect("address format should be correct");
@@ -132,7 +136,12 @@ async fn run_main() -> u8 {
         }
     };
     let result = Server::builder()
-        .add_service(GameMasterServiceServer::new(game_master))
+        .add_service(GameMasterSessionServiceServer::new(
+            GameMasterSessionServiceImpl::new(data_source.clone()),
+        ))
+        .add_service(GameMasterPlayerServiceServer::new(
+            GameMasterPlayerServiceImpl::new(data_source),
+        ))
         .add_service(health_service)
         .serve_with_shutdown(addr, sig)
         .await;

@@ -2,8 +2,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_files = [
         "../../proto/ball-tracker__projector.proto",
         "../../proto/camera__ball-tracker.proto",
-        "../../proto/game-master.proto",
         "../../proto/xtask_sync.proto",
+        "../../proto/game_master/session.proto",
+        "../../proto/game_master/player.proto",
     ];
     let include = "../../proto/";
     println!("cargo::rerun-if-changed={}", include);

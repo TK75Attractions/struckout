@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.game_master.v1;
+
+// Set of RPCs related to player.
+service GameMasterPlayerService {
+  rpc AddPlayer(AddPlayerRequest) returns (AddPlayerResponse);
+
+  // Validates player's name.
+  rpc ValidatePlayerName(ValidatePlayerNameRequest) returns (ValidatePlayerNameResponse);
+
+  // Get player.
+  rpc GetPlayer(GetPlayerRequest) returns (GetPlayerResponse);
+}
+
+message AddPlayerRequest {
+  string name = 1;
+}
+
+message AddPlayerResponse {
+  uint32 player_id = 1;
+}
+
+message ValidatePlayerNameRequest {
+  string player_name = 1;
+}
+
+message ValidatePlayerNameResponse {
+  message Ok {}
+
+  message AlreadyUsed {}
+
+  oneof validate_player_name_resp {
+    Ok ok = 1;
+    AlreadyUsed already_used = 2;
+  }
+}
+
+message GetPlayerRequest {
+  string name = 1;
+}
+
+message GetPlayerResponse {
+  uint32 player_id = 1;
+  string player_name = 2;
+}

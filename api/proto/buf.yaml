@@ -2,7 +2,6 @@ version: v2
 lint:
   use:
     - STANDARD
-  except: 
+  except:
     - PACKAGE_DIRECTORY_MATCH
     - FILE_LOWER_SNAKE_CASE
-    
