@@ -7,7 +7,8 @@ using Struckout.Launcher.Core.Platform;
 namespace Struckout.Launcher.Core.Launch;
 
 /// <summary>ball_tracker, projector and touchpanel: a process on this PC.</summary>
-/// <param name="servedPorts">The module is up when these ports are open on this PC.</param>
+/// <param name="servedPorts">Ports checked for conflicts before starting the process.</param>
+/// <param name="healthPort">The gRPC health port, or null for modules checked by process liveness.</param>
 /// <param name="logFile">
 /// Where stdout and stderr go. Null when the module writes its own log (Unity's <c>-logFile</c>).
 /// </param>
@@ -18,6 +19,7 @@ internal sealed class ProcessModuleRunner(
     string executable,
     IReadOnlyList<string> arguments,
     IReadOnlyList<int> servedPorts,
+    int? healthPort,
     string? logFile) : IModuleRunner
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
@@ -118,9 +120,9 @@ internal sealed class ProcessModuleRunner(
             return Health.Exited($"終了しました (終了コード {process.ExitCode})");
         }
 
-        return servedPorts.Count == 0
-            ? Health.Up()
-            : await TcpProbe.CheckAsync("127.0.0.1", servedPorts, cancellationToken);
+        return healthPort is { } port
+            ? await GrpcHealthProbe.CheckAsync("127.0.0.1", port, cancellationToken)
+            : Health.Up();
     }
 
     /// <summary>Asks the process to quit, and kills it if it doesn't within <see cref="StopTimeout"/>.</summary>

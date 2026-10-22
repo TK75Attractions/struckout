@@ -8,8 +8,10 @@ fn main() {
     let data_port = get_port_def("ball-tracker", "camera-data");
     let ctrl_port = get_port_def("ball-tracker", "camera-ctrl");
     let projector_port = get_port_def("ball-tracker", "projector");
+    let health_port = get_port_def("ball-tracker", "health");
     println!("cargo::rustc-env=CAMERA_VIDEO_PORT={}", video_port);
     println!("cargo::rustc-env=CAMERA_DATA_PORT={}", data_port);
     println!("cargo::rustc-env=CAMERA_CTRL_PORT={}", ctrl_port);
     println!("cargo::rustc-env=PROJECTOR_PORT={}", projector_port);
+    println!("cargo::rustc-env=HEALTH_PORT={}", health_port);
 }

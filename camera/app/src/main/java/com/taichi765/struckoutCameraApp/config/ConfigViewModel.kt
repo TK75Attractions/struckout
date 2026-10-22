@@ -2,6 +2,7 @@ package com.taichi765.struckoutCameraApp.config
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.taichi765.struckoutCameraApp.BuildConfig
 import com.taichi765.struckoutCameraApp.CaptureSession
 import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.network.NetworkManager
@@ -23,6 +24,13 @@ class ConfigViewModel @Inject constructor(
     private val configRepository: ConfigStoreRepository,
     private val captureSession: CaptureSession
 ) : ViewModel() {
+    /** Formatted like `--version` of the Rust modules. Only release builds have the commit hash. */
+    val version = if (BuildConfig.COMMIT_SHORT_HASH.isEmpty()) {
+        "no version"
+    } else {
+        "${BuildConfig.VERSION_NAME} (${BuildConfig.COMMIT_SHORT_HASH})"
+    }
+
     val uiState = combine(
         configRepository.recordingModeEnabled,
         configRepository.detectionOutputKind,

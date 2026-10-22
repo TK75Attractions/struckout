@@ -14,6 +14,7 @@ public class SpecTests
         Assert.Equal(6060, ports.BallTrackerCameraControl);
         Assert.Equal(5050, ports.BallTrackerCameraData);
         Assert.Equal(5052, ports.BallTrackerCameraVideo);
+        Assert.Equal(5080, ports.BallTrackerHealth);
     }
 
     [Fact]

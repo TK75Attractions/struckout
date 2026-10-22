@@ -10,6 +10,7 @@ use struckout_proto::{
 
 mod data;
 pub use data::DataSourceImpl;
+pub mod health;
 mod service;
 pub use service::GameMasterServiceImpl;
 

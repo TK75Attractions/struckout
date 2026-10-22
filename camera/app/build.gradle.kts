@@ -1,5 +1,7 @@
 import com.google.protobuf.gradle.proto
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 plugins {
     alias(libs.plugins.android.application)
@@ -10,11 +12,30 @@ plugins {
 }
 
 val enableNatsLog = providers.gradleProperty("enableNatsLog")
+val releaseVersion = providers.environmentVariable("ST_VERSION")
+val releaseCommitShortHash = providers.environmentVariable("ST_COMMIT_SHORT_HASH")
 
 // Every release signs the APK with one key (.github/workflows/release.yaml) so that the launcher
 // can update the app on the phones: Android refuses an update signed with another key.
 // Without the variables, the release build is unsigned as before.
 val releaseKeystore = providers.environmentVariable("CAMERA_KEYSTORE_FILE")
+
+// The release (.github/workflows/release.yaml) gives the version like the other modules, e.g.
+// '2026-10-20.3' (see ReleaseTag in xtask/src/release.rs). The launcher updates the app with
+// `adb install -r`, which refuses a smaller versionCode, so the versionCode is YYYYMMDD * 100 + N:
+// it increases with every release and stays below the limit of Android (2100000000) until 2100.
+// Local builds have no version.
+val (appVersionCode, appVersionName) = if (releaseVersion.isPresent) {
+    val version = releaseVersion.get()
+    val date = LocalDate.parse(version.substringBefore('.'))
+    val releaseNumber = version.substringAfter('.').toInt()
+    check(releaseNumber < 100) { "release number of ST_VERSION must be less than 100: $version" }
+    check(releaseCommitShortHash.isPresent) { "ST_COMMIT_SHORT_HASH must be set with ST_VERSION" }
+    val versionCode = date.format(DateTimeFormatter.BASIC_ISO_DATE).toInt() * 100 + releaseNumber
+    versionCode to version
+} else {
+    1 to "no version"
+}
 
 android {
     namespace = "com.taichi765.struckoutCameraApp"
@@ -27,8 +48,13 @@ android {
         applicationId = "com.taichi765.struckoutCameraApp.highspeed"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
+        buildConfigField(
+            "String",
+            "COMMIT_SHORT_HASH",
+            "\"${releaseCommitShortHash.orElse("").get()}\""
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
