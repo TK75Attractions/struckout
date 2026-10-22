@@ -18,7 +18,7 @@ pub enum SessionError {
         "{msg}: the session on machine {machine_id} was expected to be in {expected_state}, but actually was in {actual_state}"
     )]
     InvalidState {
-        msg: String,
+        msg: &'static str,
         expected_state: &'static str,
         actual_state: &'static str,
         machine_id: MachineId,
@@ -172,6 +172,21 @@ impl Sessions {
         debug_assert!(mode.is_multi());
         *di = Some(difficulty);
         Ok(())
+    }
+
+    pub fn score(&self, machine_id: MachineId) -> Result<u32, SessionError> {
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (_, _, _, _, score) =
+            ms.as_running()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "score can only be fetched while running state",
+                    expected_state: "Running",
+                    actual_state,
+                    machine_id,
+                })?;
+        Ok(*score)
     }
 }
 
