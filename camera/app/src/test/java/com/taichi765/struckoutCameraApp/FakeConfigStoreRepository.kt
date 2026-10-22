@@ -3,6 +3,7 @@ package com.taichi765.struckoutCameraApp
 import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
+import com.taichi765.struckoutCameraApp.config.HighSpeedStreamSize
 import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,13 @@ class FakeConfigStoreRepository(
 
     private val _focalLengthRatio = MutableStateFlow(0.0)
     override val focalLengthRatio = _focalLengthRatio.asStateFlow()
+
+    private val _highSpeedStreamSize = MutableStateFlow(HighSpeedStreamSize.HD720)
+    override val highSpeedStreamSize = _highSpeedStreamSize.asStateFlow()
+
+    override suspend fun setHighSpeedStreamSize(size: HighSpeedStreamSize) {
+        _highSpeedStreamSize.value = size
+    }
 
     override suspend fun toggleRecordingMode() {
         _recordingModeEnabled.update { !it }

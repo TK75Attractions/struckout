@@ -20,6 +20,7 @@ import android.util.Range
 import android.util.Size
 import android.view.Surface
 import com.taichi765.struckoutCameraApp.camera.CameraClockInfoHolder
+import com.taichi765.struckoutCameraApp.config.HighSpeedStreamSize
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -125,11 +126,15 @@ class HighSpeedCamera @Inject constructor(
      * @param encodedListener エンコーダーが出したデータも受け取るとき
      */
     @Synchronized
-    fun start(listener: FrameListener, encodedListener: EncodedFrameListener? = null) {
+    fun start(
+        listener: FrameListener,
+        encodedListener: EncodedFrameListener? = null,
+        streamSize: HighSpeedStreamSize = HighSpeedStreamSize.HD720,
+    ) {
         if (run != null) return
         _state.value = State.Starting
         _stats.value = null
-        run = Run(listener, encodedListener).also { it.start() }
+        run = Run(listener, encodedListener, streamSize).also { it.start() }
     }
 
     /** 次のフレームをキーフレームにするよう、エンコーダーに頼む (途中から受け取る相手がデコードを始められるように) */
@@ -167,6 +172,7 @@ class HighSpeedCamera @Inject constructor(
     private inner class Run(
         private val listener: FrameListener,
         private val encodedListener: EncodedFrameListener?,
+        private val streamSize: HighSpeedStreamSize,
     ) {
         private val cameraThread = HandlerThread("hs-camera").apply { start() }
         private val cameraHandler = Handler(cameraThread.looper)
@@ -219,7 +225,7 @@ class HighSpeedCamera @Inject constructor(
                 try {
                     val manager =
                         context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-                    val mode = selectMode(manager)
+                    val mode = selectMode(manager, streamSize)
                     val analysisSize = Size(
                         ANALYSIS_WIDTH,
                         // 縦横比を保つ。偶数にそろえる。
@@ -249,7 +255,7 @@ class HighSpeedCamera @Inject constructor(
                             { data, presentationTimeUs, keyFrame, codecConfig ->
                                 val sensorTimestamp =
                                     if (codecConfig) 0L else timeline.sensorTimestamp(presentationTimeUs * 1000)
-                                listener.onEncoded(data, sensorTimestamp, keyFrame, codecConfig)
+                                if (!stopped) listener.onEncoded(data, sensorTimestamp, keyFrame, codecConfig)
                             }
                         },
                     ) { message, cause ->
@@ -512,7 +518,7 @@ class HighSpeedCamera @Inject constructor(
     /**
      * 背面カメラの高速撮影の設定から、[TARGET_FPS] 固定で撮れるものを選ぶ。
      */
-    private fun selectMode(manager: CameraManager): Mode {
+    private fun selectMode(manager: CameraManager, streamSize: HighSpeedStreamSize): Mode {
         // CameraRepository と同じく、最初の背面カメラを使う。
         val cameraId = manager.cameraIdList.firstOrNull { id ->
             manager.getCameraCharacteristics(id)
@@ -528,33 +534,27 @@ class HighSpeedCamera @Inject constructor(
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             ?: throw IllegalStateException("This device does not report stream configurations.")
 
-        val candidates = map.highSpeedVideoSizes.mapNotNull { size ->
+        val candidates = map.highSpeedVideoSizes.flatMap { size ->
             val ranges = map.getHighSpeedVideoFpsRangesFor(size)
             Timber.tag(TAG).i("high speed config: $size ${ranges.joinToString()}")
             // 下限と上限が同じ範囲を選ぶ。下限が 30 の範囲だと、プレビュー用の出力は 30fps になる。
-            ranges.firstOrNull { it.lower == TARGET_FPS && it.upper == TARGET_FPS }
-                ?.let { Mode(cameraId, size, it) }
+            ranges.map { HighSpeedMode(size.width, size.height, it.lower, it.upper) }
         }
-        check(candidates.isNotEmpty()) { "This device does not support ${TARGET_FPS}fps capture." }
-
-        // 縮小して使うので大きい画像は要らない。小さいほうが GPU の負荷が軽い。
-        // ただし 4:3 のセンサーから横いっぱいに切り出される 16:9 を優先する (内部パラメータの換算の前提)。
-        return candidates
-            .filter { it.size.width >= ANALYSIS_WIDTH }
-            .sortedWith(
-                compareBy<Mode> { if (it.size.width * 9 == it.size.height * 16) 0 else 1 }
-                    .thenBy { it.size.width * it.size.height }
-            )
-            .firstOrNull()
-            ?: candidates.maxBy { it.size.width * it.size.height }
+        val selected = selectHighSpeedMode(candidates, streamSize)
+        if (streamSize == HighSpeedStreamSize.VGA && (selected.width != 640 || selected.height != 480)) {
+            Timber.tag(TAG).w("640x480 at ${TARGET_FPS}fps is unavailable; falling back to ${selected.width}x${selected.height}")
+        }
+        // VGA は 4:3 センサー全体を横いっぱいに使い、16:9 と横の画角が同じという前提。
+        // Save frame で実機の画角を確認するまでは既定にしない (焦点距離/解析画像幅の比の前提)。
+        return Mode(cameraId, Size(selected.width, selected.height), Range(selected.minFps, selected.maxFps))
     }
 
     companion object {
         const val TAG = "HighSpeedCamera"
-        const val TARGET_FPS = 120
+        const val TARGET_FPS = HIGH_SPEED_TARGET_FPS
 
         /** 解析に渡す画像の幅。高さはカメラの出力の縦横比から決まる。 */
-        const val ANALYSIS_WIDTH = 640
+        const val ANALYSIS_WIDTH = HIGH_SPEED_ANALYSIS_WIDTH
 
         private const val BUFFER_COUNT = 3
         private const val STATS_INTERVAL_MILLIS = 1000L

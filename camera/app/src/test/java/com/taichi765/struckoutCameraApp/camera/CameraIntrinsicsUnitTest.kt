@@ -47,6 +47,18 @@ class CameraIntrinsicsUnitTest {
     }
 
     @Test
+    fun `full width VGA preserves the focal length ratio of the 16 by 9 analysis image`() {
+        val hd = kyv45.scaledToImage(4672, 3504, 640, 360)
+        val vga = kyv45.scaledToImage(4672, 3504, 640, 480)
+
+        assertEquals(hd.fx, vga.fx, 1e-9)
+        assertEquals(hd.fy, vga.fy, 1e-9)
+        assertEquals(hd.cx, vga.cx, 1e-9)
+        assertEquals(180.0, hd.cy, 1e-9)
+        assertEquals(240.0, vga.cy, 1e-9)
+    }
+
+    @Test
     fun `an off-center principal point stays off-center after scaling`() {
         val calibrated = CameraIntrinsics(fx = 3520.0, fy = 3520.0, cx = 2409.0, cy = 1752.0)
 

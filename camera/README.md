@@ -8,7 +8,7 @@
 - カメラは CameraX の `ImageAnalysis` ではなく、Camera2 の高速撮影セッション
   (constrained high speed) を直接使う。KYV45 は通常のセッションだと 30fps が上限のため
 - 高速撮影セッションは YUV の画像を直接受け取れないので、カメラのフレームを動画エンコーダーに入れ、
-  すぐにデコードして `SurfaceTexture` に描き、GPU で 640x360 に縮小して `glReadPixels` で読み出す
+  すぐにデコードして `SurfaceTexture` に描き、GPU で幅 640 (高さは撮影の縦横比に合わせる) に縮小して `glReadPixels` で読み出す
   (`camera/highspeed/`)。ファイルには書かない
   - 以前は `SurfaceTexture` でカメラのフレームを直接受けていた。KYV45 は高速撮影でもプレビュー用の
     出力先には 30fps しか渡さないため (届いたフレームの間隔が、すべて 1/120 秒のちょうど 4 倍だった。
@@ -26,7 +26,7 @@
 - `ObjectTracker` は作業用の `Mat` を使い回す。検出の手順は変えていない
 - アプリ ID は `com.taichi765.struckoutCameraApp.highspeed`、表示名は `Struckout HS`。
   元のアプリと同じ端末に入れられる。設定 (カメラの位置など) は別々に持つ
-- OpenCV は複製せず `../struckoutCameraApp/opencv` を参照する
+- OpenCV Android SDK は `camera/opencv/` に置く (git の管理外)。初回は `mise run install-opencv` で導入する
 
 ## ビルド
 
@@ -34,8 +34,24 @@
 
 ```bash
 ./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## 高速撮影の大きさ
+
+設定画面の「高速撮影の大きさ」で、従来の自動選択 (既定) と `640x480` を選べる。自動選択は固定 120fps の
+16:9・幅 640 以上を優先して最小のサイズを選ぶ (KYV45 は 1280x720)。`640x480` は固定 120fps に対応するときだけ
+使い、非対応なら従来の自動選択に戻して logcat に出す。設定は保存され、変更するとカメラと PC 向け動画送信を開き直す。
+
+PC からは `scripts/cameras.json` の端末ごとに任意で `"stream_size": "640x480"` を書き、
+`python scripts/camera_remote.py config` で反映する。`"1280x720"` は従来の自動選択に戻す値で、サイズの強制指定ではない。
+キーを省略すると保存済みの設定を変えない。`status` の `stream_size` は希望する設定で、実際のサイズはカメラ画面か logcat で確認する。
+
+640x480 撮影では解析画像も 640x480 になる。内部パラメータと検出範囲は実際の画像寸法から計算する。
+4:3 センサー全体を横いっぱいに使い、1280x720 と横の画角が同じであると仮定しているため、
+使用前に両方の設定で **Save frame の画像の横の画角を比較する**。同じなら焦点距離/解析画像幅の比を引き継げる。
+画角が違うときは同じ比を使わず、640x480 用に較正し直す。実機で確認するまでは 640x480 を既定にしない。
 
 ## 実機で確かめること
 
@@ -51,5 +67,5 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
   エンコードとデコードを入れる前の 60〜84ms からどれだけ増えたか
 - プレビューの向きが元のアプリと同じであること。フレームはセンサーの向きのまま読み出す前提で
   書いており、上下や左右が反転していると方向ベクトルが狂う
-- 高速撮影時の画角。内部パラメータは「センサーの中央を 16:9 で横いっぱいに切り出す」前提で
+- 高速撮影時の画角。内部パラメータは「センサーの中央を撮影の縦横比で横いっぱいに切り出す」前提で
   換算しているが、高速撮影ではセンサーの読み出し範囲が狭くなる端末がある

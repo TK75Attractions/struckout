@@ -22,6 +22,7 @@ import com.taichi765.struckoutCameraApp.proto.videoStreamConfig
 import com.taichi765.struckoutCameraApp.remote.RemoteCommands
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -117,14 +118,25 @@ class CameraViewModel @Inject constructor(
     private var frameId = FrameID(0u)
     private val rgb = Mat()
     private var lastPreviewNanos = 0L
+    private var cameraSettingsJob: Job? = null
 
     fun startCamera() {
-        camera.start(::onFrame, pcStreamer::offer)
-        pcStreamer.start()
+        if (cameraSettingsJob != null) return
+        cameraSettingsJob = viewModelScope.launch {
+            configRepository.highSpeedStreamSize.collect { size ->
+                // 動画の寸法と解析画像の寸法を PC に送り直すため、送信もカメラと一緒に開き直す。
+                pcStreamer.stop()
+                camera.stop()
+                pcStreamer.start()
+                camera.start(::onFrame, pcStreamer::offer, size)
+            }
+        }
         remoteCommands.cameraScreenActive = true
     }
 
     fun stopCamera() {
+        cameraSettingsJob?.cancel()
+        cameraSettingsJob = null
         remoteCommands.cameraScreenActive = false
         pcStreamer.stop()
         camera.stop()

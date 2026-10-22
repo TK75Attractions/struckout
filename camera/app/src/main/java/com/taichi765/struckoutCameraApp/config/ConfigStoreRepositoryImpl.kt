@@ -96,6 +96,20 @@ class ConfigStoreRepositoryImpl @Inject constructor(
             initialValue = 0.0
         )
 
+    override val highSpeedStreamSize: StateFlow<HighSpeedStreamSize> =
+        context.dataStore.data.map { preferences ->
+            preferences[HIGH_SPEED_STREAM_SIZE]?.let { HighSpeedStreamSize.valueOf(it) }
+                ?: HighSpeedStreamSize.HD720
+        }.stateIn(scope, SharingStarted.Eagerly, HighSpeedStreamSize.HD720)
+
+    override suspend fun setHighSpeedStreamSize(size: HighSpeedStreamSize) {
+        context.dataStore.updateData {
+            it.toMutablePreferences().also { preferences ->
+                preferences[HIGH_SPEED_STREAM_SIZE] = size.name
+            }
+        }
+    }
+
     override suspend fun setDetectionOutputKind(kind: DetectionOutputKind) {
         context.dataStore.updateData {
             it.toMutablePreferences().also { preferences ->
@@ -157,6 +171,7 @@ class ConfigStoreRepositoryImpl @Inject constructor(
         private val CAMERA_ROTATION_Z_DEGREES = doublePreferencesKey("camera_rotation_z_degrees")
         private val CAMERA_FOCAL_LENGTH_RATIO = doublePreferencesKey("camera_focal_length_ratio")
         private val DETECTION_OUTPUT_KIND = stringPreferencesKey("detection_output_kind")
+        private val HIGH_SPEED_STREAM_SIZE = stringPreferencesKey("high_speed_stream_size")
         private val DETECTION_AREA_LEFT_PERCENT = doublePreferencesKey("detection_area_left_percent")
         private val DETECTION_AREA_TOP_PERCENT = doublePreferencesKey("detection_area_top_percent")
         private val DETECTION_AREA_RIGHT_PERCENT =
