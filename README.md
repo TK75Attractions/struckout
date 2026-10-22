@@ -22,6 +22,7 @@
 - `api`: protobufの定義やモジュール間で共有するやつを置いておく場所。
 - `docs`: メモとかを置いておく場所。
 - `migrations`: sqlxで使うデータベースのマイグレーションスクリプトを置いておく場所。
+- `macros`: Rust モジュールで共有するproc-macro達。
 - `sandbox`: 雑多なプログラムを置いておく場所。
 - `xtask`: package.jsonのscriptsの豪華版みたいなもん。複雑なスクリプトはPowerShellとかbash、PythonではなくRustで書いてここに置いてほしい。
 
