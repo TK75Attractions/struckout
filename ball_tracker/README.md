@@ -59,6 +59,19 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   楕円 5x5 でのオープン 1 回・クローズ 2 回、前景が続いたら背景に混ぜる、外側の輪郭の面積、色の変化の大きさ。
   2026-10-10 の録画 822 フレームで、OpenCV で書いた `scripts/recording_analysis/detect_objects.py` と
   検出の枠がすべて一致した。視線 (`video/analysis.rs`) もアプリの `WorldDirectionCalculator` と同じ計算。
+- 1 フレームの解析の予算は 120fps で 8.33 ms で、2 台を別のスレッドで解析する。2026-10-18 に、PC① が長く動いて
+  熱で遅くなり、解析が 1 フレーム 8.5〜26.8 ms に延びて追いつかなくなった。そこで、結果を 1 ビットも変えずに、
+  画像全体をなぞる回数を減らした (前景を 1 画素 1 ビットに詰めて形の処理をする、領域の番号付けと色みの判定を
+  横の連なり単位にする、背景をまとめて更新する。詳しくは `video/tracker.rs` の先頭)。Snapdragon X の PC で、
+  1 フレーム 3〜5 ms が 0.5 ms (人が写った区間の 95% で 13 ms が 2.6 ms) になった。
+- `bench_analysis` で、録画の一部を使って、解析の時間と検出の結果の指紋を測れる。解析を変えたときは、指紋が
+  変わらないこと (結果が同じであること) と、時間を確かめる。途中の区間はデコードに数分かかるので、`--cache` で
+  デコードした画像を使い回す。
+
+  ```bash
+  cargo run --release --bin bench_analysis -- recordings/2026-10-16_experiment_3/video/camera0_20261016-064230.vsp \
+      --skip 33600 --frames 1200 --cache /tmp/run3_camera0.raw
+  ```
 - 範囲、内部パラメータ、向き、解析の設定は、アプリが `VideoStreamConfig` で送ってくる値を使う。
 - 遅れは、60fps の録画を流して受け取ってから解析し終えるまで 50〜60 ms (2026-10-15)。
   `scripts/recording_analysis/stream_video_to_tracker.py` で、録画をアプリと同じ手順で流して確かめられる。
