@@ -80,7 +80,7 @@ jobs:
             SQLX_OFFLINE=true \
             ST_COMMIT_SHORT_HASH=${{ needs.get-version.outputs.short-hash }} \
             ST_VERSION=${{ needs.get-version.outputs.version }} \
-            mise exec protoc mold -- cargo build --release -p ball_tracker -p touchpanel --features sentry
+            mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --release -p ball_tracker -p touchpanel --features sentry
 
       - name: Rename binaries
         id: triple
