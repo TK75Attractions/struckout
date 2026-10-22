@@ -15,6 +15,7 @@ use std::{
     process::{Child, Command, Stdio},
     sync::{
         Arc,
+        atomic::{AtomicUsize, Ordering},
         mpsc::{self as std_mpsc, SyncSender, TrySendError},
     },
     thread,
@@ -37,20 +38,45 @@ const INPUT_QUEUE: usize = 240;
 /// 解析の状況をログに出す間隔。
 const STATS_INTERVAL: Duration = Duration::from_secs(10);
 
-/// 書いたフレームの時刻。ffmpeg から出てきたフレームに順に割り当てる。
+/// 受け取ったフレームの時刻。ffmpeg から出てきたフレームに順に割り当てる。
 #[derive(Debug, Clone, Copy)]
 struct FrameMeta {
     sensor_timestamp_ns: i64,
     timestamp_ms: i64,
     received_at: DateTime<Utc>,
+    /// 受け取った時刻。段ごとの時間は、時計の補正の影響を受けない単調な時計で測る
+    received: Instant,
+}
+
+/// ffmpeg に書くもの。`frame` は、フレームなら `Some`、設定 (SPS/PPS) なら `None`。
+struct Input {
+    data: Vec<u8>,
+    frame: Option<FrameMeta>,
+}
+
+/// ffmpeg に書いたフレーム。
+#[derive(Debug, Clone, Copy)]
+struct WrittenFrame {
+    meta: FrameMeta,
+    /// 書き込みのスレッドが ffmpeg に書き始めた時刻
+    handed: Instant,
+}
+
+/// 受け取ってから解析するまでのフレーム。受信、書き込み、解析のスレッドで共有する。
+#[derive(Default)]
+struct FrameQueue {
+    /// ffmpeg への書き込みを待っているフレームの数
+    waiting: AtomicUsize,
+    /// ffmpeg に書いて、まだ出てきていないフレーム (書いた順)
+    written: Mutex<VecDeque<WrittenFrame>>,
 }
 
 pub struct Pipeline {
     camera_id: u32,
     width: usize,
     height: usize,
-    input: Option<SyncSender<Vec<u8>>>,
-    pending: Arc<Mutex<VecDeque<FrameMeta>>>,
+    input: Option<SyncSender<Input>>,
+    queue: Arc<FrameQueue>,
     settings: Arc<Mutex<AnalysisSettings>>,
     child: Child,
     /// キーフレームを待っている (まだ書き始めていないか、詰まって捨てたあと)
@@ -115,21 +141,32 @@ impl Pipeline {
         let mut stdin = child.stdin.take().expect("piped stdin");
         let mut stdout = child.stdout.take().expect("piped stdout");
 
-        let (input, input_rx) = std_mpsc::sync_channel::<Vec<u8>>(INPUT_QUEUE);
-        thread::Builder::new()
-            .name(format!("video-write-{camera_id}"))
-            .spawn(move || {
-                while let Ok(data) = input_rx.recv() {
-                    if stdin.write_all(&data).and_then(|()| stdin.flush()).is_err() {
-                        break;
+        let (input, input_rx) = std_mpsc::sync_channel::<Input>(INPUT_QUEUE);
+        let queue = Arc::new(FrameQueue::default());
+        {
+            let queue = Arc::clone(&queue);
+            thread::Builder::new()
+                .name(format!("video-write-{camera_id}"))
+                .spawn(move || {
+                    while let Ok(Input { data, frame }) = input_rx.recv() {
+                        // 時刻は書く前に積む (ffmpeg の出力より先に積まれているように)
+                        if let Some(meta) = frame {
+                            queue.written.lock().push_back(WrittenFrame {
+                                meta,
+                                handed: Instant::now(),
+                            });
+                            queue.waiting.fetch_sub(1, Ordering::Relaxed);
+                        }
+                        if stdin.write_all(&data).and_then(|()| stdin.flush()).is_err() {
+                            break;
+                        }
                     }
-                }
-            })?;
+                })?;
+        }
 
-        let pending = Arc::new(Mutex::new(VecDeque::new()));
         let settings = Arc::new(Mutex::new(settings));
         {
-            let pending = Arc::clone(&pending);
+            let queue = Arc::clone(&queue);
             let settings = Arc::clone(&settings);
             let snapshot_dir = options.snapshot_dir.clone();
             let detection = options.detection;
@@ -141,7 +178,7 @@ impl Pipeline {
                         &mut stdout,
                         width,
                         height,
-                        &pending,
+                        &queue,
                         &settings,
                         snapshot_dir,
                         detection,
@@ -161,7 +198,7 @@ impl Pipeline {
             width,
             height,
             input: Some(input),
-            pending,
+            queue,
             settings,
             child,
             waiting_for_key_frame: true,
@@ -200,28 +237,30 @@ impl Pipeline {
             sensor_timestamp_ns: frame.sensor_timestamp_ns,
             timestamp_ms: frame.timestamp,
             received_at,
+            received: Instant::now(),
         };
         self.write(frame.data, Some(meta));
     }
 
-    fn write(&mut self, data: Vec<u8>, meta: Option<FrameMeta>) {
+    fn write(&mut self, data: Vec<u8>, frame: Option<FrameMeta>) {
         let Some(input) = &self.input else {
             return;
         };
-        // 時刻は書く前に積む (ffmpeg の出力より先に積まれているように)
-        if let Some(meta) = meta {
-            self.pending.lock().push_back(meta);
+        // 書き込みのスレッドが減らすより先に数える (数が 0 を下回らないように)
+        if frame.is_some() {
+            self.queue.waiting.fetch_add(1, Ordering::Relaxed);
         }
-        match input.try_send(data) {
+        let result = input.try_send(Input { data, frame });
+        if result.is_err() && frame.is_some() {
+            self.queue.waiting.fetch_sub(1, Ordering::Relaxed);
+        }
+        match result {
             Ok(()) => {}
             Err(TrySendError::Full(_)) => {
                 warn!(
                     camera_id = self.camera_id,
                     "video decoder is falling behind; waiting for the next key frame"
                 );
-                if meta.is_some() {
-                    self.pending.lock().pop_back();
-                }
                 self.waiting_for_key_frame = true;
             }
             Err(TrySendError::Disconnected(_)) => {
@@ -247,7 +286,7 @@ fn analyze_loop(
     stdout: &mut impl Read,
     width: usize,
     height: usize,
-    pending: &Mutex<VecDeque<FrameMeta>>,
+    queue: &FrameQueue,
     settings: &Mutex<AnalysisSettings>,
     mut snapshot_dir: Option<PathBuf>,
     detection: super::analysis::DetectionOptions,
@@ -256,11 +295,21 @@ fn analyze_loop(
     let mut analyzer = Analyzer::new(settings.lock().clone()).with_options(detection);
     let mut image = vec![0u8; width * height * 3];
     let mut stats = Stats::new();
-    while stdout.read_exact(&mut image).is_ok() {
-        let Some(meta) = pending.lock().pop_front() else {
+    loop {
+        let read_begin = Instant::now();
+        if stdout.read_exact(&mut image).is_err() {
+            break;
+        }
+        let decoded = Instant::now();
+        let Some(WrittenFrame { meta, handed }) = queue.written.lock().pop_front() else {
             warn!(camera_id, "a decoded frame has no timestamp; skipping it");
             continue;
         };
+        stats.add_input(
+            handed - meta.received,
+            decoded - handed,
+            decoded - read_begin,
+        );
         if let Some(dir) = snapshot_dir.take() {
             let path = dir.join(format!(
                 "camera{camera_id}_{}.bmp",
@@ -290,12 +339,18 @@ fn analyze_loop(
             analyzed.ignored,
         );
         if let Some(packet) = analyzed.packet {
+            let send_begin = Instant::now();
             if out.blocking_send((meta.received_at, packet)).is_err() {
                 break;
             }
+            stats.sending += send_begin.elapsed();
         }
         if stats.started.elapsed() >= STATS_INTERVAL {
-            stats.log(camera_id, pending.lock().len());
+            stats.log(
+                camera_id,
+                queue.waiting.load(Ordering::Relaxed),
+                queue.written.lock().len(),
+            );
             stats = Stats::new();
         }
     }
@@ -340,6 +395,15 @@ struct Stats {
     analysis: Duration,
     /// 受け取ってから解析し終えるまで (デコードの待ちを含む)。フレームごと (ms)
     delays_ms: Vec<i64>,
+    /// 受け取ってから ffmpeg に書き始めるまで。フレームごと
+    inputs: Vec<Duration>,
+    /// ffmpeg に書き始めてから、縮小した画像を読み終えるまで。フレームごと。解析が遅れて ffmpeg の出力が
+    /// 詰まっているあいだも含む
+    decodes: Vec<Duration>,
+    /// 解析のスレッドが ffmpeg の出力を待っていた時間の合計
+    waiting: Duration,
+    /// 解析のスレッドが検出を追跡に渡すのを待っていた時間の合計
+    sending: Duration,
 }
 
 impl Stats {
@@ -351,7 +415,18 @@ impl Stats {
             ignored: 0,
             analysis: Duration::ZERO,
             delays_ms: Vec::new(),
+            inputs: Vec::new(),
+            decodes: Vec::new(),
+            waiting: Duration::ZERO,
+            sending: Duration::ZERO,
         }
+    }
+
+    /// ffmpeg から出てきた 1 フレームの、そこまでの時間を足す。
+    fn add_input(&mut self, input: Duration, decode: Duration, waiting: Duration) {
+        self.inputs.push(input);
+        self.decodes.push(decode);
+        self.waiting += waiting;
     }
 
     fn add(
@@ -368,31 +443,43 @@ impl Stats {
         self.delays_ms.push(delay.num_milliseconds());
     }
 
-    fn log(&mut self, camera_id: u32, queued: usize) {
+    /// `waiting` は ffmpeg への書き込みを待っているフレームの数、`written` は ffmpeg に書いてまだ出てきていない
+    /// フレームの数。
+    fn log(&mut self, camera_id: u32, waiting: usize, written: usize) {
         let seconds = self.started.elapsed().as_secs_f64();
+        let frames = f64::from(self.frames.max(1));
+        let mean_ms = |total: Duration| format!("{:.2}", total.as_secs_f64() * 1000.0 / frames);
+        let ms = |duration: Duration| format!("{:.1}", duration.as_secs_f64() * 1000.0);
         self.delays_ms.sort_unstable();
-        let percentile = |p: f64| {
-            self.delays_ms
-                .get(((self.delays_ms.len() as f64 - 1.0) * p).round() as usize)
-                .copied()
-                .unwrap_or_default()
-        };
+        self.inputs.sort_unstable();
+        self.decodes.sort_unstable();
         info!(
             camera_id,
             fps = format!("{:.1}", f64::from(self.frames) / seconds),
             frames_with_detections = self.with_detections,
             ignored_detections = self.ignored,
-            analysis_ms = format!(
-                "{:.2}",
-                self.analysis.as_secs_f64() * 1000.0 / f64::from(self.frames.max(1))
-            ),
-            delay_ms_p50 = percentile(0.5),
-            delay_ms_p95 = percentile(0.95),
+            analysis_ms = mean_ms(self.analysis),
+            delay_ms_p50 = percentile(&self.delays_ms, 0.5),
+            delay_ms_p95 = percentile(&self.delays_ms, 0.95),
             max_delay_ms = self.delays_ms.last().copied().unwrap_or_default(),
-            queued,
+            queued = waiting + written,
+            input_ms_p95 = ms(percentile(&self.inputs, 0.95)),
+            ffmpeg_ms_p50 = ms(percentile(&self.decodes, 0.5)),
+            ffmpeg_ms_p95 = ms(percentile(&self.decodes, 0.95)),
+            queued_in_ffmpeg = written,
+            wait_ms = mean_ms(self.waiting),
+            send_ms = mean_ms(self.sending),
             "video analysis"
         );
     }
+}
+
+/// 小さい順に並べた値の、割合 `p` (0〜1) の位置にある値。空なら既定値 (0)。
+fn percentile<T: Copy + Default>(sorted: &[T], p: f64) -> T {
+    sorted
+        .get(((sorted.len() as f64 - 1.0) * p).round() as usize)
+        .copied()
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -409,5 +496,14 @@ mod tests {
         assert_eq!(bytes.len(), 54 + 8);
         assert_eq!(&bytes[0..2], b"BM");
         assert_eq!(&bytes[54..], &[255, 0, 0, 0, 0, 0, 255, 0]);
+    }
+
+    #[test]
+    fn percentile_picks_the_nearest_rank_and_defaults_to_zero() {
+        let sorted: Vec<i64> = (1..=21).collect();
+        assert_eq!(percentile(&sorted, 0.5), 11);
+        assert_eq!(percentile(&sorted, 0.95), 20);
+        assert_eq!(percentile(&sorted, 1.0), 21);
+        assert_eq!(percentile::<Duration>(&[], 0.95), Duration::ZERO);
     }
 }

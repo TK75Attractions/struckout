@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254">
+  <!-- One connected outline; rotate about the canvas center (627,627). -->
+  <g id="watch-hand">
+    <path d="M627 312 L639 342 L647 599.5 A34 34 0 0 1 642 657.5 L642 702 L627 717 L612 702 L612 657.5 A34 34 0 0 1 607 599.5 L615 342 Z" fill="#FFFFFF" stroke="#000000" stroke-width="8" stroke-linejoin="round"/>
+  </g>
+  <!-- Blue tip covers the upper quarter, with an eight-pixel black seam. -->
+  <g id="hand-tip">
+    <path d="M627 312 L639 342 L640.6 392 L613.4 392 L615 342 Z" fill="#0A6CFF" stroke="#000000" stroke-width="8" stroke-linejoin="round"/>
+  </g>
+  <!-- Yellow counterweight joins the circular hub. -->
+  <g id="hand-tail">
+    <path d="M612 657.5 L642 657.5 L642 702 L627 717 L612 702 Z" fill="#FFF200" stroke="#000000" stroke-width="8" stroke-linejoin="round"/>
+  </g>
+  <!-- Small black center stays on the rotation axis. -->
+  <g id="hand-pivot">
+    <circle cx="627" cy="627" r="10" fill="#000000"/>
+  </g>
+</svg>

@@ -1,3 +1,25 @@
+## 設定ファイル
+
+既定では、次の場所にある `config.yaml` を読み込みます。`--config PATH` または `--config=PATH` で別のファイルを指定できます。
+明示したファイルがない場合はエラーになり、既定のファイルがない場合は設定ファイルなしで起動します。
+
+- Linux: `~/.config/struckout/ball-tracker/config.yaml`
+- Windows: `%APPDATA%\struckout\ball-tracker\config.yaml`
+- macOS: `~/Library/Application Support/struckout/ball-tracker/config.yaml`
+
+キーには長いオプション名 (`--` を除く) を使います。書かなかった項目は既定値になり、知らないキーはエラーになります。
+`--json` のようなフラグは `true` / `false` で書きます。
+
+```yaml
+input: network
+output: network
+report-delay-ms: -30
+json: true
+```
+
+設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
+ただし、設定ファイルで `true` にしたフラグを、コマンドラインから無効にすることはできません。
+
 ## ヘルスチェック
 ランチャーが状態を確かめられるように、5080 番 (`api/spec/servers.yaml` の `ball-tracker.health`) で gRPC の health checking protocol に答える。
 入出力の準備が終わり、処理を始める直前に `SERVING` になる。それまでは `NOT_SERVING`。
@@ -37,9 +59,40 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   楕円 5x5 でのオープン 1 回・クローズ 2 回、前景が続いたら背景に混ぜる、外側の輪郭の面積、色の変化の大きさ。
   2026-10-10 の録画 822 フレームで、OpenCV で書いた `scripts/recording_analysis/detect_objects.py` と
   検出の枠がすべて一致した。視線 (`video/analysis.rs`) もアプリの `WorldDirectionCalculator` と同じ計算。
+- 1 フレームの解析の予算は 120fps で 8.33 ms で、2 台を別のスレッドで解析する。2026-10-18 に、PC① が長く動いて
+  熱で遅くなり、解析が 1 フレーム 8.5〜26.8 ms に延びて追いつかなくなった。そこで、結果を 1 ビットも変えずに、
+  画像全体をなぞる回数を減らした (前景を 1 画素 1 ビットに詰めて形の処理をする、領域の番号付けと色みの判定を
+  横の連なり単位にする、背景をまとめて更新する。詳しくは `video/tracker.rs` の先頭)。Snapdragon X の PC で、
+  1 フレーム 3〜5 ms が 0.5 ms (人が写った区間の 95% で 13 ms が 2.6 ms) になった。
+- `bench_analysis` で、録画の一部を使って、解析の時間と検出の結果の指紋を測れる。解析を変えたときは、指紋が
+  変わらないこと (結果が同じであること) と、時間を確かめる。途中の区間はデコードに数分かかるので、`--cache` で
+  デコードした画像を使い回す。
+
+  ```bash
+  cargo run --release --bin bench_analysis -- recordings/2026-10-16_experiment_3/video/camera0_20261016-064230.vsp \
+      --skip 33600 --frames 1200 --cache /tmp/run3_camera0.raw
+  ```
 - 範囲、内部パラメータ、向き、解析の設定は、アプリが `VideoStreamConfig` で送ってくる値を使う。
 - 遅れは、60fps の録画を流して受け取ってから解析し終えるまで 50〜60 ms (2026-10-15)。
   `scripts/recording_analysis/stream_video_to_tracker.py` で、録画をアプリと同じ手順で流して確かめられる。
+- 10 秒おきに、カメラごとに `video analysis` のログを出す。時間はどれも 1 フレームあたりで、`_p50`、`_p95` は
+  その 10 秒の中央値と 95% の値。
+
+  | 項目 | 内容 |
+  |---|---|
+  | `fps` | 解析したフレームの数 (1 秒あたり) |
+  | `analysis_ms` | 解析にかかった時間の平均 |
+  | `delay_ms_p50`、`delay_ms_p95`、`max_delay_ms` | 受け取ってから解析し終えるまで |
+  | `queued` | 受け取って、まだ解析していないフレームの数 |
+  | `input_ms_p95` | 受け取ってから ffmpeg に書き始めるまで (ffmpeg が標準入力を読まないあいだ伸びる) |
+  | `ffmpeg_ms_p50`、`ffmpeg_ms_p95` | ffmpeg に書き始めてから、縮小した画像を読み終えるまで。解析が遅れて ffmpeg の出力が詰まっているあいだも含む |
+  | `queued_in_ffmpeg` | ffmpeg に書いて、まだ出てきていないフレームの数 |
+  | `wait_ms` | 解析のスレッドが ffmpeg の出力を待っていた時間の平均 |
+  | `send_ms` | 解析のスレッドが検出を追跡に渡すのを待っていた時間の平均 |
+
+  追いついているあいだは、`wait_ms` + `analysis_ms` + `send_ms` が 1 フレームの間隔 (120fps で 8.33 ms) に近い。
+  `queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が
+  追いついていない。
 - `--no-video-analysis` で受け付けをやめると、アプリは自分で解析する。
 
 ### 視線の集まりからボールを見つける

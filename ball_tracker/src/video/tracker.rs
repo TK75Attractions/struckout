@@ -6,6 +6,12 @@
 //! OpenCV を使わずに書いているので、アプリと次の点が少し違う。
 //! - 背景を 8 ビットに直すときの丸め (OpenCV は偶数への丸め、こちらは四捨五入)
 //! - 色みの判定に使う領域。アプリは外側の輪郭を塗りつぶした多角形、こちらは領域とその穴を合わせた画素
+//!
+//! 120fps のカメラ 2 台を、それぞれ 1 本のスレッドで解析する (1 フレーム 8.33 ms の予算)。長く動かすと PC が熱で
+//! 遅くなるので、どの手順も画像全体をなるべく少ない回数だけなぞるようにしてある。
+//! - 背景との差は、背景を 8 ビットに直しながら 1 回でなぞり、前景かどうかを 1 画素 1 ビットに詰める
+//! - 形の処理は、1 行を 64 画素ずつの整数として、ビット演算で行う
+//! - 領域の番号付けと背景の更新は、前景の画素だけを見る (背景はまとめて更新し、残す画素だけ元に戻す)
 
 /// 検出した領域を囲む四角形 (解析画像の px)。幅と高さは画素の数。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,17 +63,22 @@ pub struct ObjectTracker {
     height: usize,
     /// 背景 (チャンネルごと、浮動小数)。空なら未初期化
     background: Vec<f32>,
-    /// 前景が続いているフレーム数
+    /// 前景が続いているフレーム数。前のフレームで前景だった画素だけが 0 でない
     foreground_age: Vec<u16>,
+    /// 前景 (形の処理をしたあと)。前のフレームのものは、番号と前景の続いた数を消すのに使う
+    clean: BitImage,
+    previous_clean: BitImage,
     // 作業用。フレームごとに確保しない
-    background8: Vec<u8>,
-    binary: Vec<u8>,
-    scratch_a: Vec<u8>,
-    scratch_b: Vec<u8>,
-    scratch_c: Vec<u8>,
-    scratch_d: Vec<u8>,
-    scratch_e: Vec<u8>,
+    binary: BitImage,
+    scratch: BitImage,
+    inverted: BitImage,
+    deltas: Vec<u8>,
+    row: Vec<u8>,
+    rows: [Vec<u64>; 3],
+    /// 領域の番号。前景の画素だけに付ける (それ以外は 0)
     labels: Vec<u32>,
+    label_scratch: LabelScratch,
+    color_scratch: ColorScratch,
 }
 
 impl ObjectTracker {
@@ -78,14 +89,17 @@ impl ObjectTracker {
             height: 0,
             background: Vec::new(),
             foreground_age: Vec::new(),
-            background8: Vec::new(),
-            binary: Vec::new(),
-            scratch_a: Vec::new(),
-            scratch_b: Vec::new(),
-            scratch_c: Vec::new(),
-            scratch_d: Vec::new(),
-            scratch_e: Vec::new(),
+            clean: BitImage::new(0, 0),
+            previous_clean: BitImage::new(0, 0),
+            binary: BitImage::new(0, 0),
+            scratch: BitImage::new(0, 0),
+            inverted: BitImage::new(0, 0),
+            deltas: Vec::new(),
+            row: Vec::new(),
+            rows: [Vec::new(), Vec::new(), Vec::new()],
             labels: Vec::new(),
+            label_scratch: LabelScratch::default(),
+            color_scratch: ColorScratch::default(),
         }
     }
 
@@ -111,66 +125,49 @@ impl ObjectTracker {
             self.height = height;
             self.background = frame.iter().map(|&v| f32::from(v)).collect();
             self.foreground_age = vec![0; pixels];
-            self.background8 = vec![0; pixels * 3];
-            self.binary = vec![0; pixels];
-            self.scratch_a = vec![0; pixels];
-            self.scratch_b = vec![0; pixels];
-            self.scratch_c = vec![0; pixels];
-            self.scratch_d = vec![0; pixels];
-            self.scratch_e = vec![0; pixels];
+            self.clean = BitImage::new(width, height);
+            self.previous_clean = BitImage::new(width, height);
+            self.binary = BitImage::new(width, height);
+            self.scratch = BitImage::new(width, height);
+            self.inverted = BitImage::new(width, height);
+            self.deltas = vec![0; width * 3];
+            self.row = vec![0; width];
+            self.rows = [
+                vec![0; self.clean.words_per_row],
+                vec![0; self.clean.words_per_row],
+                vec![0; self.clean.words_per_row],
+            ];
             self.labels = vec![0; pixels];
             return Vec::new();
         }
 
         // 背景との差を色ごとに取り、最も大きく変わったチャンネルで判定する
-        let threshold = self.params.binary_threshold;
-        for (i, bg) in self.background.iter().enumerate() {
-            self.background8[i] = bg.abs().round().clamp(0.0, 255.0) as u8;
-        }
-        for p in 0..pixels {
-            let mut delta = 0u8;
-            for c in 0..3 {
-                delta = delta.max(frame[p * 3 + c].abs_diff(self.background8[p * 3 + c]));
-            }
-            self.binary[p] = u8::from(f64::from(delta) > threshold);
-        }
+        threshold(
+            frame,
+            &self.background,
+            self.params.binary_threshold,
+            &mut self.deltas,
+            &mut self.row,
+            &mut self.binary,
+        );
 
         // 小さな点を消してから (オープニング 1 回)、穴を埋める (クロージング 2 回)
+        let (rows, inverted) = (&mut self.rows, &mut self.inverted);
+        erode_ellipse5(&self.binary, &mut self.scratch, inverted, rows);
+        dilate_ellipse5(&self.scratch, &mut self.binary, rows);
+        dilate_ellipse5(&self.binary, &mut self.scratch, rows);
+        dilate_ellipse5(&self.scratch, &mut self.binary, rows);
+        erode_ellipse5(&self.binary, &mut self.scratch, inverted, rows);
+        std::mem::swap(&mut self.previous_clean, &mut self.clean);
+        erode_ellipse5(&self.scratch, &mut self.clean, inverted, rows);
+
+        // 領域を探す。背景はまだ更新していないので、色みの判定はこのフレームの前の背景と比べる
         let (w, h) = (width, height);
-        let mut work = Work {
-            tmp: &mut self.scratch_c,
-            line: &mut self.scratch_d,
-            line_tmp: &mut self.scratch_e,
-        };
-        erode_ellipse5(&self.binary, &mut self.scratch_a, &mut work, w, h);
-        dilate_ellipse5(&self.scratch_a, &mut self.scratch_b, &mut work, w, h);
-        dilate_ellipse5(&self.scratch_b, &mut self.scratch_a, &mut work, w, h);
-        dilate_ellipse5(&self.scratch_a, &mut self.scratch_b, &mut work, w, h);
-        erode_ellipse5(&self.scratch_b, &mut self.scratch_a, &mut work, w, h);
-        erode_ellipse5(&self.scratch_a, &mut self.binary, &mut work, w, h);
-        let clean = &self.binary;
-
-        // 止まった前景は、しばらくしたら背景に取り込む
-        let persistence = self.params.foreground_persistence_frames;
-        let weight = self.params.accumulate_weight as f32;
-        for p in 0..pixels {
-            if clean[p] == 0 {
-                self.foreground_age[p] = 0;
-            } else {
-                self.foreground_age[p] = self.foreground_age[p].saturating_add(1);
-            }
-            let update = clean[p] == 0 || u32::from(self.foreground_age[p]) >= persistence;
-            if update {
-                for c in 0..3 {
-                    let i = p * 3 + c;
-                    self.background[i] =
-                        (1.0 - weight) * self.background[i] + weight * f32::from(frame[i]);
-                }
-            }
+        for i in self.previous_clean.ones() {
+            self.labels[i] = 0;
         }
-
         let mut rects = Vec::new();
-        let components = label_components(clean, &mut self.labels, w, h);
+        let components = label_components(&self.clean, &mut self.labels, &mut self.label_scratch);
         for component in components {
             let contour = trace_outer_contour(&self.labels, w, h, component.label, component.start);
             if polygon_area(&contour) < self.params.min_contour_area {
@@ -185,11 +182,12 @@ impl ObjectTracker {
             if self.params.min_color_shift > 0.0
                 && color_shift(
                     frame,
-                    &self.background8,
+                    &self.background,
                     &self.labels,
                     w,
                     component.label,
                     rect,
+                    &mut self.color_scratch,
                 ) < self.params.min_color_shift
             {
                 continue;
@@ -213,7 +211,196 @@ impl ObjectTracker {
                     || component.max_y == h - 1,
             });
         }
+
+        // 止まった前景は、しばらくしたら背景に取り込む。64 画素 (1 つの整数) ずつ、前景の続いた数を更新し、
+        // 背景に取り込まない画素 (前景で、続いた数がまだ足りない) を除いて背景を更新する。前景はふつう画像の
+        // ごく一部なので、ほとんどの 64 画素は除くものがなく、まとめて更新できる (ベクトル命令が使える)
+        let persistence = self.params.foreground_persistence_frames;
+        let weight = self.params.accumulate_weight as f32;
+        let keep = 1.0 - weight;
+        let n = self.clean.words_per_row;
+        for y in 0..h {
+            for k in 0..n {
+                let (now, before) = (
+                    self.clean.words[y * n + k],
+                    self.previous_clean.words[y * n + k],
+                );
+                let x0 = k * 64;
+                let base = y * w + x0;
+                // 前景の続いた数は、前のフレームで前景だった画素のほかは 0 のまま
+                for bit in Ones(before & !now) {
+                    self.foreground_age[base + bit] = 0;
+                }
+                let mut hold = 0u64;
+                for bit in Ones(now) {
+                    let age = &mut self.foreground_age[base + bit];
+                    *age = age.saturating_add(1);
+                    if u32::from(*age) < persistence {
+                        hold |= 1 << bit;
+                    }
+                }
+                let count = (w - x0).min(64);
+                let values = base * 3..(base + count) * 3;
+                let background = &mut self.background[values.clone()];
+                let frame = &frame[values];
+                if hold == 0 {
+                    for (bg, &value) in background.iter_mut().zip(frame) {
+                        *bg = keep * *bg + weight * f32::from(value);
+                    }
+                } else {
+                    for (i, (bg, value)) in background
+                        .as_chunks_mut::<3>()
+                        .0
+                        .iter_mut()
+                        .zip(frame.as_chunks::<3>().0)
+                        .enumerate()
+                    {
+                        if hold >> i & 1 == 0 {
+                            for c in 0..3 {
+                                bg[c] = keep * bg[c] + weight * f32::from(value[c]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         rects
+    }
+}
+
+/// 背景の値を 8 ビットに直す。`value.abs().round().clamp(0.0, 255.0) as u8` と同じ結果。
+///
+/// `f32::round` は x86_64 の既定の命令 (SSE2) では 1 つずつの関数呼び出しになり、画像全体では遅い。
+/// 0.5 を足して切り捨てると、0.5 のすぐ下の値 (0.49999997) だけが 1 に繰り上がるので、それを直す。
+#[inline]
+fn to_u8(value: f32) -> u8 {
+    let value = value.abs();
+    // 255 を超えるところは飽和し、NaN は 0 になる
+    let rounded = (value + 0.5) as u8;
+    rounded - u8::from(value < f32::from(rounded) - 0.5)
+}
+
+/// 背景との差がしきい値を超えた画素を前景とする。`deltas` と `row` は 1 行ぶんの作業用 (幅 x 3 と、幅)。
+fn threshold(
+    frame: &[u8],
+    background: &[f32],
+    threshold: f64,
+    deltas: &mut [u8],
+    row: &mut [u8],
+    out: &mut BitImage,
+) {
+    // 差は整数なので、「差 > しきい値」は「差 > しきい値の切り捨て」と同じ。しきい値が負なら全部、255 以上なら
+    // どれも超えない (NaN も超えない)
+    let limit: i16 = if threshold.is_nan() {
+        255
+    } else {
+        threshold.floor().clamp(-1.0, 255.0) as i16
+    };
+    let w = out.width;
+    for y in 0..out.height {
+        let values = y * w * 3..(y + 1) * w * 3;
+        // チャンネルを区別せずに並びのまま差を取る (ベクトル命令が使える)。画素ごとに最も大きな差で判定する
+        for ((d, &f), &b) in deltas
+            .iter_mut()
+            .zip(&frame[values.clone()])
+            .zip(&background[values])
+        {
+            *d = f.abs_diff(to_u8(b));
+        }
+        for (value, d) in row.iter_mut().zip(deltas.as_chunks::<3>().0) {
+            *value = u8::from(i16::from(d[0].max(d[1]).max(d[2])) > limit);
+        }
+        out.set_row(y, row);
+    }
+}
+
+// --- 1 画素 1 ビットの画像 ---
+
+/// 前景かどうかを 1 画素 1 ビットで持つ画像。1 行を 64 画素ずつの整数に詰める (画素 x は x / 64 番目の
+/// 整数の x % 64 ビット目)。行の右端の余りのビットはいつも 0。
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BitImage {
+    width: usize,
+    height: usize,
+    words_per_row: usize,
+    words: Vec<u64>,
+}
+
+impl BitImage {
+    fn new(width: usize, height: usize) -> Self {
+        let words_per_row = width.div_ceil(64);
+        Self {
+            width,
+            height,
+            words_per_row,
+            words: vec![0; words_per_row * height],
+        }
+    }
+
+    fn row(&self, y: usize) -> &[u64] {
+        &self.words[y * self.words_per_row..(y + 1) * self.words_per_row]
+    }
+
+    fn get(&self, x: usize, y: usize) -> bool {
+        self.words[y * self.words_per_row + x / 64] >> (x % 64) & 1 != 0
+    }
+
+    /// 1 行を、画素ごとの 0 / 1 から詰める。
+    fn set_row(&mut self, y: usize, values: &[u8]) {
+        let words = &mut self.words[y * self.words_per_row..(y + 1) * self.words_per_row];
+        for (word, chunk) in words.iter_mut().zip(values.chunks(64)) {
+            let mut packed = 0u64;
+            for (i, eight) in chunk.chunks(8).enumerate() {
+                let mut bytes = [0u8; 8];
+                bytes[..eight.len()].copy_from_slice(eight);
+                packed |= pack8(u64::from_le_bytes(bytes)) << (i * 8);
+            }
+            *word = packed;
+        }
+    }
+
+    /// 1 の画素の通し番号を、ラスタ順に返す。
+    fn ones(&self) -> impl Iterator<Item = usize> + '_ {
+        self.words.iter().enumerate().flat_map(move |(k, &word)| {
+            let (y, x0) = (k / self.words_per_row, k % self.words_per_row * 64);
+            let base = y * self.width + x0;
+            Ones(word).map(move |bit| base + bit)
+        })
+    }
+
+    /// 行の右端の余りのビット (画像の外) を 0 にする。
+    fn mask_padding(&self, row: &mut [u64]) {
+        let tail = self.width % 64;
+        if tail != 0
+            && let Some(last) = row.last_mut()
+        {
+            *last &= (1u64 << tail) - 1;
+        }
+    }
+}
+
+/// 8 バイト (どれも 0 か 1) を 8 ビットに詰める。i 番目のバイトが i ビット目になる。
+///
+/// 掛け算で各バイトを上の 8 ビットに集める。i 番目のバイトは 56 + i ビット目に来て、ほかの組み合わせは
+/// 重ならない (繰り上がらない) 位置か、64 ビットの外に出る。
+#[inline]
+fn pack8(bytes: u64) -> u64 {
+    (bytes & 0x0101_0101_0101_0101).wrapping_mul(0x0102_0408_1020_4080) >> 56
+}
+
+/// 整数の 1 のビットの位置を、小さいほうから返す。
+struct Ones(u64);
+
+impl Iterator for Ones {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<usize> {
+        if self.0 == 0 {
+            return None;
+        }
+        let bit = self.0.trailing_zeros() as usize;
+        self.0 &= self.0 - 1;
+        Some(bit)
     }
 }
 
@@ -227,73 +414,78 @@ impl ObjectTracker {
 //   0 0 1 0 0
 // 横 5 x 縦 3 の長方形と、縦 5 の線を合わせた形なので、それぞれで処理して合わせる。
 // 膨張は和、収縮は積になる。画像の外は、膨張では 0、収縮では 1 とみなす (OpenCV の BORDER_CONSTANT の既定)。
+// 収縮は、白黒を反転して膨張し、もう一度反転したものと同じ (核が上下左右に対称で、画像の外も反転する) なので、
+// 膨張だけを書く。
 
-/// 形の処理の作業用の配列 (どれも画像と同じ大きさ)。
-struct Work<'a> {
-    tmp: &'a mut [u8],
-    line: &'a mut [u8],
-    line_tmp: &'a mut [u8],
-}
-
-fn dilate_ellipse5(src: &[u8], dst: &mut [u8], work: &mut Work, w: usize, h: usize) {
-    rect_filter(src, dst, work.tmp, w, h, 2, 1, true);
-    rect_filter(src, work.line, work.line_tmp, w, h, 0, 2, true);
-    for (d, l) in dst.iter_mut().zip(work.line.iter()) {
-        *d |= *l;
+/// 1 行を横に 2 画素ずつ広げる (横 5 の膨張)。画像の外は 0。
+fn dilate_row5(src: &[u64], dst: &mut [u64]) {
+    let n = src.len();
+    for k in 0..n {
+        let here = src[k];
+        let before = if k > 0 { src[k - 1] } else { 0 };
+        let after = if k + 1 < n { src[k + 1] } else { 0 };
+        // 画素 x に x - 1, x - 2 (左) と x + 1, x + 2 (右) の値を重ねる
+        let from_left = (here << 1 | before >> 63) | (here << 2 | before >> 62);
+        let from_right = (here >> 1 | after << 63) | (here >> 2 | after << 62);
+        dst[k] = here | from_left | from_right;
     }
 }
 
-fn erode_ellipse5(src: &[u8], dst: &mut [u8], work: &mut Work, w: usize, h: usize) {
-    rect_filter(src, dst, work.tmp, w, h, 2, 1, false);
-    rect_filter(src, work.line, work.line_tmp, w, h, 0, 2, false);
-    for (d, l) in dst.iter_mut().zip(work.line.iter()) {
-        *d &= *l;
-    }
-}
-
-/// 横に `rx`、縦に `ry` 画素ずつ広げた長方形で、膨張 (`dilate`) か収縮をする。値は 0 か 1。
-///
-/// 1 画素ずつ窓を見るのではなく、行 (縦の処理では行どうし) をずらして重ねる。CPU のベクトル命令が使えるので速い。
-/// 画像の外は、ずらしたときに重ならないだけなので、膨張では 0、収縮では 1 とみなしたことになる。
-#[allow(clippy::too_many_arguments)]
-fn rect_filter(
-    src: &[u8],
-    dst: &mut [u8],
-    tmp: &mut [u8],
-    w: usize,
-    h: usize,
-    rx: usize,
-    ry: usize,
-    dilate: bool,
-) {
-    let combine = |out: &mut [u8], other: &[u8]| {
-        if dilate {
-            out.iter_mut().zip(other).for_each(|(o, v)| *o |= *v);
+/// 5x5 の楕円で膨張する。画像の外は 0。`rows` は 1 行ぶんの作業用 3 本 (上、今、下の行を横に広げたもの)。
+fn dilate_ellipse5(src: &BitImage, dst: &mut BitImage, rows: &mut [Vec<u64>; 3]) {
+    let (h, n) = (src.height, src.words_per_row);
+    let empty = vec![0u64; n];
+    let row_or_empty = |y: isize| {
+        if y >= 0 && (y as usize) < h {
+            src.row(y as usize)
         } else {
-            out.iter_mut().zip(other).for_each(|(o, v)| *o &= *v);
+            empty.as_slice()
         }
     };
-    tmp.copy_from_slice(src);
+    // rows[0], rows[1], rows[2] に、y - 1, y, y + 1 の行を横に広げたものを置き、y を進めるたびに回す
+    rows[0].iter_mut().for_each(|v| *v = 0);
+    dilate_row5(row_or_empty(0), &mut rows[1]);
     for y in 0..h {
-        let row = y * w..(y + 1) * w;
-        let source = &src[row.clone()];
-        let target = &mut tmp[row];
-        for d in 1..=rx.min(w.saturating_sub(1)) {
-            combine(&mut target[d..], &source[..w - d]);
-            combine(&mut target[..w - d], &source[d..]);
+        dilate_row5(row_or_empty(y as isize + 1), &mut rows[2]);
+        let (up2, up1, here, down1, down2) = (
+            row_or_empty(y as isize - 2),
+            row_or_empty(y as isize - 1),
+            src.row(y),
+            row_or_empty(y as isize + 1),
+            row_or_empty(y as isize + 2),
+        );
+        let out = &mut dst.words[y * n..(y + 1) * n];
+        for k in 0..n {
+            let rect = rows[0][k] | rows[1][k] | rows[2][k];
+            let line = up2[k] | up1[k] | here[k] | down1[k] | down2[k];
+            out[k] = rect | line;
         }
+        src.mask_padding(out);
+        rows.rotate_left(1);
     }
-    dst.copy_from_slice(tmp);
-    for d in 1..=ry.min(h.saturating_sub(1)) {
-        for y in 0..h {
-            let row = y * w..(y + 1) * w;
-            if y >= d {
-                combine(&mut dst[row.clone()], &tmp[(y - d) * w..(y - d + 1) * w]);
-            }
-            if y + d < h {
-                combine(&mut dst[row], &tmp[(y + d) * w..(y + d + 1) * w]);
-            }
+}
+
+/// 5x5 の楕円で収縮する。画像の外は 1。`inverted` は src と同じ大きさの作業用。
+fn erode_ellipse5(
+    src: &BitImage,
+    dst: &mut BitImage,
+    inverted: &mut BitImage,
+    rows: &mut [Vec<u64>; 3],
+) {
+    // 反転して膨張し、もう一度反転する
+    let n = src.words_per_row;
+    for y in 0..src.height {
+        let row = &mut inverted.words[y * n..(y + 1) * n];
+        for (v, &s) in row.iter_mut().zip(src.row(y)) {
+            *v = !s;
         }
+        src.mask_padding(row);
+    }
+    dilate_ellipse5(inverted, dst, rows);
+    for y in 0..dst.height {
+        let row = &mut dst.words[y * n..(y + 1) * n];
+        row.iter_mut().for_each(|v| *v = !*v);
+        src.mask_padding(row);
     }
 }
 
@@ -309,50 +501,142 @@ struct Component {
     max_y: usize,
 }
 
-/// 8 近傍でつながった前景の領域に番号 (1 から) を付ける。背景は 0。
-fn label_components(binary: &[u8], labels: &mut [u32], w: usize, h: usize) -> Vec<Component> {
-    labels.iter_mut().for_each(|l| *l = 0);
-    let mut components = Vec::new();
-    let mut stack = Vec::new();
-    for y in 0..h {
-        for x in 0..w {
-            let i = y * w + x;
-            if binary[i] == 0 || labels[i] != 0 {
-                continue;
-            }
-            let label = components.len() as u32 + 1;
-            let mut component = Component {
-                label,
-                start: (x, y),
-                min_x: x,
-                min_y: y,
-                max_x: x,
-                max_y: y,
-            };
-            labels[i] = label;
-            stack.push((x, y));
-            while let Some((cx, cy)) = stack.pop() {
-                component.min_x = component.min_x.min(cx);
-                component.max_x = component.max_x.max(cx);
-                component.min_y = component.min_y.min(cy);
-                component.max_y = component.max_y.max(cy);
-                for dy in -1i32..=1 {
-                    for dx in -1i32..=1 {
-                        let nx = cx as i32 + dx;
-                        let ny = cy as i32 + dy;
-                        if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 {
-                            continue;
-                        }
-                        let j = ny as usize * w + nx as usize;
-                        if binary[j] != 0 && labels[j] == 0 {
-                            labels[j] = label;
-                            stack.push((nx as usize, ny as usize));
-                        }
+/// 前景の横の連なり (1 行のうち、続いている前景の画素)。`x1` も連なりに含む。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Run {
+    y: usize,
+    x0: usize,
+    x1: usize,
+}
+
+/// 番号付けの作業用。フレームごとに確保しない。
+#[derive(Default)]
+struct LabelScratch {
+    runs: Vec<Run>,
+    /// 連なりどうしのつながり (union-find)。根が同じ連なりは同じ領域
+    parent: Vec<usize>,
+    /// 根の連なりに付けた番号 (0 はまだ付けていない)
+    label_of: Vec<u32>,
+}
+
+/// 1 行の前景の連なりを、左から順に `runs` に足す。
+fn push_runs(row: &[u64], y: usize, runs: &mut Vec<Run>) {
+    // 前の整数から続いている連なりの始まり
+    let mut start: Option<usize> = None;
+    for (k, &word) in row.iter().enumerate() {
+        let base = k * 64;
+        // この整数のうち、`pos` より下のビットは見終わった
+        let mut pos = 0;
+        while pos < 64 {
+            let rest = word >> pos;
+            match start {
+                None => {
+                    if rest == 0 {
+                        break;
+                    }
+                    pos += rest.trailing_zeros() as usize;
+                    start = Some(base + pos);
+                }
+                Some(x0) => {
+                    // `pos` から続く 1 の数。上から入る 0 は反転すると 1 になるので、64 - pos を超えない
+                    pos += (!rest).trailing_zeros() as usize;
+                    if pos < 64 {
+                        runs.push(Run {
+                            y,
+                            x0,
+                            x1: base + pos - 1,
+                        });
+                        start = None;
                     }
                 }
             }
-            components.push(component);
         }
+    }
+    // 行の右端まで続いた (右端の余りのビットは 0 なので、幅がちょうど 64 の倍数のときだけ)
+    if let Some(x0) = start {
+        runs.push(Run {
+            y,
+            x0,
+            x1: row.len() * 64 - 1,
+        });
+    }
+}
+
+fn find(parent: &mut [usize], mut i: usize) -> usize {
+    while parent[i] != i {
+        parent[i] = parent[parent[i]];
+        i = parent[i];
+    }
+    i
+}
+
+/// 8 近傍でつながった前景の領域に番号 (1 から) を付ける。`labels` は前景の画素がすべて 0 であること。
+/// 番号は、ラスタ順で最初の画素が先に来る領域から振る (1 画素ずつ塗り広げたときと同じ番号になる)。
+///
+/// 1 画素ずつ塗り広げると、人が写ったときのような大きな領域で遅いので、横の連なりを単位にする。
+/// 上の行の連なりと、横に 1 画素広げて重なれば (斜めも含めて隣り合えば) 同じ領域。
+fn label_components(
+    binary: &BitImage,
+    labels: &mut [u32],
+    scratch: &mut LabelScratch,
+) -> Vec<Component> {
+    let w = binary.width;
+    let LabelScratch {
+        runs,
+        parent,
+        label_of,
+    } = scratch;
+    runs.clear();
+    parent.clear();
+    let mut previous = 0..0;
+    for y in 0..binary.height {
+        let first = runs.len();
+        push_runs(binary.row(y), y, runs);
+        let current = first..runs.len();
+        parent.extend(current.clone());
+        // 上の行の連なりは左から並んでいるので、重なりうる最初のものを順に進めながら探す
+        let mut j = previous.start;
+        for i in current.clone() {
+            let Run { x0, x1, .. } = runs[i];
+            while j < previous.end && runs[j].x1 + 1 < x0 {
+                j += 1;
+            }
+            let mut k = j;
+            while k < previous.end && runs[k].x0 <= x1 + 1 {
+                let (a, b) = (find(parent, i), find(parent, k));
+                if a != b {
+                    parent[a.max(b)] = a.min(b);
+                }
+                k += 1;
+            }
+        }
+        previous = current;
+    }
+
+    label_of.clear();
+    label_of.resize(runs.len(), 0);
+    let mut components: Vec<Component> = Vec::new();
+    for (i, &run) in runs.iter().enumerate() {
+        let root = find(parent, i);
+        if label_of[root] == 0 {
+            // 連なりはラスタ順に並んでいるので、領域で最初に出てきた連なりの左端が、領域の最初の画素
+            let label = components.len() as u32 + 1;
+            components.push(Component {
+                label,
+                start: (run.x0, run.y),
+                min_x: run.x0,
+                min_y: run.y,
+                max_x: run.x1,
+                max_y: run.y,
+            });
+            label_of[root] = label;
+        }
+        let label = label_of[root];
+        let component = &mut components[label as usize - 1];
+        component.min_x = component.min_x.min(run.x0);
+        component.max_x = component.max_x.max(run.x1);
+        component.max_y = component.max_y.max(run.y);
+        labels[run.y * w + run.x0..=run.y * w + run.x1].fill(label);
     }
     components
 }
@@ -444,18 +728,28 @@ fn polygon_area(points: &[(i32, i32)]) -> f64 {
     (twice as f64).abs() / 2.0
 }
 
+/// 色みの判定の作業用。フレームごとに確保しない。
+#[derive(Default)]
+struct ColorScratch {
+    outside: Vec<bool>,
+    stack: Vec<(usize, usize)>,
+}
+
 /// 領域 (穴を含む) の平均色が、背景の同じ場所の平均色から色みをどれだけ変えたか (8 ビットの階調)。
 ///
 /// 次の 2 つの残りの小さいほう。アプリの ObjectTracker.colorShift と同じ式。
 /// 1. 明るさだけが何倍かになったとみなしたときの残り
 /// 2. 全チャンネルが同じ量だけ増減したとみなしたときの残り
+///
+/// 背景は、8 ビットに直してから平均する ([`to_u8`])。アプリが 8 ビットの背景と比べるのに合わせる。
 fn color_shift(
     frame: &[u8],
-    background8: &[u8],
+    background: &[f32],
     labels: &[u32],
     w: usize,
     label: u32,
     rect: Rect,
+    scratch: &mut ColorScratch,
 ) -> f64 {
     let (rx, ry, rw, rh) = (
         rect.x as usize,
@@ -463,43 +757,56 @@ fn color_shift(
         rect.width as usize,
         rect.height as usize,
     );
-    // 四角形の縁からたどれる「領域でない画素」が外。それ以外 (領域とその穴) を平均する
-    let mut outside = vec![false; rw * rh];
-    let mut stack = Vec::new();
+    // 四角形の縁から 4 近傍でたどれる「領域でない画素」が外。それ以外 (領域とその穴) を平均する。
+    // 大きな領域でも速いよう、横の連なりごとに塗り広げる
+    let ColorScratch { outside, stack } = scratch;
+    outside.clear();
+    outside.resize(rw * rh, false);
+    stack.clear();
     let in_region = |x: usize, y: usize| labels[(ry + y) * w + rx + x] == label;
     for x in 0..rw {
-        for y in [0, rh - 1] {
-            if !in_region(x, y) && !outside[y * rw + x] {
-                outside[y * rw + x] = true;
-                stack.push((x, y));
-            }
-        }
+        stack.push((x, 0));
+        stack.push((x, rh - 1));
     }
     for y in 0..rh {
-        for x in [0, rw - 1] {
-            if !in_region(x, y) && !outside[y * rw + x] {
-                outside[y * rw + x] = true;
-                stack.push((x, y));
-            }
-        }
+        stack.push((0, y));
+        stack.push((rw - 1, y));
     }
     while let Some((x, y)) = stack.pop() {
-        for (dx, dy) in [(-1i32, 0i32), (1, 0), (0, -1), (0, 1)] {
-            let nx = x as i32 + dx;
-            let ny = y as i32 + dy;
-            if nx < 0 || ny < 0 || nx >= rw as i32 || ny >= rh as i32 {
+        let open = |outside: &[bool], x: usize, y: usize| !outside[y * rw + x] && !in_region(x, y);
+        if !open(outside, x, y) {
+            continue;
+        }
+        let (mut left, mut right) = (x, x);
+        while left > 0 && open(outside, left - 1, y) {
+            left -= 1;
+        }
+        while right + 1 < rw && open(outside, right + 1, y) {
+            right += 1;
+        }
+        outside[y * rw + left..=y * rw + right].fill(true);
+        // 上下の行で、この連なりの真上と真下にある「外になりうる」連なりごとに 1 つずつ種を置く
+        for ny in [y.wrapping_sub(1), y + 1] {
+            if ny >= rh {
                 continue;
             }
-            let (nx, ny) = (nx as usize, ny as usize);
-            if !outside[ny * rw + nx] && !in_region(nx, ny) {
-                outside[ny * rw + nx] = true;
-                stack.push((nx, ny));
+            let mut nx = left;
+            while nx <= right {
+                if open(outside, nx, ny) {
+                    stack.push((nx, ny));
+                    while nx <= right && open(outside, nx, ny) {
+                        nx += 1;
+                    }
+                } else {
+                    nx += 1;
+                }
             }
         }
     }
-    let mut now = [0f64; 3];
-    let mut before = [0f64; 3];
-    let mut count = 0f64;
+    // 合計は整数で取る (浮動小数で 1 つずつ足しても、2^53 に届かないので同じ値になる)
+    let mut now = [0u64; 3];
+    let mut before = [0u64; 3];
+    let mut count = 0u64;
     for y in 0..rh {
         for x in 0..rw {
             if outside[y * rw + x] {
@@ -507,19 +814,18 @@ fn color_shift(
             }
             let p = (ry + y) * w + rx + x;
             for c in 0..3 {
-                now[c] += f64::from(frame[p * 3 + c]);
-                before[c] += f64::from(background8[p * 3 + c]);
+                now[c] += u64::from(frame[p * 3 + c]);
+                before[c] += u64::from(to_u8(background[p * 3 + c]));
             }
-            count += 1.0;
+            count += 1;
         }
     }
-    if count == 0.0 {
+    if count == 0 {
         return 0.0;
     }
-    for c in 0..3 {
-        now[c] /= count;
-        before[c] /= count;
-    }
+    let count = count as f64;
+    let now = now.map(|v| v as f64 / count);
+    let before = before.map(|v| v as f64 / count);
     let dot: f64 = (0..3).map(|c| now[c] * before[c]).sum();
     let denominator: f64 = before.iter().map(|b| b * b).sum();
     let k = if denominator > 0.0 {
@@ -560,25 +866,69 @@ mod tests {
         }
     }
 
+    /// テスト用の決まった乱数 (xorshift)。
+    struct Random(u64);
+
+    impl Random {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+    }
+
+    fn bits(w: usize, h: usize, values: &[u8]) -> BitImage {
+        let mut image = BitImage::new(w, h);
+        for y in 0..h {
+            image.set_row(y, &values[y * w..(y + 1) * w]);
+        }
+        image
+    }
+
+    fn unpack(image: &BitImage) -> Vec<u8> {
+        (0..image.height)
+            .flat_map(|y| (0..image.width).map(move |x| u8::from(image.get(x, y))))
+            .collect()
+    }
+
+    /// 5x5 の楕円の形の処理を、画素ごとに素直に計算したもの。画像の外は、膨張では 0、収縮では 1。
+    fn reference_morphology(src: &[u8], w: usize, h: usize, dilate: bool) -> Vec<u8> {
+        let kernel: Vec<(i32, i32)> = (-2i32..=2)
+            .flat_map(|dy| (-2i32..=2).map(move |dx| (dx, dy)))
+            .filter(|&(dx, dy)| dy.abs() <= 1 || dx == 0)
+            .collect();
+        let mut out = vec![0u8; w * h];
+        for y in 0..h as i32 {
+            for x in 0..w as i32 {
+                let values = kernel.iter().map(|&(dx, dy)| {
+                    let (nx, ny) = (x + dx, y + dy);
+                    if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 {
+                        u8::from(!dilate)
+                    } else {
+                        src[ny as usize * w + nx as usize]
+                    }
+                });
+                let value = if dilate { values.max() } else { values.min() };
+                out[y as usize * w + x as usize] = value.expect("kernel is not empty");
+            }
+        }
+        out
+    }
+
     #[test]
     fn ellipse_kernel_matches_opencv() {
         // 1 画素を膨張すると、OpenCV の 5x5 の楕円の形になる
         let (w, h) = (9, 9);
-        let mut src = vec![0u8; w * h];
-        src[4 * w + 4] = 1;
-        let mut dst = vec![0u8; w * h];
-        let (mut a, mut b, mut c) = (vec![0u8; w * h], vec![0u8; w * h], vec![0u8; w * h]);
+        let mut values = vec![0u8; w * h];
+        values[4 * w + 4] = 1;
+        let mut dst = BitImage::new(w, h);
         dilate_ellipse5(
-            &src,
+            &bits(w, h, &values),
             &mut dst,
-            &mut Work {
-                tmp: &mut a,
-                line: &mut b,
-                line_tmp: &mut c,
-            },
-            w,
-            h,
+            &mut [vec![0; 1], vec![0; 1], vec![0; 1]],
         );
+        let dst = unpack(&dst);
         let expected = [
             [0, 0, 1, 0, 0],
             [1, 1, 1, 1, 1],
@@ -597,21 +947,161 @@ mod tests {
     #[test]
     fn erosion_does_not_shrink_at_the_image_border() {
         let (w, h) = (6, 6);
-        let src = vec![1u8; w * h];
-        let mut dst = vec![0u8; w * h];
-        let (mut a, mut b, mut c) = (vec![0u8; w * h], vec![0u8; w * h], vec![0u8; w * h]);
+        let mut dst = BitImage::new(w, h);
+        let mut inverted = BitImage::new(w, h);
         erode_ellipse5(
-            &src,
+            &bits(w, h, &vec![1u8; w * h]),
             &mut dst,
-            &mut Work {
-                tmp: &mut a,
-                line: &mut b,
-                line_tmp: &mut c,
-            },
-            w,
-            h,
+            &mut inverted,
+            &mut [vec![0; 1], vec![0; 1], vec![0; 1]],
         );
-        assert!(dst.iter().all(|&v| v == 1));
+        assert!(unpack(&dst).iter().all(|&v| v == 1));
+    }
+
+    #[test]
+    fn morphology_matches_a_per_pixel_reference() {
+        let mut random = Random(0x9e37_79b9_7f4a_7c15);
+        // 64 の倍数とその前後 (整数の境目)、1 画素、細長い画像
+        for (w, h) in [
+            (1, 1),
+            (5, 3),
+            (63, 7),
+            (64, 6),
+            (65, 9),
+            (130, 11),
+            (640, 4),
+            (3, 40),
+        ] {
+            for density in [2, 8, 64] {
+                let values: Vec<u8> = (0..w * h)
+                    .map(|_| u8::from(random.next() % 128 < density))
+                    .collect();
+                let src = bits(w, h, &values);
+                let n = src.words_per_row;
+                let mut rows = [vec![0; n], vec![0; n], vec![0; n]];
+                let mut dst = BitImage::new(w, h);
+                dilate_ellipse5(&src, &mut dst, &mut rows);
+                assert_eq!(
+                    unpack(&dst),
+                    reference_morphology(&values, w, h, true),
+                    "dilate {w}x{h} density {density}"
+                );
+                let mut inverted = BitImage::new(w, h);
+                erode_ellipse5(&src, &mut dst, &mut inverted, &mut rows);
+                assert_eq!(
+                    unpack(&dst),
+                    reference_morphology(&values, w, h, false),
+                    "erode {w}x{h} density {density}"
+                );
+                // 右端の余りのビットは 0 のまま
+                assert_eq!(dst, bits(w, h, &unpack(&dst)));
+            }
+        }
+    }
+
+    #[test]
+    fn to_u8_matches_round_and_clamp() {
+        let reference = |v: f32| v.abs().round().clamp(0.0, 255.0) as u8;
+        let edges = [
+            0.0,
+            -0.0,
+            0.25,
+            f32::from_bits(0.5f32.to_bits() - 1),
+            0.5,
+            0.75,
+            1.0,
+            1.5,
+            2.5,
+            f32::from_bits(1.5f32.to_bits() - 1),
+            126.5,
+            f32::from_bits(127.5f32.to_bits() - 1),
+            254.5,
+            254.6,
+            255.0,
+            255.49,
+            255.5,
+            256.0,
+            300.0,
+            1e10,
+            f32::INFINITY,
+            -0.5,
+            -1.5,
+            -254.5,
+            -300.0,
+            f32::NAN,
+        ];
+        for v in edges {
+            assert_eq!(to_u8(v), reference(v), "{v} ({:#x})", v.to_bits());
+        }
+        // 背景の値は、整数を重み付きで平均したもの (2 進の小数)。いろいろな桁の値で確かめる
+        let mut random = Random(42);
+        for _ in 0..1_000_000 {
+            let v = (random.next() % (300 << 20)) as f32 / (1 << 20) as f32;
+            assert_eq!(to_u8(v), reference(v), "{v}");
+            let bits = 0x3e80_0000 + (random.next() % 0x0c00_0000) as u32; // 0.25 から 300 ほどまでの全てのビットの並び
+            let v = f32::from_bits(bits);
+            assert_eq!(to_u8(v), reference(v), "{v} ({bits:#x})");
+        }
+    }
+
+    #[test]
+    fn threshold_matches_a_per_pixel_reference() {
+        let (w, h) = (70, 5);
+        let mut random = Random(7);
+        let frame: Vec<u8> = (0..w * h * 3).map(|_| random.next() as u8).collect();
+        let background: Vec<f32> = (0..w * h * 3)
+            .map(|_| (random.next() % (256 << 4)) as f32 / 16.0)
+            .collect();
+        for limit in [
+            15.0,
+            15.5,
+            0.0,
+            -0.5,
+            -10.0,
+            254.9,
+            255.0,
+            300.0,
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ] {
+            let mut out = BitImage::new(w, h);
+            threshold(
+                &frame,
+                &background,
+                limit,
+                &mut vec![0; w * 3],
+                &mut vec![0; w],
+                &mut out,
+            );
+            let expected: Vec<u8> = (0..w * h)
+                .map(|p| {
+                    let delta = (0..3)
+                        .map(|c| {
+                            frame[p * 3 + c].abs_diff(
+                                background[p * 3 + c].abs().round().clamp(0.0, 255.0) as u8,
+                            )
+                        })
+                        .max()
+                        .expect("3 channels");
+                    u8::from(f64::from(delta) > limit)
+                })
+                .collect();
+            assert_eq!(unpack(&out), expected, "threshold {limit}");
+        }
+    }
+
+    #[test]
+    fn ones_lists_set_pixels_in_raster_order() {
+        let (w, h) = (70, 3);
+        let mut values = vec![0u8; w * h];
+        for i in [0, 63, 64, 69, 70, 139, 140, 209] {
+            values[i] = 1;
+        }
+        assert_eq!(
+            bits(w, h, &values).ones().collect::<Vec<_>>(),
+            vec![0, 63, 64, 69, 70, 139, 140, 209]
+        );
     }
 
     #[test]
@@ -688,6 +1178,35 @@ mod tests {
                 width: 15,
                 height: 17
             }
+        );
+    }
+
+    #[test]
+    fn a_ball_that_moves_on_leaves_no_trace_behind() {
+        // 前のフレームの前景は背景に取り込まず、番号も消すので、ボールが通り過ぎた跡は検出しない
+        let (w, h) = (160, 90);
+        let background = [120u8, 110, 100];
+        let mut tracker = ObjectTracker::new(TrackerParams::APP_DEFAULT);
+        tracker.next_frame(&image(w, h, background), w, h);
+        for (i, cx) in [40.0, 60.0, 80.0].into_iter().enumerate() {
+            let mut frame = image(w, h, background);
+            fill_disc(&mut frame, w, cx, 40.0, 8.0, [220, 200, 40]);
+            let rects = tracker.next_frame(&frame, w, h);
+            assert_eq!(
+                rects,
+                vec![Rect {
+                    x: cx as i32 - 7,
+                    y: 32,
+                    width: 15,
+                    height: 17
+                }],
+                "frame {i}"
+            );
+        }
+        assert!(
+            tracker
+                .next_frame(&image(w, h, background), w, h)
+                .is_empty()
         );
     }
 

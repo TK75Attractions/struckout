@@ -826,6 +826,7 @@ dependencies = [
  "rand 0.10.3",
  "sentry",
  "serde",
+ "serde-saphyr",
  "serde_json",
  "sqlx",
  "struckout-proto",

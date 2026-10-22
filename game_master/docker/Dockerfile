@@ -8,7 +8,7 @@ ARG ST_COMMIT_SHORT_HASH
 ENV CARGO_HOME="/home/builder/.cargo/"
 ENV PATH="/home/builder/.local/bin/:${PATH}"
 
-RUN apt update && apt install -y curl \
+RUN apt update && apt install -y clang \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system builder --gid 1000 \
