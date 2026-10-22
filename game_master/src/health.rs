@@ -1,6 +1,5 @@
 use std::{future::Future, time::Duration};
 
-use tonic::server::NamedService;
 use tonic_health::{ServingStatus, server::HealthReporter};
 use tracing::{info, warn};
 
@@ -8,18 +7,23 @@ const CHECK_INTERVAL: Duration = Duration::from_secs(5);
 
 /// Updates the gRPC health status using the result of a database check.
 /// The check runs immediately and then every five seconds.
-pub async fn monitor_database<S, F, Fut>(reporter: HealthReporter, mut check: F) -> !
+pub async fn monitor_database<F, Fut>(
+    reporter: HealthReporter,
+    service_names: Vec<&'static str>,
+    mut check: F,
+) -> !
 where
-    S: NamedService,
     F: FnMut() -> Fut,
     Fut: Future<Output = bool>,
 {
     reporter
         .set_service_status("", ServingStatus::NotServing)
         .await;
-    reporter
-        .set_service_status(S::NAME, ServingStatus::NotServing)
-        .await;
+    for name in &service_names {
+        reporter
+            .set_service_status(name, ServingStatus::NotServing)
+            .await;
+    }
 
     let mut is_serving = false;
     loop {
@@ -39,7 +43,9 @@ where
             ServingStatus::NotServing
         };
         reporter.set_service_status("", status).await;
-        reporter.set_service_status(S::NAME, status).await;
+        for name in &service_names {
+            reporter.set_service_status(name, status).await;
+        }
 
         tokio::time::sleep(CHECK_INTERVAL).await;
     }
@@ -59,12 +65,6 @@ mod tests {
     };
 
     use super::*;
-
-    struct TestService;
-
-    impl NamedService for TestService {
-        const NAME: &'static str = "test.GameMasterService";
-    }
 
     /// The statuses of the whole server and of [`TestService`].
     async fn statuses(health: &HealthService) -> [Status; 2] {
@@ -102,7 +102,11 @@ mod tests {
                 result
             }
         };
-        let task = tokio::spawn(monitor_database::<TestService, _, _>(reporter, check));
+        let task = tokio::spawn(monitor_database(
+            reporter,
+            vec!["test.GameMasterService"],
+            check,
+        ));
 
         tokio::task::yield_now().await;
         assert_eq!(statuses(&health).await, [Status::NotServing; 2]);

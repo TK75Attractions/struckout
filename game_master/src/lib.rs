@@ -11,8 +11,8 @@ use struckout_proto::{
 mod data;
 pub use data::DataSourceImpl;
 pub mod health;
-mod service;
-pub use service::GameMasterServiceImpl;
+mod services;
+pub use services::{GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
 
 use crate::data::{GameRecord, Player};
 

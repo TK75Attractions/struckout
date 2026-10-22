@@ -1,5 +1,9 @@
 mod proto {
     include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/tk75attractions.struckout.game_master.v1.rs"
+    ));
 }
 pub mod types;
 
