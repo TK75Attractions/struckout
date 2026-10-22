@@ -81,6 +81,8 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   | 項目 | 内容 |
   |---|---|
   | `fps` | 解析したフレームの数 (1 秒あたり) |
+  | `dropped_before_ffmpeg` | この 10 秒間に ffmpeg に書く前に捨てたフレームの数 |
+  | `dropped_after_ffmpeg` | この 10 秒間に ffmpeg から読み、解析せずに捨てたフレームの数 |
   | `analysis_ms` | 解析にかかった時間の平均 |
   | `delay_ms_p50`、`delay_ms_p95`、`max_delay_ms` | 受け取ってから解析し終えるまで |
   | `queued` | 受け取って、まだ解析していないフレームの数 |
@@ -93,6 +95,11 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   追いついているあいだは、`wait_ms` + `analysis_ms` + `send_ms` が 1 フレームの間隔 (120fps で 8.33 ms) に近い。
   `queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が
   追いついていない。
+  受信から 0.3 秒を超えた入力は、次の新しいキーフレームまで捨てて追いつく (キーフレームの間隔は 1 秒)。
+  ffmpeg から出た画像も、受信から 0.3 秒を超えていれば解析せずに読み流し、書き込み側も次のキーフレームまで
+  捨てる (デコードしても捨てるだけのフレームを書き続けないように)。捨てた間の着弾は出ない。
+  0.3 秒は、追跡が撮影から 0.5 秒 (`RAY_LIFETIME`) を過ぎた視線を捨てることから決めた (`video/pipeline.rs` の
+  `MAX_DELAY`)。
 - `--no-video-analysis` で受け付けをやめると、アプリは自分で解析する。
 
 ### 視線の集まりからボールを見つける

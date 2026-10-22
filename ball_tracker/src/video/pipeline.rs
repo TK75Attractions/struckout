@@ -7,6 +7,7 @@
 //! ffmpeg の出力には時刻が付かないので、フレームは書いた順に出てくるものとして、書いたときの時刻を順に割り当てる。
 //! カメラアプリは B フレームを使わない (デコードの順と表示の順が同じ) ので、この対応は崩れない。
 //! キーフレームより前のフレームはデコードできず、出てこないので書かない。
+//! 遅れた入力は次の新しいキーフレームまで捨て、ffmpeg に残った古い画像も解析せずに読み流して追いつく。
 
 use std::{
     collections::VecDeque,
@@ -15,8 +16,8 @@ use std::{
     process::{Child, Command, Stdio},
     sync::{
         Arc,
-        atomic::{AtomicUsize, Ordering},
-        mpsc::{self as std_mpsc, SyncSender, TrySendError},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
+        mpsc::{self as std_mpsc, Receiver, SyncSender, TrySendError},
     },
     thread,
     time::{Duration, Instant},
@@ -35,6 +36,11 @@ use super::{
 
 /// ffmpeg に書く前にためておけるフレームの数 (120fps で 2 秒)。超えたら次のキーフレームまで捨てる。
 const INPUT_QUEUE: usize = 240;
+/// 着弾の計算にほぼ役に立たないフレームを捨てるための、受信からの遅れの上限。
+/// 撮影から PC に届くまで約 0.1 秒かかり、追跡は撮影から
+/// [`RAY_LIFETIME`](crate::tracking::RAY_LIFETIME) (0.5 秒) を過ぎた視線を捨てる。
+/// 軌跡を作るにはその前の約 0.1 秒の視線も要るため、受信から 0.3 秒を過ぎたフレームは使わない。
+const MAX_DELAY: Duration = Duration::from_millis(300);
 /// 解析の状況をログに出す間隔。
 const STATS_INTERVAL: Duration = Duration::from_secs(10);
 
@@ -46,6 +52,7 @@ struct FrameMeta {
     received_at: DateTime<Utc>,
     /// 受け取った時刻。段ごとの時間は、時計の補正の影響を受けない単調な時計で測る
     received: Instant,
+    key_frame: bool,
 }
 
 /// ffmpeg に書くもの。`frame` は、フレームなら `Some`、設定 (SPS/PPS) なら `None`。
@@ -54,12 +61,103 @@ struct Input {
     frame: Option<FrameMeta>,
 }
 
+/// 書き込みを再開した回数。解析のスレッドが捨てた画像が、いま書いている区間のものかを見分ける。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct Generation(u64);
+
+/// 遅れたフレームを捨てて追いつく。書き込みのスレッドが、ffmpeg に書く直前に使う。
+///
+/// 遅れたまま順に処理し続けると、[`MAX_DELAY`] を超えたフレームを解析し続けることになり、遅れが戻らない。
+/// P フレームは前のフレームを参照するので、1 枚捨てたら次のキーフレームまでまとめて捨てる (途中から書くと
+/// ffmpeg は参照の欠けた画像を出す)。キーフレームは 1 秒おき (カメラアプリの `VideoRelay`) なので、捨てる
+/// のは長くて 1 秒と少し。
+#[derive(Default)]
+struct CatchUp {
+    /// 直近の設定 (SPS/PPS)。再開するキーフレームの前に書く
+    codec_config: Option<Vec<u8>>,
+    /// 捨て始めてから捨てたフレームの数。0 なら捨てていない
+    dropped: usize,
+    /// いま書いている区間。キーフレームから書き直すたびに増やす
+    generation: Generation,
+}
+
+/// [`CatchUp::prepare`] の判断。
+#[derive(Debug, PartialEq, Eq)]
+enum WriteAction {
+    /// 書く。`config` があれば先に書く。`resumed_after` は、再開するまでに捨てたフレームの数 (再開でなければ 0)
+    Write {
+        config: Option<Vec<u8>>,
+        resumed_after: usize,
+    },
+    /// 捨てる。捨て始めたフレームなら、その遅れを `started_with_delay` に入れる (ログに 1 回だけ出すため)
+    Skip {
+        started_with_delay: Option<Duration>,
+    },
+}
+
+impl CatchUp {
+    /// `input` を書くか捨てるかを決める。`now` は書き込みのスレッドが受け取った時刻。
+    ///
+    /// `stale` は、解析のスレッドが遅れて捨てた画像の区間 (なければ `None`)。いま書いている区間の画像が
+    /// 捨てられたら、ffmpeg の中で遅れが積もっているので、書く前には遅れていなくても捨て始める。そうしないと、
+    /// デコードしてから捨てるだけのフレームを書き続けて、遅れが戻らない (CPU を 1 コアに絞った試験で、
+    /// 1 秒に 120 枚のうち 60 枚ほどをデコードしてから捨てていた)。前の区間の画像が捨てられても、いまの
+    /// 区間には関係ないので気にしない。
+    fn prepare(&mut self, input: &Input, now: Instant, stale: Option<Generation>) -> WriteAction {
+        let Some(meta) = input.frame else {
+            self.codec_config = Some(input.data.clone());
+            return if self.dropped > 0 {
+                WriteAction::Skip {
+                    started_with_delay: None,
+                }
+            } else {
+                WriteAction::Write {
+                    config: None,
+                    resumed_after: 0,
+                }
+            };
+        };
+        let delay = now - meta.received;
+        let fresh_key_frame = meta.key_frame && delay <= MAX_DELAY;
+        if self.dropped > 0 {
+            if !fresh_key_frame {
+                self.dropped += 1;
+                return WriteAction::Skip {
+                    started_with_delay: None,
+                };
+            }
+            self.generation.0 += 1;
+            return WriteAction::Write {
+                config: self.codec_config.clone(),
+                resumed_after: std::mem::take(&mut self.dropped),
+            };
+        }
+        if delay > MAX_DELAY || stale == Some(self.generation) {
+            if fresh_key_frame {
+                // 捨てなくても、ここから新しい区間として書き直せる
+                self.generation.0 += 1;
+            } else {
+                self.dropped = 1;
+                return WriteAction::Skip {
+                    started_with_delay: Some(delay),
+                };
+            }
+        }
+        WriteAction::Write {
+            config: None,
+            resumed_after: 0,
+        }
+    }
+}
+
 /// ffmpeg に書いたフレーム。
 #[derive(Debug, Clone, Copy)]
 struct WrittenFrame {
     meta: FrameMeta,
     /// 書き込みのスレッドが ffmpeg に書き始めた時刻
     handed: Instant,
+    /// 書いたときの区間 ([`CatchUp`])
+    generation: Generation,
 }
 
 /// 受け取ってから解析するまでのフレーム。受信、書き込み、解析のスレッドで共有する。
@@ -67,8 +165,27 @@ struct WrittenFrame {
 struct FrameQueue {
     /// ffmpeg への書き込みを待っているフレームの数
     waiting: AtomicUsize,
+    /// 書き込みのスレッドが、ffmpeg に書かずに捨てたフレームの数 (ログを出すたびに 0 に戻す)
+    dropped_before_ffmpeg: AtomicUsize,
     /// ffmpeg に書いて、まだ出てきていないフレーム (書いた順)
     written: Mutex<VecDeque<WrittenFrame>>,
+    /// 解析のスレッドが遅れて捨てた画像の区間に 1 を足したもの。0 ならない
+    stale: AtomicU64,
+}
+
+impl FrameQueue {
+    /// 解析のスレッドが、遅れた画像を捨てたことを書き込みのスレッドに知らせる。
+    fn report_stale(&self, generation: Generation) {
+        self.stale.fetch_max(generation.0 + 1, Ordering::Relaxed);
+    }
+
+    /// 知らされた区間を受け取って、消す。
+    fn take_stale(&self) -> Option<Generation> {
+        self.stale
+            .swap(0, Ordering::Relaxed)
+            .checked_sub(1)
+            .map(Generation)
+    }
 }
 
 pub struct Pipeline {
@@ -147,21 +264,7 @@ impl Pipeline {
             let queue = Arc::clone(&queue);
             thread::Builder::new()
                 .name(format!("video-write-{camera_id}"))
-                .spawn(move || {
-                    while let Ok(Input { data, frame }) = input_rx.recv() {
-                        // 時刻は書く前に積む (ffmpeg の出力より先に積まれているように)
-                        if let Some(meta) = frame {
-                            queue.written.lock().push_back(WrittenFrame {
-                                meta,
-                                handed: Instant::now(),
-                            });
-                            queue.waiting.fetch_sub(1, Ordering::Relaxed);
-                        }
-                        if stdin.write_all(&data).and_then(|()| stdin.flush()).is_err() {
-                            break;
-                        }
-                    }
-                })?;
+                .spawn(move || write_loop(camera_id, &input_rx, &mut stdin, &queue))?;
         }
 
         let settings = Arc::new(Mutex::new(settings));
@@ -238,6 +341,7 @@ impl Pipeline {
             timestamp_ms: frame.timestamp,
             received_at,
             received: Instant::now(),
+            key_frame: frame.key_frame,
         };
         self.write(frame.data, Some(meta));
     }
@@ -281,6 +385,67 @@ impl Drop for Pipeline {
     }
 }
 
+fn write_loop(
+    camera_id: u32,
+    input_rx: &Receiver<Input>,
+    stdin: &mut impl Write,
+    queue: &FrameQueue,
+) {
+    let mut catch_up = CatchUp::default();
+    while let Ok(input) = input_rx.recv() {
+        let stale = if input.frame.is_some() {
+            queue.waiting.fetch_sub(1, Ordering::Relaxed);
+            queue.take_stale()
+        } else {
+            None
+        };
+        match catch_up.prepare(&input, Instant::now(), stale) {
+            WriteAction::Skip { started_with_delay } => {
+                if input.frame.is_some() {
+                    queue.dropped_before_ffmpeg.fetch_add(1, Ordering::Relaxed);
+                }
+                if let Some(delay) = started_with_delay {
+                    warn!(
+                        camera_id,
+                        delay_ms = delay.as_millis(),
+                        "video analysis is falling behind; skipping to the next key frame"
+                    );
+                }
+                continue;
+            }
+            WriteAction::Write {
+                config,
+                resumed_after,
+            } => {
+                if let Some(config) = config
+                    && stdin.write_all(&config).is_err()
+                {
+                    break;
+                }
+                if resumed_after > 0 {
+                    info!(
+                        camera_id,
+                        dropped = resumed_after,
+                        "resuming video at a key frame"
+                    );
+                }
+            }
+        }
+        let Input { data, frame } = input;
+        // 時刻は書く前に積む (ffmpeg の出力より先に積まれているように)
+        if let Some(meta) = frame {
+            queue.written.lock().push_back(WrittenFrame {
+                meta,
+                handed: Instant::now(),
+                generation: catch_up.generation,
+            });
+        }
+        if stdin.write_all(&data).and_then(|()| stdin.flush()).is_err() {
+            break;
+        }
+    }
+}
+
 fn analyze_loop(
     camera_id: u32,
     stdout: &mut impl Read,
@@ -301,7 +466,12 @@ fn analyze_loop(
             break;
         }
         let decoded = Instant::now();
-        let Some(WrittenFrame { meta, handed }) = queue.written.lock().pop_front() else {
+        let Some(WrittenFrame {
+            meta,
+            handed,
+            generation,
+        }) = queue.written.lock().pop_front()
+        else {
             warn!(camera_id, "a decoded frame has no timestamp; skipping it");
             continue;
         };
@@ -310,6 +480,14 @@ fn analyze_loop(
             decoded - handed,
             decoded - read_begin,
         );
+        if decoded - meta.received > MAX_DELAY {
+            // 背景の更新も飛ぶが、ffmpeg に残った古い画像を速く読み流すことを優先する。書き込みのスレッドにも
+            // 知らせて、デコードしても捨てるだけのフレームを書かないようにする
+            queue.report_stale(generation);
+            stats.dropped_after_ffmpeg += 1;
+            stats.log_if_due(camera_id, queue);
+            continue;
+        }
         if let Some(dir) = snapshot_dir.take() {
             let path = dir.join(format!(
                 "camera{camera_id}_{}.bmp",
@@ -345,14 +523,7 @@ fn analyze_loop(
             }
             stats.sending += send_begin.elapsed();
         }
-        if stats.started.elapsed() >= STATS_INTERVAL {
-            stats.log(
-                camera_id,
-                queue.waiting.load(Ordering::Relaxed),
-                queue.written.lock().len(),
-            );
-            stats = Stats::new();
-        }
+        stats.log_if_due(camera_id, queue);
     }
 }
 
@@ -390,6 +561,8 @@ fn save_bmp(path: &Path, rgb: &[u8], width: usize, height: usize) -> std::io::Re
 struct Stats {
     started: Instant,
     frames: u32,
+    dropped_before_ffmpeg: usize,
+    dropped_after_ffmpeg: usize,
     with_detections: u32,
     ignored: usize,
     analysis: Duration,
@@ -411,6 +584,8 @@ impl Stats {
         Self {
             started: Instant::now(),
             frames: 0,
+            dropped_before_ffmpeg: 0,
+            dropped_after_ffmpeg: 0,
             with_detections: 0,
             ignored: 0,
             analysis: Duration::ZERO,
@@ -419,6 +594,18 @@ impl Stats {
             decodes: Vec::new(),
             waiting: Duration::ZERO,
             sending: Duration::ZERO,
+        }
+    }
+
+    fn log_if_due(&mut self, camera_id: u32, queue: &FrameQueue) {
+        if self.started.elapsed() >= STATS_INTERVAL {
+            self.dropped_before_ffmpeg = queue.dropped_before_ffmpeg.swap(0, Ordering::Relaxed);
+            self.log(
+                camera_id,
+                queue.waiting.load(Ordering::Relaxed),
+                queue.written.lock().len(),
+            );
+            *self = Self::new();
         }
     }
 
@@ -456,6 +643,8 @@ impl Stats {
         info!(
             camera_id,
             fps = format!("{:.1}", f64::from(self.frames) / seconds),
+            dropped_before_ffmpeg = self.dropped_before_ffmpeg,
+            dropped_after_ffmpeg = self.dropped_after_ffmpeg,
             frames_with_detections = self.with_detections,
             ignored_detections = self.ignored,
             analysis_ms = mean_ms(self.analysis),
@@ -485,6 +674,140 @@ fn percentile<T: Copy + Default>(sorted: &[T], p: f64) -> T {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn frame(received: Instant, key_frame: bool) -> Input {
+        Input {
+            data: vec![1],
+            frame: Some(FrameMeta {
+                sensor_timestamp_ns: 0,
+                timestamp_ms: 0,
+                received_at: Utc::now(),
+                received,
+                key_frame,
+            }),
+        }
+    }
+
+    const WRITE: WriteAction = WriteAction::Write {
+        config: None,
+        resumed_after: 0,
+    };
+    const SKIP: WriteAction = WriteAction::Skip {
+        started_with_delay: None,
+    };
+
+    fn config(data: u8) -> Input {
+        Input {
+            data: vec![data],
+            frame: None,
+        }
+    }
+
+    #[test]
+    fn catch_up_resumes_only_at_a_fresh_key_frame() {
+        let now = Instant::now();
+        let late = MAX_DELAY + Duration::from_millis(1);
+        let mut catch_up = CatchUp::default();
+        assert_eq!(
+            catch_up.prepare(&frame(now - late, false), now, None),
+            WriteAction::Skip {
+                started_with_delay: Some(late),
+            }
+        );
+        assert_eq!(catch_up.prepare(&frame(now, false), now, None), SKIP);
+        // 遅れたキーフレームからは再開しない
+        assert_eq!(catch_up.prepare(&frame(now - late, true), now, None), SKIP);
+        assert_eq!(
+            catch_up.prepare(&frame(now, true), now, None),
+            WriteAction::Write {
+                config: None,
+                resumed_after: 3
+            }
+        );
+        assert_eq!(catch_up.generation, Generation(1));
+        assert_eq!(catch_up.prepare(&frame(now, false), now, None), WRITE);
+    }
+
+    #[test]
+    fn catch_up_rewrites_the_latest_config_before_resuming() {
+        let now = Instant::now();
+        let mut catch_up = CatchUp::default();
+        assert_eq!(catch_up.prepare(&config(1), now, None), WRITE);
+        catch_up.prepare(
+            &frame(now - MAX_DELAY - Duration::from_millis(1), false),
+            now,
+            None,
+        );
+        for value in [2, 3] {
+            assert_eq!(catch_up.prepare(&config(value), now, None), SKIP);
+        }
+        assert_eq!(
+            catch_up.prepare(&frame(now, true), now, None),
+            WriteAction::Write {
+                config: Some(vec![3]),
+                resumed_after: 1
+            }
+        );
+    }
+
+    #[test]
+    fn catch_up_keeps_frames_within_the_delay_limit() {
+        let now = Instant::now();
+        let mut catch_up = CatchUp::default();
+        for key_frame in [true, false, false, true] {
+            assert_eq!(
+                catch_up.prepare(&frame(now, key_frame), now + MAX_DELAY, None),
+                WRITE
+            );
+        }
+        assert_eq!(catch_up.generation, Generation(0));
+    }
+
+    #[test]
+    fn catch_up_skips_when_the_current_generation_was_dropped_after_decoding() {
+        let now = Instant::now();
+        let mut catch_up = CatchUp::default();
+        assert_eq!(
+            catch_up.prepare(&frame(now, false), now, Some(Generation(0))),
+            WriteAction::Skip {
+                started_with_delay: Some(Duration::ZERO),
+            }
+        );
+        assert_eq!(
+            catch_up.prepare(&frame(now, true), now, None),
+            WriteAction::Write {
+                config: None,
+                resumed_after: 1
+            }
+        );
+        // 再開する前に書いた画像が捨てられても、新しい区間は捨てない
+        assert_eq!(
+            catch_up.prepare(&frame(now, false), now, Some(Generation(0))),
+            WRITE
+        );
+    }
+
+    #[test]
+    fn catch_up_restarts_the_generation_at_a_fresh_key_frame_without_skipping() {
+        let now = Instant::now();
+        let mut catch_up = CatchUp::default();
+        assert_eq!(
+            catch_up.prepare(&frame(now, true), now, Some(Generation(0))),
+            WRITE
+        );
+        assert_eq!(catch_up.generation, Generation(1));
+    }
+
+    #[test]
+    fn frame_queue_reports_the_latest_stale_generation_once() {
+        let queue = FrameQueue::default();
+        assert_eq!(queue.take_stale(), None);
+        queue.report_stale(Generation(0));
+        queue.report_stale(Generation(2));
+        queue.report_stale(Generation(1));
+        assert_eq!(queue.take_stale(), Some(Generation(2)));
+        assert_eq!(queue.take_stale(), None);
+    }
 
     #[test]
     fn bmp_rows_are_padded_and_stored_bottom_up() {
