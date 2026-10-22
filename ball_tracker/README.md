@@ -1,3 +1,25 @@
+## 設定ファイル
+
+既定では、次の場所にある `config.yaml` を読み込みます。`--config PATH` または `--config=PATH` で別のファイルを指定できます。
+明示したファイルがない場合はエラーになり、既定のファイルがない場合は設定ファイルなしで起動します。
+
+- Linux: `~/.config/struckout/ball-tracker/config.yaml`
+- Windows: `%APPDATA%\struckout\ball-tracker\config.yaml`
+- macOS: `~/Library/Application Support/struckout/ball-tracker/config.yaml`
+
+キーには長いオプション名 (`--` を除く) を使います。書かなかった項目は既定値になり、知らないキーはエラーになります。
+`--json` のようなフラグは `true` / `false` で書きます。
+
+```yaml
+input: network
+output: network
+report-delay-ms: -30
+json: true
+```
+
+設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
+ただし、設定ファイルで `true` にしたフラグを、コマンドラインから無効にすることはできません。
+
 ## ヘルスチェック
 ランチャーが状態を確かめられるように、5080 番 (`api/spec/servers.yaml` の `ball-tracker.health`) で gRPC の health checking protocol に答える。
 入出力の準備が終わり、処理を始める直前に `SERVING` になる。それまでは `NOT_SERVING`。
