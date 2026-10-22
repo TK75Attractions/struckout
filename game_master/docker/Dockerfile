@@ -20,12 +20,10 @@ COPY --from=ghcr.io/jdx/mise@sha256:1e0a39bc5a3b089b9b9305b6cd53e5d32ed5327e6241
 WORKDIR /build/
 
 # mise.tomlの変更頻度は低いので先にコピーしてインストールしておく
-# mise は動いている環境の分をロックファイルに書き足すことがあるので、builder が書けるようにしておく
-# (root のままだと、linux-arm64 の PC で Permission denied になった)
 COPY mise.toml mise.toml
 COPY mise.lock mise.lock
 COPY game_master/mise.toml game_master/mise.toml
-RUN mise install protoc
+RUN mise install --locked protoc
 
 COPY ./ ./
 RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/.cargo/registry \
