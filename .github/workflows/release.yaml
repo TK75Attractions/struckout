@@ -315,7 +315,7 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'master' }}
-    needs: [get-version, rust-build, unity-build, launcher-build, camera-build]
+    needs: [get-version, rust-build, unity-build, launcher-build, camera-build, publish-game-master-image]
     permissions:
       contents: write
     steps:
