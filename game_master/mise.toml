@@ -8,14 +8,14 @@ SENTRY_DSN = { default = "", redact = true }
 [tasks.dev]
 shell = "bash -c"
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up"
-dir = "{{ config_root }}"
+dir = "{{ config_root }}/docker/"
 description = "Start a dev server of game-master using docker-compose"
 env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
 raw = true
 
 [tasks.prod]
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_PROD docker compose -f compose.yaml -f compose.prod.yaml up"
-dir = "{{ config_root }}"
+dir = "{{ config_root }}/docker/"
 description = "Start a production server of game-master with the image of a release (GAME_MASTER_VERSION)"
 env.MYSQL_ROOT_PASSWORD_PROD = { required = true, redact = true }
 env.GAME_MASTER_VERSION = { required = true }
@@ -23,7 +23,7 @@ raw = true
 
 [tasks.db]
 run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up db"
-dir = "{{ config_root }}"
+dir = "{{ config_root }}/docker/"
 description = "Start a MySQL service for game-master."
 env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
 raw = true
@@ -41,7 +41,7 @@ run = '''
   fi
   docker compose -f compose.yaml -f compose.dev.yaml build ${FLAGS}
 '''
-dir = "{{ config_root }}"
+dir = "{{ config_root }}/docker/"
 description = "game-masterのDockerイメージをビルドする"
 usage = '''
   flag "--release" help="releaseプロファイルでビルドする"
@@ -56,7 +56,7 @@ raw = true
 
 [tasks.compose]
 run = "docker compose -f compose.yaml -f compose.dev.yaml"
-dir = "{{ config_root }}"
+dir = "{{ config_root }}/docker/"
 description = "game-master-devのサービスを操作する"
 raw = true
 
