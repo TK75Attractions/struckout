@@ -23,7 +23,10 @@ use tokio_stream::{
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
 
-use crate::{DataSource, DataSourceImpl, GetGameResultError, session::Sessions};
+use crate::{
+    DataSource, DataSourceImpl, GetGameResultError,
+    session::{Sessions, SetReadyAction},
+};
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
 
@@ -69,13 +72,14 @@ where
                 .send(Event {
                     game_id,
                     machine_id,
-                    data: Err(Status::unknown(e.to_string())), // TODO: more detailed error
+                    data: Err(Status::internal(e.to_string())),
                 })
                 .expect("all event receiver has been dropped");
         };
         {
-            let mut guard = self.running_games.write();
-            guard.remove(&game_id);
+            let mut sessions = self.sessions.write();
+            sessions.remove(machine_id);
+            todo!("マルチプレイ時の処理");
         }
         self.event_tx
             .send(Event {
@@ -123,13 +127,17 @@ where
             difficulty,
             machine_id,
         } = req;
-        let difficulty: Difficulty = difficulty.try_into().map_err();
-        let machine_id = machine_id.into();
+        let difficulty = Difficulty::try_from(difficulty)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let machine_id: MachineId = machine_id.into();
 
         {
             let mut sessions = self.sessions.write();
+            sessions
+                .update_difficulty(machine_id, difficulty)
+                .map_err(|e| Status::failed_precondition(e.to_string()))?;
         }
-        todo!()
+        todo!("notify change")
     }
 
     async fn set_game_mode(
@@ -188,6 +196,9 @@ where
         let req = req.into_inner();
         let game_id = req.game_id.into();
         let machine_id = req.machine_id.into();
+        {
+            let mut sessions = self.sessions.write();
+        }
         let total_score = {
             let mut guard = self.running_games.write();
             let Some(game) = guard.get_mut(&game_id) else {
@@ -225,50 +236,106 @@ where
         }
     }
 
+    #[instrument]
     async fn set_session_ready(
         &self,
         req: Request<SetSessionReadyRequest>,
     ) -> Result<Response<SetSessionReadyResponse>, Status> {
-        let req = req.into_inner();
-
-        let started_at = UtcDateTime::now();
-
-        // TODO: more detailed error
-        let game_id = self
-            .data_source
-            .insert_game_single(machine_id, req.player_id.into(), started_at, difficulty)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        self.running_games.write().insert(game_id, Game::new());
-
-        if self
-            .event_tx
-            .send(Event {
-                game_id,
-                machine_id,
-                data: Ok(SuccessfulEvent::GameStarted { difficulty }),
-            })
-            .is_err()
+        let SetSessionReadyRequest { machine_id } = req.into_inner();
+        let machine_id = machine_id.into();
         {
-            warn!("all receiver has been dropped");
-        };
+            let mut sessions = self.sessions.write();
+            match sessions.set_ready(machine_id) {
+                Ok(SetReadyAction::RunSingle {
+                    player_id,
+                    difficulty,
+                }) => {
+                    let started_at = UtcDateTime::now();
 
-        let (complete_tx, complete_rx) = mpsc::channel(16);
+                    let game_id = self
+                        .data_source
+                        .insert_game_single(machine_id, player_id, started_at, difficulty)
+                        .await
+                        .map_err(|e| Status::internal(e.to_string()))?;
 
-        tokio::spawn(game_timer(
-            machine_id,
-            game_id,
-            self.event_tx.clone(),
-            complete_tx,
-        ));
+                    if self
+                        .event_tx
+                        .send(Event {
+                            game_id,
+                            target: EventTarget::Single(machine_id),
+                            data: Ok(SuccessfulEvent::GameStarted { difficulty }),
+                        })
+                        .is_err()
+                    {
+                        warn!("all receiver has been dropped");
+                    };
 
-        // handle game completion
-        tokio::spawn(
-            self.clone()
-                .handle_game_completion(game_id, machine_id, complete_rx),
-        );
-        todo!()
+                    let (complete_tx, complete_rx) = mpsc::channel(16);
+
+                    tokio::spawn(game_timer(
+                        machine_id,
+                        game_id,
+                        self.event_tx.clone(),
+                        complete_tx,
+                    ));
+
+                    // handle game completion
+                    tokio::spawn(self.clone().handle_game_completion(
+                        game_id,
+                        machine_id,
+                        complete_rx,
+                    ));
+                    Ok(Response::new(SetSessionReadyResponse {}))
+                }
+                Ok(SetReadyAction::RunMulti {
+                    player_ids,
+                    difficulty,
+                }) => {
+                    let started_at = UtcDateTime::now();
+
+                    let game_id = self
+                        .data_source
+                        .insert_game_multi(player_ids, started_at, difficulty)
+                        .await
+                        .map_err(|e| Status::internal(e.to_string()))?;
+
+                    if self
+                        .event_tx
+                        .send(Event {
+                            game_id,
+                            target: EventTarget::Single(machine_id),
+                            data: Ok(SuccessfulEvent::GameStarted { difficulty }),
+                        })
+                        .is_err()
+                    {
+                        warn!("all receiver has been dropped");
+                    };
+
+                    let (complete_tx, complete_rx) = mpsc::channel(16);
+
+                    tokio::spawn(game_timer(
+                        machine_id,
+                        game_id,
+                        self.event_tx.clone(),
+                        complete_tx,
+                    ));
+
+                    // handle game completion
+                    tokio::spawn(self.clone().handle_game_completion(
+                        game_id,
+                        machine_id,
+                        complete_rx,
+                    ));
+                    Ok(Response::new(SetSessionReadyResponse {}))
+                }
+                Ok(SetReadyAction::WaitForAnother) => {
+                    todo!()
+                }
+                Err(e) => {
+                    return Err(Status::failed_precondition(e.to_string()));
+                }
+            }
+        }
     }
 }
 
@@ -325,8 +392,15 @@ async fn game_timer(
 #[derive(Debug, Clone)]
 pub struct Event {
     game_id: GameId,
-    machine_id: MachineId,
+    target: EventTarget,
     data: Result<SuccessfulEvent, Status>,
+}
+
+/// Where to send events.
+#[derive(Debug, Clone, Copy)]
+pub enum EventTarget {
+    Single(MachineId),
+    All,
 }
 
 /// Events which occur in the service. This can be converted to [`struckout_proto::Event`].

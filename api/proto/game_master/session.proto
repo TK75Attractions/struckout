@@ -80,7 +80,9 @@ message SetGameModeRequest {
 
 message SetGameModeResponse {}
 
-message SetSessionReadyRequest {}
+message SetSessionReadyRequest {
+  uint32 machine_id = 1;
+}
 
 message SetSessionReadyResponse {}
 

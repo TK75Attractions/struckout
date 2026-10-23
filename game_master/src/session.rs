@@ -6,6 +6,7 @@ use struckout_proto::{
     types::{MachineId, PlayerId},
 };
 use thiserror::Error;
+use tracing::trace;
 
 #[derive(Debug, Clone)]
 pub struct Sessions((Option<MachineSession>, Option<MachineSession>));
@@ -25,6 +26,8 @@ pub enum SessionError {
     },
     #[error("there's no session on machine {0}")]
     NoSession(MachineId),
+    #[error("on machine {0}: can't evlove to the next state: difficulty is not yet set")]
+    NoDifficulty(MachineId),
 }
 
 impl Sessions {
@@ -174,6 +177,7 @@ impl Sessions {
         Ok(())
     }
 
+    /// Returns the score of the session on `machine_id`.
     pub fn score(&self, machine_id: MachineId) -> Result<u32, SessionError> {
         let ms = self
             .get(machine_id)
@@ -188,12 +192,130 @@ impl Sessions {
                 })?;
         Ok(*score)
     }
+
+    /// Removes the session on `machine_id`, returning the removed session.
+    ///
+    /// Returns `None` when no session exist on `machine_id`.
+    pub fn remove(&mut self, machine_id: MachineId) -> Option<MachineSession> {
+        if let Some(ms) = &self.0.0
+            && ms.machine_id() == machine_id
+        {
+            std::mem::replace(&mut self.0.0, None)
+        } else if let Some(ms) = &self.0.1
+            && ms.machine_id() == machine_id
+        {
+            std::mem::replace(&mut self.0.0, None)
+        } else {
+            None
+        }
+    }
+
+    /// Sets the session on `machine_id` ready.
+    ///
+    /// If the session's mode is [`GameMode::Multi`], it checks if another machine's session is waiting for this session
+    /// and then starts a game. If not waiting, it sets the session's state to [`MachineSession::WaitingForAnotherMachine`].
+    pub fn set_ready(&mut self, machine_id: MachineId) -> Result<SetReadyAction, SessionError> {
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (_, &player_id, &mode, &difficulty) =
+            ms.as_configuring_difficulty()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "session can be made ready only while ConfiguringDifficulty",
+                    expected_state: "ConfiguringDifficulty",
+                    actual_state,
+                    machine_id,
+                })?;
+        let difficulty = difficulty.ok_or(SessionError::NoDifficulty(machine_id))?;
+        match mode {
+            GameMode::Unspecified => unreachable!(),
+
+            GameMode::Single => Ok(SetReadyAction::RunSingle {
+                player_id,
+                difficulty,
+            }),
+            GameMode::Multi => {
+                let Some(another_ms) = self.get_another(machine_id) else {
+                    trace!(
+                        %machine_id,
+                        "no session found for another machine: waiting for it"
+                    );
+                    let ms = self
+                        .get_mut(machine_id)
+                        .expect("returned above with SessionError::NoSession");
+                    *ms = MachineSession::WaitingForAnotherMachine {
+                        machine_id,
+                        player_id,
+                        mode,
+                        difficulty,
+                    };
+                    return Ok(SetReadyAction::WaitForAnother);
+                };
+                let Ok((&another_machine_id, &another_player_id, &mode, &another_difficulty)) =
+                    another_ms.as_waiting_for_another_machine()
+                else {
+                    trace!(%machine_id, "a session exist on another machine, but it is not waiting for this machine; waiting for it to make session ready");
+                    let ms = self
+                        .get_mut(machine_id)
+                        .expect("returned above with SessionError::NoSession");
+                    *ms = MachineSession::WaitingForAnotherMachine {
+                        machine_id,
+                        player_id,
+                        mode,
+                        difficulty,
+                    };
+                    return Ok(SetReadyAction::WaitForAnother);
+                };
+                assert!(mode.is_multi());
+                assert_eq!(difficulty, another_difficulty);
+                {
+                    let ms = self
+                        .get_mut(machine_id)
+                        .expect("returned with NoSession above");
+                    *ms = MachineSession::Running {
+                        machine_id,
+                        player_id,
+                        mode: GameMode::Multi,
+                        difficulty,
+                        score: 0,
+                    };
+                }
+                {
+                    let another_ms = self.get_another_mut(machine_id).expect("returned above");
+                    *another_ms = MachineSession::Running {
+                        machine_id: another_machine_id,
+                        player_id: another_player_id,
+                        mode: GameMode::Multi,
+                        difficulty,
+                        score: 0,
+                    };
+                }
+                Ok(SetReadyAction::RunMulti {
+                    player_ids: [player_id, another_player_id],
+                    difficulty,
+                })
+            }
+        }
+    }
 }
 
 impl Default for Sessions {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Returned from [`Sessions::set_ready()`].
+pub enum SetReadyAction {
+    RunSingle {
+        player_id: PlayerId,
+        difficulty: Difficulty,
+    },
+    RunMulti {
+        player_ids: [PlayerId; 2],
+        difficulty: Difficulty,
+    },
+    WaitForAnother,
 }
 
 /// Session data for a specific machine.
@@ -210,6 +332,12 @@ pub enum MachineSession {
         mode: GameMode,
         difficulty: Option<Difficulty>,
     },
+    WaitingForAnotherMachine {
+        machine_id: MachineId,
+        player_id: PlayerId,
+        mode: GameMode,
+        difficulty: Difficulty,
+    },
     Running {
         machine_id: MachineId,
         player_id: PlayerId,
@@ -225,6 +353,7 @@ impl MachineSession {
         match self {
             MachineSession::ConfiguringGameMode { machine_id, .. } => *machine_id,
             MachineSession::ConfiguringDifficulty { machine_id, .. } => *machine_id,
+            MachineSession::WaitingForAnotherMachine { machine_id, .. } => *machine_id,
             MachineSession::Running { machine_id, .. } => *machine_id,
         }
     }
@@ -234,6 +363,7 @@ impl MachineSession {
         match self {
             MachineSession::ConfiguringGameMode { player_id, .. } => *player_id,
             MachineSession::ConfiguringDifficulty { player_id, .. } => *player_id,
+            MachineSession::WaitingForAnotherMachine { player_id, .. } => *player_id,
             MachineSession::Running { player_id, .. } => *player_id,
         }
     }
