@@ -28,6 +28,8 @@ pub enum SessionError {
     NoSession(MachineId),
     #[error("on machine {0}: can't evlove to the next state: difficulty is not yet set")]
     NoDifficulty(MachineId),
+    #[error("multi-play mode is required to do this operation")]
+    NotMultiPlay,
 }
 
 impl Sessions {
@@ -193,6 +195,41 @@ impl Sessions {
         Ok(*score)
     }
 
+    /// Returns `Ok(score)` when current session is multi-play, otherwise [`SessionError::NotMultiPlay`].
+    pub fn score_multi(&self) -> Result<u32, SessionError> {
+        let Some(ms1) = &self.0.0 else {
+            return Err(SessionError::NotMultiPlay);
+        };
+        let Some(ms2) = &self.0.1 else {
+            return Err(SessionError::NotMultiPlay);
+        };
+        let (_, _, mode1, dfclty1, score1) =
+            ms1.as_running()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "score can only be fetched while Running",
+                    expected_state: "Running",
+                    actual_state,
+                    machine_id: ms1.machine_id(),
+                })?;
+        let (_, _, mode2, dfclty2, score2) =
+            ms2.as_running()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "score can only be fetched while Running",
+                    expected_state: "Running",
+                    actual_state,
+                    machine_id: ms2.machine_id(),
+                })?;
+        if !mode1.is_multi() {
+            return Err(SessionError::NotMultiPlay);
+        }
+        if !mode2.is_multi() {
+            return Err(SessionError::NotMultiPlay);
+        }
+        assert_eq!(dfclty1, dfclty2);
+        assert_eq!(score1, score2);
+        Ok(*score1)
+    }
+
     /// Removes the session on `machine_id`, returning the removed session.
     ///
     /// Returns `None` when no session exist on `machine_id`.
@@ -208,6 +245,14 @@ impl Sessions {
         } else {
             None
         }
+    }
+
+    /// Removes all sessions.
+    pub fn remove_all(&mut self) -> (Option<MachineSession>, Option<MachineSession>) {
+        (
+            std::mem::replace(&mut self.0.0, None),
+            std::mem::replace(&mut self.0.1, None),
+        )
     }
 
     /// Sets the session on `machine_id` ready.

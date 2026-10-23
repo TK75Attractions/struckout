@@ -56,35 +56,47 @@ where
     async fn handle_game_completion(
         self,
         game_id: GameId,
-        machine_id: MachineId,
+        ev_target: EventTarget,
         mut complete_rx: mpsc::Receiver<()>,
     ) {
         complete_rx.recv().await.expect("complete channel closed");
         let score = {
             let sessions = self.sessions.read();
-            sessions
-                .score(machine_id)
-                .expect("it is guaranteed the session exist and is in right state")
+            match ev_target {
+                EventTarget::Single(machine_id) => sessions
+                    .score(machine_id)
+                    .expect("it is guaranteed the session exist and is in right state"),
+                EventTarget::All => sessions.score_multi().expect("should be in valid state"),
+            }
         };
         let res = self.data_source.complete_game(game_id, score).await;
         if let Err(e) = res {
             self.event_tx
                 .send(Event {
                     game_id,
-                    machine_id,
+                    target: ev_target,
                     data: Err(Status::internal(e.to_string())),
                 })
                 .expect("all event receiver has been dropped");
         };
         {
             let mut sessions = self.sessions.write();
-            sessions.remove(machine_id);
-            todo!("マルチプレイ時の処理");
+            match ev_target {
+                EventTarget::Single(machine_id) => {
+                    let removed = sessions.remove(machine_id);
+                    assert!(removed.is_some());
+                }
+                EventTarget::All => {
+                    let (removed1, removed2) = sessions.remove_all();
+                    assert!(removed1.is_some());
+                    assert!(removed2.is_some());
+                }
+            }
         }
         self.event_tx
             .send(Event {
                 game_id,
-                machine_id,
+                target: ev_target,
                 data: Ok(SuccessfulEvent::GameFinished),
             })
             .expect("all event receiver has been dropped");
@@ -273,7 +285,7 @@ where
                     let (complete_tx, complete_rx) = mpsc::channel(16);
 
                     tokio::spawn(game_timer(
-                        machine_id,
+                        EventTarget::Single(machine_id),
                         game_id,
                         self.event_tx.clone(),
                         complete_tx,
@@ -282,7 +294,7 @@ where
                     // handle game completion
                     tokio::spawn(self.clone().handle_game_completion(
                         game_id,
-                        machine_id,
+                        EventTarget::Single(machine_id),
                         complete_rx,
                     ));
                     Ok(Response::new(SetSessionReadyResponse {}))
@@ -314,7 +326,7 @@ where
                     let (complete_tx, complete_rx) = mpsc::channel(16);
 
                     tokio::spawn(game_timer(
-                        machine_id,
+                        EventTarget::All,
                         game_id,
                         self.event_tx.clone(),
                         complete_tx,
@@ -323,7 +335,7 @@ where
                     // handle game completion
                     tokio::spawn(self.clone().handle_game_completion(
                         game_id,
-                        machine_id,
+                        EventTarget::All,
                         complete_rx,
                     ));
                     Ok(Response::new(SetSessionReadyResponse {}))
@@ -349,11 +361,13 @@ async fn pass_events_through_by_machine_id(
     let events = BroadcastStream::new(event_rx);
     let mut events = events
         .map(|v| v.expect("broadcast channel lagged"))
-        .filter(|ev| ev.machine_id == machine_id);
+        .filter(|ev| match ev.target {
+            EventTarget::Single(ev_machine_id) => ev_machine_id == machine_id,
+            EventTarget::All => true,
+        });
     while let Some(ev) = events.next().await {
         let data = ev.data.map(|v| ListenEventsResponse {
             event: Some(struckout_proto::Event {
-                game_id: ev.game_id.into_inner(),
                 event_data: Some(v.into()),
             }),
         });
@@ -364,7 +378,7 @@ async fn pass_events_through_by_machine_id(
 /// Sends event to broadcast channel every secounds until the game finishes, then sends the [`Event::GameFinished`].
 #[instrument(skip(tx, complete_tx))]
 async fn game_timer(
-    machine_id: MachineId,
+    ev_target: EventTarget,
     game_id: GameId,
     tx: broadcast::Sender<Event>,
     complete_tx: mpsc::Sender<()>,
@@ -375,7 +389,7 @@ async fn game_timer(
         trace!(secs_elapsed = i, "timer tick");
         let res = tx.send(Event {
             game_id,
-            machine_id,
+            target: ev_target,
             data: Ok(SuccessfulEvent::GameTimeLimitNotify {
                 remaining: (duration_secs - i).seconds(),
             }),
@@ -396,7 +410,7 @@ pub struct Event {
     data: Result<SuccessfulEvent, Status>,
 }
 
-/// Where to send events.
+/// Where to send events to.
 #[derive(Debug, Clone, Copy)]
 pub enum EventTarget {
     Single(MachineId),

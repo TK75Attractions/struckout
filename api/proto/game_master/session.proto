@@ -32,9 +32,9 @@ message ListenEventsResponse {
   Event event = 1;
 }
 
+// FIXME: score_to_addじゃなくてtarget_idとかのほうが良いか？
 message AddScoreRequest {
   uint32 machine_id = 1;
-  uint32 game_id = 2;
   uint32 score_to_add = 3;
 }
 
@@ -97,22 +97,17 @@ message Event {
 
   message GameStarted {
     Difficulty difficulty = 1;
-    uint32 game_id = 2;
   }
 
   message GameTimeLimitNotify {
     google.protobuf.Duration remaining = 1;
-    uint32 game_id = 2;
   }
 
   message GameScoreChanged {
     uint32 total_score = 1;
-    uint32 game_id = 2;
   }
 
-  message GameFinished {
-    uint32 game_id = 2;
-  }
+  message GameFinished {}
 
   oneof event_data {
     GameStarted game_started = 3;
