@@ -1,4 +1,4 @@
-FROM rust@sha256:e259494b14672950a909b4c54527e19d29cae6ebf980672114c8bb85e5594e4a AS builder
+FROM rust:1.99.1-trixie AS builder
 
 ARG RELEASE_MODE=false
 ARG SENTRY_DSN
@@ -23,7 +23,7 @@ WORKDIR /build/
 COPY mise.toml mise.toml
 COPY mise.lock mise.lock
 COPY game_master/mise.toml game_master/mise.toml
-RUN mise install --locked protoc
+RUN mise install --locked protoc mold
 
 COPY ./ ./
 RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/.cargo/registry \
@@ -45,11 +45,11 @@ RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/
         TARGET_DIR="debug"; \
     fi &&\
     SQLX_OFFLINE=true ST_VERSION=${ST_VERSION} ST_COMMIT_SHORT_HASH=${ST_COMMIT_SHORT_HASH} \
-    mise -C game_master exec protoc -- cargo build ${FLAGS} -p game_master \
+    mise exec protoc mold -- cargo build ${FLAGS} -p game_master \
     && mkdir -p /build/bin/ \
     && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 
-FROM debian@sha256:913f6706df59a68922d1dd08f78c2476560a8d367897200a6005b00e5f67c2d5
+FROM debian:trixie
 
 RUN apt update && apt install -y ca-certificates && \
     update-ca-certificates && \
