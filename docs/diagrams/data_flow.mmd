@@ -1,0 +1,57 @@
+flowchart BT
+    subgraph Projector["プロジェクター"]
+        direction LR
+
+        Waiting1["待機画面"]
+        ProjectorTutorial["チュートリアル"]
+        Waiting2["待機画面2"]
+
+        Waiting1 ==>|"TutorialStarted"| ProjectorTutorial
+        ProjectorTutorial ==> Waiting2
+    end
+
+    subgraph TouchPanel["タッチパネル"]
+        direction LR
+
+        Start["Start"]
+        Tutorial["Tutorial"]
+        NameInputFirst["NameInputFirst"]
+        NameInputNonFirst["NameInputNonFirst"]
+        ModeSelect["ModeSelect"]
+        DifficultySelect["DifficultySelect"]
+
+        Start ==>|"初めて"| Tutorial
+        Start ==>|"2回目"| NameInputNonFirst
+
+        Tutorial ==>|"最後のチュートリアルで「次へ」"| NameInputFirst
+
+        NameInputFirst ==> ModeSelect
+        NameInputNonFirst ==> ModeSelect
+
+        ModeSelect ==> DifficultySelect
+    end
+
+    %% チュートリアル開始
+    Start -->|"初めて"| StartTutorial(["StartTutorial"])
+    StartTutorial -.-> TutorialStarted{{"TutorialStarted"}}
+    TutorialStarted -->|"表示開始"| ProjectorTutorial
+
+    %% チュートリアルの前のページへ
+    Tutorial -->|"前"| GoPreviousTutorial(["GoPreviousTutorial"])
+    GoPreviousTutorial -.-> TutorialNavigatedToPrevious{{"TutorialNavigatedToPrevious"}}
+    TutorialNavigatedToPrevious -->|"前へ"| ProjectorTutorial
+
+    %% チュートリアルの次のページへ
+    Tutorial -->|"次へ"| GoNextTutorial(["GoNextTutorial"])
+    GoNextTutorial -.-> TutorialNavigatedToNext{{"TutorialNavigatedToNext"}}
+    TutorialNavigatedToNext -->|"次へ"| ProjectorTutorial
+
+    %% プレイヤー登録
+    NameInputFirst --> AddPlayer(["AddPlayer"])
+
+    %% セッション開始
+    ModeSelect <--> StartSession(["StartSession"])
+
+    %% 難易度設定
+    DifficultySelect --> SetSessionDifficulty(["SetSessionDifficulty"])
+    SetSessionDifficulty -.-> SessionDifficultyChanged{{"SessionDifficultyChanged"}}
