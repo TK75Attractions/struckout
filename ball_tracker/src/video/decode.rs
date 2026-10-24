@@ -1,4 +1,5 @@
-//! 本番と録画の道具で、同じ NV12 のデコードと RGB への変換を使う。
+//! その場の解析 (`video::pipeline`) と、録画を解析し直すプログラム (`replay_video`、`bench_analysis`) で、
+//! 同じ NV12 のデコードと RGB への変換を使う。
 
 use super::analysis::AnalysisSettings;
 
@@ -112,7 +113,8 @@ fn rgb_pixel(y: i32, u: u8, v: u8) -> [u8; 3] {
     ]
 }
 
-/// 低遅延の H.264 入力から NV12 を出す引数。本番と道具の画像を一致させる。
+/// 低遅延の H.264 入力から NV12 を出す ffmpeg の引数。その場の解析と、録画を解析し直すプログラムで同じものを
+/// 使い、解析する画像が食い違わないようにする。
 pub fn ffmpeg_args(settings: &AnalysisSettings, hwaccel: Option<&str>) -> Vec<String> {
     let mut args: Vec<String> = [
         "-hide_banner",
