@@ -2,17 +2,12 @@ syntax = "proto3";
 
 package tk75attractions.struckout.game_master.v1;
 
+import "game_master/target.proto";
 import "game_master/types.proto";
 import "google/protobuf/duration.proto";
 
 message Event {
-  message TutorialStarted {}
-
-  message TutorialNavigatedToPrevious {}
-
-  message TutorialNavigatedToNext {}
-
-  message DifficultyChanged {}
+  message SessionDifficultyChanged {}
 
   message GameStarted {
     Difficulty difficulty = 1;
@@ -28,10 +23,44 @@ message Event {
 
   message GameFinished {}
 
-  oneof event_data {
-    GameStarted game_started = 3;
-    GameTimeLimitNotify game_time_limit_notify = 4;
-    GameFinished game_finished = 5;
-    GameScoreChanged game_score_changed = 6;
+  /* ----- Tutorials ----- */
+  message TutorialStarted {}
+
+  message TutorialNavigatedToPrevious {}
+
+  message TutorialNavigatedToNext {}
+
+  /* ----- Targets ----- */
+  message TargetAdded {
+    Target target = 1;
   }
+
+  message TargetRemoved {
+    string target_id = 1;
+  }
+
+  // TODO: 機能追加したらコメントアウト外す
+  // message TargetModified {}
+
+  oneof event_data {
+    GameStarted game_started = 1;
+    GameTimeLimitNotify game_time_limit_notify = 2;
+    GameFinished game_finished = 3;
+    GameScoreChanged game_score_changed = 4;
+    SessionDifficultyChanged session_difficulty_changed = 5;
+    /* ----- Tutorials ----- */
+    TutorialStarted tutorial_started = 6;
+    TutorialNavigatedToPrevious target_navigated_to_previous = 7;
+    TutorialNavigatedToNext target_navigated_to_next = 8;
+    TargetAdded target_added = 9;
+    TargetRemoved target_removed = 10;
+  }
+}
+
+message ListenEventsRequest {
+  uint32 machine_id = 1;
+}
+
+message ListenEventsResponse {
+  Event event = 1;
 }

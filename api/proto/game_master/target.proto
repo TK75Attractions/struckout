@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package tk75attractions.struckout.game_master.v1;
 
+// target_idはUUID
 message Target {
   message Compass {
     float x = 1;
@@ -13,16 +14,36 @@ message Target {
   oneof target_data {
     Compass compass = 2;
   }
+
+  message OwnerSingle {
+    uint32 single = 1;
+  }
+  message OwnerAll {}
+
+  oneof owner {
+    OwnerSingle single = 3;
+    OwnerAll all = 4;
+  }
 }
 
 message AddTargetRequest {
-  uint32 machine_id = 1;
+  Target target = 1;
 }
 
-message AddTargetResponse {}
+message AddTargetResponse {
+  string target_id = 1;
+}
 
 message RemoveTargetRequest {
   uint32 machine_id = 1;
+  string target_id = 2;
 }
 
 message RemoveTargetResponse {}
+
+message HitTargetRequest {
+  uint32 machine_id = 1;
+  string target_id = 2;
+}
+
+message HitTargetResponse {}

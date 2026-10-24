@@ -38,11 +38,6 @@ impl Sessions {
         Self((None, None))
     }
 
-    /// Returns whether there is a session with multiplay mode.
-    pub fn includes_multiplay(&self) -> bool {
-        todo!()
-    }
-
     /// Returns reference to the session with given machine id.
     pub fn get(&self, machine_id: MachineId) -> Option<&MachineSession> {
         if let Some(ms) = &self.0.0

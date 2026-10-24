@@ -66,10 +66,12 @@ mod tests {
 
     use super::*;
 
+    const SERVICE_NAME: &'static str = "test.GameMasterService";
+
     /// The statuses of the whole server and of [`TestService`].
     async fn statuses(health: &HealthService) -> [Status; 2] {
         let mut statuses = [Status::Unknown; 2];
-        for (status, name) in statuses.iter_mut().zip(["", TestService::NAME]) {
+        for (status, name) in statuses.iter_mut().zip(["", SERVICE_NAME]) {
             let response = health
                 .check(Request::new(HealthCheckRequest {
                     service: name.into(),
@@ -102,11 +104,7 @@ mod tests {
                 result
             }
         };
-        let task = tokio::spawn(monitor_database(
-            reporter,
-            vec!["test.GameMasterService"],
-            check,
-        ));
+        let task = tokio::spawn(monitor_database(reporter, vec![SERVICE_NAME], check));
 
         tokio::task::yield_now().await;
         assert_eq!(statuses(&health).await, [Status::NotServing; 2]);
