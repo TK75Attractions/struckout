@@ -65,6 +65,8 @@ pub struct DetectionOptions {
 pub struct AnalysisSettings {
     pub camera_id: u32,
     pub session_id: String,
+    pub video_width: usize,
+    pub video_height: usize,
     pub width: usize,
     pub height: usize,
     pub fx: f64,
@@ -80,6 +82,9 @@ pub struct AnalysisSettings {
 
 impl AnalysisSettings {
     pub fn from_config(config: &VideoStreamConfig) -> Result<Self, String> {
+        if config.video_width == 0 || config.video_height == 0 {
+            return Err("video size is zero".into());
+        }
         if config.analysis_width == 0 || config.analysis_height == 0 {
             return Err("analysis size is zero".into());
         }
@@ -102,6 +107,8 @@ impl AnalysisSettings {
         Ok(Self {
             camera_id: config.camera_id,
             session_id: config.session_id.clone(),
+            video_width: config.video_width as usize,
+            video_height: config.video_height as usize,
             width: config.analysis_width as usize,
             height: config.analysis_height as usize,
             fx: config.fx,
@@ -325,6 +332,8 @@ mod tests {
         AnalysisSettings {
             camera_id: 3,
             session_id: "s".into(),
+            video_width: 1280,
+            video_height: 720,
             width: 640,
             height: 360,
             fx: 482.0,

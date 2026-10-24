@@ -50,6 +50,9 @@ fun ConfigScreenRoute(
     val savedState by viewModel.uiState.collectAsState()
 
     var editingState by remember { mutableStateOf(savedState.copy()) }
+    var streamSize by remember(savedState.highSpeedStreamSize) {
+        mutableStateOf(savedState.highSpeedStreamSize)
+    }
 
     val radioOptions = listOf("Network", "Local", "None")
     val (selectedOption, setSelectedOption) = remember { mutableStateOf(radioOptions[0]) }
@@ -80,6 +83,8 @@ fun ConfigScreenRoute(
 
     ConfigScreen(
         version = viewModel.version,
+        streamSize = streamSize,
+        onStreamSizeSelected = { streamSize = it },
         recordingModeEnabled = editingState.recodingModeEnabled,
         connectionFailed = savedState.detectionOutputKind == DetectionOutputKind.NETWORK && !savedState.tcpIsConnected,
         x = x,
@@ -114,6 +119,7 @@ fun ConfigScreenRoute(
         onApplyChanges = {
             editingState = editingState
                 .copy(
+                    highSpeedStreamSize = streamSize,
                     locationX = x.text,
                     locationY = y.text,
                     locationZ = z.text,
@@ -136,7 +142,7 @@ fun ConfigScreenRoute(
     )
 
     // TODO: BackHandlerだと戻る動作しかフックできないのでNavControllerのラッパーを作る
-    BackHandler(savedState != editingState) {
+    BackHandler(savedState != editingState || streamSize != savedState.highSpeedStreamSize) {
         showDiscardDialog = true
     }
 }
@@ -153,6 +159,8 @@ private fun textToDetectionOutputKind(text: String): DetectionOutputKind? {
 @Composable
 private fun ConfigScreen(
     version: String,
+    streamSize: HighSpeedStreamSize,
+    onStreamSizeSelected: (HighSpeedStreamSize) -> Unit,
     recordingModeEnabled: Boolean,
     connectionFailed: Boolean,
     showDiscardDialog: Boolean,
@@ -196,6 +204,29 @@ private fun ConfigScreen(
                 onOptionSelected = onOptionSelected,
                 onToggleRecordingMode = onToggleRecordingMode,
             )
+
+            Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp).selectableGroup()) {
+                    Text("高速撮影の大きさ (120fps)")
+                    HighSpeedStreamSize.entries.forEach { size ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(56.dp).selectable(
+                                selected = streamSize == size,
+                                onClick = { onStreamSizeSelected(size) },
+                                role = Role.RadioButton,
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = streamSize == size, onClick = null)
+                            Text(when (size) {
+                                HighSpeedStreamSize.HD720 -> "従来の自動選択 (16:9 優先・既定)"
+                                HighSpeedStreamSize.VGA -> "640x480 (非対応なら自動選択)"
+                            })
+                        }
+                    }
+                    Text("640x480 は使用前に Save frame で画角を確認してください。")
+                }
+            }
 
             CameraPoseInput(
                 x,
@@ -497,6 +528,8 @@ private fun DummyConfigScreen(
 ) {
     ConfigScreen(
         version = "no version",
+        streamSize = HighSpeedStreamSize.HD720,
+        onStreamSizeSelected = {},
         recordingModeEnabled = recordingModeEnabled,
         connectionFailed = connectionFailed,
         showDiscardDialog = showDiscardDialog,

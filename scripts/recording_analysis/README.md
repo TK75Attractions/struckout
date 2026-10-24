@@ -15,8 +15,9 @@
 | `simulate_layouts.py` | カメラの置き方ごとに、着弾位置の予測がどのくらい当たるかをシミュレーションで比べる |
 | `replay_to_tracker.py` | 録画から作った検出結果を、カメラアプリと同じ通信で ball_tracker に流し込む |
 | `replay_stream_to_tracker.py` | ball_tracker が保存した動画 (`.vsp`) を、スマホが送ったときと同じ間隔で ball_tracker に流し直す。PC での解析の遅れを実機なしで確かめる |
+| `downscale_vsp.py` | ball_tracker の録画 (`.vsp`) の動画を小さい大きさの H.264 に再エンコードし、時刻と順番を保った `.vsp` と `.h264` を作る。スマホが小さい大きさで送った場合の PC 側の処理を実機なしで確かめる |
 | `stream_video_to_tracker.py` | 普通の動画を H.264 にして、カメラアプリと同じ手順で ball_tracker に流す |
-| `bench_ffmpeg.py` | ball_tracker と同じ設定で ffmpeg に録画 (`.h264`) をデコードさせ、GPU の方式と同時に動かす本数ごとに CPU の時間を測る。`numpy` と `opencv-python` は要らない |
+| `bench_ffmpeg.py` | ball_tracker と同じ設定で ffmpeg に録画 (`.h264`) をデコードさせ、GPU の方式と出力 (`full`、`decode`、`yuv`、`nv12`、`gpuscale`)、同時に動かす本数ごとに CPU の時間を測る。`gpuscale` は d3d11va / d3d12va 用。`numpy` と `opencv-python` は要らない |
 | `calibrate_camera.py` | 筐体の線が映った解析画像から、カメラの向き (診断用に位置と焦点距離も) を求める |
 | `calibrate_intrinsics.py` | チェッカーボードを撮った解析画像から、焦点距離を求める |
 

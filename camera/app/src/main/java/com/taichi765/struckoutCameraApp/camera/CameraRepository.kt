@@ -182,6 +182,8 @@ class CameraRepository @Inject constructor(
         }
 
         val intrinsics = if (focalLengthRatio > 0.0) {
+            // VGA も 4:3 センサー全体を横いっぱいに使うなら、16:9 と同じ幅比を使える。
+            // この画角の前提は実機の Save frame で確認すること。高さと光学中心は実画像から求める。
             // 設定で指定された焦点距離を使う。光学中心は画像の中央とする (中央からのずれは、
             // カメラの向きを画像から求めるときにほぼ吸収される)。
             CameraIntrinsics(

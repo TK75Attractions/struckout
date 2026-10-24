@@ -3,6 +3,7 @@ package com.taichi765.struckoutCameraApp.config
 data class ConfigUiState(
     val recodingModeEnabled: Boolean,
     val detectionOutputKind: DetectionOutputKind,
+    val highSpeedStreamSize: HighSpeedStreamSize,
     val udpIsConnected: Boolean,
     val tcpIsConnected: Boolean,
     val locationX: CharSequence,
@@ -24,6 +25,7 @@ data class ConfigUiState(
 fun ConfigUiState(): ConfigUiState = ConfigUiState(
     recodingModeEnabled = ConfigStoreRepository.ENABLE_RECORDING_MODE_DEFAULT,
     detectionOutputKind = DetectionOutputKind.NONE,
+    highSpeedStreamSize = HighSpeedStreamSize.HD720,
     udpIsConnected = false,
     tcpIsConnected = false,
     locationX = "0",

@@ -279,6 +279,16 @@ python scripts/camera_remote.py save-frame   # 画像を recordings/calibration/
 
 ほかに `retry` (ball_tracker への接続をやり直す)、`stop` (アプリを止める) がある。
 
+端末ごとの任意のキー `"stream_size": "640x480"` を `scripts/cameras.json` に足すと、`config` が高速撮影の大きさも
+設定する。固定 120fps の 640x480 に対応していない端末は従来の自動選択に戻り、logcat に記録する。
+`"stream_size": "1280x720"` は従来の自動選択 (16:9 優先、KYV45 は 1280x720) に戻す指定。
+キーがなければ端末の保存済み設定を変えず、未設定の既定も従来どおり。変更時はカメラと動画送信を開き直す。
+`status` の `stream_size` は希望する設定なので、実際の撮影サイズはカメラ画面か logcat で確かめる。
+
+640x480 は PC のデコード対象の画素数を減らし、解析画像も 640x480 になる。ただし「4:3 センサー全体を横いっぱいに使い、
+1280x720 と横の画角が同じ」という前提は実機で未確認。**使う前に両設定で Save frame を保存し、横の画角を比較すること。**
+同じなら焦点距離/解析画像幅の比をそのまま使える。違うなら 640x480 用に較正し直す。確認が済むまで既定にはしない。
+
 ## 7. ファイアウォールを開ける
 
 PC② の projector が 5000 番につないでくる。3 章の確認ダイアログで許可していれば
@@ -356,7 +366,8 @@ ball_tracker は、projector には的の面の上の位置 `(y, z)` を送る (
 ### 起動する前に: PC① の電源と温度 (2026-10-19 から)
 
 PC① は、熱や充電でクロックが落ちると、動画の処理が 120fps に追いつかなくなる。先に足りなくなるのは ffmpeg
-(デコードと縮小) の見込み。受け取ってから解析し終えるまでの遅れが 0.5 秒を超えると、そのあいだの着弾は出ない。
+(デコードと縮小) の見込み。受信から 0.3 秒を超えた入力は、次の新しいキーフレームまで捨てて追いつく。
+ffmpeg から出た古い画像も解析せずに読み流す。捨てた間の着弾は出ない。
 次の条件をそろえてから起動する (2026-10-19 に Ryzen 7 6800U の PC で確かめた)。
 
 - 電源につなぐ。バッテリーでは ffmpeg のデコードが約 75fps しか出ない (`run_pc1.py` が警告する)
@@ -454,7 +465,8 @@ ball_tracker にオプションを足すときは `--` のあとに書く (`pyth
    |---|---|
    | `fps` | 120 前後 (カメラ画面の「エンコード」と同じくらい) |
    | `analysis_ms` | 1 枚の解析。8 ms 以内 (2026-10-19 に Ryzen 7 6800U の PC で 1.35 ms) |
-   | `max_delay_ms` | 受け取ってから解析し終えるまでの最大。数十 ms (60fps の録画で 51〜60 ms)。500 ms を超えると着弾が出なくなる |
+   | `max_delay_ms` | 受け取ってから解析し終えるまでの最大。数十 ms (60fps の録画で 51〜60 ms)。受信から 300 ms を超えた入力は次の新しいキーフレームまで捨て、古い出力画像も解析せずに捨てる。捨てた間の着弾は出ない |
+   | `dropped_before_ffmpeg`、`dropped_after_ffmpeg` | この 10 秒間に書く前・解析する前に捨てた枚数。通常はどちらも 0 |
    | `queued` | 受け取って、まだ解析していないフレーム。数枚 |
    | `wait_ms`、`ffmpeg_ms_p50` など | 段ごとの時間。読み方は `ball_tracker/README.md` |
 
@@ -499,7 +511,7 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 | `its device_id is not in --cameras` | `cameras.json` にその端末の `device_id` が無い。`python scripts/camera_remote.py config` を実行する。それまでは、つないだ順の番号 (2 から) と、スマホが送る位置を使う |
 | カメラ画面が `検出: この端末で解析` のまま | `adb reverse --list` に 5052 があるか、設定の出力先が `Network` で TCP がつながっているか (カメラの番号が要る)、ball_tracker を `--no-video-analysis` で起動していないか。ball_tracker のログに `accepted new connection in VideoTransport` が出ているか |
 | `failed to start ffmpeg` | ffmpeg が PATH に無い。`--ffmpeg` で場所を渡す (1.4) |
-| `video analysis` の `fps` が 120 に届かない、`max_delay_ms` が大きい | PC① の処理が追いついていない。`queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が追いついていない。どちらも、クロックが落ちていないか (9 章の「起動する前に」) を先に疑う。`falling behind` が出ていれば、送信か ffmpeg が詰まっている |
+| `video analysis` の `fps` が 120 に届かない、`max_delay_ms` や `dropped_before_ffmpeg`、`dropped_after_ffmpeg` が大きい | PC① の処理が追いついていない。受信から 0.3 秒を超えた入力は次の新しいキーフレームまで捨てて追いつき、古い出力画像も解析せずに読み流す。捨てた間の着弾は出ない。`queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が追いついていない。クロックが落ちていないか (9 章の「起動する前に」) を先に疑う。破棄開始は `falling behind`、再開は `resuming video at a key frame` のログと破棄枚数で確認する |
 | アプリを開き直したら `camera_id` が 2, 3 ... になった | ball_tracker を `--cameras` なしで起動したか、その端末の `device_id` が `cameras.json` に無い。`--cameras` のないときの番号は接続のたびに増え、前の接続の位置も残るので、2 台の組み合わせを誤るおそれがある |
 | 検知が届かない | スマホがカメラ画面になっているか、画面が消えていないか |
 | 衝突が出ない | `-j` を付けて起動し、`events_*` を見る。`SeedDiagnostics` にトラックを作れなかった理由 (`RejectReason`) が残る。`SuppressedCollision` は、直前の報告に近い、またはほかのトラックのほうがボールらしいとして見送ったもの |

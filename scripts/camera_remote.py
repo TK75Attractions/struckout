@@ -80,6 +80,8 @@ class CameraRemote:
                       "--es", "pose", ",".join(str(v) for v in camera["pose"])]
             if camera.get("area"):
                 extras += ["--es", "area", ",".join(str(v) for v in camera["area"])]
+            if "stream_size" in camera:
+                extras += ["--es", "stream_size", camera["stream_size"]]
             result = self.broadcast(camera, "SET_CONFIG", extras)
             lines.append(self.label(camera, result))
             match = re.search(r"device_id=(\S+)", result)

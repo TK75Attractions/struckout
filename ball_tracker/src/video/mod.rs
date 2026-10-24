@@ -7,6 +7,7 @@
 //! スマホで解析すると 1 枚 17ms ほどかかり、120fps に追いつかない (KYV45)。
 
 pub mod analysis;
+pub mod decode;
 pub mod hwaccel;
 mod pipeline;
 pub mod recorder;
