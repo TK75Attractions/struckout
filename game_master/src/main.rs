@@ -153,7 +153,7 @@ async fn run_main() -> u8 {
             return 1;
         }
     };
-    return 0;
+    0
 }
 
 /// Whether the database answers within 2 seconds.

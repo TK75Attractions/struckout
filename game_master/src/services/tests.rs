@@ -92,12 +92,10 @@ macro_rules! wait_event {
 macro_rules! assert_event {
     ($stream_var:ident, $ev_pat:pat) => {{
         use tokio_stream::StreamExt;
-        println!("waiting for game to start");
 
         let Some(ev) = $stream_var.next().await else {
             panic!("event stream ended");
         };
-        println!("game started");
         match ev {
             Ok(ListenEventsResponse {
                 event:
@@ -141,6 +139,12 @@ async fn start_game_single<DS>(
     service
         .set_session_difficulty(Request::new(SetSessionDifficultyRequest {
             difficulty: difficulty.into(),
+            machine_id: machine_id.into(),
+        }))
+        .await
+        .expect("should succeed");
+    service
+        .set_session_ready(Request::new(SetSessionReadyRequest {
             machine_id: machine_id.into(),
         }))
         .await
@@ -316,6 +320,7 @@ async fn event_stream_notifies_in_correct_order() {
     start_game_single(&service, machine_id, difficulty, PlayerId::new(1)).await;
 
     // Assert: Started
+    assert_event!(stream, EventData::SessionDifficultyChanged(_));
     assert_event!(stream, EventData::GameStarted(_));
 
     // Assert: TimeLimitNotify
@@ -323,7 +328,6 @@ async fn event_stream_notifies_in_correct_order() {
         let resp = stream.next().await.unwrap();
         let resp = resp.expect("should not have error");
         let ev = resp.event.unwrap();
-        println!("received event: {:?}", ev);
         let ev = ev.event_data.unwrap();
         let EventData::GameTimeLimitNotify(notify) = ev else {
             break ev;
@@ -454,10 +458,6 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
         PlayerId::new(1),
     )
     .await;
-    service
-        .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 }))
-        .await
-        .expect("start game");
     let target_id = service
         .add_target(Request::new(target_request(1)))
         .await

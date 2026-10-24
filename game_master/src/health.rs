@@ -66,7 +66,7 @@ mod tests {
 
     use super::*;
 
-    const SERVICE_NAME: &'static str = "test.GameMasterService";
+    const SERVICE_NAME: &str = "test.GameMasterService";
 
     /// The statuses of the whole server and of [`TestService`].
     async fn statuses(health: &HealthService) -> [Status; 2] {

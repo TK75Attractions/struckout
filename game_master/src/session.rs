@@ -211,8 +211,8 @@ impl Sessions {
             .ok_or(SessionError::NoSession(machine_id))?;
         let (state,) = ms.as_configuring_difficulty_mut().map_err(|actual_state| {
             SessionError::InvalidState {
-                msg: "difficulty can only be updated while configuring difficulty".into(),
-                expected_state: "ConfiguringDifficulty".into(),
+                msg: "difficulty can only be updated while configuring difficulty",
+                expected_state: "ConfiguringDifficulty",
                 actual_state,
                 machine_id,
             }
@@ -228,7 +228,7 @@ impl Sessions {
         let (state,) = another
             .as_configuring_difficulty_mut()
             .map_err(|actual_state| SessionError::InvalidState {
-                msg: "difficulty can only be updated while configuring difficulty".into(),
+                msg: "difficulty can only be updated while configuring difficulty",
                 expected_state: "ConfiguringDifficulty",
                 actual_state,
                 machine_id,
@@ -343,11 +343,11 @@ impl Sessions {
         if let Some(ms) = &self.0.0
             && ms.machine_id() == machine_id
         {
-            std::mem::replace(&mut self.0.0, None)
+            self.0.0.take()
         } else if let Some(ms) = &self.0.1
             && ms.machine_id() == machine_id
         {
-            std::mem::replace(&mut self.0.0, None)
+            self.0.1.take()
         } else {
             None
         }
@@ -355,10 +355,7 @@ impl Sessions {
 
     /// Removes all sessions.
     pub fn remove_all(&mut self) -> (Option<MachineSession>, Option<MachineSession>) {
-        (
-            std::mem::replace(&mut self.0.0, None),
-            std::mem::replace(&mut self.0.1, None),
-        )
+        (self.0.0.take(), self.0.1.take())
     }
 
     /// Sets the session on `machine_id` ready.
