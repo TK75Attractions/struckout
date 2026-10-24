@@ -768,13 +768,6 @@ MonoBehaviour:
     LogConversions: 1
   _gameSettings:
     InitialTargetCount: 4
-  _scoreSettings:
-    Tiers:
-    - MaxDiameter: 150
-      Points: 5
-    - MaxDiameter: 300
-      Points: 3
-    DefaultPoints: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

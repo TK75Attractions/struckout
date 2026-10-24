@@ -240,15 +240,22 @@ where
         &self,
         req: Request<AddTargetRequest>,
     ) -> Result<Response<AddTargetResponse>, Status> {
-        let req = req.into_inner();
-        let AddTargetRequest { target } = req;
-        let target = target.ok_or_else(|| Status::invalid_argument("target is required"))?;
-        if target.target_data.is_none() {
-            return Err(Status::invalid_argument("target_data is required"));
-        }
-        if target.owner.is_none() {
-            return Err(Status::invalid_argument("target owner is required"));
-        }
+        let AddTargetRequest {
+            machine_id,
+            target_data,
+        } = req.into_inner();
+        let target_data =
+            target_data.ok_or_else(|| Status::invalid_argument("target_data is required"))?;
+        let target_data = match target_data {
+            struckout_proto::add_target_request::TargetData::Compass(compass) => {
+                struckout_proto::target::TargetData::Compass(compass)
+            }
+        };
+        let target = struckout_proto::Target {
+            machine_id,
+            target_data: Some(target_data),
+            owner: None,
+        };
         let target_id = self
             .sessions
             .write()

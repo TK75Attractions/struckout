@@ -5,9 +5,9 @@
 `SharedRunningState` にまとめて `Arc<RwLock<SharedRunningState>>` で保持する。
 マルチプレイ開始時は両セッションが同じ共有状態を参照し、一方での変更は他方からも見える。
 シングルプレイはゲームごとに独立した状態を持つ。
-`owner` はターゲットとともに保存する。ターゲットはゲームの共有状態が破棄されるまで保持する。
+`owner` はセッションの mode に応じてサーバーが設定し、ターゲットとともに保存する。ターゲットはゲームの共有状態が破棄されるまで保持する。
 
-- `AddTarget`: `target`、`target_data`、`owner` を必須とし、登録ごとに UUID v4 を生成して `target_id` として返す。
+- `AddTarget`: `machine_id` と必須の `target_data` を受け取り、登録ごとに UUID v4 を生成して `target_id` として返す。要求に `owner` は含めない。シングルプレイは `Single.machine_id = machine_id`、マルチプレイは `All` を設定する。
 - `RemoveTarget`: UUID 形式の `target_id` を受け取り、指定マシンが参加するゲームのターゲットを削除する。マルチプレイではどちらのマシンからも同じターゲットを削除できる。削除済み、未登録、別ゲームの ID は `NotFound` を返す。
 - 必須項目の欠落や不正な UUID は `InvalidArgument`、セッションがない場合や実行中でない場合は `FailedPrecondition` を返す。
 
@@ -26,25 +26,8 @@
 1回の得点または累計得点が `u32` の範囲を超える場合は `OutOfRange` を返す。
 エラー時は得点を変更せず、得点変更イベントも送信しない。
 
-## 関連する既存課題（issue 案）
+## 検証状況（2026-10-24）
 
-以下は今回の実装範囲外として記録する。issue は未起票。
-
-### [game-master] イベント順序テストを開始手順に合わせる
-
-`event_stream_notifies_in_correct_order` は難易度設定直後に `GameStarted` を期待するが、
-実際には `SessionDifficultyChanged` を受け取り失敗する。難易度変更イベントを検証し、
-`SetSessionReady` でゲームを開始してから開始イベントと残り時間を検証する必要がある。
-
-### [game-master] 2 番目のセッションを正しく削除する
-
-`Sessions::remove` は 2 番目のスロットで ID が一致した場合も 1 番目のスロットを削除する。
-2 番目のシングルプレイが終了すると、他方のセッションとターゲットを誤って破棄しうる。
-スロットごとの削除と他方のセッションの保持を再現テストで確認して修正する必要がある。
-
-### [game-master] 既存の整形と Clippy の指摘を解消する
-
-既存コードには `HitTarget` の未使用引数、不要な `into()` や `return` などの警告がある。
-また、ワークスペース全体の `cargo fmt --check` は `api/rust/proto/build.rs` と
-`ball_tracker/src/bin/replay_video.rs` の既存の整形差分で失敗する。
-対象モジュールごとに別の変更で整理する。
+`SQLX_OFFLINE=true cargo check --all-targets -p game_master`、`cargo test -p game_master`（66 件）、
+`cargo clippy --all-targets -p game_master`、`cargo fmt -p game_master --check` は成功した。
+以前のメモで失敗するとしていたイベント順序テストも成功している。

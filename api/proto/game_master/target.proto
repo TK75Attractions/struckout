@@ -17,7 +17,8 @@ message Target {
   }
 
   message OwnerSingle {
-    uint32 single = 1;
+    // machine_id of the owning single-play session.
+    uint32 machine_id = 1;
   }
   message OwnerAll {}
 
@@ -28,7 +29,11 @@ message Target {
 }
 
 message AddTargetRequest {
-  Target target = 1;
+  uint32 machine_id = 1;
+
+  oneof target_data {
+    Target.Compass compass = 2;
+  }
 }
 
 message AddTargetResponse {

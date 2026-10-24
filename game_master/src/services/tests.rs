@@ -340,46 +340,31 @@ async fn event_stream_notifies_in_correct_order() {
 }
 
 fn target_request(machine_id: u32) -> AddTargetRequest {
-    use struckout_proto::{
-        Target,
-        target::{Compass, Owner, OwnerAll, TargetData},
-    };
+    use struckout_proto::{add_target_request::TargetData, target::Compass};
     AddTargetRequest {
-        target: Some(Target {
-            machine_id,
-            target_data: Some(TargetData::Compass(Compass {
-                x: 0.0,
-                y: 0.0,
-                radius: 1.0,
-            })),
-            owner: Some(Owner::All(OwnerAll {})),
-        }),
+        machine_id,
+        target_data: Some(TargetData::Compass(Compass {
+            x: 0.0,
+            y: 0.0,
+            radius: 1.0,
+        })),
     }
 }
 
-#[rstest]
-#[case::missing_target(AddTargetRequest { target: None })]
-#[case::missing_data({
-    let mut req = target_request(1);
-    req.target.as_mut().expect("target exists").target_data = None;
-    req
-})]
-#[case::missing_owner({
-    let mut req = target_request(1);
-    req.target.as_mut().expect("target exists").owner = None;
-    req
-})]
 #[tokio::test]
-async fn add_target_rejects_missing_fields(#[case] req: AddTargetRequest) {
+async fn add_target_rejects_missing_data() {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
         game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     assert_eq!(
         service
-            .add_target(Request::new(req))
+            .add_target(Request::new(AddTargetRequest {
+                machine_id: 1,
+                target_data: None
+            }))
             .await
-            .expect_err("invalid target")
+            .expect_err("missing target data")
             .code(),
         tonic::Code::InvalidArgument
     );
@@ -674,8 +659,8 @@ async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: to
     )
     .await;
     let mut req = target_request(1);
-    let Some(struckout_proto::target::TargetData::Compass(compass)) =
-        req.target.as_mut().expect("target").target_data.as_mut()
+    let Some(struckout_proto::add_target_request::TargetData::Compass(compass)) =
+        req.target_data.as_mut()
     else {
         panic!("compass target expected");
     };

@@ -56,11 +56,6 @@ namespace Struckout.Unity
         [Tooltip("的の数とクールダウン時間。")]
         private GameSettings gameSettings = new();
 
-        [FormerlySerializedAs("_scoreSettings")]
-        [SerializeField]
-        [Tooltip("的の大きさごとの点数。まだ仮の値なので、決まったらここで差し替える。")]
-        private ScoreSettings scoreSettings = new();
-
         protected override void Configure(IContainerBuilder builder)
         {
             var networkSettings = NetworkSettingsResolver.Resolve(this.networkSettings);
@@ -109,9 +104,6 @@ namespace Struckout.Unity
             Debug.Log($"[Game] {gameSettings}");
             builder.RegisterInstance(gameSettings);
 
-            Debug.Log($"[Score] {scoreSettings}");
-            builder.RegisterInstance(scoreSettings);
-
             if (networkSettings.mode == NetworkMode.Fake)
             {
                 builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
@@ -132,7 +124,6 @@ namespace Struckout.Unity
             builder.Register<GameRuntime>(Lifetime.Singleton);
 
             builder.Register<ICollisionSolver, CollisionSolver>(Lifetime.Singleton);
-            builder.Register<IPointCalculator, PointCalculator>(Lifetime.Singleton);
             builder.Register<ISensorProvider, SensorProvider>(Lifetime.Singleton);
             builder.Register<ITargetGenerator, TargetGenerator>(Lifetime.Singleton);
 

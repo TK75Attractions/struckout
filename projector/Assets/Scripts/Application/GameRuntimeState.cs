@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using Struckout.Application.Interface;
 using Struckout.Domain.TargetDefinition;
-using Tk75Attractions.Struckout.V1;
+using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Application
 {
@@ -30,7 +30,7 @@ namespace Struckout.Application
             Phase = GamePhase.Finished;
         }
 
-        public int Score { get; private set; } = 0;
+        public void SuspendGame() => Phase = GamePhase.Idle;
         public Difficulty Difficulty { get; private set; }
 
         public void SetDifficulty(Difficulty difficulty)
@@ -43,21 +43,6 @@ namespace Struckout.Application
             {
                 _targets.Add(target);
             }
-        }
-
-        public void AddScore(int score)
-        {
-            Score += score;
-        }
-
-        public void DecreaseScore(int score)
-        {
-            if (score > Score)
-            {
-                Score = 0;
-                return;
-            }
-            Score -= score;
         }
 
         public void AddTargets(ITargetGenerator generator, int num, TargetType type)

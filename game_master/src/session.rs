@@ -253,7 +253,10 @@ impl Sessions {
     }
 
     /// Registers a target in the running game so both multi-play machines can access it.
-    pub fn add_target(&mut self, target: Target) -> Result<Uuid, SessionError> {
+    ///
+    /// Derives ownership from the authoritative mode rather than trusting client input:
+    /// single-play belongs to this machine, while multi-play belongs to all participants.
+    pub fn add_target(&mut self, mut target: Target) -> Result<Uuid, SessionError> {
         let machine_id = target.machine_id.into();
         let ms = self
             .get_mut(machine_id)
@@ -267,7 +270,15 @@ impl Sessions {
                 machine_id,
             })?;
         let target_id = Uuid::new_v4();
-        state.shared.write().targets.insert(target_id, target);
+        let mut shared = state.shared.write();
+        target.owner = Some(if shared.mode.is_multi() {
+            struckout_proto::target::Owner::All(struckout_proto::target::OwnerAll {})
+        } else {
+            struckout_proto::target::Owner::Single(struckout_proto::target::OwnerSingle {
+                machine_id: machine_id.into(),
+            })
+        });
+        shared.targets.insert(target_id, target);
         Ok(target_id)
     }
 
@@ -666,6 +677,41 @@ mod tests {
     }
 
     #[rstest]
+    #[case(GameMode::Single, 1)]
+    #[case(GameMode::Single, 2)]
+    #[case(GameMode::Multi, 1)]
+    #[case(GameMode::Multi, 2)]
+    fn target_owner_is_derived_from_session_mode(#[case] mode: GameMode, #[case] machine: u32) {
+        use struckout_proto::target::{Owner, OwnerAll, OwnerSingle};
+
+        let mut sessions = running_sessions(mode);
+        let machine_id = MachineId::new(machine);
+        let target_id = sessions
+            .add_target(Target {
+                machine_id: machine_id.into(),
+                owner: Some(Owner::Single(OwnerSingle { machine_id: 99 })),
+                ..Default::default()
+            })
+            .expect("running session");
+        let (state,) = sessions
+            .get(machine_id)
+            .expect("session exists")
+            .as_running()
+            .expect("running session");
+        let expected = if mode.is_multi() {
+            Owner::All(OwnerAll {})
+        } else {
+            Owner::Single(OwnerSingle {
+                machine_id: machine_id.into(),
+            })
+        };
+        assert_eq!(
+            state.shared.read().targets[&target_id].owner,
+            Some(expected)
+        );
+    }
+
+    #[rstest]
     #[case(GameMode::Single)]
     #[case(GameMode::Multi)]
     fn targets_follow_game_sharing(#[case] mode: GameMode) {
@@ -684,7 +730,9 @@ mod tests {
             .expect("session exists")
             .as_running()
             .expect("running session");
-        assert_eq!(state.shared.read().targets.get(&first), Some(&target));
+        let registered = state.shared.read().targets[&first];
+        assert_eq!(registered.machine_id, target.machine_id);
+        assert_eq!(registered.target_data, target.target_data);
         if mode.is_multi() {
             sessions
                 .remove_target(MachineId::new(2), first)

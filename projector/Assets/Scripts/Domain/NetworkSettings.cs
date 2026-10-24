@@ -26,7 +26,7 @@ namespace Struckout.Domain
         [FormerlySerializedAs("MasterPort")] public int masterPort = 8020;
 
         /// <summary>
-        /// この筐体の号機番号。AddScore と ListenEvents の両方に必要。
+        /// この筐体の号機番号。的の登録・命中通知と ListenEvents に必要。
         /// ListenEvents は game_master 側がこの番号で絞り込むので、
         /// 間違っていると繋がってはいるのにイベントが一件も来ない。
         ///
