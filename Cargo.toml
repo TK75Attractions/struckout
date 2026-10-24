@@ -78,7 +78,7 @@ proc-macro2 = "1.0.107"
 
 # dev-dependencies
 mockall = "0.15.0"
-rstest = "0.27.0"
+rstest = "0.28.0"
 dtor = { version = "1.0.6", default-features = false }
 testcontainers-modules = "0.15.0"
 
