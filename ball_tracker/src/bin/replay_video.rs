@@ -385,7 +385,7 @@ fn analyze_recording(
         .into_iter()
         .map(|f| Ok(Some(f)))
         .chain(packets.map(|item| {
-        item.map(|(_, packet)| match packet.data {
+            item.map(|(_, packet)| match packet.data {
             Some(video_stream_packet::Data::Frame(frame)) => Some(frame),
             Some(video_stream_packet::Data::Config(config)) => {
                 match AnalysisSettings::from_config(&config) {
@@ -406,7 +406,7 @@ fn analyze_recording(
             }
             None => None,
         })
-    }));
+        }));
     for frame in frames {
         let Some(frame) = frame? else { continue };
         if frame.codec_config {
