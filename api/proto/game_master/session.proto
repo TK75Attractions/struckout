@@ -2,20 +2,11 @@ syntax = "proto3";
 
 package tk75attractions.struckout.game_master.v1;
 
+import "game_master/event.proto";
+import "game_master/target.proto";
+import "game_master/tutorial.proto";
+import "game_master/types.proto";
 import "google/protobuf/duration.proto";
-
-enum Difficulty {
-  DIFFICULTY_UNSPECIFIED = 0;
-  DIFFICULTY_NORMAL = 1;
-  DIFFICULTY_HARD = 2;
-  DIFFICULTY_VERYHARD = 3;
-}
-
-enum GameMode {
-  GAME_MODE_UNSPECIFIED = 0;
-  GAME_MODE_SINGLE = 1;
-  GAME_MODE_MULTI = 2;
-}
 
 message StartSessionRequest {
   uint32 machine_id = 1;
@@ -48,24 +39,6 @@ message GetGameResultResponse {
   uint32 total_score = 1;
 }
 
-message StartTutorialRequest {
-  uint32 machine_id = 1;
-}
-
-message StartTutorialResponse {}
-
-message GoPreviousTutorialRequest {
-  uint32 machine_id = 1;
-}
-
-message GoPreviousTutorialResponse {}
-
-message GoNextTutorialRequest {
-  uint32 machine_id = 1;
-}
-
-message GoNextTutorialResponse {}
-
 message SetSessionDifficultyRequest {
   Difficulty difficulty = 1;
   uint32 machine_id = 2;
@@ -86,37 +59,6 @@ message SetSessionReadyRequest {
 
 message SetSessionReadyResponse {}
 
-message Event {
-  message TutorialStarted {}
-
-  message TutorialNavigatedToPrevious {}
-
-  message TutorialNavigatedToNext {}
-
-  message DifficultyChanged {}
-
-  message GameStarted {
-    Difficulty difficulty = 1;
-  }
-
-  message GameTimeLimitNotify {
-    google.protobuf.Duration remaining = 1;
-  }
-
-  message GameScoreChanged {
-    uint32 total_score = 1;
-  }
-
-  message GameFinished {}
-
-  oneof event_data {
-    GameStarted game_started = 3;
-    GameTimeLimitNotify game_time_limit_notify = 4;
-    GameFinished game_finished = 5;
-    GameScoreChanged game_score_changed = 6;
-  }
-}
-
 // Service provided by `game_master`.
 //
 // ## Single-play
@@ -127,6 +69,8 @@ message Event {
 // | game-master | ------------------------------------------------------------------------------------------------ GameStarted |
 // |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession ----- SetSessionPlayer -- SetSessionDifficulty ------ Ready ----- |
 // |  machine 2  | ----- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready
+//
+// See also: docs/diagrams/data_flow.mmd
 service GameMasterSessionService {
   // Used by `touchpanel`.
   // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
@@ -157,4 +101,10 @@ service GameMasterSessionService {
 
   // Gets the result of a specific game.
   rpc GetGameResult(GetGameResultRequest) returns (GetGameResultResponse);
+
+  // Adds a target to a session. Used by `projector`
+  rpc AddTarget(AddTargetRequest) returns (AddTargetResponse);
+
+  // Removes a target from a session. Used by `projector`.
+  rpc RemoveTarget(RemoveTargetRequest) returns (RemoveTargetResponse);
 }

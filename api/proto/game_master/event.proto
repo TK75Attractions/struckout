@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.game_master.v1;
+
+import "game_master/types.proto";
+import "google/protobuf/duration.proto";
+
+message Event {
+  message TutorialStarted {}
+
+  message TutorialNavigatedToPrevious {}
+
+  message TutorialNavigatedToNext {}
+
+  message DifficultyChanged {}
+
+  message GameStarted {
+    Difficulty difficulty = 1;
+  }
+
+  message GameTimeLimitNotify {
+    google.protobuf.Duration remaining = 1;
+  }
+
+  message GameScoreChanged {
+    uint32 total_score = 1;
+  }
+
+  message GameFinished {}
+
+  oneof event_data {
+    GameStarted game_started = 3;
+    GameTimeLimitNotify game_time_limit_notify = 4;
+    GameFinished game_finished = 5;
+    GameScoreChanged game_score_changed = 6;
+  }
+}
