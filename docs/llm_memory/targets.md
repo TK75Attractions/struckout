@@ -1,11 +1,14 @@
 # ターゲットの登録と削除
 
 `GameMasterSessionService` の `AddTarget` / `RemoveTarget` は、ゲーム実行中 (`Running`) のセッションで利用する。
-シングルプレイ、マルチプレイともに、ターゲットは `machine_id` ごとのセッションに保持し、セッション終了時に破棄する。
-`owner` はターゲットとともに保存し、別のマシンの登録情報には複製しない。
+`RunningState` はマシンごとの `machine_id` と `player_id` を持ち、ゲームの `mode`・`difficulty`・`score`・`targets` は
+`SharedRunningState` にまとめて `Arc<RwLock<SharedRunningState>>` で保持する。
+マルチプレイ開始時は両セッションが同じ共有状態を参照し、一方での変更は他方からも見える。
+シングルプレイはゲームごとに独立した状態を持つ。
+`owner` はターゲットとともに保存する。ターゲットはゲームの共有状態が破棄されるまで保持する。
 
 - `AddTarget`: `target`、`target_data`、`owner` を必須とし、登録ごとに UUID v4 を生成して `target_id` として返す。
-- `RemoveTarget`: UUID 形式の `target_id` を受け取り、指定マシンのターゲットを削除する。削除済み、未登録、別マシンの ID は `NotFound` を返す。
+- `RemoveTarget`: UUID 形式の `target_id` を受け取り、指定マシンが参加するゲームのターゲットを削除する。マルチプレイではどちらのマシンからも同じターゲットを削除できる。削除済み、未登録、別ゲームの ID は `NotFound` を返す。
 - 必須項目の欠落や不正な UUID は `InvalidArgument`、セッションがない場合や実行中でない場合は `FailedPrecondition` を返す。
 
 登録・削除ではイベントを送信しない。`HitTarget` による得点処理は別途実装する。
