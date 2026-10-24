@@ -78,7 +78,7 @@ namespace Struckout.Infrastructure
 
         public static string ToJson(CollisionCoordinateTransform transform) => JsonUtility.ToJson(transform, true);
 
-        /// <summary>JSON を読む。書かれていない項目は既定値になる。1 m あたりの値が正でなければ <see cref="ArgumentException"/>。</summary>
+        /// <summary>JSON を読む。書かれていない項目は既定値になる。1 m あたりの値が正でなければ <see cref="ArgumentException"/>を投げる。</summary>
         public static CollisionCoordinateTransform FromJson(string json)
         {
             var result = new CollisionCoordinateTransform();

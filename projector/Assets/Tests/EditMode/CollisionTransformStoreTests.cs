@@ -113,7 +113,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             Directory.CreateDirectory(_directory);
             var path = Path.Combine(_directory, CollisionTransformStore.FileName);
-            File.WriteAllText(path, "{ \"PixelsPerMetreX\": -900, \"OriginX\": 5 }");
+            File.WriteAllText(path, "{ \"pixelsPerMetreX\": -900, \"originX\": 5 }");
             var target = new CollisionCoordinateTransform { originX = 123f };
 
             bool ok = CollisionTransformStore.TryLoadInto(target, path, out var error);
@@ -126,7 +126,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 書かれていない項目は既定値になる()
         {
-            var loaded = CollisionTransformStore.FromJson("{ \"OriginX\": 5 }");
+            var loaded = CollisionTransformStore.FromJson("{ \"originX\": 5 }");
 
             Assert.That(loaded.originX, Is.EqualTo(5f));
             Assert.That(loaded.pixelsPerMetreX, Is.EqualTo(new CollisionCoordinateTransform().pixelsPerMetreX));
