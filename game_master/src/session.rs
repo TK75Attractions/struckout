@@ -1,12 +1,15 @@
 //! Session management
 
+use std::collections::HashMap;
+
 use struckout_macros::{EnumAsInner, EnumAsInnerMut};
 use struckout_proto::{
-    Difficulty, GameMode,
+    Difficulty, GameMode, Target,
     types::{MachineId, PlayerId},
 };
 use thiserror::Error;
 use tracing::trace;
+use uuid::Uuid;
 
 use crate::services::EventTarget;
 
@@ -39,6 +42,11 @@ pub enum SessionError {
     UnspecifiedGameMode,
     #[error("multi-play mode is required to do this operation")]
     NotMultiPlay,
+    #[error("target {target_id} does not exist on machine {machine_id}")]
+    TargetNotFound {
+        machine_id: MachineId,
+        target_id: Uuid,
+    },
 }
 
 impl Sessions {
@@ -223,12 +231,57 @@ impl Sessions {
         Ok(EventTarget::All)
     }
 
+    /// Registers a target in its running session so it is discarded when the session ends.
+    pub fn add_target(&mut self, target: Target) -> Result<Uuid, SessionError> {
+        let machine_id = target.machine_id.into();
+        let ms = self
+            .get_mut(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (_, _, _, _, _, targets) =
+            ms.as_running_mut()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "targets can only be added while running",
+                    expected_state: "Running",
+                    actual_state,
+                    machine_id,
+                })?;
+        let target_id = Uuid::new_v4();
+        targets.insert(target_id, target);
+        Ok(target_id)
+    }
+
+    /// Removes a target only from the requested running session to keep machines isolated.
+    pub fn remove_target(
+        &mut self,
+        machine_id: MachineId,
+        target_id: Uuid,
+    ) -> Result<(), SessionError> {
+        let ms = self
+            .get_mut(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (_, _, _, _, _, targets) =
+            ms.as_running_mut()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "targets can only be removed while running",
+                    expected_state: "Running",
+                    actual_state,
+                    machine_id,
+                })?;
+        targets
+            .remove(&target_id)
+            .ok_or(SessionError::TargetNotFound {
+                machine_id,
+                target_id,
+            })?;
+        Ok(())
+    }
+
     /// Returns the score of the session on `machine_id`.
     pub fn score(&self, machine_id: MachineId) -> Result<u32, SessionError> {
         let ms = self
             .get(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
-        let (_, _, _, _, score) =
+        let (_, _, _, _, score, _) =
             ms.as_running()
                 .map_err(|actual_state| SessionError::InvalidState {
                     msg: "score can only be fetched while running state",
@@ -247,7 +300,7 @@ impl Sessions {
         let Some(ms2) = &self.0.1 else {
             return Err(SessionError::NotMultiPlay);
         };
-        let (_, _, mode1, dfclty1, score1) =
+        let (_, _, mode1, dfclty1, score1, _) =
             ms1.as_running()
                 .map_err(|actual_state| SessionError::InvalidState {
                     msg: "score can only be fetched while Running",
@@ -255,7 +308,7 @@ impl Sessions {
                     actual_state,
                     machine_id: ms1.machine_id(),
                 })?;
-        let (_, _, mode2, dfclty2, score2) =
+        let (_, _, mode2, dfclty2, score2, _) =
             ms2.as_running()
                 .map_err(|actual_state| SessionError::InvalidState {
                     msg: "score can only be fetched while Running",
@@ -319,10 +372,23 @@ impl Sessions {
         match mode {
             GameMode::Unspecified => unreachable!(),
 
-            GameMode::Single => Ok(SetReadyAction::RunSingle {
-                player_id,
-                difficulty,
-            }),
+            GameMode::Single => {
+                let ms = self
+                    .get_mut(machine_id)
+                    .expect("session existence was checked above");
+                *ms = MachineSession::Running {
+                    machine_id,
+                    player_id,
+                    mode,
+                    difficulty,
+                    score: 0,
+                    targets: HashMap::new(),
+                };
+                Ok(SetReadyAction::RunSingle {
+                    player_id,
+                    difficulty,
+                })
+            }
             GameMode::Multi => {
                 let Some(another_ms) = self.get_another(machine_id) else {
                     trace!(
@@ -367,6 +433,7 @@ impl Sessions {
                         mode: GameMode::Multi,
                         difficulty,
                         score: 0,
+                        targets: HashMap::new(),
                     };
                 }
                 {
@@ -377,6 +444,7 @@ impl Sessions {
                         mode: GameMode::Multi,
                         difficulty,
                         score: 0,
+                        targets: HashMap::new(),
                     };
                 }
                 Ok(SetReadyAction::RunMulti {
@@ -433,6 +501,7 @@ pub enum MachineSession {
         mode: GameMode,
         difficulty: Difficulty,
         score: u32,
+        targets: HashMap<Uuid, Target>,
     },
 }
 
@@ -464,6 +533,110 @@ mod tests {
     use std::assert_matches;
 
     use super::*;
+
+    fn running_sessions(mode: GameMode) -> Sessions {
+        let mut sessions = Sessions::new();
+        for id in [1, 2] {
+            let machine_id = MachineId::new(id);
+            sessions
+                .insert(machine_id, PlayerId::new(id))
+                .expect("new session");
+            sessions
+                .set_game_mode(machine_id, mode)
+                .expect("initial state");
+            sessions
+                .update_difficulty(machine_id, Difficulty::Normal)
+                .expect("configuring difficulty");
+        }
+        sessions
+            .set_ready(MachineId::new(1))
+            .expect("difficulty is set");
+        sessions
+            .set_ready(MachineId::new(2))
+            .expect("difficulty is set");
+        sessions
+    }
+
+    #[rstest::rstest]
+    #[case(GameMode::Single)]
+    #[case(GameMode::Multi)]
+    fn targets_are_stored_and_removed_per_machine(#[case] mode: GameMode) {
+        let mut sessions = running_sessions(mode);
+        let machine_id = MachineId::new(1);
+        let target = Target {
+            machine_id: machine_id.into(),
+            ..Default::default()
+        };
+        let first = sessions.add_target(target).expect("running session");
+        let second = sessions.add_target(target).expect("running session");
+        assert_ne!(first, second);
+        assert_eq!(first.get_version_num(), 4);
+        let (_, _, _, _, _, targets) = sessions
+            .get(machine_id)
+            .expect("session exists")
+            .as_running()
+            .expect("running session");
+        assert_eq!(targets.get(&first), Some(&target));
+        assert_matches!(
+            sessions.remove_target(MachineId::new(2), first),
+            Err(SessionError::TargetNotFound { .. })
+        );
+        sessions
+            .remove_target(machine_id, first)
+            .expect("registered target");
+        assert_matches!(
+            sessions.remove_target(machine_id, first),
+            Err(SessionError::TargetNotFound { .. })
+        );
+        sessions
+            .remove_target(machine_id, second)
+            .expect("other target is preserved");
+    }
+
+    #[test]
+    fn target_operations_require_a_running_session() {
+        let machine_id = MachineId::new(1);
+        let player_id = PlayerId::new(1);
+        let target = Target {
+            machine_id: machine_id.into(),
+            ..Default::default()
+        };
+        let mut sessions = Sessions::new();
+        assert_matches!(sessions.add_target(target), Err(SessionError::NoSession(_)));
+        assert_matches!(
+            sessions.remove_target(machine_id, Uuid::nil()),
+            Err(SessionError::NoSession(_))
+        );
+        for session in [
+            MachineSession::ConfiguringGameMode {
+                machine_id,
+                player_id,
+                mode: None,
+            },
+            MachineSession::ConfiguringDifficulty {
+                machine_id,
+                player_id,
+                mode: GameMode::Multi,
+                difficulty: Some(Difficulty::Normal),
+            },
+            MachineSession::WaitingForAnotherMachine {
+                machine_id,
+                player_id,
+                mode: GameMode::Multi,
+                difficulty: Difficulty::Normal,
+            },
+        ] {
+            let mut sessions = Sessions((Some(session), None));
+            assert_matches!(
+                sessions.add_target(target),
+                Err(SessionError::InvalidState { .. })
+            );
+            assert_matches!(
+                sessions.remove_target(machine_id, Uuid::nil()),
+                Err(SessionError::InvalidState { .. })
+            );
+        }
+    }
 
     #[test]
     fn sessions_insert_returns_err_when_called_on_same_machine_in_a_row() {
@@ -564,6 +737,7 @@ mod tests {
                 mode,
                 difficulty,
                 score: 10,
+                targets: HashMap::new(),
             },
         ] {
             let mut sessions = Sessions((Some(session.clone()), None));

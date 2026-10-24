@@ -328,3 +328,153 @@ async fn event_stream_notifies_in_correct_order() {
     // Assert: Finished
     assert_matches!(finished, EventData::GameFinished(_));
 }
+
+fn target_request(machine_id: u32) -> AddTargetRequest {
+    use struckout_proto::{
+        Target,
+        target::{Compass, Owner, OwnerAll, TargetData},
+    };
+    AddTargetRequest {
+        target: Some(Target {
+            machine_id,
+            target_data: Some(TargetData::Compass(Compass {
+                x: 0.0,
+                y: 0.0,
+                radius: 1.0,
+            })),
+            owner: Some(Owner::All(OwnerAll {})),
+        }),
+    }
+}
+
+#[tokio::test]
+async fn target_operations_validate_requests_and_session_state() {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
+    let mut missing_data = target_request(1);
+    missing_data
+        .target
+        .as_mut()
+        .expect("target exists")
+        .target_data = None;
+    let mut missing_owner = target_request(1);
+    missing_owner.target.as_mut().expect("target exists").owner = None;
+    for req in [
+        AddTargetRequest { target: None },
+        missing_data,
+        missing_owner,
+    ] {
+        assert_eq!(
+            service
+                .add_target(Request::new(req))
+                .await
+                .expect_err("invalid target")
+                .code(),
+            tonic::Code::InvalidArgument
+        );
+    }
+    assert_eq!(
+        service
+            .add_target(Request::new(target_request(1)))
+            .await
+            .expect_err("missing session")
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    for target_id in [String::new(), "invalid".to_owned()] {
+        assert_eq!(
+            service
+                .remove_target(Request::new(RemoveTargetRequest {
+                    machine_id: 1,
+                    target_id
+                }))
+                .await
+                .expect_err("invalid UUID")
+                .code(),
+            tonic::Code::InvalidArgument
+        );
+    }
+    assert_eq!(
+        service
+            .remove_target(Request::new(RemoveTargetRequest {
+                machine_id: 1,
+                target_id: Uuid::nil().to_string()
+            }))
+            .await
+            .expect_err("missing session")
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    service
+        .start_session(Request::new(StartSessionRequest {
+            machine_id: 1,
+            player_id: 1,
+        }))
+        .await
+        .expect("new session");
+    assert_eq!(
+        service
+            .add_target(Request::new(target_request(1)))
+            .await
+            .expect_err("not running")
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    assert_eq!(
+        service
+            .remove_target(Request::new(RemoveTargetRequest {
+                machine_id: 1,
+                target_id: Uuid::nil().to_string()
+            }))
+            .await
+            .expect_err("not running")
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn targets_can_be_added_and_removed_without_event_subscribers() {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
+    start_game_single(
+        &service,
+        MachineId::new(1),
+        Difficulty::Normal,
+        PlayerId::new(1),
+    )
+    .await;
+    service
+        .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 }))
+        .await
+        .expect("start game");
+    let target_id = service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .expect("running session")
+        .into_inner()
+        .target_id;
+    Uuid::parse_str(&target_id).expect("UUID response");
+    service
+        .remove_target(Request::new(RemoveTargetRequest {
+            machine_id: 1,
+            target_id: target_id.clone(),
+        }))
+        .await
+        .expect("registered target");
+    assert_eq!(
+        service
+            .remove_target(Request::new(RemoveTargetRequest {
+                machine_id: 1,
+                target_id
+            }))
+            .await
+            .expect_err("already removed")
+            .code(),
+        tonic::Code::NotFound
+    );
+}

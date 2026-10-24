@@ -26,6 +26,7 @@ use tokio_stream::{
 };
 use tonic::{Request, Response, Status};
 use tracing::{instrument, trace, warn};
+use uuid::Uuid;
 
 use crate::{
     DataSource, DataSourceImpl, GetGameResultError,
@@ -234,18 +235,49 @@ where
         ))
     }
 
+    #[instrument]
     async fn add_target(
         &self,
         req: Request<AddTargetRequest>,
     ) -> Result<Response<AddTargetResponse>, Status> {
-        todo!()
+        let req = req.into_inner();
+        let AddTargetRequest { target } = req;
+        let target = target.ok_or_else(|| Status::invalid_argument("target is required"))?;
+        if target.target_data.is_none() {
+            return Err(Status::invalid_argument("target_data is required"));
+        }
+        if target.owner.is_none() {
+            return Err(Status::invalid_argument("target owner is required"));
+        }
+        let target_id = self
+            .sessions
+            .write()
+            .add_target(target)
+            .map_err(|e| Status::failed_precondition(e.to_string()))?;
+        Ok(Response::new(AddTargetResponse {
+            target_id: target_id.to_string(),
+        }))
     }
 
+    #[instrument]
     async fn remove_target(
         &self,
         req: Request<RemoveTargetRequest>,
     ) -> Result<Response<RemoveTargetResponse>, Status> {
-        todo!()
+        let RemoveTargetRequest {
+            machine_id,
+            target_id,
+        } = req.into_inner();
+        let target_id =
+            Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
+        self.sessions
+            .write()
+            .remove_target(machine_id.into(), target_id)
+            .map_err(|e| match e {
+                SessionError::TargetNotFound { .. } => Status::not_found(e.to_string()),
+                _ => Status::failed_precondition(e.to_string()),
+            })?;
+        Ok(Response::new(RemoveTargetResponse {}))
     }
 
     async fn hit_target(
