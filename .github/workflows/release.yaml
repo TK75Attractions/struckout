@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: protoc mold
       - name: Get commit hash and version of this release
@@ -67,7 +67,7 @@ jobs:
             touchpanel
             xtask
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }}
       - name: Install fontconfig for Linux
@@ -195,7 +195,7 @@ jobs:
             launcher
             mise.toml
             mise.lock
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
         with:
           working_directory: launcher
           install_args: dotnet
@@ -229,7 +229,7 @@ jobs:
             api/proto
             mise.toml
             mise.lock
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
         with:
           working_directory: camera
           install_args: java protoc python
