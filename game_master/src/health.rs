@@ -55,6 +55,7 @@ where
 mod tests {
     use std::collections::VecDeque;
 
+    use rstest::rstest;
     use tonic::Request;
     use tonic_health::{
         pb::{
@@ -66,19 +67,18 @@ mod tests {
 
     use super::*;
 
-    /// The statuses of the whole server and of [`TestService`].
-    async fn statuses(health: &HealthService) -> [Status; 2] {
-        let mut statuses = [Status::Unknown; 2];
-        for (status, name) in statuses.iter_mut().zip(["", TestService::NAME]) {
-            let response = health
-                .check(Request::new(HealthCheckRequest {
-                    service: name.into(),
-                }))
-                .await
-                .unwrap();
-            *status = response.into_inner().status();
-        }
-        statuses
+    const SERVICE_NAME: &str = "test.GameMasterService";
+
+    /// Fetches a service's status to verify both server-wide and named health checks.
+    async fn status(health: &HealthService, service_name: &str) -> Status {
+        health
+            .check(Request::new(HealthCheckRequest {
+                service: service_name.into(),
+            }))
+            .await
+            .expect("health check should succeed")
+            .into_inner()
+            .status()
     }
 
     /// Moves the paused clock a second at a time, letting the monitor run after each step.
@@ -89,8 +89,11 @@ mod tests {
         }
     }
 
+    #[rstest]
+    #[case::whole_server("")]
+    #[case::named_service(SERVICE_NAME)]
     #[tokio::test(start_paused = true)]
-    async fn follows_the_database_check() {
+    async fn follows_the_database_check(#[case] service_name: &str) {
         let (reporter, _) = health_reporter();
         let health = HealthService::from_health_reporter(reporter.clone());
         let mut results = VecDeque::from([true, false, true]);
@@ -102,23 +105,19 @@ mod tests {
                 result
             }
         };
-        let task = tokio::spawn(monitor_database(
-            reporter,
-            vec!["test.GameMasterService"],
-            check,
-        ));
+        let task = tokio::spawn(monitor_database(reporter, vec![SERVICE_NAME], check));
 
         tokio::task::yield_now().await;
-        assert_eq!(statuses(&health).await, [Status::NotServing; 2]);
+        assert_eq!(status(&health, service_name).await, Status::NotServing);
 
         wait(Duration::from_secs(1)).await;
-        assert_eq!(statuses(&health).await, [Status::Serving; 2]);
+        assert_eq!(status(&health, service_name).await, Status::Serving);
 
         wait(CHECK_INTERVAL + Duration::from_secs(1)).await;
-        assert_eq!(statuses(&health).await, [Status::NotServing; 2]);
+        assert_eq!(status(&health, service_name).await, Status::NotServing);
 
         wait(CHECK_INTERVAL + Duration::from_secs(1)).await;
-        assert_eq!(statuses(&health).await, [Status::Serving; 2]);
+        assert_eq!(status(&health, service_name).await, Status::Serving);
 
         task.abort();
     }

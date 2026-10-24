@@ -332,8 +332,8 @@ Fake モードでは以下が動く。
 
 - `FakeClientService` がダミーの着弾を流す
 - `FakeGameMasterClient` が接続直後に `GameStarted` を、
-  150 秒後に `GameFinished` を流す
-- 得点計算は**本物**が動く（`PointCalculator`）
+  90 秒後に `GameFinished` を流す
+- `FakeGameMasterClient` が的を登録し、game_master と同じ式で得点を計算して通知する
 
 つまり **描画とアニメーションの調整は対向を立てずに完結する。**
 （以前は開始イベントが落ちて的が出なかった。上記 7 を参照）

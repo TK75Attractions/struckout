@@ -2454,6 +2454,7 @@ dependencies = [
  "parking_lot",
  "prost",
  "prost-types",
+ "rstest",
  "sentry",
  "serde",
  "sqlx",
@@ -2471,6 +2472,7 @@ dependencies = [
  "tonic-health",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

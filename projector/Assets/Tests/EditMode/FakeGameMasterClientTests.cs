@@ -1,7 +1,10 @@
+using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
+using Struckout.Domain.TargetDefinition;
 using NUnit.Framework;
 using Struckout.Infrastructure.Fake;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -79,5 +82,53 @@ namespace Struckout.Tests.Tests.EditMode
 
             Assert.That(received, Is.Empty);
         }
+        [Test]
+        public async Task Registered_targets_score_repeatedly_until_removed()
+        {
+            var client = new FakeGameMasterClient();
+            var scores = new List<uint>();
+            client.ScoreChanged += scores.Add;
+            try
+            {
+                Assert.That(await client.AddTargetAsync(default, 200), Is.Null);
+                await client.ConnectAsync();
+                var id = await client.AddTargetAsync(new TargetCoordinate(100, 200), 200);
+                Assert.That(id, Is.Not.Null);
+                Assert.That(await client.HitTargetAsync(id.Value), Is.True);
+                Assert.That(await client.HitTargetAsync(id.Value), Is.True);
+                Assert.That(scores, Is.EqualTo(new uint[] { 0, 500, 1000 }));
+                Assert.That(await client.RemoveTargetAsync(id.Value), Is.True);
+                Assert.That(await client.HitTargetAsync(id.Value), Is.False);
+                Assert.That(await client.RemoveTargetAsync(id.Value), Is.False);
+                Assert.That(await client.HitTargetAsync(Guid.NewGuid()), Is.False);
+                await client.DisconnectAsync();
+                Assert.That(await client.HitTargetAsync(id.Value), Is.False);
+                await client.ConnectAsync();
+                Assert.That(await client.HitTargetAsync(id.Value), Is.False);
+                Assert.That(scores[scores.Count - 1], Is.Zero);
+            }
+            finally { await client.DisconnectAsync(); }
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        [TestCase(double.NaN)]
+        [TestCase(double.PositiveInfinity)]
+        [TestCase(1e-30)]
+        public async Task Invalid_scores_do_not_emit_events(double radius)
+        {
+            var client = new FakeGameMasterClient();
+            try
+            {
+                await client.ConnectAsync();
+                var scores = new List<uint>();
+                client.ScoreChanged += scores.Add;
+                var id = await client.AddTargetAsync(default, radius);
+                Assert.That(await client.HitTargetAsync(id.Value), Is.False);
+                Assert.That(scores, Is.Empty);
+            }
+            finally { await client.DisconnectAsync(); }
+        }
+
     }
 }

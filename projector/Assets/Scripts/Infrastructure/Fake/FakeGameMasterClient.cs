@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
+using Struckout.Domain.TargetDefinition;
 using System.Threading;
 using System.Threading.Tasks;
 using Struckout.Application.Interface;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
@@ -14,8 +16,8 @@ namespace Struckout.Infrastructure.Fake
     /// </summary>
     public class FakeGameMasterClient : IGameMasterClient
     {
-        /// <summary>game_master の GAME_DURATION (service.rs) に合わせてある。</summary>
-        private static readonly TimeSpan GameDuration = TimeSpan.FromSeconds(150);
+        /// <summary>game_master の GAME_DURATION (services/mod.rs) に合わせてある。</summary>
+        private static readonly TimeSpan GameDuration = TimeSpan.FromSeconds(90);
 
         /// <summary>
         /// 購読が始まる前に開始してしまった場合に備えて、開始したことを覚えておく。
@@ -55,6 +57,7 @@ namespace Struckout.Infrastructure.Fake
         private Task _gameTask;
         private readonly object _stateLock = new();
         private uint _totalScore;
+        private readonly Dictionary<Guid, double> _targetRadii = new();
         private bool _connected;
 
         public Task<bool> ConnectAsync()
@@ -68,6 +71,7 @@ namespace Struckout.Infrastructure.Fake
 
                 _started = true;
                 _totalScore = 0;
+                _targetRadii.Clear();
                 _startedDifficulty = Difficulty.Normal;
                 _gameCancellation = new CancellationTokenSource();
                 var elapsed = Stopwatch.StartNew();
@@ -118,15 +122,34 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        public Task<bool> AddScoreAsync(int scoreToAdd)
+        public Task<Guid?> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || !_started || scoreToAdd < 0 || (ulong)_totalScore + (uint)scoreToAdd > uint.MaxValue)
-                    return Task.FromResult(false);
+                if (!_connected || !_started || token.IsCancellationRequested) return Task.FromResult<Guid?>(null);
+                var id = Guid.NewGuid();
+                // Match protobuf's float precision before the server calculates in f64.
+                _targetRadii.Add(id, (float)radius);
+                return Task.FromResult<Guid?>(id);
+            }
+        }
 
-                _totalScore += (uint)scoreToAdd;
-                Debug.Log($"[Fake] game_master <- AddScore(+{scoreToAdd})");
+        public Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
+        {
+            lock (_stateLock)
+                return Task.FromResult(_connected && _started && !token.IsCancellationRequested && _targetRadii.Remove(targetId));
+        }
+
+        public Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
+        {
+            lock (_stateLock)
+            {
+                if (!_connected || !_started || token.IsCancellationRequested || !_targetRadii.TryGetValue(targetId, out var radius) ||
+                    double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0)
+                    return Task.FromResult(false);
+                var points = Math.Truncate(100000.0 / radius);
+                if (points > uint.MaxValue || points + _totalScore > uint.MaxValue) return Task.FromResult(false);
+                _totalScore += (uint)points;
                 ScoreChanged?.Invoke(_totalScore);
                 return Task.FromResult(true);
             }
@@ -140,6 +163,7 @@ namespace Struckout.Infrastructure.Fake
             {
                 if (!_connected) return;
                 _connected = false;
+                _targetRadii.Clear();
                 _started = false;
                 cancellation = _gameCancellation;
                 gameTask = _gameTask;

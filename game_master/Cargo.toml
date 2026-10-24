@@ -26,6 +26,7 @@ thiserror = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 
 sqlx = { workspace = true, features = ["migrate", "mysql", "runtime-tokio", "sqlx-toml", "time", "tls-rustls"] }
 toml = { workspace = true }
@@ -33,6 +34,7 @@ toml = { workspace = true }
 [dev-dependencies]
 dtor = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["mysql"] }
+rstest = { workspace = true }
 
 [build-dependencies]
 struckout-utils = { workspace = true }

@@ -82,3 +82,15 @@ run = """
 """
 dir = "{{ config_root }}/.cargo"
 description = ".cargo/patches.tomlの状態を表示する"
+
+[tasks."generate-mermaid"]
+run = """
+  docker run --rm \
+      --user "$(id -u):$(id -g)" \
+      --volume "$PWD:/data" \
+      ghcr.io/mermaid-js/mermaid-cli/mermaid-cli:latest \
+      -i data_flow.mmd \
+      -o data_flow.svg
+"""
+description = ".mmdファイルから.svgを生成する"
+dir = "{{ config_root }}/docs/diagrams/"

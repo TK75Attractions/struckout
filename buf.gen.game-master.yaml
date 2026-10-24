@@ -1,4 +1,4 @@
-# game-master.proto から C# を生成する。
+# game_master/*.proto から C# を生成する。
 #
 # projector は game_master と gRPC で話すので、メッセージだけでなく
 # クライアントのスタブも要る。protoc 単体では作れず grpc_csharp_plugin が要る。
@@ -17,7 +17,7 @@ version: v2
 inputs:
   - directory: api/proto
     paths:
-      - api/proto/game-master.proto
+      - api/proto/game_master
 plugins:
   - protoc_builtin: csharp
     out: projector/Assets/Scripts/ProtoBuf/Generated

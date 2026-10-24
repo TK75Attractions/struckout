@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Struckout.Application;
 using Struckout.Domain;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -26,28 +26,22 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(state.Difficulty, Is.EqualTo(Difficulty.Hard));
         }
 
-        // ---------------------------------------------------------------- score
-
         [Test]
-        public void 得点は加算される()
+        public void 終了後は_Finished()
         {
             var state = new GameRuntimeState();
-
-            state.AddScore(3);
-            state.AddScore(4);
-
-            Assert.That(state.Score, Is.EqualTo(7));
+            state.StartGame(Difficulty.Normal);
+            state.FinishGame();
+            Assert.That(state.Phase, Is.EqualTo(GamePhase.Finished));
         }
 
         [Test]
-        public void 得点は0を下回らない()
+        public void 切断時は_Idle()
         {
             var state = new GameRuntimeState();
-
-            state.AddScore(2);
-            state.DecreaseScore(5);
-
-            Assert.That(state.Score, Is.EqualTo(0));
+            state.StartGame(Difficulty.Normal);
+            state.SuspendGame();
+            Assert.That(state.Phase, Is.EqualTo(GamePhase.Idle));
         }
     }
 }

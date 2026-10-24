@@ -11,7 +11,7 @@
 - `ball-tracker`(Rust): カメラからボールの二次元座標を継続的に受け取り、それらを組み合わせて三次元座標を特定し、三次元座標の推移から的のどの部分にボールがあたったか判定し、それを`projector`に送る。
 - `game-master` (Rust): 合計得点やランキングなどを管理する。MySQLをデータベースとして使っている。
 - `touchpanel` (Rust/Slint): タッチパネルのUI。game-masterにゲームスタートのリクエストをしたりprojectorがgame-masterに送った点数を取得したり。
-- `projector` (C#/Unity): ball_trackerから的にあたった場所を受け取り、`projector`が持っている的の座標と照合し何点入るか計算する。入る点数をgame_masterに通知する。
+- `projector` (C#/Unity): ball_trackerから的にあたった場所を受け取り、`projector`が持っている的の座標と照合する。的をgame_masterに登録し、命中した的のIDを通知する。得点はgame_masterが計算する。
 - `camera` (Kotlin): 二次元座標をカメラから取得して`ball_tracker`に送信する。
 - `launcher` (C#/Avalonia): 上のモジュールを GitHub Releases などからインストールし、依存の順に起動する。使い方は [launcher/README.md](./launcher/README.md)。
 

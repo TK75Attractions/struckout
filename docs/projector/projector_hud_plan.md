@@ -1,5 +1,9 @@
 # Projector の残り時間・得点 HUD
 
+このページは 2026-10-17 の実装記録。現在の通信・的管理・得点の責務は
+[projector_behavior.md](projector_behavior.md) を参照。現在は game_master が得点を計算し、
+projector は `HitTarget` で命中を通知する。
+
 ## 目的と期待動作
 
 - touchpanel が同梱する Oxanium を Unity の HUD と終了メッセージで使用する。

@@ -1,0 +1,73 @@
+block-beta
+    %% 外部への接続で画面遷移の方向が変わらないよう、行と列を明示する。
+    columns 1
+    block:Projector
+        columns 13
+        space:5 ProjectorTitle["プロジェクター"] space:7
+        Waiting1["待機画面"] space:3 ProjectorTutorial["チュートリアル"] space:5 Waiting2["待機画面2"] space ProjectorPlaying["プレイ中"]
+    end
+    space
+    block:Events
+        columns 13
+        TutorialStarted{{"TutorialStarted"}} space TutorialNavigatedToPrevious{{"TutorialNavigatedToPrevious"}} space TutorialNavigatedToNext{{"TutorialNavigatedToNext"}} space:5 SessionDifficultyChanged{{"SessionDifficultyChanged"}} space GameStarted{{"GameStarted"}}
+    end
+    block:Commands
+        columns 13
+        StartTutorial(["StartTutorial"]) space GoPreviousTutorial(["GoPreviousTutorial"]) space GoNextTutorial(["GoNextTutorial"]) space AddPlayer(["AddPlayer"]) space StartSession(["StartSession"]) space SetSessionDifficulty(["SetSessionDifficulty"]) space SetSessionReady(["SetSessionReady"])
+    end
+    block:TouchPanel
+        columns 13
+        space:5 TouchPanelTitle["タッチパネル"] space:7
+        Start["Start"] space Tutorial["Tutorial"] space:3 NameInputFirst["NameInputFirst"] space ModeSelect["ModeSelect"] space DifficultySelect["DifficultySelect"] space Playing["Playing"]
+        space:13
+        space:6 NameInputNonFirst["NameInputNonFirst"] space:6
+    end
+
+    %% 画面遷移（左から右）
+    Waiting1 == "TutorialStarted" ==> ProjectorTutorial
+    ProjectorTutorial == "最後のチュートリアルで「次へ」" ==> Waiting2
+    Waiting2 == "GameStarted" ==> ProjectorPlaying
+    Start == "初めて" ==> Tutorial
+    Start == "2回目" ==> NameInputNonFirst
+    Tutorial == "最後のチュートリアルで「次へ」" ==> NameInputFirst
+    NameInputFirst ==> ModeSelect
+    NameInputNonFirst ==> ModeSelect
+    ModeSelect ==> DifficultySelect
+    DifficultySelect == "GameStarted" ==> Playing
+
+    %% チュートリアル開始
+    Start -- "初めて" --> StartTutorial
+    StartTutorial -.-> TutorialStarted
+    TutorialStarted -- "表示開始" --> ProjectorTutorial
+
+    %% チュートリアルの前のページへ
+    Tutorial -- "前" --> GoPreviousTutorial
+    GoPreviousTutorial -.-> TutorialNavigatedToPrevious
+    TutorialNavigatedToPrevious -- "前へ" --> ProjectorTutorial
+
+    %% チュートリアルの次のページへ
+    Tutorial -- "次へ" --> GoNextTutorial
+    GoNextTutorial -.-> TutorialNavigatedToNext
+    TutorialNavigatedToNext -- "次へ" --> ProjectorTutorial
+
+    %% プレイヤー登録
+    NameInputFirst --> AddPlayer
+
+    %% セッション開始
+    ModeSelect --> StartSession
+
+    %% 難易度設定
+    DifficultySelect --> SetSessionDifficulty
+    SetSessionDifficulty -.-> SessionDifficultyChanged
+
+    %% ゲーム開始
+    DifficultySelect --> SetSessionReady
+    SetSessionReady -.-> GameStarted
+    GameStarted -- "表示開始" --> ProjectorPlaying
+
+    style Events fill:none,stroke:none
+    style Commands fill:none,stroke:none
+    style Projector fill:#F0FDFA,stroke:#2DD4BF
+    style TouchPanel fill:#FFF7ED,stroke:#FB923C
+    style ProjectorTitle fill:none,stroke:none
+    style TouchPanelTitle fill:none,stroke:none

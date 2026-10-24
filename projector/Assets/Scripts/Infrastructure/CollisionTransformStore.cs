@@ -15,9 +15,8 @@ namespace Struckout.Infrastructure
     ///
     ///   コマンドライン: -collisionTransform C:\path\collision_transform.json
     ///   環境変数:       STRUCKOUT_COLLISION_TRANSFORM
-    ///   既定:           Application.persistentDataPath/collision_transform.json
-    ///                   (Windows では %USERPROFILE%\AppData\LocalLow\DefaultCompany\StruckOut。
-    ///                    Editor と書き出したプレイヤーが同じ場所を使う)
+    ///   既定:           &lt;dirs::config_dir()&gt;/struckout/projector/collision_transform.json
+    ///                   (Editor と書き出したプレイヤーが同じ場所を使う)
     /// </summary>
     public static class CollisionTransformStore
     {
@@ -27,7 +26,7 @@ namespace Struckout.Infrastructure
 
         /// <summary>この起動で使うファイルの場所。</summary>
         public static string ResolvePath() =>
-            ResolvePath(ParseCommandLine(), ReadEnvironmentVariable, UnityEngine.Application.persistentDataPath);
+            ResolvePath(ParseCommandLine(), ReadEnvironmentVariable, null);
 
         /// <summary>入力源を明示して解決する。テストから優先順位を確かめるために公開している。</summary>
         public static string ResolvePath(
@@ -41,7 +40,7 @@ namespace Struckout.Infrastructure
             var fromEnv = environment?.Invoke(EnvName);
             if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
 
-            return Path.Combine(defaultDirectory ?? ".", FileName);
+            return Path.Combine(defaultDirectory ?? ProjectorPaths.ConfigDirectory, FileName);
         }
 
         /// <summary>
@@ -79,7 +78,7 @@ namespace Struckout.Infrastructure
 
         public static string ToJson(CollisionCoordinateTransform transform) => JsonUtility.ToJson(transform, true);
 
-        /// <summary>JSON を読む。書かれていない項目は既定値になる。1 m あたりの値が正でなければ <see cref="ArgumentException"/>。</summary>
+        /// <summary>JSON を読む。書かれていない項目は既定値になる。1 m あたりの値が正でなければ <see cref="ArgumentException"/>を投げる。</summary>
         public static CollisionCoordinateTransform FromJson(string json)
         {
             var result = new CollisionCoordinateTransform();

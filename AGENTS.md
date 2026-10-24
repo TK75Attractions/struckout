@@ -37,7 +37,8 @@ taichi は Linux ユーザーで、責任の分離、型による表現、根本
 - 横断的な設計や仕様、計画: `docs/<topic>.md`。1 つのモジュールに関するものは `docs/<module>/` に置く (`docs/ball_tracker/`、`docs/projector/`)。ファイル名は snake_case で、`projector_*`、`ball_detection_plan_N_*` のようにトピックを接頭辞にする
 - モジュール固有のアルゴリズムや使い方: `<module>/README.md`
 - 図: Mermaid (`.mmd`) で書き、生成した PNG もコミットする。Figma などの外部ツールで描いた図は使わない
-- ドキュメントは日本語で書く。仕様を変えたら、同じ PR でドキュメントも直す
+- docs/のドキュメントは日本語で書く。仕様を変えたら、同じ PR でドキュメントも直す
+- LLMのメモリ以外の意味を持たないドキュメントはdocs/llm_memory/に置く。
 
 ---
 
