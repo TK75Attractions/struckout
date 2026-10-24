@@ -1,6 +1,7 @@
 //! Tests of [`GameMasterSessionServiceImpl`].
 use std::assert_matches;
 
+use rstest::rstest;
 use struckout_proto::event::EventData;
 
 use crate::{AddPlayerError, GetPlayerError, PlayerId, ValidatePlayerNameError, data::Player};
@@ -139,6 +140,99 @@ async fn start_game_single<DS>(
         }))
         .await
         .expect("should succeed");
+}
+
+#[rstest]
+#[case::single(GameMode::Single)]
+#[case::multi(GameMode::Multi)]
+#[tokio::test]
+async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMode) {
+    let machine_id = MachineId::new(1);
+    let player_id = PlayerId::new(2);
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(3),
+        player_id,
+    });
+    service
+        .start_session(Request::new(StartSessionRequest {
+            machine_id: machine_id.into(),
+            player_id: player_id.into(),
+        }))
+        .await
+        .expect("should succeed");
+
+    service
+        .set_game_mode(Request::new(SetGameModeRequest {
+            machine_id: machine_id.into(),
+            mode: mode.into(),
+        }))
+        .await
+        .expect("should succeed without event subscribers");
+
+    assert_matches!(
+        service.sessions.read().get(machine_id),
+        Some(crate::session::MachineSession::ConfiguringDifficulty {
+            mode: actual_mode, difficulty: None, ..
+        }) if *actual_mode == mode
+    );
+    let error = service
+        .set_game_mode(Request::new(SetGameModeRequest {
+            machine_id: machine_id.into(),
+            mode: mode.into(),
+        }))
+        .await
+        .expect_err("mode has already been selected");
+    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+}
+
+#[rstest]
+#[case(GameMode::Unspecified.into())]
+#[case(-1)]
+#[case(i32::MAX)]
+#[tokio::test]
+async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
+    let machine_id = MachineId::new(1);
+    let player_id = PlayerId::new(2);
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(3),
+        player_id,
+    });
+    service
+        .start_session(Request::new(StartSessionRequest {
+            machine_id: machine_id.into(),
+            player_id: player_id.into(),
+        }))
+        .await
+        .expect("should succeed");
+
+    let error = service
+        .set_game_mode(Request::new(SetGameModeRequest {
+            machine_id: machine_id.into(),
+            mode,
+        }))
+        .await
+        .expect_err("invalid mode must be rejected");
+    assert_eq!(error.code(), tonic::Code::InvalidArgument);
+    assert_matches!(
+        service.sessions.read().get(machine_id),
+        Some(crate::session::MachineSession::ConfiguringGameMode { mode: None, .. })
+    );
+}
+
+#[tokio::test]
+async fn set_game_mode_requires_an_existing_session() {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(3),
+        player_id: PlayerId::new(2),
+    });
+    let error = service
+        .set_game_mode(Request::new(SetGameModeRequest {
+            machine_id: 1,
+            mode: GameMode::Single.into(),
+        }))
+        .await
+        .expect_err("session has not been started");
+    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
 }
 
 #[tokio::test]

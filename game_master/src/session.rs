@@ -8,6 +8,13 @@ use struckout_proto::{
 use thiserror::Error;
 use tracing::trace;
 
+use crate::services::EventTarget;
+
+/// Owns machine sessions so configuration and readiness share a single source of state.
+///
+/// Sessions begin in [`MachineSession::ConfiguringGameMode`]. Selecting a mode with
+/// [`Self::set_game_mode`] advances to difficulty configuration; [`Self::update_difficulty`]
+/// and [`Self::set_ready`] then configure difficulty and readiness respectively.
 #[derive(Debug, Clone)]
 pub struct Sessions((Option<MachineSession>, Option<MachineSession>));
 
@@ -28,6 +35,8 @@ pub enum SessionError {
     NoSession(MachineId),
     #[error("on machine {0}: can't evlove to the next state: difficulty is not yet set")]
     NoDifficulty(MachineId),
+    #[error("game mode must be single-play or multi-play")]
+    UnspecifiedGameMode,
     #[error("multi-play mode is required to do this operation")]
     NotMultiPlay,
 }
@@ -133,6 +142,46 @@ impl Sessions {
         }
     }
 
+    /// Sets the game mode and advances to difficulty configuration so readiness requires a selected mode.
+    ///
+    /// Accepts [`GameMode::Single`] or [`GameMode::Multi`] for a session in
+    /// [`MachineSession::ConfiguringGameMode`], preserving its machine and player IDs.
+    /// The difficulty starts unset, and other machine sessions are unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SessionError::UnspecifiedGameMode`] for [`GameMode::Unspecified`],
+    /// [`SessionError::NoSession`] if the session does not exist, or
+    /// [`SessionError::InvalidState`] if mode selection has already finished.
+    /// Errors leave all sessions unchanged.
+    pub fn set_game_mode(
+        &mut self,
+        machine_id: MachineId,
+        mode: GameMode,
+    ) -> Result<(), SessionError> {
+        if mode == GameMode::Unspecified {
+            return Err(SessionError::UnspecifiedGameMode);
+        }
+        let ms = self
+            .get_mut(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (_, &player_id, _) =
+            ms.as_configuring_game_mode()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "game mode can only be set while configuring game mode",
+                    expected_state: "ConfiguringGameMode",
+                    actual_state,
+                    machine_id,
+                })?;
+        *ms = MachineSession::ConfiguringDifficulty {
+            machine_id,
+            player_id,
+            mode,
+            difficulty: None,
+        };
+        Ok(())
+    }
+
     /// Updates difficulty.
     ///
     /// If current session on `machine_id` is single-play mode, it updates only that session's difficulty.
@@ -141,7 +190,7 @@ impl Sessions {
         &mut self,
         machine_id: MachineId,
         difficulty: Difficulty,
-    ) -> Result<(), SessionError> {
+    ) -> Result<EventTarget, SessionError> {
         let ms = self
             .get_mut(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
@@ -156,10 +205,10 @@ impl Sessions {
         *di = Some(difficulty);
 
         if !mode.is_multi() {
-            return Ok(());
+            return Ok(EventTarget::Single(machine_id));
         }
         let Some(another) = self.get_another_mut(machine_id) else {
-            return Ok(());
+            return Ok(EventTarget::All);
         };
         let (_, _, mode, di) = another
             .as_configuring_difficulty_mut()
@@ -171,7 +220,7 @@ impl Sessions {
             })?;
         debug_assert!(mode.is_multi());
         *di = Some(difficulty);
-        Ok(())
+        Ok(EventTarget::All)
     }
 
     /// Returns the score of the session on `machine_id`.
@@ -425,6 +474,120 @@ mod tests {
             res,
             Err(SessionError::AlreadyExists(mid)) if mid == machine_id
         );
+    }
+
+    #[test]
+    fn set_game_mode_advances_only_the_requested_session() {
+        let machine_id = MachineId::new(1);
+        let player_id = PlayerId::new(2);
+        let another_machine_id = MachineId::new(3);
+        for mode in [GameMode::Single, GameMode::Multi] {
+            let mut sessions = Sessions::new();
+            sessions
+                .insert(another_machine_id, player_id)
+                .expect("should succeed");
+            sessions
+                .insert(machine_id, player_id)
+                .expect("should succeed");
+
+            sessions
+                .set_game_mode(machine_id, mode)
+                .expect("should succeed");
+
+            assert_matches!(
+                sessions.get(machine_id),
+                Some(MachineSession::ConfiguringDifficulty {
+                    machine_id: actual_machine_id,
+                    player_id: actual_player_id,
+                    mode: actual_mode,
+                    difficulty: None,
+                }) if *actual_machine_id == machine_id && *actual_player_id == player_id && *actual_mode == mode
+            );
+            assert_matches!(
+                sessions.get(another_machine_id),
+                Some(MachineSession::ConfiguringGameMode { mode: None, .. })
+            );
+        }
+    }
+
+    #[test]
+    fn set_game_mode_rejects_unspecified_without_changing_state() {
+        let machine_id = MachineId::new(1);
+        let mut sessions = Sessions::new();
+        sessions
+            .insert(machine_id, PlayerId::new(2))
+            .expect("should succeed");
+
+        assert_matches!(
+            sessions.set_game_mode(machine_id, GameMode::Unspecified),
+            Err(SessionError::UnspecifiedGameMode)
+        );
+        assert_matches!(
+            sessions.get(machine_id),
+            Some(MachineSession::ConfiguringGameMode { mode: None, .. })
+        );
+    }
+
+    #[test]
+    fn set_game_mode_requires_an_existing_session() {
+        let machine_id = MachineId::new(1);
+        let mut sessions = Sessions::new();
+        assert_matches!(
+            sessions.set_game_mode(machine_id, GameMode::Single),
+            Err(SessionError::NoSession(id)) if id == machine_id
+        );
+    }
+
+    #[test]
+    fn set_game_mode_rejects_later_states_without_changing_them() {
+        let machine_id = MachineId::new(1);
+        let player_id = PlayerId::new(2);
+        let mode = GameMode::Multi;
+        let difficulty = Difficulty::Hard;
+        for session in [
+            MachineSession::ConfiguringDifficulty {
+                machine_id,
+                player_id,
+                mode,
+                difficulty: Some(difficulty),
+            },
+            MachineSession::WaitingForAnotherMachine {
+                machine_id,
+                player_id,
+                mode,
+                difficulty,
+            },
+            MachineSession::Running {
+                machine_id,
+                player_id,
+                mode,
+                difficulty,
+                score: 10,
+            },
+        ] {
+            let mut sessions = Sessions((Some(session.clone()), None));
+            assert_matches!(
+                sessions.set_game_mode(machine_id, GameMode::Single),
+                Err(SessionError::InvalidState { machine_id: id, expected_state: "ConfiguringGameMode", .. }) if id == machine_id
+            );
+            let actual = sessions.get(machine_id).expect("session must still exist");
+            match session {
+                MachineSession::ConfiguringDifficulty { .. } => assert_eq!(
+                    actual.as_configuring_difficulty(),
+                    session.as_configuring_difficulty()
+                ),
+                MachineSession::WaitingForAnotherMachine { .. } => assert_eq!(
+                    actual.as_waiting_for_another_machine(),
+                    session.as_waiting_for_another_machine()
+                ),
+                MachineSession::Running { .. } => {
+                    assert_eq!(actual.as_running(), session.as_running())
+                }
+                MachineSession::ConfiguringGameMode { .. } => {
+                    unreachable!("only later states are tested")
+                }
+            }
+        }
     }
 
     #[test]

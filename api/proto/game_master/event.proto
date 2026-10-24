@@ -7,7 +7,9 @@ import "game_master/types.proto";
 import "google/protobuf/duration.proto";
 
 message Event {
-  message SessionDifficultyChanged {}
+  message SessionDifficultyChanged {
+    Difficulty difficulty = 1;
+  }
 
   message GameStarted {
     Difficulty difficulty = 1;

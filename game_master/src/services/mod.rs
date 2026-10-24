@@ -29,7 +29,7 @@ use tracing::{instrument, trace, warn};
 
 use crate::{
     DataSource, DataSourceImpl, GetGameResultError,
-    session::{Sessions, SetReadyAction},
+    session::{SessionError, Sessions, SetReadyAction},
 };
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
@@ -145,15 +145,32 @@ where
             .map_err(|e| Status::invalid_argument(e.to_string()))?;
         let machine_id: MachineId = machine_id.into();
 
-        {
+        let ev_target = {
             let mut sessions = self.sessions.write();
             sessions
                 .update_difficulty(machine_id, difficulty)
-                .map_err(|e| Status::failed_precondition(e.to_string()))?;
+                .map_err(|e| Status::failed_precondition(e.to_string()))?
+        };
+
+        if self
+            .event_tx
+            .send(Event {
+                target: ev_target,
+                data: Ok(SuccessfulEvent::SessionDifficultyChanged),
+            })
+            .is_err()
+        {
+            warn!("all event receiver has been dropped");
         }
-        todo!("notify change")
+        Ok(Response::new(SetSessionDifficultyResponse {}))
     }
 
+    /// Selects a session's game mode before difficulty configuration can begin.
+    ///
+    /// Returns `InvalidArgument` for unspecified or unknown modes and
+    /// `FailedPrecondition` for a missing session or an invalid session state.
+    /// Errors leave session state unchanged. This operation emits no events.
+    #[instrument]
     async fn set_game_mode(
         &self,
         req: Request<SetGameModeRequest>,
@@ -164,7 +181,15 @@ where
             .map_err(|e| Status::invalid_argument(format!("GameMode is out of range: {e}")))?;
         let machine_id: MachineId = machine_id.into();
 
-        todo!()
+        self.sessions
+            .write()
+            .set_game_mode(machine_id, mode)
+            .map_err(|e| match e {
+                SessionError::UnspecifiedGameMode => Status::invalid_argument(e.to_string()),
+                _ => Status::failed_precondition(e.to_string()),
+            })?;
+
+        Ok(Response::new(SetGameModeResponse {}))
     }
 
     async fn start_tutorial(

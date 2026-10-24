@@ -2454,6 +2454,7 @@ dependencies = [
  "parking_lot",
  "prost",
  "prost-types",
+ "rstest",
  "sentry",
  "serde",
  "sqlx",
