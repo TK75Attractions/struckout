@@ -4,7 +4,11 @@ use std::assert_matches;
 use rstest::rstest;
 use struckout_proto::event::EventData;
 
-use crate::{AddPlayerError, GetPlayerError, PlayerId, ValidatePlayerNameError, data::Player};
+use crate::{
+    AddPlayerError, GetPlayerError, PlayerId, ValidatePlayerNameError,
+    data::Player,
+    session::{ConfiguringDifficultyState, ConfiguringGameModeState},
+};
 
 use super::*;
 
@@ -172,9 +176,9 @@ async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMo
 
     assert_matches!(
         service.sessions.read().get(machine_id),
-        Some(crate::session::MachineSession::ConfiguringDifficulty {
+        Some(crate::session::MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
             mode: actual_mode, difficulty: None, ..
-        }) if *actual_mode == mode
+        })) if *actual_mode == mode
     );
     let error = service
         .set_game_mode(Request::new(SetGameModeRequest {
@@ -216,7 +220,9 @@ async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
     assert_eq!(error.code(), tonic::Code::InvalidArgument);
     assert_matches!(
         service.sessions.read().get(machine_id),
-        Some(crate::session::MachineSession::ConfiguringGameMode { mode: None, .. })
+        Some(crate::session::MachineSession::ConfiguringGameMode(
+            ConfiguringGameModeState { mode: None, .. }
+        ))
     );
 }
 
