@@ -56,6 +56,23 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public void 既定の保存先はユーザーの設定ディレクトリ配下になる()
+        {
+            var path = CollisionTransformStore.ResolvePath(new Dictionary<string, string>(), _ => null, null);
+
+            Assert.That(path, Is.EqualTo(Path.Combine(ProjectorPaths.ConfigDirectory, CollisionTransformStore.FileName)));
+        }
+
+        [Test]
+        public void 空の上書きは既定の保存先を変えない()
+        {
+            var args = new Dictionary<string, string> { [CollisionTransformStore.ArgName] = " " };
+            var path = CollisionTransformStore.ResolvePath(args, _ => " ", null);
+
+            Assert.That(path, Is.EqualTo(Path.Combine(ProjectorPaths.ConfigDirectory, CollisionTransformStore.FileName)));
+        }
+
+        [Test]
         public void 保存して読み直すと同じ値になる()
         {
             var path = Path.Combine(_directory, "sub", CollisionTransformStore.FileName);

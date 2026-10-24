@@ -61,7 +61,21 @@ Inspector の値は既定値で、起動時に設定ファイル `collision_tran
 |---|---|
 | コマンドライン | `StruckOut.exe -collisionTransform C:\struckout\collision_transform.json` |
 | 環境変数 | `STRUCKOUT_COLLISION_TRANSFORM` |
-| 既定 | `%USERPROFILE%\AppData\LocalLow\DefaultCompany\StruckOut\collision_transform.json` (Editor とプレイヤーで共通) |
+| 既定 | `<dirs::config_dir()>/struckout/projector/collision_transform.json` (Editor とプレイヤーで共通) |
+
+既定の設定ディレクトリは launcher・ball_tracker と同じ規則で決まる。
+
+| OS | 設定ディレクトリ |
+|---|---|
+| Linux | `$XDG_CONFIG_HOME/struckout/projector` (未設定・空・相対パスなら `~/.config/struckout/projector`) |
+| Windows | `%APPDATA%\struckout\projector` |
+| macOS | `~/Library/Application Support/struckout/projector` |
+
+F2 の「保存」と起動時の読み込みは同じパスを使い、保存時にディレクトリがなければ作る。
+従来の `Application.persistentDataPath` にある設定は自動では移さないため、既存の
+`collision_transform.json` を上のディレクトリへ移すか、コマンドライン・環境変数でそのファイルを指定する。
+projector 独自の保存処理はこの設定ファイルだけで、データディレクトリへ保存するファイルは現在ない。
+Unity 自身が出力する `Player.log` は Unity の保存先に従い、起動時の `-logFile` で変更できる。
 
 ファイルが無ければ Inspector の値のまま動く。中身がおかしい (1 m あたりが 0 以下など) ときも
 Inspector の値を使い、`Player.log` に `[Collision] could not read ...` と出る。
