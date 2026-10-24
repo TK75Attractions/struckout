@@ -448,6 +448,7 @@ impl MachineSession {
     }
 
     /// Returns the player id of this session.
+    #[allow(unused)]
     pub fn player_id(&self) -> PlayerId {
         match self {
             MachineSession::ConfiguringGameMode { player_id, .. } => *player_id,
@@ -588,11 +589,5 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn sessions_update_difficulty_returns_err_when_called_in_configuring_mode() {
-        let mut sessions = Sessions::new();
-        todo!()
     }
 }

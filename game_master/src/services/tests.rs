@@ -62,6 +62,7 @@ impl DataSource for StubDataSource {
 }
 
 /// Waits for event matching `ev_pat`. Returns when a event from stream matches pattern, or panics when stream ends.
+#[allow(unused)] // temporary allow
 macro_rules! wait_event {
     ($stream_var:ident, $ev_pat:pat) => {
         loop {
@@ -112,7 +113,7 @@ macro_rules! assert_event {
 
 /// Starts single-play game.
 async fn start_game_single<DS>(
-    service: &mut GameMasterSessionServiceImpl<DS>,
+    service: &GameMasterSessionServiceImpl<DS>,
     machine_id: MachineId,
     difficulty: Difficulty,
     player_id: PlayerId,
@@ -284,9 +285,7 @@ async fn set_session_ready_triggers_game_started_event() {
 
     assert_event!(
         stream,
-        EventData::GameStarted(struckout_proto::event::GameStarted {
-            difficulty: ev_difficulty,
-        })
+        EventData::GameStarted(struckout_proto::event::GameStarted { .. })
     );
 }
 
@@ -308,9 +307,10 @@ async fn event_stream_notifies_in_correct_order() {
         .expect("should succeed");
     let mut stream = stream.into_inner();
 
+    start_game_single(&service, machine_id, difficulty, PlayerId::new(1)).await;
+
     // Assert: Started
-    assert_event!(stream, EventData::GameStarted(started));
-    // if started.difficulty == difficulty
+    assert_event!(stream, EventData::GameStarted(_));
 
     // Assert: TimeLimitNotify
     let finished = loop {

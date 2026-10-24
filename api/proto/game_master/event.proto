@@ -52,8 +52,8 @@ message Event {
     SessionDifficultyChanged session_difficulty_changed = 5;
     /* ----- Tutorials ----- */
     TutorialStarted tutorial_started = 6;
-    TutorialNavigatedToPrevious target_navigated_to_previous = 7;
-    TutorialNavigatedToNext target_navigated_to_next = 8;
+    TutorialNavigatedToPrevious tutorial_navigated_to_previous = 7;
+    TutorialNavigatedToNext tutorial_navigated_to_next = 8;
     TargetAdded target_added = 9;
     TargetRemoved target_removed = 10;
   }

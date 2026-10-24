@@ -7,6 +7,7 @@ message Target {
   message Compass {
     float x = 1;
     float y = 2;
+    float radius = 3;
   }
 
   uint32 machine_id = 1;

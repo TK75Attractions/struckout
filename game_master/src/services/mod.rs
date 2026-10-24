@@ -156,7 +156,7 @@ where
             .event_tx
             .send(Event {
                 target: ev_target,
-                data: Ok(SuccessfulEvent::SessionDifficultyChanged),
+                data: Ok(SuccessfulEvent::SessionDifficultyChanged(difficulty)),
             })
             .is_err()
         {
@@ -362,9 +362,7 @@ where
                     ));
                     Ok(Response::new(SetSessionReadyResponse {}))
                 }
-                Ok(SetReadyAction::WaitForAnother) => {
-                    todo!()
-                }
+                Ok(SetReadyAction::WaitForAnother) => Ok(Response::new(SetSessionReadyResponse {})),
                 Err(e) => {
                     return Err(Status::failed_precondition(e.to_string()));
                 }
@@ -451,7 +449,7 @@ pub enum SuccessfulEvent {
     /// [`struckout_proto::event::GameFinished`]
     GameFinished,
     /// [`struckout_proto::event::SessionDifficultyChanged`]
-    SessionDifficultyChanged,
+    SessionDifficultyChanged(Difficulty),
     /// [`struckout_proto::event::TutorialStarted`]
     TutorialStarted,
     /// [`struckout_proto::event::TutorialNavigatedToPrevious`]
@@ -479,10 +477,18 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
                 })
             }
             SuccessfulEvent::GameFinished => EventData::GameFinished(GameFinished {}),
-            SuccessfulEvent::SessionDifficultyChanged => todo!(),
-            SuccessfulEvent::TutorialStarted => todo!(),
-            SuccessfulEvent::TutorialNavigatedToPrevious => todo!(),
-            SuccessfulEvent::TutotialNavigatedToNext => todo!(),
+            SuccessfulEvent::SessionDifficultyChanged(difficulty) => {
+                EventData::SessionDifficultyChanged(SessionDifficultyChanged {
+                    difficulty: difficulty.into(),
+                })
+            }
+            SuccessfulEvent::TutorialStarted => EventData::TutorialStarted(TutorialStarted {}),
+            SuccessfulEvent::TutorialNavigatedToPrevious => {
+                EventData::TutorialNavigatedToPrevious(TutorialNavigatedToPrevious {})
+            }
+            SuccessfulEvent::TutotialNavigatedToNext => {
+                EventData::TutorialNavigatedToNext(TutorialNavigatedToNext {})
+            }
         }
     }
 }
