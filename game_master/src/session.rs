@@ -567,6 +567,8 @@ impl MachineSession {
 mod tests {
     use std::assert_matches;
 
+    use rstest::rstest;
+
     use super::*;
 
     fn running_sessions(mode: GameMode) -> Sessions {
@@ -592,7 +594,7 @@ mod tests {
         sessions
     }
 
-    #[rstest::rstest]
+    #[rstest]
     #[case(GameMode::Single)]
     #[case(GameMode::Multi)]
     fn targets_follow_game_sharing(#[case] mode: GameMode) {
@@ -634,7 +636,7 @@ mod tests {
             .expect("other target is preserved");
     }
 
-    #[rstest::rstest]
+    #[rstest]
     #[case(GameMode::Single)]
     #[case(GameMode::Multi)]
     fn running_game_data_is_shared_only_in_multi_play(#[case] mode: GameMode) {
@@ -676,9 +678,8 @@ mod tests {
     }
 
     #[test]
-    fn target_operations_require_a_running_session() {
+    fn target_operations_require_an_existing_session() {
         let machine_id = MachineId::new(1);
-        let player_id = PlayerId::new(1);
         let target = Target {
             machine_id: machine_id.into(),
             ..Default::default()
@@ -689,35 +690,47 @@ mod tests {
             sessions.remove_target(machine_id, Uuid::nil()),
             Err(SessionError::NoSession(_))
         );
-        for session in [
-            MachineSession::ConfiguringGameMode(ConfiguringGameModeState {
-                machine_id,
-                player_id,
-                mode: None,
-            }),
-            MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
-                machine_id,
-                player_id,
-                mode: GameMode::Multi,
-                difficulty: Some(Difficulty::Normal),
-            }),
-            MachineSession::WaitingForAnotherMachine(WaitingForAnotherMachineState {
-                machine_id,
-                player_id,
-                mode: GameMode::Multi,
-                difficulty: Difficulty::Normal,
-            }),
-        ] {
-            let mut sessions = Sessions((Some(session), None));
-            assert_matches!(
-                sessions.add_target(target),
-                Err(SessionError::InvalidState { .. })
-            );
-            assert_matches!(
-                sessions.remove_target(machine_id, Uuid::nil()),
-                Err(SessionError::InvalidState { .. })
-            );
-        }
+    }
+
+    #[rstest]
+    #[case::configuring_game_mode(
+        MachineSession::ConfiguringGameMode(ConfiguringGameModeState {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(1),
+            mode: None,
+        })
+    )]
+    #[case::configuring_difficulty(
+        MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(1),
+            mode: GameMode::Multi,
+            difficulty: Some(Difficulty::Normal),
+        })
+    )]
+    #[case::waiting_for_another_machine(
+        MachineSession::WaitingForAnotherMachine(WaitingForAnotherMachineState {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(1),
+            mode: GameMode::Multi,
+            difficulty: Difficulty::Normal,
+        })
+    )]
+    fn target_operations_require_a_running_session(#[case] session: MachineSession) {
+        let machine_id = session.machine_id();
+        let target = Target {
+            machine_id: machine_id.into(),
+            ..Default::default()
+        };
+        let mut sessions = Sessions((Some(session), None));
+        assert_matches!(
+            sessions.add_target(target),
+            Err(SessionError::InvalidState { .. })
+        );
+        assert_matches!(
+            sessions.remove_target(machine_id, Uuid::nil()),
+            Err(SessionError::InvalidState { .. })
+        );
     }
 
     #[test]
@@ -732,40 +745,40 @@ mod tests {
         );
     }
 
-    #[test]
-    fn set_game_mode_advances_only_the_requested_session() {
+    #[rstest]
+    #[case::single(GameMode::Single)]
+    #[case::multi(GameMode::Multi)]
+    fn set_game_mode_advances_only_the_requested_session(#[case] mode: GameMode) {
         let machine_id = MachineId::new(1);
         let player_id = PlayerId::new(2);
         let another_machine_id = MachineId::new(3);
-        for mode in [GameMode::Single, GameMode::Multi] {
-            let mut sessions = Sessions::new();
-            sessions
-                .insert(another_machine_id, player_id)
-                .expect("should succeed");
-            sessions
-                .insert(machine_id, player_id)
-                .expect("should succeed");
+        let mut sessions = Sessions::new();
+        sessions
+            .insert(another_machine_id, player_id)
+            .expect("should succeed");
+        sessions
+            .insert(machine_id, player_id)
+            .expect("should succeed");
 
-            sessions
-                .set_game_mode(machine_id, mode)
-                .expect("should succeed");
+        sessions
+            .set_game_mode(machine_id, mode)
+            .expect("should succeed");
 
-            assert_matches!(
-                sessions.get(machine_id),
-                Some(MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
-                    machine_id: actual_machine_id,
-                    player_id: actual_player_id,
-                    mode: actual_mode,
-                    difficulty: None,
-                })) if *actual_machine_id == machine_id && *actual_player_id == player_id && *actual_mode == mode
-            );
-            assert_matches!(
-                sessions.get(another_machine_id),
-                Some(MachineSession::ConfiguringGameMode(
-                    ConfiguringGameModeState { mode: None, .. }
-                ))
-            );
-        }
+        assert_matches!(
+            sessions.get(machine_id),
+            Some(MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
+                machine_id: actual_machine_id,
+                player_id: actual_player_id,
+                mode: actual_mode,
+                difficulty: None,
+            })) if *actual_machine_id == machine_id && *actual_player_id == player_id && *actual_mode == mode
+        );
+        assert_matches!(
+            sessions.get(another_machine_id),
+            Some(MachineSession::ConfiguringGameMode(
+                ConfiguringGameModeState { mode: None, .. }
+            ))
+        );
     }
 
     #[test]
@@ -798,61 +811,61 @@ mod tests {
         );
     }
 
-    #[test]
-    fn set_game_mode_rejects_later_states_without_changing_them() {
-        let machine_id = MachineId::new(1);
-        let player_id = PlayerId::new(2);
-        let mode = GameMode::Multi;
-        let difficulty = Difficulty::Hard;
-        for session in [
-            MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
-                machine_id,
-                player_id,
-                mode,
-                difficulty: Some(difficulty),
-            }),
-            MachineSession::WaitingForAnotherMachine(WaitingForAnotherMachineState {
-                machine_id,
-                player_id,
-                mode,
-                difficulty,
-            }),
-            MachineSession::Running(RunningState {
-                machine_id,
-                player_id,
-                shared: Arc::new(RwLock::new(SharedRunningState {
-                    mode,
-                    difficulty,
-                    score: 10,
-                    targets: HashMap::new(),
-                })),
-            }),
-        ] {
-            let mut sessions = Sessions((Some(session.clone()), None));
-            assert_matches!(
-                sessions.set_game_mode(machine_id, GameMode::Single),
-                Err(SessionError::InvalidState { machine_id: id, expected_state: "ConfiguringGameMode", .. }) if id == machine_id
-            );
-            let actual = sessions.get(machine_id).expect("session must still exist");
-            match session {
-                MachineSession::ConfiguringDifficulty(_) => assert_eq!(
-                    actual.as_configuring_difficulty(),
-                    session.as_configuring_difficulty()
-                ),
-                MachineSession::WaitingForAnotherMachine(_) => assert_eq!(
-                    actual.as_waiting_for_another_machine(),
-                    session.as_waiting_for_another_machine()
-                ),
-                MachineSession::Running(expected) => {
-                    let (actual,) = actual.as_running().expect("state must remain running");
-                    assert_eq!(actual.machine_id, expected.machine_id);
-                    assert_eq!(actual.player_id, expected.player_id);
-                    assert!(Arc::ptr_eq(&actual.shared, &expected.shared));
-                    assert_eq!(actual.shared.read().score, 10);
-                }
-                MachineSession::ConfiguringGameMode(_) => {
-                    unreachable!("only later states are tested")
-                }
+    #[rstest]
+    #[case::configuring_difficulty(
+        MachineSession::ConfiguringDifficulty(ConfiguringDifficultyState {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(2),
+            mode: GameMode::Multi,
+            difficulty: Some(Difficulty::Hard),
+        })
+    )]
+    #[case::waiting_for_another_machine(
+        MachineSession::WaitingForAnotherMachine(WaitingForAnotherMachineState {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(2),
+            mode: GameMode::Multi,
+            difficulty: Difficulty::Hard,
+        })
+    )]
+    #[case::running(
+        MachineSession::Running(RunningState {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(2),
+            shared: Arc::new(RwLock::new(SharedRunningState {
+                mode: GameMode::Multi,
+                difficulty: Difficulty::Hard,
+                score: 10,
+                targets: HashMap::new(),
+            })),
+        })
+    )]
+    fn set_game_mode_rejects_later_states_without_changing_them(#[case] session: MachineSession) {
+        let machine_id = session.machine_id();
+        let mut sessions = Sessions((Some(session.clone()), None));
+        assert_matches!(
+            sessions.set_game_mode(machine_id, GameMode::Single),
+            Err(SessionError::InvalidState { machine_id: id, expected_state: "ConfiguringGameMode", .. }) if id == machine_id
+        );
+        let actual = sessions.get(machine_id).expect("session must still exist");
+        match session {
+            MachineSession::ConfiguringDifficulty(_) => assert_eq!(
+                actual.as_configuring_difficulty(),
+                session.as_configuring_difficulty()
+            ),
+            MachineSession::WaitingForAnotherMachine(_) => assert_eq!(
+                actual.as_waiting_for_another_machine(),
+                session.as_waiting_for_another_machine()
+            ),
+            MachineSession::Running(expected) => {
+                let (actual,) = actual.as_running().expect("state must remain running");
+                assert_eq!(actual.machine_id, expected.machine_id);
+                assert_eq!(actual.player_id, expected.player_id);
+                assert!(Arc::ptr_eq(&actual.shared, &expected.shared));
+                assert_eq!(actual.shared.read().score, 10);
+            }
+            MachineSession::ConfiguringGameMode(_) => {
+                unreachable!("only later states are tested")
             }
         }
     }

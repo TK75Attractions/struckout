@@ -357,34 +357,62 @@ fn target_request(machine_id: u32) -> AddTargetRequest {
     }
 }
 
+#[rstest]
+#[case::missing_target(AddTargetRequest { target: None })]
+#[case::missing_data({
+    let mut req = target_request(1);
+    req.target.as_mut().expect("target exists").target_data = None;
+    req
+})]
+#[case::missing_owner({
+    let mut req = target_request(1);
+    req.target.as_mut().expect("target exists").owner = None;
+    req
+})]
 #[tokio::test]
-async fn target_operations_validate_requests_and_session_state() {
+async fn add_target_rejects_missing_fields(#[case] req: AddTargetRequest) {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
         game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
-    let mut missing_data = target_request(1);
-    missing_data
-        .target
-        .as_mut()
-        .expect("target exists")
-        .target_data = None;
-    let mut missing_owner = target_request(1);
-    missing_owner.target.as_mut().expect("target exists").owner = None;
-    for req in [
-        AddTargetRequest { target: None },
-        missing_data,
-        missing_owner,
-    ] {
-        assert_eq!(
-            service
-                .add_target(Request::new(req))
-                .await
-                .expect_err("invalid target")
-                .code(),
-            tonic::Code::InvalidArgument
-        );
-    }
+    assert_eq!(
+        service
+            .add_target(Request::new(req))
+            .await
+            .expect_err("invalid target")
+            .code(),
+        tonic::Code::InvalidArgument
+    );
+}
+
+#[rstest]
+#[case::empty("")]
+#[case::invalid("invalid")]
+#[tokio::test]
+async fn remove_target_rejects_invalid_ids(#[case] target_id: &str) {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
+    assert_eq!(
+        service
+            .remove_target(Request::new(RemoveTargetRequest {
+                machine_id: 1,
+                target_id: target_id.to_owned(),
+            }))
+            .await
+            .expect_err("invalid UUID")
+            .code(),
+        tonic::Code::InvalidArgument
+    );
+}
+
+#[tokio::test]
+async fn target_operations_require_a_running_session() {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
     assert_eq!(
         service
             .add_target(Request::new(target_request(1)))
@@ -393,19 +421,6 @@ async fn target_operations_validate_requests_and_session_state() {
             .code(),
         tonic::Code::FailedPrecondition
     );
-    for target_id in [String::new(), "invalid".to_owned()] {
-        assert_eq!(
-            service
-                .remove_target(Request::new(RemoveTargetRequest {
-                    machine_id: 1,
-                    target_id
-                }))
-                .await
-                .expect_err("invalid UUID")
-                .code(),
-            tonic::Code::InvalidArgument
-        );
-    }
     assert_eq!(
         service
             .remove_target(Request::new(RemoveTargetRequest {
