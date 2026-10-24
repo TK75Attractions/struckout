@@ -35,7 +35,7 @@ impl DataSource for StubDataSource {
         _started_at: UtcDateTime,
         _difficulty: Difficulty,
     ) -> Result<GameId, sqlx::Error> {
-        unimplemented!()
+        Ok(self.game_id)
     }
 
     async fn complete_game(&self, _game_id: GameId, _score: u32) -> Result<(), sqlx::Error> {
@@ -432,6 +432,17 @@ async fn target_operations_require_a_running_session() {
             .code(),
         tonic::Code::FailedPrecondition
     );
+    assert_eq!(
+        service
+            .hit_target(Request::new(HitTargetRequest {
+                machine_id: 1,
+                target_id: Uuid::nil().to_string(),
+            }))
+            .await
+            .expect_err("session is not running")
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
     service
         .start_session(Request::new(StartSessionRequest {
             machine_id: 1,
@@ -455,6 +466,17 @@ async fn target_operations_require_a_running_session() {
             }))
             .await
             .expect_err("not running")
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    assert_eq!(
+        service
+            .hit_target(Request::new(HitTargetRequest {
+                machine_id: 1,
+                target_id: Uuid::nil().to_string(),
+            }))
+            .await
+            .expect_err("session is not running")
             .code(),
         tonic::Code::FailedPrecondition
     );
@@ -497,5 +519,192 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
             .expect_err("already removed")
             .code(),
         tonic::Code::NotFound
+    );
+}
+
+#[rstest]
+#[case::single(GameMode::Single)]
+#[case::multi(GameMode::Multi)]
+#[tokio::test(start_paused = true)]
+async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
+    let machine_count = if mode.is_multi() { 2 } else { 1 };
+    for machine_id in 1..=machine_count {
+        service
+            .start_session(Request::new(StartSessionRequest {
+                machine_id,
+                player_id: machine_id,
+            }))
+            .await
+            .expect("new session");
+        service
+            .set_game_mode(Request::new(SetGameModeRequest {
+                machine_id,
+                mode: mode.into(),
+            }))
+            .await
+            .expect("select mode");
+    }
+    service
+        .set_session_difficulty(Request::new(SetSessionDifficultyRequest {
+            machine_id: 1,
+            difficulty: Difficulty::Normal.into(),
+        }))
+        .await
+        .expect("configure difficulty");
+    for machine_id in 1..=machine_count {
+        service
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id }))
+            .await
+            .expect("start game");
+    }
+    let target_id = service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .expect("add target")
+        .into_inner()
+        .target_id;
+    let mut events = service.event_tx.subscribe();
+    service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: machine_count,
+            target_id: target_id.clone(),
+        }))
+        .await
+        .expect("hit target");
+    let event = events.try_recv().expect("score event");
+    assert_matches!(
+        event.data,
+        Ok(SuccessfulEvent::GameScoreChanged {
+            total_score: 100_000
+        })
+    );
+    if mode.is_multi() {
+        assert_matches!(event.target, EventTarget::All);
+        assert_eq!(
+            service.sessions.read().score_multi().expect("shared score"),
+            100_000
+        );
+    } else {
+        assert_matches!(event.target, EventTarget::Single(id) if id == MachineId::new(1));
+    }
+    assert_eq!(
+        service
+            .sessions
+            .read()
+            .score(MachineId::new(1))
+            .expect("running"),
+        100_000
+    );
+    drop(events);
+    service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id,
+        }))
+        .await
+        .expect("hit succeeds without subscribers");
+    assert_eq!(
+        service
+            .sessions
+            .read()
+            .score(MachineId::new(1))
+            .expect("running"),
+        200_000
+    );
+}
+
+#[rstest]
+#[case::empty("", tonic::Code::InvalidArgument)]
+#[case::invalid("invalid", tonic::Code::InvalidArgument)]
+#[case::unknown("00000000-0000-0000-0000-000000000000", tonic::Code::NotFound)]
+#[tokio::test(start_paused = true)]
+async fn hit_target_rejects_invalid_ids(#[case] target_id: &str, #[case] code: tonic::Code) {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
+    start_game_single(
+        &service,
+        MachineId::new(1),
+        Difficulty::Normal,
+        PlayerId::new(1),
+    )
+    .await;
+    let mut events = service.event_tx.subscribe();
+    let error = service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id: target_id.to_owned(),
+        }))
+        .await
+        .expect_err("invalid target ID");
+    assert_eq!(error.code(), code);
+    assert_eq!(
+        service
+            .sessions
+            .read()
+            .score(MachineId::new(1))
+            .expect("running"),
+        0
+    );
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+}
+
+#[rstest]
+#[case::zero_radius(0.0, tonic::Code::FailedPrecondition)]
+#[case::overflow(f32::MIN_POSITIVE, tonic::Code::OutOfRange)]
+#[tokio::test(start_paused = true)]
+async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: tonic::Code) {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        game_id: GameId::new(1),
+        player_id: PlayerId::new(1),
+    });
+    start_game_single(
+        &service,
+        MachineId::new(1),
+        Difficulty::Normal,
+        PlayerId::new(1),
+    )
+    .await;
+    let mut req = target_request(1);
+    let Some(struckout_proto::target::TargetData::Compass(compass)) =
+        req.target.as_mut().expect("target").target_data.as_mut()
+    else {
+        panic!("compass target expected");
+    };
+    compass.radius = radius;
+    let target_id = service
+        .add_target(Request::new(req))
+        .await
+        .expect("add target")
+        .into_inner()
+        .target_id;
+    let mut events = service.event_tx.subscribe();
+    let error = service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id,
+        }))
+        .await
+        .expect_err("invalid score");
+    assert_eq!(error.code(), code);
+    assert_eq!(
+        service
+            .sessions
+            .read()
+            .score(MachineId::new(1))
+            .expect("running"),
+        0
+    );
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
     );
 }

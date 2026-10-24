@@ -7,6 +7,7 @@ use parking_lot::RwLock;
 use struckout_macros::{EnumAsInner, EnumAsInnerMut};
 use struckout_proto::{
     Difficulty, GameMode, Target,
+    target::TargetData,
     types::{MachineId, PlayerId},
 };
 use thiserror::Error;
@@ -49,6 +50,19 @@ pub enum SessionError {
         machine_id: MachineId,
         target_id: Uuid,
     },
+}
+
+/// Failures that must leave the running game's score unchanged.
+#[derive(Debug, Error)]
+pub enum HitTargetError {
+    #[error(transparent)]
+    Session(#[from] SessionError),
+    #[error("target_data is required to calculate the score")]
+    MissingTargetData,
+    #[error("target radius must be finite and positive")]
+    InvalidRadius,
+    #[error("score exceeds the range of u32")]
+    ScoreOverflow,
 }
 
 impl Sessions {
@@ -284,6 +298,63 @@ impl Sessions {
                 target_id,
             })?;
         Ok(())
+    }
+
+    /// Adds `100000 / radius`, truncated to an integer, to the shared game score.
+    ///
+    /// Keeps the target registered for subsequent hits and returns the new total and
+    /// event recipients. Validation and checked addition precede mutation so errors
+    /// leave the game unchanged.
+    pub fn hit_target(
+        &mut self,
+        machine_id: MachineId,
+        target_id: Uuid,
+    ) -> Result<(u32, EventTarget), HitTargetError> {
+        // TODO: スコアの算出を別のモジュールに切り出す
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (state,) = ms
+            .as_running()
+            .map_err(|actual_state| SessionError::InvalidState {
+                msg: "targets can only be hit while running",
+                expected_state: "Running",
+                actual_state,
+                machine_id,
+            })?;
+        let mut shared = state.shared.write();
+        let target = shared
+            .targets
+            .get(&target_id)
+            .ok_or(SessionError::TargetNotFound {
+                machine_id,
+                target_id,
+            })?;
+        let radius = match target
+            .target_data
+            .as_ref()
+            .ok_or(HitTargetError::MissingTargetData)?
+        {
+            TargetData::Compass(compass) => f64::from(compass.radius),
+        };
+        if !radius.is_finite() || radius <= 0.0 {
+            return Err(HitTargetError::InvalidRadius);
+        }
+        let points = (100_000.0 / radius).trunc();
+        if points > f64::from(u32::MAX) {
+            return Err(HitTargetError::ScoreOverflow);
+        }
+        let total_score = shared
+            .score
+            .checked_add(points as u32)
+            .ok_or(HitTargetError::ScoreOverflow)?;
+        shared.score = total_score;
+        let target = if shared.mode.is_multi() {
+            EventTarget::All
+        } else {
+            EventTarget::Single(machine_id)
+        };
+        Ok((total_score, target))
     }
 
     /// Returns the score of the session on `machine_id`.
@@ -677,6 +748,125 @@ mod tests {
         assert_matches!(sessions.score_multi(), Err(SessionError::NotMultiPlay));
     }
 
+    fn compass_target(machine_id: MachineId, radius: f32) -> Target {
+        Target {
+            machine_id: machine_id.into(),
+            target_data: Some(TargetData::Compass(struckout_proto::target::Compass {
+                x: 0.0,
+                y: 0.0,
+                radius,
+            })),
+            ..Default::default()
+        }
+    }
+
+    #[rstest]
+    #[case::unit_radius(1.0, 100_000)]
+    #[case::larger_radius(200.0, 500)]
+    #[case::fractional_points(3.0, 33_333)]
+    #[case::less_than_one_point(200_000.0, 0)]
+    fn hit_target_adds_points_for_each_hit(#[case] radius: f32, #[case] points: u32) {
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(compass_target(machine_id, radius))
+            .expect("running game");
+        let (score, target) = sessions
+            .hit_target(machine_id, target_id)
+            .expect("registered target");
+        assert_eq!(score, points);
+        assert_matches!(target, EventTarget::Single(id) if id == machine_id);
+        let (score, _) = sessions
+            .hit_target(machine_id, target_id)
+            .expect("target remains registered");
+        assert_eq!(score, 2 * points);
+        assert_eq!(sessions.score(machine_id).expect("running"), 2 * points);
+        assert_eq!(
+            sessions.score(MachineId::new(2)).expect("independent game"),
+            0
+        );
+    }
+
+    #[test]
+    fn hit_target_updates_the_shared_multi_play_score() {
+        let mut sessions = running_sessions(GameMode::Multi);
+        let target_id = sessions
+            .add_target(compass_target(MachineId::new(1), 200.0))
+            .expect("running game");
+        let (score, target) = sessions
+            .hit_target(MachineId::new(2), target_id)
+            .expect("shared target");
+        assert_eq!(score, 500);
+        assert_matches!(target, EventTarget::All);
+        assert_eq!(
+            sessions.score(MachineId::new(1)).expect("first machine"),
+            500
+        );
+        assert_eq!(
+            sessions.score(MachineId::new(2)).expect("second machine"),
+            500
+        );
+        assert_eq!(sessions.score_multi().expect("shared score"), 500);
+    }
+
+    #[rstest]
+    #[case::zero(0.0)]
+    #[case::negative(-1.0)]
+    #[case::nan(f32::NAN)]
+    #[case::infinite(f32::INFINITY)]
+    #[case::negative_infinite(f32::NEG_INFINITY)]
+    fn hit_target_rejects_invalid_radii(#[case] radius: f32) {
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(compass_target(machine_id, radius))
+            .expect("running game");
+        assert_matches!(
+            sessions.hit_target(machine_id, target_id),
+            Err(HitTargetError::InvalidRadius)
+        );
+        assert_eq!(sessions.score(machine_id).expect("running"), 0);
+    }
+
+    #[rstest]
+    #[case::points_overflow(f32::MIN_POSITIVE, 0)]
+    #[case::total_overflow(1.0, u32::MAX)]
+    fn hit_target_rejects_score_overflow(#[case] radius: f32, #[case] score: u32) {
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(compass_target(machine_id, radius))
+            .expect("running game");
+        let (state,) = sessions
+            .get(machine_id)
+            .expect("session")
+            .as_running()
+            .expect("running");
+        state.shared.write().score = score;
+        assert_matches!(
+            sessions.hit_target(machine_id, target_id),
+            Err(HitTargetError::ScoreOverflow)
+        );
+        assert_eq!(sessions.score(machine_id).expect("running"), score);
+    }
+
+    #[test]
+    fn hit_target_rejects_missing_target_data() {
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(Target {
+                machine_id: machine_id.into(),
+                ..Default::default()
+            })
+            .expect("running game");
+        assert_matches!(
+            sessions.hit_target(machine_id, target_id),
+            Err(HitTargetError::MissingTargetData)
+        );
+        assert_eq!(sessions.score(machine_id).expect("running"), 0);
+    }
+
     #[test]
     fn target_operations_require_an_existing_session() {
         let machine_id = MachineId::new(1);
@@ -686,6 +876,10 @@ mod tests {
         };
         let mut sessions = Sessions::new();
         assert_matches!(sessions.add_target(target), Err(SessionError::NoSession(_)));
+        assert_matches!(
+            sessions.hit_target(machine_id, Uuid::nil()),
+            Err(HitTargetError::Session(SessionError::NoSession(_)))
+        );
         assert_matches!(
             sessions.remove_target(machine_id, Uuid::nil()),
             Err(SessionError::NoSession(_))
@@ -723,6 +917,10 @@ mod tests {
             ..Default::default()
         };
         let mut sessions = Sessions((Some(session), None));
+        assert_matches!(
+            sessions.hit_target(machine_id, Uuid::nil()),
+            Err(HitTargetError::Session(SessionError::InvalidState { .. }))
+        );
         assert_matches!(
             sessions.add_target(target),
             Err(SessionError::InvalidState { .. })

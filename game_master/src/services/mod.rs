@@ -30,7 +30,7 @@ use uuid::Uuid;
 
 use crate::{
     DataSource, DataSourceImpl, GetGameResultError,
-    session::{SessionError, Sessions, SetReadyAction},
+    session::{HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
 const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
@@ -280,11 +280,39 @@ where
         Ok(Response::new(RemoveTargetResponse {}))
     }
 
+    #[instrument]
     async fn hit_target(
         &self,
         req: Request<HitTargetRequest>,
     ) -> Result<Response<HitTargetResponse>, Status> {
-        todo!()
+        let HitTargetRequest {
+            machine_id,
+            target_id,
+        } = req.into_inner();
+        let target_id =
+            Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let (total_score, ev_target) = self
+            .sessions
+            .write()
+            .hit_target(machine_id.into(), target_id)
+            .map_err(|e| match e {
+                HitTargetError::Session(SessionError::TargetNotFound { .. }) => {
+                    Status::not_found(e.to_string())
+                }
+                HitTargetError::ScoreOverflow => Status::out_of_range(e.to_string()),
+                _ => Status::failed_precondition(e.to_string()),
+            })?;
+        if self
+            .event_tx
+            .send(Event {
+                target: ev_target,
+                data: Ok(SuccessfulEvent::GameScoreChanged { total_score }),
+            })
+            .is_err()
+        {
+            warn!("all event receiver has been dropped");
+        }
+        Ok(Response::new(HitTargetResponse {}))
     }
 
     async fn get_game_result(
