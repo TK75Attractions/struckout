@@ -7,7 +7,7 @@ using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Application
 {
-    public class GameRuntimeState
+    internal class GameRuntimeState
     {
         private List<Target> _targets = new();
         public IReadOnlyList<Target> Targets => _targets;

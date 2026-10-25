@@ -8,7 +8,7 @@ namespace Struckout.Infrastructure
     /// Keeps user settings alongside launcher and ball_tracker, using the same base directory as
     /// Rust's dirs::config_dir() instead of Unity's company/product-specific persistentDataPath.
     /// </summary>
-    public static class ProjectorPaths
+    internal static class ProjectorPaths
     {
         public static string ConfigDirectory => ResolveConfigDirectory(
             UnityEngine.Application.platform, Environment.GetEnvironmentVariable,
