@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Struckout.Domain;
@@ -14,7 +15,7 @@ namespace Struckout.Tests.Tests.EditMode
     public class CollisionSolverTests
     {
         private static Target Circle(float x, float y, float diameter) =>
-            new(new TargetCoordinate(x, y), TargetType.Circle, diameter);
+            new(Guid.NewGuid(), new TargetGeometry(new TargetCoordinate(x, y), TargetType.Circle, diameter));
 
         private static CollisionPoint At(double x, double y) => new() { X = x, Y = y };
 

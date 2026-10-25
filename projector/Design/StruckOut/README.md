@@ -23,13 +23,13 @@ The original logo is kept separately as `reference_logo.jpg`. Targets, impact ef
 ## Unity animation integration
 
 - The board is logically 1920 × 1080. `UIService` stretches each screen sprite to that board, with the background behind the runtime targets and the idle/finish screens above them.
-- `GameRuntime` drives Idle → Playing → Finished. `UIService` crossfades the screens over 0.55 seconds; the circle targets fade in with short staggered delays and fade out at finish.
-- `CircleTargetUI` preserves the target diameter while adding a subtle rotation and a short ease/squash during hit relocation.
-- A hit keeps the original expanding ripple: a thin cyan ring expands from the target's old position and blooms again at its new position. The target continues its existing eased move, while the separate ripple remains behind the new impact artwork.
+- `GameRuntime` drives Idle → Playing → Finished. `UIService` crossfades the screens over 0.55 seconds; registered circle targets fade in with short staggered delays and are removed at finish.
+- `CircleTargetUI` preserves the target diameter and adds a subtle rotation. It draws only a target whose UUID has been returned by game_master.
+- After a hit, the old UUID and GameObject are removed. A newly registered UUID creates a separate target and GameObject at its new position. A thin cyan ripple expands at deletion and blooms at creation; existing targets are never moved or reused.
 - `CollisionResult.Scored`, `Missed`, and `Ignored` select different transparent impact sprites. `CollisionMarker` expands, turns where appropriate, fades, and removes itself.
 - The finish screen's `TIME UP` text is a Unity `TextMesh` so its wording can be edited. The touchpanel already shows time, score, and the result.
 - `Assets/Editor/StruckOutAnimationSetup.cs` supplies **Tools → STRUCK OUT → Apply Projector Animation Art** to reimport the seven live sprites and assign them to the scene and target prefab after artwork changes.
-- To preview without the physical tracker or game master, set `GameLifetimeScope` → `Network Settings` → `Mode` to `Fake` in the Inspector and enter Play Mode. The fake services start the game, send collisions, and finish it after 150 seconds. Restore `Real` for the installation.
+- To preview without the physical tracker or game master, set `GameLifetimeScope` → `Network Settings` → `Mode` to `Fake` in the Inspector and enter Play Mode. The fake services start the game, send collisions, and finish it after 90 seconds. Restore `Real` for the installation.
 
 ## Reusable image prompt set
 

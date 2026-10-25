@@ -231,7 +231,7 @@ namespace Struckout.Infrastructure.Grpc
                         Radius = (float)radius,
                     },
                 }, cancellationToken: token);
-                if (Guid.TryParse(response.TargetId, out var id)) return id;
+                if (Guid.TryParse(response.TargetId, out var id) && id != Guid.Empty) return id;
                 Debug.LogWarning("[GameMaster] 的の登録応答に有効な UUID がありません。");
                 return null;
             }

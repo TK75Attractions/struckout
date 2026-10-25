@@ -28,10 +28,10 @@ game_master は本物を起動すれば、Fake モードを使わずにシリア
 - `CollisionPoint` は**物理座標 (m)**。ball_tracker は的の面の上での着弾位置を送る。
   `x` が面に沿った横方向 (世界座標の y)、`y` が高さ (世界座標の z)
   (`ball_tracker/src/collision_output/network.rs`: `x = coll.y, y = coll.z`)。
-- projector は `GameStarted` 後に自分の盤面の的を `AddTarget` で登録し、UUID を保持する。
+- projector は `GameStarted` 後に自分の盤面の的を `AddTarget` で登録し、応答の UUID を持つ的を生成・描画する。
 - 命中時は `HitTarget` を送り、game_master が半径から得点を計算する。
   HUD は `GameScoreChanged.total_score` を表示する。ゲーム ID や得点差分は送らない。
-- 移動時は `RemoveTarget` → `AddTarget` で UUID を更新する。
+- 命中後は `RemoveTarget` で元の的を削除し、`AddTarget` の応答で新しい UUID の別エンティティを生成する。
   詳細は [projector_behavior.md](projector_behavior.md) を参照。
 
 ### 物理座標 → 盤面座標の変換

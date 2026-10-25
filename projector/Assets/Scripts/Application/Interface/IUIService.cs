@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
@@ -16,12 +15,16 @@ namespace Struckout.Application.Interface
         /// <summary>game_master が確定した累計得点を表示する。</summary>
         void SetScore(uint totalScore);
 
-        void InstantiateTargets(IReadOnlyList<Target> targets);
+        /// <summary>AddTarget が返した UUID を持つ的を描画する。</summary>
+        void AddTarget(Target target);
+
         /// <summary>
-        /// 的が移動したことを見た目に反映する。的は消えない。
-        /// 座標は <paramref name="target"/> が既に持っている。
+        /// Removes target from UI.
         /// </summary>
-        void MoveTarget(Target target);
+        /// <param name="id">Id of the target to remove.</param>
+        /// <returns>Whether target existed and was removed successfully or not.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        bool RemoveTarget(Guid id);
 
         /// <summary>
         /// ボールが当たった位置を描画座標で受け取り、その場にマーカーを出す。

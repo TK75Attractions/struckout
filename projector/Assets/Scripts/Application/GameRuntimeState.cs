@@ -1,7 +1,6 @@
 using Struckout.Domain;
 using System.Collections.Generic;
 using System;
-using Struckout.Application.Interface;
 using Struckout.Domain.TargetDefinition;
 using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
@@ -9,7 +8,7 @@ namespace Struckout.Application
 {
     internal class GameRuntimeState
     {
-        private List<Target> _targets = new();
+        private readonly List<Target> _targets = new();
         public IReadOnlyList<Target> Targets => _targets;
 
         /// <summary>StartGame を受け取るまでは Idle。</summary>
@@ -37,29 +36,19 @@ namespace Struckout.Application
         {
             Difficulty = difficulty;
         }
-        public void AddTargets(IReadOnlyList<Target> targets)
+        
+        public void AddTarget(Target target)
         {
-            foreach (var target in targets)
-            {
-                _targets.Add(target);
-            }
+            if (_targets.Exists(existing => existing.Id == target.Id))
+                throw new InvalidOperationException($"Target {target.Id} is already registered.");
+            _targets.Add(target);
         }
 
-        public void AddTargets(ITargetGenerator generator, int num, TargetType type)
+        public void RemoveTarget(Guid id)
         {
-            var targets = generator.GenerateTargets(num, type, Targets);
-
-            foreach (var target in targets)
-            {
-                if (_targets.Contains(target)) throw new Exception("Add Existing Target");
-                _targets.Add(target);
-            }
-        }
-
-        public void RemoveTarget(Target target)
-        {
-            if (!_targets.Contains(target)) throw new Exception("Remove Missing Target");
-            _targets.Remove(target);
+            var index = _targets.FindIndex(target => target.Id == id);
+            if (index < 0) throw new InvalidOperationException($"Target {id} is not registered.");
+            _targets.RemoveAt(index);
         }
     }
 }

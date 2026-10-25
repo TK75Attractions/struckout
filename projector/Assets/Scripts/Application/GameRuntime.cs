@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
-using Tk75Attractions.Struckout.GameMaster.V1;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
-using Target = Struckout.Domain.TargetDefinition.Target;
+using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Application
 {
@@ -21,8 +21,8 @@ namespace Struckout.Application
         private readonly IGameMasterClient _master;
         private readonly GameSettings _settings;
         private readonly GameRuntimeState _state = new();
-        private readonly Dictionary<Target, Guid> _registeredTargets = new();
-        private readonly HashSet<Target> _pendingTargets = new();
+        private readonly HashSet<Guid> _pendingTargets = new();
+        private IReadOnlyList<TargetGeometry> _initialGeometry;
         private CancellationTokenSource _gameCancellation;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
@@ -42,34 +42,64 @@ namespace Struckout.Application
 
         public void GameSetup()
         {
-            _state.AddTargets(_targetGenerator, _settings.initialTargetCount, TargetType.Circle);
-            _uiService.InstantiateTargets(_state.Targets);
+            // Geometry has no identity and cannot participate in rendering or hit detection.
+            _initialGeometry = _targetGenerator.GenerateTargets(
+                _settings.initialTargetCount, TargetType.Circle, Array.Empty<TargetGeometry>());
         }
 
         /// <summary>
-        /// Register this machine's targets after GameStarted because the server accepts them only while running.
+        /// Register geometry before constructing any local entities because game_master owns their identity.
         /// Called on Unity's main thread so continuations can safely update the board.
         /// </summary>
         public async Task StartGameAsync(Difficulty difficulty)
         {
+            if (_initialGeometry == null) throw new InvalidOperationException("GameSetup must run before starting a game.");
             CancelPendingOperations();
+            ClearLocalTargets();
             _gameCancellation = new CancellationTokenSource();
             var token = _gameCancellation.Token;
             _state.StartGame(difficulty);
             _uiService.SetGamePhase(GamePhase.Playing);
 
-            foreach (var target in _state.Targets)
+            foreach (var geometry in _initialGeometry)
             {
-                var id = await _master.AddTargetAsync(target.Coordinate, target.Radius, token);
+                await RegisterTargetAsync(geometry, token);
                 if (token.IsCancellationRequested) return;
-                if (id.HasValue) _registeredTargets.Add(target, id.Value);
-                else Debug.LogWarning($"[Game] 的を登録できませんでした: {target}");
             }
+        }
+
+        private async Task RegisterTargetAsync(TargetGeometry geometry, CancellationToken token)
+        {
+            var id = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
+            if (token.IsCancellationRequested) return;
+            if (!id.HasValue)
+            {
+                Debug.LogWarning("[Game] 的を登録できなかったため、生成しません。");
+                return;
+            }
+            var target = new Target(id.Value, geometry);
+            _state.AddTarget(target);
+            _uiService.AddTarget(target);
+        }
+
+        private void RemoveLocalTarget(Guid id)
+        {
+            _state.RemoveTarget(id);
+            if (!_uiService.RemoveTarget(id))
+            {
+                Debug.LogWarning($"Tried to remove the target which doesn't exist: id = {id}");
+            }
+        }
+
+        private void ClearLocalTargets()
+        {
+            foreach (var target in new List<Target>(_state.Targets)) RemoveLocalTarget(target.Id);
         }
 
         public void FinishGame()
         {
             CancelPendingOperations();
+            ClearLocalTargets();
             _state.FinishGame();
             _uiService.SetGamePhase(GamePhase.Finished);
         }
@@ -78,6 +108,7 @@ namespace Struckout.Application
         public void SuspendGame()
         {
             CancelPendingOperations();
+            ClearLocalTargets();
             _state.SuspendGame();
             _uiService.SetGamePhase(GamePhase.Idle);
         }
@@ -87,13 +118,12 @@ namespace Struckout.Application
             _gameCancellation?.Cancel();
             _gameCancellation?.Dispose();
             _gameCancellation = null;
-            _registeredTargets.Clear();
             _pendingTargets.Clear();
         }
 
         /// <summary>
-        /// Report a registered target's hit, then replace its server registration before moving it locally.
-        /// Keep a target busy until replacement completes so overlapping inputs cannot reuse its old UUID.
+        /// Replace a hit target by removing its UUID and registering new geometry as a separate entity.
+        /// Keep its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
         /// </summary>
         public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)
         {
@@ -109,7 +139,7 @@ namespace Struckout.Application
                 _uiService.ShowCollisionMarker(x, y, CollisionResult.Missed);
                 return;
             }
-            if (!_registeredTargets.TryGetValue(target, out var id) || !_pendingTargets.Add(target))
+            if (!_pendingTargets.Add(target.Id))
             {
                 _uiService.ShowCollisionMarker(x, y, CollisionResult.Ignored);
                 return;
@@ -118,7 +148,7 @@ namespace Struckout.Application
             var token = _gameCancellation.Token;
             try
             {
-                var hit = await _master.HitTargetAsync(id, token);
+                var hit = await _master.HitTargetAsync(target.Id, token);
                 if (token.IsCancellationRequested) return;
                 _uiService.ShowCollisionMarker(x, y, hit ? CollisionResult.Scored : CollisionResult.Ignored);
                 if (!hit)
@@ -127,34 +157,23 @@ namespace Struckout.Application
                     return;
                 }
 
-                var removed = await _master.RemoveTargetAsync(id, token);
+                var removed = await _master.RemoveTargetAsync(target.Id, token);
                 if (token.IsCancellationRequested) return;
+                // If the deletion response was lost, stop displaying or accepting hits for the uncertain UUID.
+                RemoveLocalTarget(target.Id);
                 if (!removed)
                 {
-                    // The server may have processed the deletion despite a lost response.
-                    _registeredTargets.Remove(target);
-                    Debug.LogWarning($"[Game] 的の削除を確認できないため、命中判定を停止します: {target}");
+                    Debug.LogWarning($"[Game] 的の削除を確認できないため、再生成を停止します: {target}");
                     return;
                 }
-                _registeredTargets.Remove(target);
-                var others = new List<Target>(_state.Targets);
-                others.Remove(target);
-                var coordinate = _targetGenerator.PickRelocation(target, others);
-                var replacement = await _master.AddTargetAsync(coordinate, target.Radius, token);
-                if (token.IsCancellationRequested) return;
-                if (!replacement.HasValue)
-                {
-                    Debug.LogWarning($"[Game] 移動先の的を登録できないため、命中判定を停止します: {target}");
-                    return;
-                }
-                _registeredTargets.Add(target, replacement.Value);
-                target.MoveTo(coordinate);
-                _uiService.MoveTarget(target);
+                var others = _state.Targets.Select(other => other.Geometry).ToList();
+                var coordinate = _targetGenerator.PickRelocation(target.Geometry, others);
+                await RegisterTargetAsync(new TargetGeometry(coordinate, target.Type, target.Size), token);
             }
             finally
             {
-                // A subsequent game may already be processing the same local target.
-                if (!token.IsCancellationRequested) _pendingTargets.Remove(target);
+                // A subsequent game may already be processing another set of UUIDs.
+                if (!token.IsCancellationRequested) _pendingTargets.Remove(target.Id);
             }
         }
     }

@@ -29,7 +29,7 @@ namespace Struckout.Unity
         private const int OverlaySortingOrder = 100;
         private const int MarkerSortingOrder = 150;
 
-        private Dictionary<Target, Transform> _targetToTransform;
+        private Dictionary<Guid, Transform> _targetToTransform;
         [FormerlySerializedAs("_circleUI")] [SerializeField]
         private Transform circleUI;
 
@@ -299,20 +299,11 @@ namespace Struckout.Unity
             }
         }
 
-        public void InstantiateTargets(IReadOnlyList<Target> targets)
-        {
-            foreach (var target in targets)
-            {
-                if (target == null) Debug.Log("Target is null");
-                InstantiateTarget(target);
-            }
-        }
-
-        public void InstantiateTarget(Target target)
+        public void AddTarget(Target target)
         {
             if (target == null) return;
             if (_targetToTransform == null) throw new InvalidOperationException("UIService is not initialized.");
-            if (_targetToTransform.ContainsKey(target)) return;
+            if (_targetToTransform.ContainsKey(target.Id)) return;
 
             Transform instantiatedTrans;
             switch (target.Type)
@@ -337,7 +328,7 @@ namespace Struckout.Unity
             }
             var ui = instantiatedTrans.GetComponent<ITargetUI>() ?? throw new InvalidOperationException("The Prefab doesn't contain ITargetUI");
             ui.Initialize(target, _world);
-            _targetToTransform[target] = instantiatedTrans;
+            _targetToTransform[target.Id] = instantiatedTrans;
             if (instantiatedTrans.TryGetComponent<CircleTargetUI>(out var circle))
             {
                 circle.SetPresentationVisible(_phase == GamePhase.Playing,
@@ -443,39 +434,20 @@ namespace Struckout.Unity
             return go.transform;
         }
 
-        public void MoveTarget(Target target)
+        /// <summary>
+        /// Removes target from UI.
+        /// </summary>
+        /// <param name="id">Id of the target to remove.</param>
+        /// <returns>Whether target existed and was removed successfully or not.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public bool RemoveTarget(Guid id)
         {
-            if (!_targetToTransform.TryGetValue(target, out var trans))
-            {
-                Debug.LogWarning(
-                    $"No UI for {target}. UI count={_targetToTransform.Count}");
-                return;
-            }
-
-            if (trans == null)
-            {
-                Debug.LogWarning($"The UI for {target} has been destroyed unexpectedly.");
-                _targetToTransform.Remove(target);
-                return;
-            }
-
-            try
-            {
-                var targetUI = trans.GetComponent<ITargetUI>();
-                if (targetUI == null)
-                {
-                    Debug.LogError("The target UI has no ITargetUI.");
-                    return;
-                }
-
-                // 的は消さない。同じ GameObject を新しい座標へ移すだけ。
-                // Target は同一性で扱うので、辞書の対応づけはそのままでよい。
-                targetUI.MoveTo(target);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError(ex);
-            }
+            if (!_targetToTransform.Remove(id, out var targetTrans)) return false;
+            if (targetTrans == null) return false;
+            var targetUI = targetTrans.GetComponent<ITargetUI>()
+                ?? throw new InvalidOperationException("The target UI has no ITargetUI.");
+            targetUI.Remove();
+            return true;
         }
     }
 }

@@ -43,7 +43,7 @@ namespace Struckout.Bootstrap
             if (_service == null) throw new Exception("There are no IUIService in uiService");
             _context = context;
 
-            // Fake の遅延購読でも、開始通知より先に初期盤面を準備する。
+            // 開始通知より先に配置を準備する。登録済みの的だけを後で生成・描画する。
             _runtime.GameSetup();
 
             context.PacketRouter.OnCollisionReceived += _sensorProvider.GetSensorData;

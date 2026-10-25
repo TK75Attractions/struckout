@@ -1,35 +1,24 @@
+using System;
 using NUnit.Framework;
 using Struckout.Domain.TargetDefinition;
 
 namespace Struckout.Tests.Tests.EditMode
 {
-    /// <summary>
-    /// Size が直径であることを固定する。
-    /// CircleTargetUI は Diameter を sizeDelta に、CollisionSolver は RadiusSquared を
-    /// 判定に使うので、この関係が崩れると描画と判定がずれる。
-    /// </summary>
     public class TargetTests
     {
         private static Target Circle(float diameter) =>
-            new(new TargetCoordinate(0f, 0f), TargetType.Circle, diameter);
+            new(Guid.NewGuid(), new TargetGeometry(new TargetCoordinate(0f, 0f), TargetType.Circle, diameter));
 
         [Test]
-        public void Size_はそのまま直径()
-        {
-            Assert.That(Circle(500f).Diameter, Is.EqualTo(500f));
-        }
+        public void Size_はそのまま直径() => Assert.That(Circle(500f).Diameter, Is.EqualTo(500f));
 
         [Test]
-        public void 半径は直径の半分()
-        {
-            Assert.That(Circle(500f).Radius, Is.EqualTo(250f));
-        }
+        public void 半径は直径の半分() => Assert.That(Circle(500f).Radius, Is.EqualTo(250f));
 
         [Test]
         public void RadiusSquared_は半径の二乗()
         {
             var target = Circle(500f);
-
             Assert.That(target.RadiusSquared, Is.EqualTo(target.Radius * target.Radius));
         }
 
@@ -37,44 +26,47 @@ namespace Struckout.Tests.Tests.EditMode
         public void 直径は半径の二倍という関係が保たれる()
         {
             var target = Circle(333f);
-
             Assert.That(target.Diameter, Is.EqualTo(target.Radius * 2f).Within(0.001f));
         }
 
         [Test]
-        public void 座標が同じでも別の的として扱われる()
+        public void Coordinates_do_not_define_entity_identity()
         {
-            // 的は当たると動く。座標で等価にすると、動かすたびに
-            // UIService の辞書との対応づけが壊れてしまう。
-            var a = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
-            var b = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
-
-            Assert.That(a, Is.Not.EqualTo(b));
-            Assert.That(a.Id, Is.Not.EqualTo(b.Id));
+            var geometry = new TargetGeometry(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
+            var first = new Target(Guid.NewGuid(), geometry);
+            var second = new Target(Guid.NewGuid(), geometry);
+            Assert.That(first, Is.Not.EqualTo(second));
         }
 
         [Test]
-        public void 動かしても同じ的のまま()
+        public void Uuid_defines_identity_even_for_separately_constructed_instances()
         {
-            var target = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
-            var id = target.Id;
-
-            target.MoveTo(new TargetCoordinate(900f, 500f));
-
-            Assert.That(target.Id, Is.EqualTo(id));
-            Assert.That(target.Coordinate.X, Is.EqualTo(900f));
-            Assert.That(target.Coordinate.Y, Is.EqualTo(500f));
+            var id = Guid.NewGuid();
+            var geometry = new TargetGeometry(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
+            var first = new Target(id, geometry);
+            var second = new Target(id, geometry);
+            Assert.That(first.Id, Is.EqualTo(id));
+            Assert.That(second, Is.EqualTo(first));
+            Assert.That(second.GetHashCode(), Is.EqualTo(first.GetHashCode()));
         }
 
         [Test]
-        public void 動かしても大きさは変わらない()
+        public void Replacement_is_a_different_entity_with_immutable_original_geometry()
         {
-            var target = new Target(new TargetCoordinate(0f, 0f), TargetType.Circle, 400f);
+            var original = Circle(400f);
+            var replacement = new Target(Guid.NewGuid(),
+                new TargetGeometry(new TargetCoordinate(100f, 100f), original.Type, original.Size));
+            Assert.That(replacement, Is.Not.EqualTo(original));
+            Assert.That(original.Coordinate.X, Is.Zero);
+            Assert.That(original.Coordinate.Y, Is.Zero);
+            Assert.That(replacement.Diameter, Is.EqualTo(original.Diameter));
+        }
 
-            target.MoveTo(new TargetCoordinate(100f, 100f));
-
-            Assert.That(target.Diameter, Is.EqualTo(400f));
-            Assert.That(target.Radius, Is.EqualTo(200f));
+        [Test]
+        public void Empty_uuid_cannot_construct_an_unregistered_target()
+        {
+            Assert.Throws<ArgumentException>(() => new Target(Guid.Empty,
+                new TargetGeometry(default, TargetType.Circle, 100f)));
         }
     }
 }

@@ -152,18 +152,18 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 
 | ファイル | 役割 | 強化時に触る可能性 |
 |---|---|---|
-| `Unity/UIService.cs` | 的の生成、移動の委譲、マーカーの生成 | **高**。演出の起点 |
-| `Unity/CircleTargetUI.cs` | 的 1 個の見た目。位置・大きさ・移動補間 | **高** |
+| `Unity/UIService.cs` | UUID ごとの的の生成・削除、マーカーの生成 | **高**。演出の起点 |
+| `Unity/CircleTargetUI.cs` | 登録済みの的 1 個の見た目。位置・大きさ・生成と削除の波紋 | **高** |
 | `Unity/PlaceholderSprites.cs` | 仮の絵の生成 | 中。素材ができたら不要になる |
-| `Unity/ITargetUI.cs` | 的 UI の契約（`Initialize` / `MoveTo`） | 中。種類を増やすなら |
+| `Unity/ITargetUI.cs` | 的 UI の契約（`Initialize` / `Remove`） | 中。種類を増やすなら |
 | `Unity/CollisionMarker.cs` | マーカーの拡大とフェード | 中。Prefab に置き換えるなら不要になる |
 | `Unity/FieldCamera.cs` | 盤面に合わせてカメラの表示範囲を決める | 低 |
 | `Unity/UIRoot.cs` | 的を置く親 Transform を保持 | 低 |
 | `Domain/WorldCoordinateTransform.cs` | 盤面 px → ワールド unit | 低。ただし全部の前提 |
 | `Domain/FieldBounds.cs` | 盤面の広さ | 低。比率を変えるなら |
 | `Infrastructure/TargetGenerator.cs` | 的の**位置と大きさ**を決める | 中。見た目の前提を決めている |
-| `Domain/TargetDefinition/Target.cs` | 的の状態。`Size` は直径 | 低 |
-| `Application/GameRuntime.cs` | 当たり判定と得点。UI を呼ぶ側 | 低 |
+| `Domain/TargetDefinition/Target.cs` | サーバー UUID を持つ不変の的。`Size` は直径 | 低 |
+| `Application/GameRuntime.cs` | 的の登録・命中通知・削除と再生成。UI を呼ぶ側 | 低 |
 
 ### 押さえておくべき約束事
 
@@ -173,11 +173,13 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 - **盤面の広さは `FieldBounds` が一箇所で持つ**。`TargetGenerator`（的を置く範囲）と
   `WorldCoordinateTransform`（描画のスケール）が同じインスタンスを見ている。
   片方だけ変えると、比率を変えたときに的だけ元の範囲に置かれる
-- **`Target` は参照で等価**。`UIService` が `Dictionary<Target, Transform>` で
-  対応づけているため、座標を等価性に含めると移動のたびに対応が壊れる
-- **的は消えない**。当たったら同じ GameObject が移動する
-  （`docs/projector_behavior.md`）。当たり判定は移動先で即座に有効になり、
-  見た目が追いつくまでの短い間だけ表示位置とずれる
+- **`Target` の同一性はサーバーの UUID で決まる**。`Target.Id` に UUID を保持し、
+  `UIService` も `Dictionary<Guid, Transform>` で描画を管理する
+- **未登録の `Target` は作らない**。生成候補の位置と大きさは `TargetGeometry` として計算し、
+  `AddTarget` の応答後に `Target` を作って描画・当たり判定に追加する
+- **命中後は元の的を削除し、別の的を生成する**。サーバーとローカルの元の UUID を削除し、
+  別の位置を登録してから、新しい UUID の `Target` と GameObject を作る。
+  `Target` の座標変更や同じ GameObject の移動は行わない
 - **着弾マーカーは当たり外れに関わらず出す**。座標変換がずれているのか
   単に外したのかを区別するため
 
@@ -303,8 +305,8 @@ HDR は有効、MSAA は無効。`Assets/DefaultVolumeProfile.asset` は存在�
 - `TargetGeneratorTests` — 盤面の広さを変えたとき的もついてくること
 
 見た目そのものを検証したいなら PlayMode テストを足す必要がある。
-`CircleTargetUI` の移動補間（`SmoothStep`）はまだ `MonoBehaviour` の中にあり、
-検証したければ切り出せる。
+`CircleTargetUI` は生成時のフェードと、生成・削除時の波紋を描画する。
+命中後の同じ GameObject による移動補間は廃止した。
 
 ### このマシン固有の注意
 

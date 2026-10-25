@@ -261,7 +261,6 @@ Rust 側の担当者に相談する話。
 |---|---|
 | `sandbox/testTcpCLI/bin`・`obj` が `.gitignore` に入っているのに追跡されたまま。ビルドのたびに差分が出る | `git rm --cached` で外す。同僚のコミットにも含まれる領域なので要相談 |
 | ~~ball_tracker が `CollisionPoint` に `(x, z)` を詰めている箇所の `// FIXME: これあってる?`~~ | 解決済み。世界座標の `(y, z)` を送るように直した。`Collision Transform` の係数は盤面の位置に合わせて決め直すこと |
-| `GameRuntimeState.RemoveTarget` が未使用 | 的を消さなくなったため。`AddCollisionTargetAction` / `RemoveCollisionTargetAction` は命中通知 API への移行時に削除した |
 | `FakeSensorProvider` が未登録 | 前任者のテストダブルとして意図的に残している |
 
 ## 2026-10-24 に確認した JSON 設定テストの不整合（issue 案・未起票）

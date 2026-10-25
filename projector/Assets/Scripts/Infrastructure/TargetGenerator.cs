@@ -27,10 +27,10 @@ namespace Struckout.Infrastructure
             _xSize = field.width;
             _ySize = field.height;
         }
-        public IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> existTarget)
+        public IReadOnlyList<TargetGeometry> GenerateTargets(int num, TargetType type, IReadOnlyList<TargetGeometry> existTarget)
         {
-            List<Target> targets = new(existTarget);
-            List<Target> newTargets = new();
+            List<TargetGeometry> targets = new(existTarget);
+            List<TargetGeometry> newTargets = new();
             for (var i = 0; i < num; i++)
             {
                 var target = GenerateTarget(type, targets);
@@ -40,7 +40,7 @@ namespace Struckout.Infrastructure
             return newTargets;
         }
 
-        public Target GenerateTarget(TargetType type, IReadOnlyList<Target> targets)
+        public TargetGeometry GenerateTarget(TargetType type, IReadOnlyList<TargetGeometry> targets)
         {
 
             var maxX = 0f;
@@ -63,7 +63,7 @@ namespace Struckout.Infrastructure
             return GenerateTarget(type, maxX, maxY, maxScore);
         }
 
-        public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
+        public TargetCoordinate PickRelocation(TargetGeometry target, IReadOnlyList<TargetGeometry> others)
         {
             // 的が画面から出ないように、中心が取りうる範囲を半径ぶん狭めておく。
             var radius = target.Radius;
@@ -101,7 +101,7 @@ namespace Struckout.Infrastructure
         }
 
         /// <summary>他の的の縁までの余白。負なら重なっている。</summary>
-        private float Clearance(float x, float y, Target target, IReadOnlyList<Target> others)
+        private float Clearance(float x, float y, TargetGeometry target, IReadOnlyList<TargetGeometry> others)
         {
             var clearance = float.MaxValue;
             foreach (var other in others)
@@ -114,14 +114,14 @@ namespace Struckout.Infrastructure
             return clearance;
         }
 
-        public Target GenerateTarget(TargetType type, float x, float y, float size)
+        public TargetGeometry GenerateTarget(TargetType type, float x, float y, float size)
         {
             TargetCoordinate coordinate = new(
                 x,
                 y
             );
 
-            Target target = new(
+            TargetGeometry target = new(
                 coordinate,
                 type,
                 size
@@ -130,7 +130,7 @@ namespace Struckout.Infrastructure
             return target;
         }
 
-        private float GetScore(float x, float y, IReadOnlyList<Target> targets)
+        private float GetScore(float x, float y, IReadOnlyList<TargetGeometry> targets)
         {
             var score = float.MaxValue;
             foreach (var target in targets)
@@ -141,7 +141,7 @@ namespace Struckout.Infrastructure
             return score;
         }
 
-        private float GetScore(float x, float y, Target targets)
+        private float GetScore(float x, float y, TargetGeometry targets)
         {
             var score = MathF.Sqrt((x - targets.Coordinate.X) * (x - targets.Coordinate.X) + (y - targets.Coordinate.Y) * (y - targets.Coordinate.Y)) - targets.Radius;
             score = MathF.Min(score, x);
