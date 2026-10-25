@@ -25,7 +25,7 @@ namespace Struckout.Domain
 
         private readonly FieldBounds _field;
 
-        public WorldCoordinateTransform() : this(new FieldBounds(), 100f) { }
+        public WorldCoordinateTransform() : this(new FieldBounds()) { }
 
         public WorldCoordinateTransform(FieldBounds field, float pixelsPerUnit = 100f)
         {

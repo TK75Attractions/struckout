@@ -1,6 +1,6 @@
 namespace Struckout.Application.Interface
 {
-    public interface IMessageParser<T>
+    public interface IMessageParser<out T>
     {
         T MessageParse(byte[] bytes);
     }

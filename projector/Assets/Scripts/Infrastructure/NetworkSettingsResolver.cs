@@ -33,6 +33,7 @@ namespace Struckout.Infrastructure
         /// <summary>
         /// 入力源を明示して解決する。テストから優先順位を確かめるために公開している。
         /// </summary>
+        /// <param name="inspectorSettings">Inspectorで設定されているNetworkSettings。</param>
         /// <param name="commandLine">"-key value" を辞書にしたもの。</param>
         /// <param name="environment">環境変数を引く関数。無ければ null を返す。</param>
         public static NetworkSettings Resolve(

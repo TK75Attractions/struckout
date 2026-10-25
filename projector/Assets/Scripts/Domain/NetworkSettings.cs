@@ -8,9 +8,6 @@ namespace Struckout.Domain
     ///
     /// 既定のポートは api/spec/servers.yaml に合わせている
     /// (tracker.projector = 5000、game-master.grpc = 8020)。
-    ///
-    /// Inspector で編集できるほか、コマンドライン引数と環境変数で上書きできる。
-    /// 詳しくは <see cref="Struckout.Infrastructure.NetworkSettingsResolver"/> を参照。
     /// </summary>
     [Serializable]
     public class NetworkSettings

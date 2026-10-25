@@ -118,7 +118,6 @@ namespace Struckout.Infrastructure.Fake
             }
             catch (OperationCanceledException)
             {
-                return;
             }
         }
 

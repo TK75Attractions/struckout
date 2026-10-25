@@ -68,6 +68,7 @@ namespace Struckout.Bootstrap
             if (destroyList == null)
             {
                 Debug.Log("The DestroyList is null");
+                return;
             }
 
             foreach (var destroy in destroyList)

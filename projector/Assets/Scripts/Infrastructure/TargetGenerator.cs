@@ -60,7 +60,7 @@ namespace Struckout.Infrastructure
                 }
             }
             if (targets.Count == 0) return GenerateTarget(type, maxX, maxY, 500);
-            return GenerateTarget(type, maxX, maxY, (float)maxScore);
+            return GenerateTarget(type, maxX, maxY, maxScore);
         }
 
         public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
@@ -148,7 +148,7 @@ namespace Struckout.Infrastructure
             score = MathF.Min(score, y);
             score = MathF.Min(score, _xSize - x);
             score = MathF.Min(score, _ySize - y);
-            return (float)score;
+            return score;
         }
 
         private float RadicalInverse(int index, int baseValue)

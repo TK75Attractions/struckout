@@ -40,6 +40,7 @@ namespace Struckout.Unity
                     return 0.009f - Mathf.Abs(radius - 0.48f);
                 });
 
+        /// <param name="name">Spriteの名前。</param>
         /// <param name="signedDistance">
         /// テクスチャ内の位置 (u, v はどちらも -0.5〜0.5) を受け取り、
         /// 図形の内側で正、縁で 0、外側で負を返す。単位はテクスチャの一辺。

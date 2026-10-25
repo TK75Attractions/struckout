@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Struckout.Application.Interface
 {
-    public interface IClientService<T>
+    public interface IClientService<out T>
     {
         void RegisterPort(string host, int port);
         event Action<T> OnReceived;

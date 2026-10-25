@@ -82,7 +82,7 @@ namespace Struckout.Tests.Tests.EditMode
             // game_master とは gRPC。メッセージとサービスのスタブが要る。
             Assert.That(new HitTargetRequest(), Is.Not.Null);
             Assert.That(new ListenEventsRequest(), Is.Not.Null);
-            Assert.That(new Tk75Attractions.Struckout.GameMaster.V1.Event(), Is.Not.Null);
+            Assert.That(new Event(), Is.Not.Null);
             Assert.That(typeof(GameMasterSessionService.GameMasterSessionServiceClient), Is.Not.Null);
         }
     }

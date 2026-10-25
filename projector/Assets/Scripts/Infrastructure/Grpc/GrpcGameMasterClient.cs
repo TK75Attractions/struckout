@@ -127,7 +127,7 @@ namespace Struckout.Infrastructure.Grpc
                         HandleEvent(received);
                     }
 
-                    if (!lost) Debug.LogWarning("[GameMaster] the event stream ended.");
+                    Debug.LogWarning("[GameMaster] the event stream ended.");
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {

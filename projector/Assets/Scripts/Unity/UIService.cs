@@ -289,9 +289,9 @@ namespace Struckout.Unity
                 }
             }
             var index = 0;
-            foreach (var transform in _targetToTransform.Values)
+            foreach (var trans in _targetToTransform.Values)
             {
-                if (transform != null && transform.TryGetComponent<CircleTargetUI>(out var targetUI))
+                if (trans != null && trans.TryGetComponent<CircleTargetUI>(out var targetUI))
                 {
                     targetUI.SetPresentationVisible(phase == GamePhase.Playing, index * 0.07f);
                     index++;
@@ -310,11 +310,11 @@ namespace Struckout.Unity
 
         public void InstantiateTarget(Target target)
         {
-            Transform trans;
             if (target == null) return;
             if (_targetToTransform == null) throw new InvalidOperationException("UIService is not initialized.");
             if (_targetToTransform.ContainsKey(target)) return;
 
+            Transform instantiatedTrans;
             switch (target.Type)
             {
                 case TargetType.Circle:
@@ -324,21 +324,21 @@ namespace Struckout.Unity
                         return;
                     }
 
-                    if (!TryInstantiateTargetUI<CircleTargetUI>(circleUI, out var transform))
+                    if (!TryInstantiateTargetUI<CircleTargetUI>(circleUI, out var trans))
                     {
                         Debug.LogError("CircleTargetUI is null");
                         return;
                     }
-                    trans = transform;
+                    instantiatedTrans = trans;
                     break;
                 default:
                     Debug.LogError($"Missing TargetType {target.Type}");
                     return;
             }
-            var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
+            var ui = instantiatedTrans.GetComponent<ITargetUI>() ?? throw new InvalidOperationException("The Prefab doesn't contain ITargetUI");
             ui.Initialize(target, _world);
-            _targetToTransform[target] = trans;
-            if (trans.TryGetComponent<CircleTargetUI>(out var circle))
+            _targetToTransform[target] = instantiatedTrans;
+            if (instantiatedTrans.TryGetComponent<CircleTargetUI>(out var circle))
             {
                 circle.SetPresentationVisible(_phase == GamePhase.Playing,
                     _phase == GamePhase.Playing ? (_targetToTransform.Count - 1) * 0.07f : 0f,
@@ -346,16 +346,16 @@ namespace Struckout.Unity
             }
         }
 
-        bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
+        private bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform trans) where TTargetUI : MonoBehaviour, ITargetUI
         {
             if (prefab.GetComponent<TTargetUI>() == null)
             {
-                transform = null;
+                trans = null;
                 Debug.LogError("There are no ITargetUI");
                 return false;
             }
 
-            transform = Instantiate(prefab, _uiRoot.TargetRoot);
+            trans = Instantiate(prefab, _uiRoot.TargetRoot);
             return true;
         }
 
@@ -445,14 +445,14 @@ namespace Struckout.Unity
 
         public void MoveTarget(Target target)
         {
-            if (!_targetToTransform.TryGetValue(target, out var transform))
+            if (!_targetToTransform.TryGetValue(target, out var trans))
             {
                 Debug.LogWarning(
                     $"No UI for {target}. UI count={_targetToTransform.Count}");
                 return;
             }
 
-            if (transform == null)
+            if (trans == null)
             {
                 Debug.LogWarning($"The UI for {target} has been destroyed unexpectedly.");
                 _targetToTransform.Remove(target);
@@ -461,8 +461,8 @@ namespace Struckout.Unity
 
             try
             {
-                var targetui = transform.GetComponent<ITargetUI>();
-                if (targetui == null)
+                var targetUI = trans.GetComponent<ITargetUI>();
+                if (targetUI == null)
                 {
                     Debug.LogError("The target UI has no ITargetUI.");
                     return;
@@ -470,7 +470,7 @@ namespace Struckout.Unity
 
                 // 的は消さない。同じ GameObject を新しい座標へ移すだけ。
                 // Target は同一性で扱うので、辞書の対応づけはそのままでよい。
-                targetui.MoveTo(target);
+                targetUI.MoveTo(target);
             }
             catch (Exception ex)
             {

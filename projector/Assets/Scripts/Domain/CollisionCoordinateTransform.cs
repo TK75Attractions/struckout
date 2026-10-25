@@ -28,21 +28,21 @@ namespace Struckout.Domain
 
         /// <summary>物理座標の原点 (0, 0) が描画座標のどこに来るか。</summary>
         [FormerlySerializedAs("OriginX")] public float originX = 960f;
-        [FormerlySerializedAs("OriginY")] public float originY = 0f;
+        [FormerlySerializedAs("OriginY")] public float originY;
 
         /// <summary>軸の向きが逆だったとき用。</summary>
-        [FormerlySerializedAs("FlipX")] public bool flipX = false;
-        [FormerlySerializedAs("FlipY")] public bool flipY = false;
+        [FormerlySerializedAs("FlipX")] public bool flipX;
+        [FormerlySerializedAs("FlipY")] public bool flipY;
 
         /// <summary>
         /// 縦横が入れ替わっていたとき用。
         /// ball_tracker は CollisionPoint に、的の面に沿った横方向 (世界座標の y) と
         /// 高さ (世界座標の z) を詰めるので、通常は使わない。
         /// </summary>
-        [FormerlySerializedAs("SwapAxes")] public bool swapAxes = false;
+        [FormerlySerializedAs("SwapAxes")] public bool swapAxes;
 
         /// <summary>変換前後の値をログに出す。係数を合わせ込むとき用。</summary>
-        [FormerlySerializedAs("LogConversions")] public bool logConversions = false;
+        [FormerlySerializedAs("LogConversions")] public bool logConversions;
 
         /// <summary>物理座標 (m) → 描画座標。</summary>
         public (double X, double Y) ToRenderSpace(double physicalX, double physicalY)

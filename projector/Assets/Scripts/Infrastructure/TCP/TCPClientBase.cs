@@ -24,12 +24,15 @@ namespace Struckout.Infrastructure.TCP
         public event Action ConnectionLost;
         private Task _receiveTask;
         private readonly IMessageParser<T> _parser;
-        private bool _isRegister = false;
+        private bool _isRegister;
         private readonly SemaphoreSlim _slim = new(1, 1);
         private readonly SemaphoreSlim _sendSlim = new(1, 1);
         private const double MaxRetryDelaySeconds = 5;
 
-        private ConnectionState Transit(ConnectionState to) => _state = ConnectionStateMachine.Transition(_state, to);
+        private void Transit(ConnectionState to)
+        {
+            _state = ConnectionStateMachine.Transition(_state, to);
+        }
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public TcpClientBase(IMessageParser<T> parser)
