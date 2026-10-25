@@ -88,8 +88,8 @@ namespace Struckout.Infrastructure.Fake
 
             while (_isConnected && !token.IsCancellationRequested)
             {
-                float x = FieldMinX + (float)random.NextDouble() * (FieldMaxX - FieldMinX);
-                float y = FieldMinY + (float)random.NextDouble() * (FieldMaxY - FieldMinY);
+                var x = FieldMinX + (float)random.NextDouble() * (FieldMaxX - FieldMinX);
+                var y = FieldMinY + (float)random.NextDouble() * (FieldMaxY - FieldMinY);
 
                 ProjectorPacket packet = new()
                 {

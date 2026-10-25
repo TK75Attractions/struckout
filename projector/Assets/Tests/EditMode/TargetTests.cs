@@ -57,7 +57,7 @@ namespace Struckout.Tests.Tests.EditMode
         public void 動かしても同じ的のまま()
         {
             var target = new Target(new TargetCoordinate(10f, 20f), TargetType.Circle, 100f);
-            int id = target.Id;
+            var id = target.Id;
 
             target.MoveTo(new TargetCoordinate(900f, 500f));
 

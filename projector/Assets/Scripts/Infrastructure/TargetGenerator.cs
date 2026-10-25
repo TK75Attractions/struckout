@@ -31,7 +31,7 @@ namespace Struckout.Infrastructure
         {
             List<Target> targets = new(existTarget);
             List<Target> newTargets = new();
-            for (int i = 0; i < num; i++)
+            for (var i = 0; i < num; i++)
             {
                 var target = GenerateTarget(type, targets);
                 targets.Add(target);
@@ -43,13 +43,13 @@ namespace Struckout.Infrastructure
         public Target GenerateTarget(TargetType type, IReadOnlyList<Target> targets)
         {
 
-            float maxX = 0f;
-            float maxY = 0f;
-            float maxScore = 0f;
-            for (int i = 1; i < 200; i++)
+            var maxX = 0f;
+            var maxY = 0f;
+            var maxScore = 0f;
+            for (var i = 1; i < 200; i++)
             {
-                float x = RadicalInverse(i, 2) * _xSize;
-                float y = RadicalInverse(i, 3) * _ySize;
+                var x = RadicalInverse(i, 2) * _xSize;
+                var y = RadicalInverse(i, 3) * _ySize;
 
                 var score = GetScore(x, y, targets);
                 if (maxScore < score)
@@ -66,11 +66,11 @@ namespace Struckout.Infrastructure
         public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
         {
             // 的が画面から出ないように、中心が取りうる範囲を半径ぶん狭めておく。
-            float radius = target.Radius;
-            float minX = radius;
-            float maxX = _xSize - radius;
-            float minY = radius;
-            float maxY = _ySize - radius;
+            var radius = target.Radius;
+            var minX = radius;
+            var maxX = _xSize - radius;
+            var minY = radius;
+            var maxY = _ySize - radius;
 
             // 画面より大きい的は動かしようがない。真ん中に置く。
             if (maxX <= minX || maxY <= minY)
@@ -79,14 +79,14 @@ namespace Struckout.Infrastructure
             }
 
             TargetCoordinate fallback = default;
-            float bestClearance = float.NegativeInfinity;
+            var bestClearance = float.NegativeInfinity;
 
-            for (int attempt = 0; attempt < RelocationAttempts; attempt++)
+            for (var attempt = 0; attempt < RelocationAttempts; attempt++)
             {
-                float x = minX + (float)_random.NextDouble() * (maxX - minX);
-                float y = minY + (float)_random.NextDouble() * (maxY - minY);
+                var x = minX + (float)_random.NextDouble() * (maxX - minX);
+                var y = minY + (float)_random.NextDouble() * (maxY - minY);
 
-                float clearance = Clearance(x, y, target, others);
+                var clearance = Clearance(x, y, target, others);
                 if (clearance > 0f) return new TargetCoordinate(x, y);
 
                 // どれも重なるようなら、いちばんマシだったところに置く。
@@ -103,12 +103,12 @@ namespace Struckout.Infrastructure
         /// <summary>他の的の縁までの余白。負なら重なっている。</summary>
         private float Clearance(float x, float y, Target target, IReadOnlyList<Target> others)
         {
-            float clearance = float.MaxValue;
+            var clearance = float.MaxValue;
             foreach (var other in others)
             {
-                float dx = x - other.Coordinate.X;
-                float dy = y - other.Coordinate.Y;
-                float gap = MathF.Sqrt(dx * dx + dy * dy) - other.Radius - target.Radius;
+                var dx = x - other.Coordinate.X;
+                var dy = y - other.Coordinate.Y;
+                var gap = MathF.Sqrt(dx * dx + dy * dy) - other.Radius - target.Radius;
                 clearance = MathF.Min(clearance, gap);
             }
             return clearance;
@@ -132,7 +132,7 @@ namespace Struckout.Infrastructure
 
         private float GetScore(float x, float y, IReadOnlyList<Target> targets)
         {
-            float score = float.MaxValue;
+            var score = float.MaxValue;
             foreach (var target in targets)
             {
                 var tempScore = GetScore(x, y, target);
@@ -153,8 +153,8 @@ namespace Struckout.Infrastructure
 
         private float RadicalInverse(int index, int baseValue)
         {
-            float result = 0.0f;
-            float f = 1f / baseValue;
+            var result = 0.0f;
+            var f = 1f / baseValue;
 
             while (index > 0)
             {

@@ -99,7 +99,7 @@ namespace Struckout.Infrastructure.Grpc
         /// </summary>
         private async Task ListenEventsAsync(CancellationToken token)
         {
-            bool lost = false;
+            var lost = false;
             while (!token.IsCancellationRequested)
             {
                 try

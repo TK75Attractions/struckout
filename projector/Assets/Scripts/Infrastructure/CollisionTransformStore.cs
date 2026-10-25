@@ -118,7 +118,7 @@ namespace Struckout.Infrastructure
                 return result;
             }
 
-            for (int i = 0; i < args.Length - 1; i++)
+            for (var i = 0; i < args.Length - 1; i++)
             {
                 if (!args[i].StartsWith("-", StringComparison.Ordinal)) continue;
                 var value = args[i + 1];

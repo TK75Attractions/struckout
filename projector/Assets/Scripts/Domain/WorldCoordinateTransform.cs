@@ -60,10 +60,10 @@ namespace Struckout.Domain
         /// <param name="viewportAspect">投影面の 幅 / 高さ。</param>
         public float OrthographicSizeFor(float viewportAspect)
         {
-            float halfHeight = _field.height / (2f * pixelsPerUnit);
+            var halfHeight = _field.height / (2f * pixelsPerUnit);
             if (viewportAspect <= 0f) return halfHeight;
 
-            float halfWidth = _field.width / (2f * pixelsPerUnit);
+            var halfWidth = _field.width / (2f * pixelsPerUnit);
 
             // 縦に収めるのに要る高さと、横に収めるのに要る高さの、大きいほう。
             return MathF.Max(halfHeight, halfWidth / viewportAspect);

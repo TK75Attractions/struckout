@@ -53,12 +53,12 @@ namespace Struckout.Bootstrap
 
             _client.RegisterPort(_settings.trackerHost, _settings.trackerPort);
 
-            bool isSuccessfullyClientConnect = await _client.ConnectRetryAsync(_settings.connectAttempts);
+            var isSuccessfullyClientConnect = await _client.ConnectRetryAsync(_settings.connectAttempts);
             if (!isSuccessfullyClientConnect) return NetworkConnectionResult.ClientConnectFailed;
 
             // gRPC のチャネルは遅延接続なので、ここで失敗するのはチャネルを作れないときだけ。
             // 相手が居るかどうかはイベントの購読を始めて初めて分かる。
-            bool isSuccessfullyMasterConnect = await _master.ConnectAsync();
+            var isSuccessfullyMasterConnect = await _master.ConnectAsync();
             if (!isSuccessfullyMasterConnect) return NetworkConnectionResult.MasterConnectFailed;
 
             return NetworkConnectionResult.Success;

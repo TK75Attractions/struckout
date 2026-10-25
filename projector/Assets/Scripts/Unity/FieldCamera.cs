@@ -46,7 +46,7 @@ namespace Struckout.Unity
             if (_camera == null) _camera = GetComponent<Camera>();
             if (_camera == null) return;
 
-            float aspect = _camera.aspect;
+            var aspect = _camera.aspect;
             if (aspect <= 0f || Mathf.Approximately(aspect, _appliedAspect)) return;
 
             _camera.orthographic = true;

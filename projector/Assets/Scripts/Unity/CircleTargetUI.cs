@@ -137,7 +137,7 @@ namespace Struckout.Unity
             if (_moving)
             {
                 _moveElapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(_moveElapsed / moveDurationSeconds);
+                var t = Mathf.Clamp01(_moveElapsed / moveDurationSeconds);
 
                 // 端で滑らかに止め、移動中だけ少し縮めて速度を感じさせる。
                 transform.localPosition = Vector3.Lerp(_moveFrom, _moveTo, Mathf.SmoothStep(0f, 1f, t));
@@ -174,8 +174,8 @@ namespace Struckout.Unity
             renderer.color = rippleColor;
             renderer.sortingOrder = (_renderer != null ? _renderer.sortingOrder : 0) + 1;
 
-            float worldDiameter = _world.ToWorldLength(_target.Diameter);
-            float spriteWidth = sprite.bounds.size.x;
+            var worldDiameter = _world.ToWorldLength(_target.Diameter);
+            var spriteWidth = sprite.bounds.size.x;
             ripple.transform.localScale = spriteWidth > 0f
                 ? Vector3.one * (worldDiameter / spriteWidth)
                 : Vector3.one;
@@ -194,7 +194,7 @@ namespace Struckout.Unity
             }
 
             transform.localScale = _baseScale * (1f - _moveSquashAmount);
-            float rotation = _visibility > 0f
+            var rotation = _visibility > 0f
                 ? Mathf.Sin(Time.time * 1.8f + _rotationPhase) * rotationAmplitudeDegrees
                 : 0f;
             transform.localRotation = Quaternion.Euler(0f, 0f, rotation);
@@ -213,9 +213,9 @@ namespace Struckout.Unity
         {
             if (_world == null) return;
 
-            float desired = _world.ToWorldLength(target.Diameter);
+            var desired = _world.ToWorldLength(target.Diameter);
 
-            float spriteWidth = _renderer != null && _renderer.sprite != null
+            var spriteWidth = _renderer != null && _renderer.sprite != null
                 ? _renderer.sprite.bounds.size.x
                 : 0f;
 

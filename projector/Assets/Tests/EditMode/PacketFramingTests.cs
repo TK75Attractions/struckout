@@ -56,7 +56,7 @@ namespace Struckout.Tests.Tests.EditMode
             BinaryPrimitives.WriteUInt32LittleEndian(frame.AsSpan(0, 4), (uint)payload.Length);
             payload.CopyTo(frame, 4);
 
-            uint length = BinaryPrimitives.ReadUInt32LittleEndian(frame.AsSpan(0, 4));
+            var length = BinaryPrimitives.ReadUInt32LittleEndian(frame.AsSpan(0, 4));
             Assert.That(length, Is.EqualTo((uint)payload.Length));
 
             var body = new byte[length];

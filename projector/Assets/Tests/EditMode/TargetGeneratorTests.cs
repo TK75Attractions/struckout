@@ -26,7 +26,7 @@ namespace Struckout.Tests.Tests.EditMode
             var second = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
 
             Assert.That(second.Count, Is.EqualTo(first.Count));
-            for (int i = 0; i < first.Count; i++)
+            for (var i = 0; i < first.Count; i++)
             {
                 Assert.That(second[i].Coordinate.X, Is.EqualTo(first[i].Coordinate.X).Within(Tolerance));
                 Assert.That(second[i].Coordinate.Y, Is.EqualTo(first[i].Coordinate.Y).Within(Tolerance));
@@ -44,7 +44,7 @@ namespace Struckout.Tests.Tests.EditMode
             var moved = targets[0];
             var others = new List<Target> { targets[1], targets[2], targets[3] };
 
-            for (int i = 0; i < 200; i++)
+            for (var i = 0; i < 200; i++)
             {
                 var destination = generator.PickRelocation(moved, others);
 
@@ -61,15 +61,15 @@ namespace Struckout.Tests.Tests.EditMode
             var moved = targets[0];
             var others = new List<Target> { targets[1], targets[2], targets[3] };
 
-            for (int i = 0; i < 200; i++)
+            for (var i = 0; i < 200; i++)
             {
                 var destination = generator.PickRelocation(moved, others);
 
                 foreach (var other in others)
                 {
-                    float dx = destination.X - other.Coordinate.X;
-                    float dy = destination.Y - other.Coordinate.Y;
-                    float distance = (float)System.Math.Sqrt(dx * dx + dy * dy);
+                    var dx = destination.X - other.Coordinate.X;
+                    var dy = destination.Y - other.Coordinate.Y;
+                    var distance = (float)System.Math.Sqrt(dx * dx + dy * dy);
 
                     Assert.That(distance, Is.GreaterThan(moved.Radius + other.Radius),
                         $"移動先が {other} と重なっている");
@@ -89,8 +89,8 @@ namespace Struckout.Tests.Tests.EditMode
 
             var first = generator.PickRelocation(moved, others);
 
-            bool differs = false;
-            for (int i = 0; i < 50 && !differs; i++)
+            var differs = false;
+            for (var i = 0; i < 50 && !differs; i++)
             {
                 var next = generator.PickRelocation(moved, others);
                 differs = System.Math.Abs(next.X - first.X) > Tolerance
@@ -120,13 +120,13 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
 
-            for (int i = 0; i < targets.Count; i++)
+            for (var i = 0; i < targets.Count; i++)
             {
-                for (int j = i + 1; j < targets.Count; j++)
+                for (var j = i + 1; j < targets.Count; j++)
                 {
-                    float dx = targets[i].Coordinate.X - targets[j].Coordinate.X;
-                    float dy = targets[i].Coordinate.Y - targets[j].Coordinate.Y;
-                    float distance = Mathf(dx, dy);
+                    var dx = targets[i].Coordinate.X - targets[j].Coordinate.X;
+                    var dy = targets[i].Coordinate.Y - targets[j].Coordinate.Y;
+                    var distance = Mathf(dx, dy);
 
                     Assert.That(distance, Is.GreaterThan(targets[i].Radius + targets[j].Radius),
                         $"的 {i} と {j} が重なっている");
@@ -182,7 +182,7 @@ namespace Struckout.Tests.Tests.EditMode
             var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
             var moved = targets[0];
 
-            for (int i = 0; i < 32; i++)
+            for (var i = 0; i < 32; i++)
             {
                 var destination = generator.PickRelocation(moved, targets);
 

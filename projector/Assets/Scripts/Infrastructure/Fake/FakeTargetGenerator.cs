@@ -9,7 +9,7 @@ namespace Struckout.Infrastructure.Fake
         public IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> targets)
         {
             List<Target> result = new();
-            for (int i = 0; i < num; i++)
+            for (var i = 0; i < num; i++)
             {
                 var target = GenerateTarget(TargetType.Circle, i * 50, i * 50, 50);
 

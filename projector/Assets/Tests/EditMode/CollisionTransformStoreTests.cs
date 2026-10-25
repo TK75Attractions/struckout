@@ -89,7 +89,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             CollisionTransformStore.Save(saved, path);
             var loaded = new CollisionCoordinateTransform();
-            bool ok = CollisionTransformStore.TryLoadInto(loaded, path, out var error);
+            var ok = CollisionTransformStore.TryLoadInto(loaded, path, out var error);
 
             Assert.That(ok, Is.True, error);
             Assert.That(loaded.ToString(), Is.EqualTo(saved.ToString()));
@@ -101,7 +101,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var target = new CollisionCoordinateTransform { originX = 123f };
 
-            bool ok = CollisionTransformStore.TryLoadInto(target, Path.Combine(_directory, "none.json"), out var error);
+            var ok = CollisionTransformStore.TryLoadInto(target, Path.Combine(_directory, "none.json"), out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(error, Is.Null);
@@ -116,7 +116,7 @@ namespace Struckout.Tests.Tests.EditMode
             File.WriteAllText(path, "{ \"pixelsPerMetreX\": -900, \"originX\": 5 }");
             var target = new CollisionCoordinateTransform { originX = 123f };
 
-            bool ok = CollisionTransformStore.TryLoadInto(target, path, out var error);
+            var ok = CollisionTransformStore.TryLoadInto(target, path, out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(error, Is.Not.Null);

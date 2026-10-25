@@ -127,8 +127,8 @@ namespace Struckout.Unity
             renderer.sortingOrder = sortingOrder;
 
             // 画面比率に関係なく、論理盤面と同じ矩形を覆う。
-            float width = _world.ToWorldLength(_world.Field.width);
-            float height = _world.ToWorldLength(_world.Field.height);
+            var width = _world.ToWorldLength(_world.Field.width);
+            var height = _world.ToWorldLength(_world.Field.height);
             go.transform.localScale = new Vector3(
                 width / sprite.bounds.size.x,
                 height / sprite.bounds.size.y,
@@ -234,7 +234,7 @@ namespace Struckout.Unity
         public void SetRemainingTime(TimeSpan remaining)
         {
             if (_remainingTimeText == null) return;
-            long seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
+            var seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
             _remainingTimeText.text = string.Format(CultureInfo.InvariantCulture,
                 "TIME  {0:00}:{1:00}", seconds / 60, seconds % 60);
         }
@@ -249,7 +249,7 @@ namespace Struckout.Unity
         {
             if (_world == null) return;
 
-            float step = screenFadeSeconds <= 0f
+            var step = screenFadeSeconds <= 0f
                 ? 1f
                 : Time.deltaTime / screenFadeSeconds;
             _idleOpacity = Mathf.MoveTowards(_idleOpacity, _phase == GamePhase.Idle ? 1f : 0f, step);
@@ -288,7 +288,7 @@ namespace Struckout.Unity
                     SetRemainingTime(TimeSpan.Zero);
                 }
             }
-            int index = 0;
+            var index = 0;
             foreach (var transform in _targetToTransform.Values)
             {
                 if (transform != null && transform.TryGetComponent<CircleTargetUI>(out var targetUI))
@@ -381,7 +381,7 @@ namespace Struckout.Unity
                 CollisionResult.Ignored => ignoredImpactSprite,
                 _ => missedImpactSprite,
             };
-            float size = result switch
+            var size = result switch
             {
                 CollisionResult.Scored => scoredImpactSize,
                 CollisionResult.Ignored => ignoredImpactSize,
@@ -420,8 +420,8 @@ namespace Struckout.Unity
             renderer.sortingOrder = MarkerSortingOrder;
 
             // 的と同じ理屈で、スプライトの実寸から倍率を出す。
-            float desired = _world.ToWorldLength(size);
-            float spriteWidth = renderer.sprite.bounds.size.x;
+            var desired = _world.ToWorldLength(size);
+            var spriteWidth = renderer.sprite.bounds.size.x;
             go.transform.localScale = spriteWidth > 0f
                 ? Vector3.one * (desired / spriteWidth)
                 : Vector3.one;
@@ -461,7 +461,7 @@ namespace Struckout.Unity
 
             try
             {
-                ITargetUI targetui = transform.GetComponent<ITargetUI>();
+                var targetui = transform.GetComponent<ITargetUI>();
                 if (targetui == null)
                 {
                     Debug.LogError("The target UI has no ITargetUI.");

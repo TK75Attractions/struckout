@@ -36,7 +36,7 @@ namespace Struckout.Unity
                 ? _rippleRing
                 : _rippleRing = Build("PlaceholderRippleRing", (u, v) =>
                 {
-                    float radius = Mathf.Sqrt(u * u + v * v);
+                    var radius = Mathf.Sqrt(u * u + v * v);
                     return 0.009f - Mathf.Abs(radius - 0.48f);
                 });
 
@@ -56,16 +56,16 @@ namespace Struckout.Unity
             };
 
             var pixels = new Color32[Resolution * Resolution];
-            for (int y = 0; y < Resolution; y++)
+            for (var y = 0; y < Resolution; y++)
             {
                 // ピクセルの中心で評価する。
-                float v = (y + 0.5f) / Resolution - 0.5f;
-                for (int x = 0; x < Resolution; x++)
+                var v = (y + 0.5f) / Resolution - 0.5f;
+                for (var x = 0; x < Resolution; x++)
                 {
-                    float u = (x + 0.5f) / Resolution - 0.5f;
+                    var u = (x + 0.5f) / Resolution - 0.5f;
 
                     // 縁をまたぐ 1px ぶんで 0→1 に変える。
-                    float coverage = Mathf.Clamp01(signedDistance(u, v) * Resolution + 0.5f);
+                    var coverage = Mathf.Clamp01(signedDistance(u, v) * Resolution + 0.5f);
                     pixels[y * Resolution + x] = new Color32(255, 255, 255, (byte)(coverage * 255f));
                 }
             }

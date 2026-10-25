@@ -98,7 +98,7 @@ namespace Struckout.Unity
             HandleNudgeKeys(e);
 
             // 画面の高さ 1080 で文字が読める大きさにする
-            float scale = Mathf.Max(1f, Screen.height / 720f);
+            var scale = Mathf.Max(1f, Screen.height / 720f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
             var area = new Rect(10, 10, 470, Screen.height / scale - 20);
             GUILayout.BeginArea(area, GUI.skin.box);
@@ -162,14 +162,14 @@ namespace Struckout.Unity
             }
 
             if (GUIUtility.keyboardControl != 0) return;
-            int dx = e.keyCode == KeyCode.RightArrow ? 1 : e.keyCode == KeyCode.LeftArrow ? -1 : 0;
-            int dy = e.keyCode == KeyCode.UpArrow ? 1 : e.keyCode == KeyCode.DownArrow ? -1 : 0;
+            var dx = e.keyCode == KeyCode.RightArrow ? 1 : e.keyCode == KeyCode.LeftArrow ? -1 : 0;
+            var dy = e.keyCode == KeyCode.UpArrow ? 1 : e.keyCode == KeyCode.DownArrow ? -1 : 0;
             if (dx == 0 && dy == 0) return;
 
-            float big = e.shift ? 10f : 1f;
+            var big = e.shift ? 10f : 1f;
             if (e.control)
             {
-                float factor = 1f + 0.005f * big;
+                var factor = 1f + 0.005f * big;
                 if (dx != 0) _transform.pixelsPerMetreX *= dx > 0 ? factor : 1f / factor;
                 if (dy != 0) _transform.pixelsPerMetreY *= dy > 0 ? factor : 1f / factor;
             }
@@ -187,9 +187,9 @@ namespace Struckout.Unity
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, GUILayout.Width(180));
-            string edited = GUILayout.TextField(text ?? "", GUILayout.Width(150));
+            var edited = GUILayout.TextField(text ?? "", GUILayout.Width(150));
             GUILayout.EndHorizontal();
-            if (edited != text && TryParse(edited, out float value) && (!positive || value > 0f)) apply(value);
+            if (edited != text && TryParse(edited, out var value) && (!positive || value > 0f)) apply(value);
             return edited;
         }
 
@@ -208,7 +208,7 @@ namespace Struckout.Unity
 
         private void FitFromMeasurements()
         {
-            if (!TryParse(_m1X, out float x1) || !TryParse(_m1Y, out float y1) || !TryParse(_m2X, out float x2) || !TryParse(_m2Y, out float y2))
+            if (!TryParse(_m1X, out var x1) || !TryParse(_m1Y, out var y1) || !TryParse(_m2X, out var x2) || !TryParse(_m2Y, out var y2))
             {
                 _status = "2 点の位置を数で入れてください (m)";
                 return;
@@ -243,7 +243,7 @@ namespace Struckout.Unity
 
         private void Reload()
         {
-            if (CollisionTransformStore.TryLoadInto(_transform, _path, out string error))
+            if (CollisionTransformStore.TryLoadInto(_transform, _path, out var error))
             {
                 _status = "ファイルから読み直しました";
             }

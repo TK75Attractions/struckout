@@ -38,7 +38,7 @@ namespace Struckout.Bootstrap
 
             await _gameBootstrap.Initialize(_runtimeContext);
 
-            NetworkConnectionResult result = await _networkBootstrap.Initialize();
+            var result = await _networkBootstrap.Initialize();
 
             switch (result)
             {

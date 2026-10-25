@@ -52,8 +52,8 @@ namespace Struckout.Domain
                 (physicalX, physicalY) = (physicalY, physicalX);
             }
 
-            double x = originX + (flipX ? -physicalX : physicalX) * pixelsPerMetreX;
-            double y = originY + (flipY ? -physicalY : physicalY) * pixelsPerMetreY;
+            var x = originX + (flipX ? -physicalX : physicalX) * pixelsPerMetreX;
+            var y = originY + (flipY ? -physicalY : physicalY) * pixelsPerMetreY;
 
             return (x, y);
         }
@@ -61,8 +61,8 @@ namespace Struckout.Domain
         /// <summary>描画座標 → 物理座標 (m)。<see cref="ToRenderSpace"/> の逆。</summary>
         public (double X, double Y) ToPhysical(double renderX, double renderY)
         {
-            double x = (renderX - originX) / pixelsPerMetreX;
-            double y = (renderY - originY) / pixelsPerMetreY;
+            var x = (renderX - originX) / pixelsPerMetreX;
+            var y = (renderY - originY) / pixelsPerMetreY;
             if (flipX) x = -x;
             if (flipY) y = -y;
             if (swapAxes)
@@ -101,14 +101,14 @@ namespace Struckout.Domain
         private static (float Origin, float Scale, bool Flip) FitAxis(
             double render1, double measured1, double render2, double measured2, string axis)
         {
-            double span = measured2 - measured1;
+            var span = measured2 - measured1;
             if (Math.Abs(span) < 1e-6)
             {
                 throw new ArgumentException($"the two points are at the same {axis} position");
             }
 
             // 描画 = Origin + 符号 * 1m あたり * 物理。符号つきの傾きが負なら向きが逆
-            double slope = (render2 - render1) / span;
+            var slope = (render2 - render1) / span;
             return ((float)(render1 - slope * measured1), (float)Math.Abs(slope), slope < 0);
         }
 

@@ -97,8 +97,8 @@ namespace Struckout.Application
         /// </summary>
         public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)
         {
-            float x = (float)collisionPoint.X;
-            float y = (float)collisionPoint.Y;
+            var x = (float)collisionPoint.X;
+            var y = (float)collisionPoint.Y;
             if (_state.Phase != GamePhase.Playing)
             {
                 _uiService.ShowCollisionMarker(x, y, CollisionResult.Ignored);
@@ -118,7 +118,7 @@ namespace Struckout.Application
             var token = _gameCancellation.Token;
             try
             {
-                bool hit = await _master.HitTargetAsync(id, token);
+                var hit = await _master.HitTargetAsync(id, token);
                 if (token.IsCancellationRequested) return;
                 _uiService.ShowCollisionMarker(x, y, hit ? CollisionResult.Scored : CollisionResult.Ignored);
                 if (!hit)
@@ -127,7 +127,7 @@ namespace Struckout.Application
                     return;
                 }
 
-                bool removed = await _master.RemoveTargetAsync(id, token);
+                var removed = await _master.RemoveTargetAsync(id, token);
                 if (token.IsCancellationRequested) return;
                 if (!removed)
                 {
