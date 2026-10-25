@@ -104,7 +104,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 try
                 {
-                    var request = new ListenEventsRequest { MachineId = (uint)_settings.machineId };
+                    var request = new ListenEventsRequest { MachineId = _settings.machineId };
                     using var call = _client.ListenEvents(request, cancellationToken: token);
 
                     // 応答のヘッダーが届いたら、つながっている。イベントはゲームが動くまで来ない
@@ -223,7 +223,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 var response = await _client.AddTargetAsync(new AddTargetRequest
                 {
-                    MachineId = (uint)_settings.machineId,
+                    MachineId = _settings.machineId,
                     Compass = new ProtoTarget.Types.Compass
                     {
                         X = coordinate.X,
@@ -250,7 +250,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 await _client.RemoveTargetAsync(new RemoveTargetRequest
                 {
-                    MachineId = (uint)_settings.machineId,
+                    MachineId = _settings.machineId,
                     TargetId = targetId.ToString(),
                 }, cancellationToken: token);
                 return true;
@@ -270,7 +270,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 await _client.HitTargetAsync(new HitTargetRequest
                 {
-                    MachineId = (uint)_settings.machineId,
+                    MachineId = _settings.machineId,
                     TargetId = targetId.ToString(),
                 }, cancellationToken: token);
                 return true;

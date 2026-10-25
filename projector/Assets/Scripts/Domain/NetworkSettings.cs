@@ -16,11 +16,11 @@ namespace Struckout.Domain
 
         /// <summary>ball_tracker (collision の送り元)。</summary>
         [FormerlySerializedAs("TrackerHost")] public string trackerHost = "127.0.0.1";
-        [FormerlySerializedAs("TrackerPort")] public int trackerPort = 5000;
+        [FormerlySerializedAs("TrackerPort")] public ushort trackerPort = 5000;
 
         /// <summary>game_master。gRPC (h2c) でつなぐ。</summary>
         [FormerlySerializedAs("MasterHost")] public string masterHost = "127.0.0.1";
-        [FormerlySerializedAs("MasterPort")] public int masterPort = 8020;
+        [FormerlySerializedAs("MasterPort")] public ushort masterPort = 8020;
 
         /// <summary>
         /// この筐体の号機番号。的の登録・命中通知と ListenEvents に必要。
@@ -30,10 +30,10 @@ namespace Struckout.Domain
         /// 採番する仕組みが game_master に無い (machines テーブルも無い) ため、
         /// 各筐体で人間が設定する。誰がどう決めるかは未決。
         /// </summary>
-        [FormerlySerializedAs("MachineId")] public int machineId = 1;
+        [FormerlySerializedAs("MachineId")] public uint machineId = 1;
 
         /// <summary>接続を試す回数。1 なら再試行しない。失敗するたびに指数バックオフで待つ。</summary>
-        [FormerlySerializedAs("ConnectAttempts")] public int connectAttempts = 5;
+        [FormerlySerializedAs("ConnectAttempts")] public uint connectAttempts = 5;
 
         public NetworkSettings Clone() => new()
         {

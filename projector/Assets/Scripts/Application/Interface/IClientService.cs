@@ -16,7 +16,7 @@ namespace Struckout.Application.Interface
         Task<bool> ConnectAsync();
 
         /// <summary>失敗したら指数バックオフで <paramref name="maxAttempts"/> 回まで接続を試す。</summary>
-        Task<bool> ConnectRetryAsync(int maxAttempts);
+        Task<bool> ConnectRetryAsync(uint maxAttempts);
 
         Task DisconnectAsync();
     }

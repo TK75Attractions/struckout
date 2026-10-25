@@ -51,7 +51,7 @@ namespace Struckout.Infrastructure.Fake
             return Task.FromResult(true);
         }
 
-        public Task<bool> ConnectRetryAsync(int maxAttempts) => ConnectAsync();
+        public Task<bool> ConnectRetryAsync(uint maxAttempts) => ConnectAsync();
 
         public Task<bool> SendAsync(IMessage packet)
         {

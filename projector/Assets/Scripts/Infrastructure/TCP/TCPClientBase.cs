@@ -134,7 +134,7 @@ namespace Struckout.Infrastructure.TCP
             }
         }
 
-        public async Task<bool> ConnectRetryAsync(int maxAttempts)
+        public async Task<bool> ConnectRetryAsync(uint maxAttempts)
         {
             for (var attempt = 0; attempt < maxAttempts; attempt++)
             {
