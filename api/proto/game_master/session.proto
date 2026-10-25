@@ -21,7 +21,7 @@ import "game_master/types.proto";
 // See also: docs/diagrams/data_flow.mmd
 service GameMasterSessionService {
   // Used by `touchpanel`.
-  // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+  // The session is retained after GameFinished until CompleteSession is called.
   rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
 
   // Sets difficulty to the session. Used by `touchpanel`.
@@ -32,8 +32,12 @@ service GameMasterSessionService {
   // Sets readiness to the session. Used by `touchpanel`.
   rpc SetSessionReady(SetSessionReadyRequest) returns (SetSessionReadyResponse);
 
-  // Gets the result of a specific game.
+  // Gets the finished result of the current session on the specified machine.
   rpc GetGameResult(GetGameResultRequest) returns (GetGameResultResponse);
+
+  // Releases a finished session. Multi-play waits for both machines to call this.
+  // Used by `projector`.
+  rpc CompleteSession(CompleteSessionRequest) returns (CompleteSessionResponse);
 
   /* ----- Tutorial ----- */
 
@@ -73,7 +77,7 @@ message StartSessionRequest {
 message StartSessionResponse {}
 
 message GetGameResultRequest {
-  uint32 game_id = 1;
+  uint32 machine_id = 1;
 }
 
 message GetGameResultResponse {
@@ -99,3 +103,9 @@ message SetSessionReadyRequest {
 }
 
 message SetSessionReadyResponse {}
+
+message CompleteSessionRequest {
+  uint32 machine_id = 1;
+}
+
+message CompleteSessionResponse {}

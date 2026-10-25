@@ -14,7 +14,8 @@ use thiserror::Error;
 use tracing::trace;
 use uuid::Uuid;
 
-use crate::services::EventTarget;
+use crate::{GamePlayers, GameRecord, services::EventTarget};
+use time::UtcDateTime;
 
 /// Owns machine sessions so configuration and readiness share a single source of state.
 ///
@@ -374,6 +375,7 @@ impl Sessions {
     }
 
     /// Returns the score of the session on `machine_id`.
+    #[cfg(test)]
     pub fn score(&self, machine_id: MachineId) -> Result<u32, SessionError> {
         let ms = self
             .get(machine_id)
@@ -390,6 +392,7 @@ impl Sessions {
     }
 
     /// Returns `Ok(score)` when current session is multi-play, otherwise [`SessionError::NotMultiPlay`].
+    #[cfg(test)]
     pub fn score_multi(&self) -> Result<u32, SessionError> {
         // FIXME: machine_ids()で単純化できる気がする
         let Some(ms1) = &self.0.0 else {
@@ -432,26 +435,105 @@ impl Sessions {
         Ok(shared.score)
     }
 
-    /// Removes the session on `machine_id`, returning the removed session.
-    ///
-    /// Returns `None` when no session exist on `machine_id`.
-    pub fn remove(&mut self, machine_id: MachineId) -> Option<MachineSession> {
-        if let Some(ms) = &self.0.0
-            && ms.machine_id() == machine_id
-        {
-            self.0.0.take()
-        } else if let Some(ms) = &self.0.1
-            && ms.machine_id() == machine_id
-        {
-            self.0.1.take()
-        } else {
-            None
+    /// Freezes the result before notifying clients so no later hits can change it.
+    pub fn finish_game(&mut self, machine_id: MachineId) -> Result<(), SessionError> {
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (state,) = ms
+            .as_running()
+            .map_err(|actual_state| SessionError::InvalidState {
+                msg: "game can only finish while running",
+                expected_state: "Running",
+                actual_state,
+                machine_id,
+            })?;
+        let result = {
+            let shared = state.shared.read();
+            let players = if shared.mode.is_multi() {
+                let another = self
+                    .get_another(machine_id)
+                    .expect("multi-play has two sessions");
+                GamePlayers::Multi {
+                    player_ids: [state.player_id, another.player_id()],
+                }
+            } else {
+                GamePlayers::Single {
+                    machine_id,
+                    player_id: state.player_id,
+                }
+            };
+            Arc::new(GameRecord {
+                players,
+                started_at: shared.started_at,
+                difficulty: shared.difficulty,
+                score: shared.score,
+            })
+        };
+        let is_multi = matches!(result.players, GamePlayers::Multi { .. });
+        for ms in [&mut self.0.0, &mut self.0.1].into_iter().flatten() {
+            if is_multi || ms.machine_id() == machine_id {
+                *ms = MachineSession::Finished(FinishedState {
+                    machine_id: ms.machine_id(),
+                    player_id: ms.player_id(),
+                    result: Arc::clone(&result),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Reads the frozen result while it is still owned by the session.
+    pub fn game_result(&self, machine_id: MachineId) -> Result<&GameRecord, SessionError> {
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        match ms {
+            MachineSession::Finished(state)
+            | MachineSession::WaitingForSessionCompletion(state) => Ok(&state.result),
+            _ => Err(SessionError::InvalidState {
+                msg: "result is only available after the game finishes",
+                expected_state: "Finished or WaitingForSessionCompletion",
+                actual_state: ms
+                    .as_finished()
+                    .expect_err("finished states were handled above"),
+                machine_id,
+            }),
         }
     }
 
-    /// Removes all sessions.
-    pub fn remove_all(&mut self) -> (Option<MachineSession>, Option<MachineSession>) {
-        (self.0.0.take(), self.0.1.take())
+    /// Removes a finished game only after all its machines acknowledge completion.
+    ///
+    /// The returned record is detached before database I/O so even a failed save
+    /// cannot retain sessions or cause a duplicate save on a repeated request.
+    pub fn complete_session(
+        &mut self,
+        machine_id: MachineId,
+    ) -> Result<Option<GameRecord>, SessionError> {
+        let result = self.game_result(machine_id)?.clone();
+        if matches!(result.players, GamePlayers::Multi { .. }) {
+            let another = self
+                .get_another(machine_id)
+                .expect("multi-play retains both sessions until completion");
+            if !matches!(another, MachineSession::WaitingForSessionCompletion(_)) {
+                let ms = self.get_mut(machine_id).expect("session was checked above");
+                if let MachineSession::Finished(state) = ms {
+                    *ms = MachineSession::WaitingForSessionCompletion(state.clone());
+                }
+                return Ok(None);
+            }
+            self.0 = (None, None);
+        } else if self
+            .0
+            .0
+            .as_ref()
+            .is_some_and(|ms| ms.machine_id() == machine_id)
+        {
+            self.0.0 = None;
+        } else {
+            self.0.1 = None;
+        }
+        Ok(Some(result))
     }
 
     /// Sets the session on `machine_id` ready.
@@ -486,16 +568,14 @@ impl Sessions {
                     machine_id,
                     player_id,
                     shared: Arc::new(RwLock::new(SharedRunningState {
+                        started_at: UtcDateTime::now(),
                         mode,
                         difficulty,
                         score: 0,
                         targets: HashMap::new(),
                     })),
                 });
-                Ok(SetReadyAction::RunSingle {
-                    player_id,
-                    difficulty,
-                })
+                Ok(SetReadyAction::RunSingle { difficulty })
             }
             GameMode::Multi => {
                 let Some(another_ms) = self.get_another(machine_id) else {
@@ -532,15 +612,13 @@ impl Sessions {
                 assert!(another_state.mode.is_multi());
                 assert_eq!(difficulty, another_state.difficulty);
                 let shared = Arc::new(RwLock::new(SharedRunningState {
+                    started_at: UtcDateTime::now(),
                     mode: GameMode::Multi,
                     difficulty,
                     score: 0,
                     targets: HashMap::new(),
                 }));
-                let action = SetReadyAction::RunMulti {
-                    player_ids: [player_id, another_player_id],
-                    difficulty: shared.read().difficulty,
-                };
+                let action = SetReadyAction::RunMulti { difficulty };
                 {
                     let ms = self
                         .get_mut(machine_id)
@@ -567,7 +645,7 @@ impl Sessions {
     /// Returns machine ids registered to the session.
     ///
     /// If one of session slot is empty, `None` will be returned regardless of another session slot.
-    fn machine_ids(&self) -> Option<[MachineId; 2]> {
+    pub fn machine_ids(&self) -> Option<[MachineId; 2]> {
         let mut id_1 = None;
         let mut id_2 = None;
         if let Some(ms) = &self.0.0 {
@@ -591,14 +669,8 @@ impl Default for Sessions {
 
 /// Returned from [`Sessions::set_ready()`].
 pub enum SetReadyAction {
-    RunSingle {
-        player_id: PlayerId,
-        difficulty: Difficulty,
-    },
-    RunMulti {
-        player_ids: [PlayerId; 2],
-        difficulty: Difficulty,
-    },
+    RunSingle { difficulty: Difficulty },
+    RunMulti { difficulty: Difficulty },
     WaitForAnother,
 }
 
@@ -609,6 +681,8 @@ pub enum MachineSession {
     ConfiguringDifficulty(ConfiguringDifficultyState),
     WaitingForAnotherMachine(WaitingForAnotherMachineState),
     Running(RunningState),
+    Finished(FinishedState),
+    WaitingForSessionCompletion(FinishedState),
 }
 
 /// Keeps mode selection data separate from states that require a selected mode.
@@ -645,9 +719,18 @@ pub struct RunningState {
     pub shared: Arc<RwLock<SharedRunningState>>,
 }
 
+/// Keeps the immutable result available until both multi-play machines leave.
+#[derive(Debug, Clone)]
+pub struct FinishedState {
+    pub machine_id: MachineId,
+    pub player_id: PlayerId,
+    pub result: Arc<GameRecord>,
+}
+
 /// Keeps game configuration, score and targets consistent across multi-play machines.
 #[derive(Debug)]
 pub struct SharedRunningState {
+    pub started_at: UtcDateTime,
     pub mode: GameMode,
     pub difficulty: Difficulty,
     pub score: u32,
@@ -662,17 +745,20 @@ impl MachineSession {
             MachineSession::ConfiguringDifficulty(state) => state.machine_id,
             MachineSession::WaitingForAnotherMachine(state) => state.machine_id,
             MachineSession::Running(state) => state.machine_id,
+            MachineSession::Finished(state)
+            | MachineSession::WaitingForSessionCompletion(state) => state.machine_id,
         }
     }
 
     /// Returns the player id of this session.
-    #[allow(unused)]
     pub fn player_id(&self) -> PlayerId {
         match self {
             MachineSession::ConfiguringGameMode(state) => state.player_id,
             MachineSession::ConfiguringDifficulty(state) => state.player_id,
             MachineSession::WaitingForAnotherMachine(state) => state.player_id,
             MachineSession::Running(state) => state.player_id,
+            MachineSession::Finished(state)
+            | MachineSession::WaitingForSessionCompletion(state) => state.player_id,
         }
     }
 }
@@ -714,12 +800,12 @@ mod tests {
     fn targets_follow_game_sharing(#[case] mode: GameMode) {
         let mut sessions = running_sessions(mode);
         let machine_id = MachineId::new(1);
-        let target = Target {
+        let target = compass_target(1.0);
+        let owner = Owner::Single(OwnerSingle {
             machine_id: machine_id.into(),
-            ..Default::default()
-        };
-        let first = sessions.add_target(target).expect("running session");
-        let second = sessions.add_target(target).expect("running session");
+        });
+        let first = sessions.add_target(target, owner).expect("running session");
+        let second = sessions.add_target(target, owner).expect("running session");
         assert_ne!(first, second);
         assert_eq!(first.get_version_num(), 4);
         let (state,) = sessions
@@ -727,9 +813,9 @@ mod tests {
             .expect("session exists")
             .as_running()
             .expect("running session");
-        let registered = state.shared.read().targets[&first];
-        assert_eq!(registered.machine_id, target.machine_id);
-        assert_eq!(registered.target_data, target.target_data);
+        let registered = state.shared.read().targets[&first].clone();
+        assert_eq!(registered.owner, Some(owner));
+        assert_eq!(registered.target_data, Some(target));
         if mode.is_multi() {
             sessions
                 .remove_target(MachineId::new(2), first)
@@ -790,19 +876,15 @@ mod tests {
             first.shared.write().mode = GameMode::Multi;
             assert_eq!(second.shared.read().mode, GameMode::Single);
         }
-        assert_matches!(sessions.score_multi(), Err(SessionError::NotMultiPlay));
+        assert_matches!(sessions.score_multi(), Err(SessionError::NotMultiPlay(_)));
     }
 
-    fn compass_target(machine_id: MachineId, radius: f32) -> Target {
-        Target {
-            machine_id: machine_id.into(),
-            target_data: Some(TargetData::Compass(struckout_proto::target::Compass {
-                x: 0.0,
-                y: 0.0,
-                radius,
-            })),
-            ..Default::default()
-        }
+    fn compass_target(radius: f32) -> TargetData {
+        TargetData::Compass(struckout_proto::target::Compass {
+            x: 0.0,
+            y: 0.0,
+            radius,
+        })
     }
 
     #[rstest]
@@ -814,7 +896,12 @@ mod tests {
         let mut sessions = running_sessions(GameMode::Single);
         let machine_id = MachineId::new(1);
         let target_id = sessions
-            .add_target(compass_target(machine_id, radius))
+            .add_target(
+                compass_target(radius),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
             .expect("running game");
         let (score, target) = sessions
             .hit_target(machine_id, target_id)
@@ -836,7 +923,7 @@ mod tests {
     fn hit_target_updates_the_shared_multi_play_score() {
         let mut sessions = running_sessions(GameMode::Multi);
         let target_id = sessions
-            .add_target(compass_target(MachineId::new(1), 200.0))
+            .add_target(compass_target(200.0), Owner::All(Default::default()))
             .expect("running game");
         let (score, target) = sessions
             .hit_target(MachineId::new(2), target_id)
@@ -864,7 +951,12 @@ mod tests {
         let mut sessions = running_sessions(GameMode::Single);
         let machine_id = MachineId::new(1);
         let target_id = sessions
-            .add_target(compass_target(machine_id, radius))
+            .add_target(
+                compass_target(radius),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
             .expect("running game");
         assert_matches!(
             sessions.hit_target(machine_id, target_id),
@@ -880,7 +972,12 @@ mod tests {
         let mut sessions = running_sessions(GameMode::Single);
         let machine_id = MachineId::new(1);
         let target_id = sessions
-            .add_target(compass_target(machine_id, radius))
+            .add_target(
+                compass_target(radius),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
             .expect("running game");
         let (state,) = sessions
             .get(machine_id)
@@ -900,11 +997,21 @@ mod tests {
         let mut sessions = running_sessions(GameMode::Single);
         let machine_id = MachineId::new(1);
         let target_id = sessions
-            .add_target(Target {
-                machine_id: machine_id.into(),
-                ..Default::default()
-            })
+            .add_target(
+                compass_target(1.0),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
             .expect("running game");
+        let (state,) = sessions.get(machine_id).unwrap().as_running().unwrap();
+        state
+            .shared
+            .write()
+            .targets
+            .get_mut(&target_id)
+            .unwrap()
+            .target_data = None;
         assert_matches!(
             sessions.hit_target(machine_id, target_id),
             Err(HitTargetError::MissingTargetData)
@@ -915,12 +1022,15 @@ mod tests {
     #[test]
     fn target_operations_require_an_existing_session() {
         let machine_id = MachineId::new(1);
-        let target = Target {
+        let target = compass_target(1.0);
+        let owner = Owner::Single(OwnerSingle {
             machine_id: machine_id.into(),
-            ..Default::default()
-        };
+        });
         let mut sessions = Sessions::new();
-        assert_matches!(sessions.add_target(target), Err(SessionError::NoSession(_)));
+        assert_matches!(
+            sessions.add_target(target, owner),
+            Err(SessionError::NoSession(_))
+        );
         assert_matches!(
             sessions.hit_target(machine_id, Uuid::nil()),
             Err(HitTargetError::Session(SessionError::NoSession(_)))
@@ -957,22 +1067,59 @@ mod tests {
     )]
     fn target_operations_require_a_running_session(#[case] session: MachineSession) {
         let machine_id = session.machine_id();
-        let target = Target {
+        let target = compass_target(1.0);
+        let owner = Owner::Single(OwnerSingle {
             machine_id: machine_id.into(),
-            ..Default::default()
-        };
+        });
         let mut sessions = Sessions((Some(session), None));
         assert_matches!(
             sessions.hit_target(machine_id, Uuid::nil()),
             Err(HitTargetError::Session(SessionError::InvalidState { .. }))
         );
         assert_matches!(
-            sessions.add_target(target),
+            sessions.add_target(target, owner),
             Err(SessionError::InvalidState { .. })
         );
         assert_matches!(
             sessions.remove_target(machine_id, Uuid::nil()),
             Err(SessionError::InvalidState { .. })
+        );
+    }
+
+    #[test]
+    fn completing_single_play_preserves_the_other_machine() {
+        let mut sessions = running_sessions(GameMode::Single);
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let (state,) = sessions.get(first).unwrap().as_running().unwrap();
+        let started_at = state.shared.read().started_at;
+        state.shared.write().score = 123;
+        sessions.finish_game(first).expect("first game is running");
+        assert!(sessions.get(second).unwrap().as_running().is_ok());
+        sessions
+            .finish_game(second)
+            .expect("second game is running");
+        let game = sessions
+            .complete_session(first)
+            .unwrap()
+            .expect("single-play completes immediately");
+        assert_eq!(game.score, 123);
+        assert_eq!(game.started_at, started_at);
+        assert!(sessions.get(first).is_none());
+        assert_eq!(sessions.game_result(second).unwrap().score, 0);
+        sessions
+            .insert(first, PlayerId::new(3))
+            .expect("a new session can start on the freed machine");
+        sessions
+            .complete_session(second)
+            .unwrap()
+            .expect("second game can complete independently");
+        assert!(
+            sessions
+                .get(first)
+                .unwrap()
+                .as_configuring_game_mode()
+                .is_ok()
         );
     }
 
@@ -1076,6 +1223,7 @@ mod tests {
             machine_id: MachineId::new(1),
             player_id: PlayerId::new(2),
             shared: Arc::new(RwLock::new(SharedRunningState {
+                started_at: UtcDateTime::now(),
                 mode: GameMode::Multi,
                 difficulty: Difficulty::Hard,
                 score: 10,
@@ -1106,6 +1254,15 @@ mod tests {
                 assert_eq!(actual.player_id, expected.player_id);
                 assert!(Arc::ptr_eq(&actual.shared, &expected.shared));
                 assert_eq!(actual.shared.read().score, 10);
+            }
+            MachineSession::Finished(expected)
+            | MachineSession::WaitingForSessionCompletion(expected) => {
+                assert_eq!(actual.machine_id(), expected.machine_id);
+                assert_eq!(actual.player_id(), expected.player_id);
+                assert_eq!(
+                    sessions.game_result(machine_id).unwrap(),
+                    expected.result.as_ref()
+                );
             }
             MachineSession::ConfiguringGameMode(_) => {
                 unreachable!("only later states are tested")

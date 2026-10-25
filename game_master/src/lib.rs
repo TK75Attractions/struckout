@@ -5,7 +5,7 @@ use time::UtcDateTime;
 
 use struckout_proto::{
     Difficulty,
-    types::{GameId, MachineId, PlayerId},
+    types::{MachineId, PlayerId},
 };
 
 mod data;
@@ -15,39 +15,16 @@ mod services;
 pub use services::{GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
 mod session;
 
-use crate::data::{GameRecord, Player};
+use crate::data::Player;
 
 pub trait DataSource: Clone + Send + Sync + 'static {
-    fn insert_game_single(
-        &self,
-        machine_id: MachineId,
-        player_id: PlayerId,
-        started_at: UtcDateTime,
-        difficulty: Difficulty,
-    ) -> impl Future<Output = Result<GameId, sqlx::Error>> + Send;
-
-    fn insert_game_multi(
-        &self,
-        player_ids: [PlayerId; 2],
-        started_at: UtcDateTime,
-        difficulty: Difficulty,
-    ) -> impl Future<Output = Result<GameId, sqlx::Error>> + Send;
-
-    fn complete_game(
-        &self,
-        game_id: GameId,
-        score: u32,
-    ) -> impl Future<Output = Result<(), sqlx::Error>> + Send;
+    fn save_game(&self, game: GameRecord)
+    -> impl Future<Output = Result<(), SaveGameError>> + Send;
 
     fn add_player(
         &self,
         name: impl Into<String> + Send,
     ) -> impl Future<Output = Result<PlayerId, AddPlayerError>> + Send;
-
-    fn get_game_result(
-        &self,
-        game_id: GameId,
-    ) -> impl Future<Output = Result<GameRecord, GetGameResultError>> + Send;
 
     fn validate_player_name(
         &self,
@@ -69,13 +46,30 @@ pub enum AddPlayerError {
     Sqlx(#[from] sqlx::Error),
 }
 
-/// Error returned from [`DataSource::get_game_result()`].
+/// A completed game's participants, preventing invalid single/multi combinations.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GamePlayers {
+    Single {
+        machine_id: MachineId,
+        player_id: PlayerId,
+    },
+    Multi {
+        player_ids: [PlayerId; 2],
+    },
+}
+
+/// Retains the final result until session completion makes it ready for persistence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GameRecord {
+    pub players: GamePlayers,
+    pub started_at: UtcDateTime,
+    pub difficulty: Difficulty,
+    pub score: u32,
+}
+
+/// Error returned from [`DataSource::save_game()`].
 #[derive(Debug, Error)]
-pub enum GetGameResultError {
-    #[error("game is not yet completed")]
-    NotYetCompleted,
-    #[error("game not found in the database")]
-    GameNotFound,
+pub enum SaveGameError {
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }

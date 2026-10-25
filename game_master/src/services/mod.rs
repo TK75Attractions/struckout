@@ -8,18 +8,19 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
 use struckout_proto::{
-    self, AddTargetRequest, AddTargetResponse, Difficulty, GameMode, GetGameResultRequest,
-    GetGameResultResponse, GoNextTutorialRequest, GoNextTutorialResponse,
-    GoPreviousTutorialRequest, GoPreviousTutorialResponse, HitTargetRequest, HitTargetResponse,
-    ListenEventsRequest, ListenEventsResponse, RemoveTargetRequest, RemoveTargetResponse,
-    SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
-    SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
-    StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
+    self, AddTargetRequest, AddTargetResponse, CompleteSessionRequest, CompleteSessionResponse,
+    Difficulty, GameMode, GetGameResultRequest, GetGameResultResponse, GoNextTutorialRequest,
+    GoNextTutorialResponse, GoPreviousTutorialRequest, GoPreviousTutorialResponse,
+    HitTargetRequest, HitTargetResponse, ListenEventsRequest, ListenEventsResponse,
+    RemoveTargetRequest, RemoveTargetResponse, SetGameModeRequest, SetGameModeResponse,
+    SetSessionDifficultyRequest, SetSessionDifficultyResponse, SetSessionReadyRequest,
+    SetSessionReadyResponse, StartSessionRequest, StartSessionResponse, StartTutorialRequest,
+    StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
     target::Owner,
-    types::{GameId, MachineId, PlayerId},
+    types::{MachineId, PlayerId},
 };
-use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
+use time::{SignedDuration, ext::NumericalDuration};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::{
     Stream, StreamExt,
@@ -30,7 +31,7 @@ use tracing::{instrument, trace, warn};
 use uuid::Uuid;
 
 use crate::{
-    DataSource, DataSourceImpl, GetGameResultError,
+    DataSource, DataSourceImpl,
     session::{HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
@@ -61,49 +62,30 @@ where
     /// Handles completion of game when notified via `complete_rx`.
     async fn handle_game_completion(
         self,
-        game_id: GameId,
         ev_target: EventTarget,
         mut complete_rx: mpsc::Receiver<()>,
     ) {
         complete_rx.recv().await.expect("complete channel closed");
-        let score = {
-            let sessions = self.sessions.read();
-            match ev_target {
-                EventTarget::Single(machine_id) => sessions
-                    .score(machine_id)
-                    .expect("it is guaranteed the session exist and is in right state"),
-                EventTarget::All => sessions.score_multi().expect("should be in valid state"),
-            }
-        };
-        let res = self.data_source.complete_game(game_id, score).await;
-        if let Err(e) = res {
-            self.event_tx
-                .send(Event {
-                    target: ev_target,
-                    data: Err(Status::internal(e.to_string())),
-                })
-                .expect("all event receiver has been dropped");
-        };
         {
             let mut sessions = self.sessions.write();
-            match ev_target {
-                EventTarget::Single(machine_id) => {
-                    let removed = sessions.remove(machine_id);
-                    assert!(removed.is_some());
-                }
-                EventTarget::All => {
-                    let (removed1, removed2) = sessions.remove_all();
-                    assert!(removed1.is_some());
-                    assert!(removed2.is_some());
-                }
-            }
+            let machine_id = match ev_target {
+                EventTarget::Single(machine_id) => machine_id,
+                EventTarget::All => sessions.machine_ids().expect("multi-play has two sessions")[0],
+            };
+            sessions
+                .finish_game(machine_id)
+                .expect("only running games have a completion timer");
         }
-        self.event_tx
+        if self
+            .event_tx
             .send(Event {
                 target: ev_target,
                 data: Ok(SuccessfulEvent::GameFinished),
             })
-            .expect("all event receiver has been dropped");
+            .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
     }
 }
 
@@ -325,20 +307,39 @@ where
         Ok(Response::new(HitTargetResponse {}))
     }
 
+    #[instrument]
     async fn get_game_result(
         &self,
         req: Request<GetGameResultRequest>,
     ) -> Result<Response<GetGameResultResponse>, Status> {
-        let req = req.into_inner();
-        let game_id = req.game_id.into();
-        match self.data_source.get_game_result(game_id).await {
-            Ok(record) => Ok(Response::new(GetGameResultResponse {
-                total_score: record.score,
-            })),
-            Err(e @ GetGameResultError::GameNotFound) => Err(Status::not_found(e.to_string())),
-            Err(e @ GetGameResultError::NotYetCompleted) => Err(Status::aborted(e.to_string())),
-            Err(GetGameResultError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+        let GetGameResultRequest { machine_id } = req.into_inner();
+        let total_score = self
+            .sessions
+            .read()
+            .game_result(machine_id.into())
+            .map_err(|e| Status::failed_precondition(e.to_string()))?
+            .score;
+        Ok(Response::new(GetGameResultResponse { total_score }))
+    }
+
+    #[instrument]
+    async fn complete_session(
+        &self,
+        req: Request<CompleteSessionRequest>,
+    ) -> Result<Response<CompleteSessionResponse>, Status> {
+        let CompleteSessionRequest { machine_id } = req.into_inner();
+        let game = self
+            .sessions
+            .write()
+            .complete_session(machine_id.into())
+            .map_err(|e| Status::failed_precondition(e.to_string()))?;
+        if let Some(game) = game {
+            self.data_source
+                .save_game(game)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
         }
+        Ok(Response::new(CompleteSessionResponse {}))
     }
 
     #[instrument]
@@ -354,18 +355,7 @@ where
                 sessions.set_ready(machine_id)
             };
             match action {
-                Ok(SetReadyAction::RunSingle {
-                    player_id,
-                    difficulty,
-                }) => {
-                    let started_at = UtcDateTime::now();
-
-                    let game_id = self
-                        .data_source
-                        .insert_game_single(machine_id, player_id, started_at, difficulty)
-                        .await
-                        .map_err(|e| Status::internal(e.to_string()))?;
-
+                Ok(SetReadyAction::RunSingle { difficulty }) => {
                     if self
                         .event_tx
                         .send(Event {
@@ -386,25 +376,13 @@ where
                     ));
 
                     // handle game completion
-                    tokio::spawn(self.clone().handle_game_completion(
-                        game_id,
-                        EventTarget::Single(machine_id),
-                        complete_rx,
-                    ));
+                    tokio::spawn(
+                        self.clone()
+                            .handle_game_completion(EventTarget::Single(machine_id), complete_rx),
+                    );
                     Ok(Response::new(SetSessionReadyResponse {}))
                 }
-                Ok(SetReadyAction::RunMulti {
-                    player_ids,
-                    difficulty,
-                }) => {
-                    let started_at = UtcDateTime::now();
-
-                    let game_id = self
-                        .data_source
-                        .insert_game_multi(player_ids, started_at, difficulty)
-                        .await
-                        .map_err(|e| Status::internal(e.to_string()))?;
-
+                Ok(SetReadyAction::RunMulti { difficulty }) => {
                     if self
                         .event_tx
                         .send(Event {
@@ -425,11 +403,10 @@ where
                     ));
 
                     // handle game completion
-                    tokio::spawn(self.clone().handle_game_completion(
-                        game_id,
-                        EventTarget::All,
-                        complete_rx,
-                    ));
+                    tokio::spawn(
+                        self.clone()
+                            .handle_game_completion(EventTarget::All, complete_rx),
+                    );
                     Ok(Response::new(SetSessionReadyResponse {}))
                 }
                 Ok(SetReadyAction::WaitForAnother) => Ok(Response::new(SetSessionReadyResponse {})),

@@ -14,43 +14,16 @@ use super::*;
 
 #[derive(Clone)]
 struct StubDataSource {
-    game_id: GameId,
     player_id: PlayerId,
 }
 
 impl DataSource for StubDataSource {
-    async fn insert_game_single(
-        &self,
-        _machine_id: MachineId,
-        _player_id: PlayerId,
-        _started_at: UtcDateTime,
-        _difficulty: Difficulty,
-    ) -> Result<GameId, sqlx::Error> {
-        Ok(self.game_id)
-    }
-
-    async fn insert_game_multi(
-        &self,
-        _player_ids: [PlayerId; 2],
-        _started_at: UtcDateTime,
-        _difficulty: Difficulty,
-    ) -> Result<GameId, sqlx::Error> {
-        Ok(self.game_id)
-    }
-
-    async fn complete_game(&self, _game_id: GameId, _score: u32) -> Result<(), sqlx::Error> {
+    async fn save_game(&self, _game: crate::GameRecord) -> Result<(), crate::SaveGameError> {
         Ok(())
     }
 
     async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
         Ok(self.player_id)
-    }
-
-    async fn get_game_result(
-        &self,
-        _game_id: GameId,
-    ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
-        unimplemented!()
     }
 
     async fn validate_player_name(
@@ -158,10 +131,7 @@ async fn start_game_single<DS>(
 async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMode) {
     let machine_id = MachineId::new(1);
     let player_id = PlayerId::new(2);
-    let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(3),
-        player_id,
-    });
+    let service = GameMasterSessionServiceImpl::new(StubDataSource { player_id });
     service
         .start_session(Request::new(StartSessionRequest {
             machine_id: machine_id.into(),
@@ -202,10 +172,7 @@ async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMo
 async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
     let machine_id = MachineId::new(1);
     let player_id = PlayerId::new(2);
-    let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(3),
-        player_id,
-    });
+    let service = GameMasterSessionServiceImpl::new(StubDataSource { player_id });
     service
         .start_session(Request::new(StartSessionRequest {
             machine_id: machine_id.into(),
@@ -233,7 +200,6 @@ async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
 #[tokio::test]
 async fn set_game_mode_requires_an_existing_session() {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(3),
         player_id: PlayerId::new(2),
     });
     let error = service
@@ -249,7 +215,6 @@ async fn set_game_mode_requires_an_existing_session() {
 #[tokio::test]
 async fn set_session_ready_triggers_game_started_event() {
     let ds = StubDataSource {
-        game_id: GameId::new(14),
         player_id: PlayerId::new(334),
     };
     let machine_id = MachineId::new(1);
@@ -302,7 +267,6 @@ async fn set_session_ready_triggers_game_started_event() {
 #[tokio::test(start_paused = true)]
 async fn event_stream_notifies_in_correct_order() {
     let ds = StubDataSource {
-        game_id: GameId::new(20),
         player_id: PlayerId::new(13),
     };
     let machine_id = MachineId::new(2);
@@ -354,7 +318,6 @@ fn target_request(machine_id: u32) -> AddTargetRequest {
 #[tokio::test]
 async fn add_target_rejects_missing_data() {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     assert_eq!(
@@ -376,7 +339,6 @@ async fn add_target_rejects_missing_data() {
 #[tokio::test]
 async fn remove_target_rejects_invalid_ids(#[case] target_id: &str) {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     assert_eq!(
@@ -395,7 +357,6 @@ async fn remove_target_rejects_invalid_ids(#[case] target_id: &str) {
 #[tokio::test]
 async fn target_operations_require_a_running_session() {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     assert_eq!(
@@ -470,7 +431,6 @@ async fn target_operations_require_a_running_session() {
 #[tokio::test(start_paused = true)]
 async fn targets_can_be_added_and_removed_without_event_subscribers() {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     start_game_single(
@@ -513,7 +473,6 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
 #[tokio::test(start_paused = true)]
 async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     let machine_count = if mode.is_multi() { 2 } else { 1 };
@@ -609,7 +568,6 @@ async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
 #[tokio::test(start_paused = true)]
 async fn hit_target_rejects_invalid_ids(#[case] target_id: &str, #[case] code: tonic::Code) {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     start_game_single(
@@ -648,7 +606,6 @@ async fn hit_target_rejects_invalid_ids(#[case] target_id: &str, #[case] code: t
 #[tokio::test(start_paused = true)]
 async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: tonic::Code) {
     let service = GameMasterSessionServiceImpl::new(StubDataSource {
-        game_id: GameId::new(1),
         player_id: PlayerId::new(1),
     });
     start_game_single(
@@ -692,4 +649,245 @@ async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: to
         events.try_recv(),
         Err(broadcast::error::TryRecvError::Empty)
     );
+}
+
+#[derive(Clone, Default)]
+struct RecordingDataSource {
+    saved: Arc<parking_lot::Mutex<Vec<crate::GameRecord>>>,
+    fail_save: bool,
+}
+
+impl DataSource for RecordingDataSource {
+    async fn save_game(&self, game: crate::GameRecord) -> Result<(), crate::SaveGameError> {
+        self.saved.lock().push(game);
+        if self.fail_save {
+            Err(sqlx::Error::PoolClosed.into())
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn add_player(&self, _: impl Into<String> + Send) -> Result<PlayerId, AddPlayerError> {
+        unimplemented!()
+    }
+
+    async fn validate_player_name(
+        &self,
+        _: impl Into<String> + Send,
+    ) -> Result<(), ValidatePlayerNameError> {
+        unimplemented!()
+    }
+
+    async fn get_player(&self, _: impl Into<String> + Send) -> Result<Player, GetPlayerError> {
+        unimplemented!()
+    }
+}
+
+#[rstest]
+#[case(GameMode::Single, false)]
+#[case(GameMode::Multi, false)]
+#[case(GameMode::Single, true)]
+#[case(GameMode::Multi, true)]
+#[tokio::test(start_paused = true)]
+async fn results_are_retained_until_all_sessions_complete(
+    #[case] mode: GameMode,
+    #[case] fail_save: bool,
+) {
+    let ds = RecordingDataSource {
+        fail_save,
+        ..Default::default()
+    };
+    let service = GameMasterSessionServiceImpl::new(ds.clone());
+    let mut events = service.event_tx.subscribe();
+    let machines: &[u32] = if mode.is_multi() { &[1, 2] } else { &[1] };
+    for &machine_id in machines {
+        service
+            .start_session(Request::new(StartSessionRequest {
+                machine_id,
+                player_id: machine_id + 10,
+            }))
+            .await
+            .unwrap();
+        service
+            .set_game_mode(Request::new(SetGameModeRequest {
+                machine_id,
+                mode: mode.into(),
+            }))
+            .await
+            .unwrap();
+    }
+    service
+        .set_session_difficulty(Request::new(SetSessionDifficultyRequest {
+            machine_id: 1,
+            difficulty: Difficulty::Normal.into(),
+        }))
+        .await
+        .unwrap();
+    for &machine_id in machines {
+        service
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id }))
+            .await
+            .unwrap();
+    }
+    assert!(
+        ds.saved.lock().is_empty(),
+        "starting a game must not write games to the DB"
+    );
+    assert_eq!(
+        service
+            .get_game_result(Request::new(GetGameResultRequest { machine_id: 1 }))
+            .await
+            .unwrap_err()
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    assert_eq!(
+        service
+            .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
+            .await
+            .unwrap_err()
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    let target_id = service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .unwrap()
+        .into_inner()
+        .target_id;
+    service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id: target_id.clone(),
+        }))
+        .await
+        .unwrap();
+    loop {
+        if matches!(
+            events.recv().await.unwrap().data,
+            Ok(SuccessfulEvent::GameFinished)
+        ) {
+            break;
+        }
+    }
+    assert!(
+        ds.saved.lock().is_empty(),
+        "GameFinished must not save the result"
+    );
+    for &machine_id in machines {
+        assert_eq!(
+            service
+                .get_game_result(Request::new(GetGameResultRequest { machine_id }))
+                .await
+                .unwrap()
+                .into_inner()
+                .total_score,
+            100_000
+        );
+    }
+    assert_eq!(
+        service
+            .hit_target(Request::new(HitTargetRequest {
+                machine_id: 1,
+                target_id
+            }))
+            .await
+            .unwrap_err()
+            .code(),
+        tonic::Code::FailedPrecondition
+    );
+    if mode.is_multi() {
+        for _ in 0..2 {
+            service
+                .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
+                .await
+                .unwrap();
+            assert!(ds.saved.lock().is_empty());
+            let sessions = service.sessions.read();
+            assert!(sessions.get(MachineId::new(1)).is_some());
+            assert!(sessions.get(MachineId::new(2)).is_some());
+            assert_eq!(
+                sessions.game_result(MachineId::new(1)).unwrap().score,
+                100_000
+            );
+        }
+    }
+    let last_machine = *machines.last().unwrap();
+    let response = service
+        .complete_session(Request::new(CompleteSessionRequest {
+            machine_id: last_machine,
+        }))
+        .await;
+    if fail_save {
+        assert_eq!(response.unwrap_err().code(), tonic::Code::Internal);
+    } else {
+        response.unwrap();
+    }
+    for &machine_id in machines {
+        assert!(
+            service
+                .sessions
+                .read()
+                .get(MachineId::new(machine_id))
+                .is_none()
+        );
+        assert_eq!(
+            service
+                .get_game_result(Request::new(GetGameResultRequest { machine_id }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::FailedPrecondition
+        );
+        assert_eq!(
+            service
+                .complete_session(Request::new(CompleteSessionRequest { machine_id }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::FailedPrecondition
+        );
+    }
+    let saved = ds.saved.lock();
+    assert_eq!(saved.len(), 1);
+    assert_eq!(saved[0].score, 100_000);
+    assert_eq!(saved[0].difficulty, Difficulty::Normal);
+    assert_eq!(
+        saved[0].players,
+        if mode.is_multi() {
+            crate::GamePlayers::Multi {
+                player_ids: [PlayerId::new(11), PlayerId::new(12)],
+            }
+        } else {
+            crate::GamePlayers::Single {
+                machine_id: MachineId::new(1),
+                player_id: PlayerId::new(11),
+            }
+        }
+    );
+}
+
+#[tokio::test]
+async fn complete_session_rejects_configuring_and_missing_sessions() {
+    let service = GameMasterSessionServiceImpl::new(RecordingDataSource::default());
+    for start in [false, true] {
+        if start {
+            service
+                .start_session(Request::new(StartSessionRequest {
+                    machine_id: 1,
+                    player_id: 11,
+                }))
+                .await
+                .unwrap();
+        }
+        assert_eq!(
+            service
+                .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::FailedPrecondition
+        );
+    }
+    assert!(service.sessions.read().get(MachineId::new(1)).is_some());
 }
