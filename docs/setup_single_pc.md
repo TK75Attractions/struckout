@@ -207,7 +207,7 @@ touchpanel の `--machine-id` は `pc2.json` の `machine_id` と同じにする
 
 - **master の `scripts/run_pc2.py` は game_master を起動できない。** compose のファイルが `game_master/docker/` に移った
   (`d92cd44`) が、`run_pc2.py` (`COMPOSE`)、`game_master/mise.toml` のタスク、`compose.yaml` の `build` の `context` と
-  `dockerfile` が前の場所を指したまま。ランチャーも、リリースの `game_master/compose.yaml` を取りに行く (#307)。
+  `dockerfile` が前の場所を指したまま (#321)。ランチャーも、リリースの `game_master/compose.yaml` を取りに行く (#307)。
   リリース `2026-10-22.0` まではもとの場所にあるので、ランチャーで動かせる (5 章)
 
 ## 9. 確かめたこと (2026-10-24)
