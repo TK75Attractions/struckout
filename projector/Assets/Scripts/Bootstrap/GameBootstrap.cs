@@ -36,7 +36,7 @@ namespace Struckout.Bootstrap
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         }
 
-        internal async UniTask Initialize(
+        internal void Initialize(
             RuntimeContext context
             )
         {

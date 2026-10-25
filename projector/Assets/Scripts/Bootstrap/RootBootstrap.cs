@@ -36,7 +36,7 @@ namespace Struckout.Bootstrap
             _runtimeContext.AddDestroyEvent(_networkBootstrap);
             _runtimeContext.AddDestroyEvent(_gameBootstrap);
 
-            await _gameBootstrap.Initialize(_runtimeContext);
+            _gameBootstrap.Initialize(_runtimeContext);
 
             var result = await _networkBootstrap.Initialize();
 
