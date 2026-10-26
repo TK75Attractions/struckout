@@ -8,7 +8,7 @@ namespace Struckout.Domain
         public const uint TopItemCount = 10;
         public const int DisplayItemCount = 12;
 
-        /// <summary>Merge games by ID and select the highest scores to fit the fixed result screen.</summary>
+        /// <summary>Merges games by ID and selects the highest scores to fit the fixed result screen.</summary>
         public static IReadOnlyList<RankingRow> Merge(
             IReadOnlyList<RankingEntry> ranking, IReadOnlyList<PlayerGame> history,
             PlayerId playerId, GameId? currentGame)

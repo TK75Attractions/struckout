@@ -48,7 +48,7 @@ namespace Struckout.Application
         }
 
         /// <summary>
-        /// Request registration of initial geometry; only TargetAdded events create local entities.
+        /// Requests registration of initial geometry; only TargetAdded events create local entities.
         /// Called on Unity's main thread so continuations can safely update the board.
         /// </summary>
         public async Task StartGameAsync(Difficulty difficulty)
@@ -73,14 +73,14 @@ namespace Struckout.Application
                 Debug.LogWarning("[Game] 的の登録を要求できませんでした。");
         }
 
-        /// <summary>Apply an authoritative TargetAdded event, independently of the registration RPC response.</summary>
+        /// <summary>Applies an authoritative TargetAdded event, independently of the registration RPC response.</summary>
         public void OnTargetAdded(Target target)
         {
             if (!_state.AddTarget(target)) Debug.LogWarning($"[Game] Notified target {target.Id} already exists in the GameRuntimeState");
             _uiService.AddTarget(target);
         }
 
-        /// <summary>Apply an authoritative TargetRemoved event; RPC results never remove local targets.</summary>
+        /// <summary>Applies an authoritative TargetRemoved event; RPC results never remove local targets.</summary>
         public void OnTargetRemoved(Guid id)
         {
             _pendingTargets.Remove(id);
@@ -95,7 +95,7 @@ namespace Struckout.Application
             _state.FinishGame();
         }
 
-        /// <summary>Stop accepting hits after disconnection because the stream cannot restore a session snapshot.</summary>
+        /// <summary>Stops accepting hits after disconnection because the stream cannot restore a session snapshot.</summary>
         public void SuspendGame()
         {
             CancelPendingOperations();
@@ -111,8 +111,8 @@ namespace Struckout.Application
         }
 
         /// <summary>
-        /// Request replacement of a hit target; target events are the only source of local state changes.
-        /// Keep its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
+        /// Requests replacement of a hit target; target events are the only source of local state changes.
+        /// Keeps its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
         /// </summary>
         public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)
         {
