@@ -280,6 +280,9 @@ mod tests {
             EventData, GameFinished, GameStarted,
             game_started::{GameStartedPlayerInfo, Multi, PlayerInfo, Single},
         },
+        game_master_player_service_server::{
+            GameMasterPlayerService, GameMasterPlayerServiceServer,
+        },
         game_master_session_service_server::{
             GameMasterSessionService, GameMasterSessionServiceServer,
         },
@@ -289,12 +292,71 @@ mod tests {
 
     #[derive(Debug, PartialEq)]
     enum Command {
+        AddPlayer(String),
+        ValidateName(String),
+        FindPlayer(String),
         Start(u32, u32),
         Mode(u32, i32),
         Difficulty(u32, i32),
         Ready(u32),
         Ranking(u32),
         Home(u32),
+    }
+
+    struct FakePlayerService {
+        commands: mpsc::UnboundedSender<Command>,
+    }
+
+    #[tonic::async_trait]
+    impl GameMasterPlayerService for FakePlayerService {
+        async fn add_player(
+            &self,
+            request: Request<proto::AddPlayerRequest>,
+        ) -> Result<Response<proto::AddPlayerResponse>, Status> {
+            self.commands
+                .send(Command::AddPlayer(request.into_inner().name))
+                .expect("test receiver is alive");
+            Ok(Response::new(proto::AddPlayerResponse { player_id: 12 }))
+        }
+
+        async fn validate_player_name(
+            &self,
+            request: Request<proto::ValidatePlayerNameRequest>,
+        ) -> Result<Response<proto::ValidatePlayerNameResponse>, Status> {
+            let name = request.into_inner().player_name;
+            self.commands
+                .send(Command::ValidateName(name.clone()))
+                .expect("test receiver is alive");
+            let validate_player_name_resp = if name == "missing-field" {
+                None
+            } else {
+                Some(
+                    proto::validate_player_name_response::ValidatePlayerNameResp::Ok(
+                        proto::validate_player_name_response::Ok {},
+                    ),
+                )
+            };
+            Ok(Response::new(proto::ValidatePlayerNameResponse {
+                validate_player_name_resp,
+            }))
+        }
+
+        async fn get_player(
+            &self,
+            request: Request<proto::GetPlayerRequest>,
+        ) -> Result<Response<proto::GetPlayerResponse>, Status> {
+            let name = request.into_inner().name;
+            self.commands
+                .send(Command::FindPlayer(name.clone()))
+                .expect("test receiver is alive");
+            if name == "missing" {
+                return Err(Status::not_found("player does not exist"));
+            }
+            Ok(Response::new(proto::GetPlayerResponse {
+                player_id: 12,
+                player_name: name,
+            }))
+        }
     }
 
     struct FakeSessionService {
@@ -509,9 +571,12 @@ mod tests {
             let ready_response = Arc::new(Notify::new());
             let shutdown = CancellationToken::new();
             let service = FakeSessionService {
-                commands: commands_tx,
+                commands: commands_tx.clone(),
                 events: events.clone(),
                 ready_response: ready_response.clone(),
+            };
+            let player_service = FakePlayerService {
+                commands: commands_tx,
             };
             let incoming = async_stream::stream! {
                 loop { yield Ok::<_, std::io::Error>(listener.accept().await.expect("test listener remains open").0); }
@@ -520,6 +585,7 @@ mod tests {
             tokio::spawn(async move {
                 Server::builder()
                     .add_service(GameMasterSessionServiceServer::new(service))
+                    .add_service(GameMasterPlayerServiceServer::new(player_service))
                     .serve_with_incoming_shutdown(incoming, cancel.cancelled_owned())
                     .await
                     .expect("test server should run");
@@ -565,6 +631,68 @@ mod tests {
                 Some(Command::Difficulty(1, Difficulty::Normal.into()))
             );
         }
+    }
+
+    #[tokio::test]
+    async fn player_requests_use_the_separate_player_service() {
+        let mut fixture = Fixture::new().await;
+        assert_eq!(
+            fixture
+                .client
+                .add_player("new")
+                .await
+                .expect("player added"),
+            PlayerId::new(12)
+        );
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::AddPlayer("new".into()))
+        );
+
+        let validation = fixture
+            .client
+            .validate_player_name("new")
+            .await
+            .expect("valid name response");
+        assert!(matches!(validation, ValidatePlayerNameResp::Ok(_)));
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::ValidateName("new".into()))
+        );
+
+        assert_eq!(
+            fixture
+                .client
+                .get_player("existing")
+                .await
+                .expect("player found"),
+            Some(PlayerId::new(12))
+        );
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::FindPlayer("existing".into()))
+        );
+        assert_eq!(
+            fixture
+                .client
+                .get_player("missing")
+                .await
+                .expect("not found is expected"),
+            None
+        );
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::FindPlayer("missing".into()))
+        );
+
+        assert!(matches!(
+            fixture.client.validate_player_name("missing-field").await,
+            Err(RequestError::InvalidPacket { .. })
+        ));
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::ValidateName("missing-field".into()))
+        );
     }
 
     #[rstest::rstest]
