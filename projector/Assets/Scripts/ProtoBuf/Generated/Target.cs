@@ -63,9 +63,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
 
   }
   #region Messages
-  /// <summary>
-  /// target_idはUUID
-  /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class Target : pb::IMessage<Target>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
@@ -129,6 +126,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     /// <summary>Field number for the "target_id" field.</summary>
     public const int TargetIdFieldNumber = 1;
     private string targetId_ = "";
+    /// <summary>
+    /// UUID
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string TargetId {

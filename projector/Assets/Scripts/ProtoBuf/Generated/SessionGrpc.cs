@@ -80,6 +80,10 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultResponse> __Marshaller_tk75attractions_struckout_game_master_v1_GetGameResultResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest> __Marshaller_tk75attractions_struckout_game_master_v1_CompleteSessionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse> __Marshaller_tk75attractions_struckout_game_master_v1_CompleteSessionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialRequest> __Marshaller_tk75attractions_struckout_game_master_v1_StartTutorialRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialResponse> __Marshaller_tk75attractions_struckout_game_master_v1_StartTutorialResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialResponse.Parser));
@@ -149,6 +153,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         __Marshaller_tk75attractions_struckout_game_master_v1_GetGameResultResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest, global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse> __Method_CompleteSession = new grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest, global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CompleteSession",
+        __Marshaller_tk75attractions_struckout_game_master_v1_CompleteSessionRequest,
+        __Marshaller_tk75attractions_struckout_game_master_v1_CompleteSessionResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialResponse> __Method_StartTutorial = new grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
@@ -216,7 +228,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     {
       /// <summary>
       /// Used by `touchpanel`.
-      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+      /// The session is retained after GameFinished until CompleteSession is called.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -258,13 +270,26 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
 
       /// <summary>
-      /// Gets the result of a specific game.
+      /// Gets the finished result of the current session on the specified machine.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultResponse> GetGameResult(global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Releases a finished session. Multi-play waits for both machines to call this.
+      /// Used by `projector`.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse> CompleteSession(global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -387,7 +412,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
 
       /// <summary>
       /// Used by `touchpanel`.
-      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+      /// The session is retained after GameFinished until CompleteSession is called.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -401,7 +426,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
       /// <summary>
       /// Used by `touchpanel`.
-      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+      /// The session is retained after GameFinished until CompleteSession is called.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -413,7 +438,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
       /// <summary>
       /// Used by `touchpanel`.
-      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+      /// The session is retained after GameFinished until CompleteSession is called.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -427,7 +452,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
       /// <summary>
       /// Used by `touchpanel`.
-      /// GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+      /// The session is retained after GameFinished until CompleteSession is called.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -554,7 +579,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_SetSessionReady, null, options, request);
       }
       /// <summary>
-      /// Gets the result of a specific game.
+      /// Gets the finished result of the current session on the specified machine.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -567,7 +592,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         return GetGameResult(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Gets the result of a specific game.
+      /// Gets the finished result of the current session on the specified machine.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -578,7 +603,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_GetGameResult, null, options, request);
       }
       /// <summary>
-      /// Gets the result of a specific game.
+      /// Gets the finished result of the current session on the specified machine.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -591,7 +616,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         return GetGameResultAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Gets the result of a specific game.
+      /// Gets the finished result of the current session on the specified machine.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -600,6 +625,58 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultResponse> GetGameResultAsync(global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetGameResult, null, options, request);
+      }
+      /// <summary>
+      /// Releases a finished session. Multi-play waits for both machines to call this.
+      /// Used by `projector`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse CompleteSession(global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CompleteSession(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Releases a finished session. Multi-play waits for both machines to call this.
+      /// Used by `projector`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse CompleteSession(global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CompleteSession, null, options, request);
+      }
+      /// <summary>
+      /// Releases a finished session. Multi-play waits for both machines to call this.
+      /// Used by `projector`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse> CompleteSessionAsync(global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CompleteSessionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Releases a finished session. Multi-play waits for both machines to call this.
+      /// Used by `projector`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse> CompleteSessionAsync(global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CompleteSession, null, options, request);
       }
       /// <summary>
       /// Starts tutorial on the specified machine. Used by `touchpanel`.
@@ -940,6 +1017,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           .AddMethod(__Method_SetGameMode, serviceImpl.SetGameMode)
           .AddMethod(__Method_SetSessionReady, serviceImpl.SetSessionReady)
           .AddMethod(__Method_GetGameResult, serviceImpl.GetGameResult)
+          .AddMethod(__Method_CompleteSession, serviceImpl.CompleteSession)
           .AddMethod(__Method_StartTutorial, serviceImpl.StartTutorial)
           .AddMethod(__Method_GoPreviousTutorial, serviceImpl.GoPreviousTutorial)
           .AddMethod(__Method_GoNextTutorial, serviceImpl.GoNextTutorial)
@@ -961,6 +1039,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       serviceBinder.AddMethod(__Method_SetGameMode, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.SetGameModeRequest, global::Tk75Attractions.Struckout.GameMaster.V1.SetGameModeResponse>(serviceImpl.SetGameMode));
       serviceBinder.AddMethod(__Method_SetSessionReady, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.SetSessionReadyRequest, global::Tk75Attractions.Struckout.GameMaster.V1.SetSessionReadyResponse>(serviceImpl.SetSessionReady));
       serviceBinder.AddMethod(__Method_GetGameResult, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GetGameResultResponse>(serviceImpl.GetGameResult));
+      serviceBinder.AddMethod(__Method_CompleteSession, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionRequest, global::Tk75Attractions.Struckout.GameMaster.V1.CompleteSessionResponse>(serviceImpl.CompleteSession));
       serviceBinder.AddMethod(__Method_StartTutorial, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialResponse>(serviceImpl.StartTutorial));
       serviceBinder.AddMethod(__Method_GoPreviousTutorial, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GoPreviousTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoPreviousTutorialResponse>(serviceImpl.GoPreviousTutorial));
       serviceBinder.AddMethod(__Method_GoNextTutorial, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialResponse>(serviceImpl.GoNextTutorial));
