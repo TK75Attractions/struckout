@@ -6,9 +6,10 @@ use crate::{
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulty_select::DifficultySelectDestination, fallback::FallbackDestination,
-        mode_select::ModeSelectDestination, name_input_first::NameInputFirstDestination,
+        game_finished::GameFinishedDestination, mode_select::ModeSelectDestination,
+        name_input_first::NameInputFirstDestination,
         name_input_non_first::NameInputNonFirstDestination, playing::PlayingDestination,
-        ranking::RankingDestination, score::ScoreDestination, start::StartScreenDestination,
+        ranking_control::RankingControlDestination, start::StartScreenDestination,
     },
 };
 use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
@@ -58,12 +59,12 @@ pub mod connecting;
 pub mod connection_failed;
 pub mod difficulty_select;
 pub mod fallback;
+pub mod game_finished;
 pub mod mode_select;
 pub mod name_input_first;
 pub mod name_input_non_first;
 pub mod playing;
-pub mod ranking;
-pub mod score;
+pub mod ranking_control;
 pub mod start;
 //@xtask-pub-mod
 
@@ -162,7 +163,7 @@ fn observe_session<E: ForegroundExecutor>(worker: &WorkerThread<Context, E>, nc:
             if snapshot.phase != previous_phase {
                 match snapshot.phase {
                     SessionPhase::Running => nc.navigate(NavRoute::Playing),
-                    SessionPhase::Finished(game_id) => nc.navigate(NavRoute::Score { game_id }),
+                    SessionPhase::Finished(_) => nc.navigate(NavRoute::GameFinished),
                     _ => {}
                 }
                 previous_phase = snapshot.phase;
@@ -184,9 +185,9 @@ pub fn attach_navhost(application: &Application) {
         .register(FallbackDestination::new(application))
         .register(ConnectionFailedDestination::new(application))
         .register(PlayingDestination::new(application))
-        .register(ScoreDestination::new(application))
+        .register(GameFinishedDestination::new(application))
         .register(ConnectingDestination::new(application))
-        .register(RankingDestination::new(application))
+        .register(RankingControlDestination::new(application))
         .register(NameInputNonFirstDestination::new(application))
         //@xtask-register
         .finish()

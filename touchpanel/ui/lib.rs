@@ -11,10 +11,8 @@ mod ui {
         },
         DifficulitySelect,
         Playing,
-        Score {
-            game_id: struckout_proto::types::GameId,
-        },
-        Ranking,
+        GameFinished,
+        RankingControl,
         Fallback(String),
         ConnectionFailed(String),
         Connecting,

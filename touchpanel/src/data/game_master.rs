@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use futures_util::{Stream, StreamExt};
 use struckout_proto::{
-    AddPlayerRequest, Difficulty, GameMode, GetGameResultRequest, GetPlayerRequest,
-    GoHomeScreenRequest, GoRankingScreenRequest, ListenEventsRequest, ListenEventsResponse,
-    SetGameModeRequest, SetSessionDifficultyRequest, SetSessionReadyRequest, StartSessionRequest,
+    AddPlayerRequest, Difficulty, GameMode, GetPlayerRequest, GoHomeScreenRequest,
+    GoRankingScreenRequest, ListenEventsRequest, ListenEventsResponse, SetGameModeRequest,
+    SetSessionDifficultyRequest, SetSessionReadyRequest, StartSessionRequest,
     ValidatePlayerNameRequest,
     game_master_player_service_client::GameMasterPlayerServiceClient,
     game_master_session_service_client::GameMasterSessionServiceClient,
-    types::{GameId, MachineId, PlayerId},
+    types::{MachineId, PlayerId},
     validate_player_name_response::ValidatePlayerNameResp,
 };
 use thiserror::Error;
@@ -191,15 +191,6 @@ impl GameMasterClient {
             .await?;
         self.session.send_replace(Session::default());
         Ok(())
-    }
-
-    pub async fn get_game_result(&mut self, game_id: GameId) -> Result<u32, Status> {
-        self.session_client
-            .get_game_result(GetGameResultRequest {
-                game_id: game_id.into_inner(),
-            })
-            .await
-            .map(|response| response.into_inner().total_score)
     }
 
     pub async fn add_player(&mut self, name: impl Into<String>) -> Result<PlayerId, Status> {
