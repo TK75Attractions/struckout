@@ -12,6 +12,7 @@ using Struckout.Domain.TargetDefinition;
 using UnityEngine;
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
 using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;
+using DomainTarget = Struckout.Domain.TargetDefinition.Target;
 using ProtoTarget = Tk75Attractions.Struckout.GameMaster.V1.Target;
 
 namespace Struckout.Infrastructure.Grpc
@@ -45,6 +46,8 @@ namespace Struckout.Infrastructure.Grpc
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
         public event Action ConnectionLost;
+        public event Action<DomainTarget> TargetAdded;
+        public event Action<Guid> TargetRemoved;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GrpcGameMasterClient(NetworkSettings settings)
@@ -210,18 +213,48 @@ namespace Struckout.Infrastructure.Grpc
                     ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
                     break;
 
+                case Event.EventDataOneofCase.TargetAdded:
+                    var added = received.TargetAdded;
+                    var data = added.Target;
+                    if (data == null || !Guid.TryParse(added.TargetId, out var targetId) || targetId == Guid.Empty)
+                    {
+                        Debug.LogWarning("[GameMaster] 的の追加通知に有効な UUID または的データがありません。");
+                        break;
+                    }
+                    if (data.MachineId != _settings.machineId) break;
+                    var compass = data.Compass;
+                    if (compass == null || float.IsNaN(compass.X) || float.IsInfinity(compass.X) ||
+                        float.IsNaN(compass.Y) || float.IsInfinity(compass.Y) ||
+                        float.IsNaN(compass.Radius) || compass.Radius <= 0 || float.IsInfinity(compass.Radius * 2f))
+                    {
+                        Debug.LogWarning("[GameMaster] 的の追加通知に有効な円の形状がありません。");
+                        break;
+                    }
+                    TargetAdded?.Invoke(new DomainTarget(targetId,
+                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Circle, compass.Radius * 2f)));
+                    break;
+
+                case Event.EventDataOneofCase.TargetRemoved:
+                    if (!Guid.TryParse(received.TargetRemoved.TargetId, out var removedId) || removedId == Guid.Empty)
+                    {
+                        Debug.LogWarning("[GameMaster] 的の削除通知に有効な UUID がありません。");
+                        break;
+                    }
+                    TargetRemoved?.Invoke(removedId);
+                    break;
+
                 default:
                     Debug.Log($"[GameMaster] unhandled event: {received.EventDataCase}");
                     break;
             }
         }
 
-        public async Task<Guid?> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        public async Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
         {
-            if (_client == null || !_running || token.IsCancellationRequested) return null;
+            if (_client == null || !_running || token.IsCancellationRequested) return false;
             try
             {
-                var response = await _client.AddTargetAsync(new AddTargetRequest
+                await _client.AddTargetAsync(new AddTargetRequest
                 {
                     MachineId = _settings.machineId,
                     Compass = new ProtoTarget.Types.Compass
@@ -231,15 +264,13 @@ namespace Struckout.Infrastructure.Grpc
                         Radius = (float)radius,
                     },
                 }, cancellationToken: token);
-                if (Guid.TryParse(response.TargetId, out var id) && id != Guid.Empty) return id;
-                Debug.LogWarning("[GameMaster] 的の登録応答に有効な UUID がありません。");
-                return null;
+                return true;
             }
             catch (RpcException ex)
             {
                 if (!token.IsCancellationRequested)
                     Debug.LogWarning($"[GameMaster] 的の登録に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
-                return null;
+                return false;
             }
         }
 

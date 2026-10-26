@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.GameMaster.V1;
+using Target = Struckout.Domain.TargetDefinition.Target;
 
 namespace Struckout.Application.Interface
 {
@@ -32,16 +33,22 @@ namespace Struckout.Application.Interface
         /// <summary>サーバーの累計得点。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
         event Action<uint> ScoreChanged;
 
+        /// <summary>登録された的。受信スレッドから通知されるため、状態・描画の更新はマーシャリングする。</summary>
+        event Action<Target> TargetAdded;
+
+        /// <summary>削除された的の UUID。受信スレッドから通知される。</summary>
+        event Action<Guid> TargetRemoved;
+
         /// <summary>イベント購読が切れた。</summary>
         event Action ConnectionLost;
 
         /// <summary>接続してイベントの購読を始める。</summary>
         Task<bool> ConnectAsync();
 
-        /// <summary>円形の的を登録する。所有者はサーバーが決め、失敗時は null を返す。</summary>
-        Task<Guid?> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default);
+        /// <summary>円形の的の登録を要求する。状態への追加は TargetAdded の受信時に行う。</summary>
+        Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default);
 
-        /// <summary>登録済みの的を削除する。移動時は削除後に新しい位置で登録する。</summary>
+        /// <summary>的の削除を要求する。状態からの削除は TargetRemoved の受信時に行う。</summary>
         Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default);
 
         /// <summary>命中を通知する。得点はサーバーが計算して ScoreChanged で通知する。</summary>

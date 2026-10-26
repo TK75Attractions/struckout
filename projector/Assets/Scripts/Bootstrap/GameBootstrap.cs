@@ -7,6 +7,7 @@ using Tk75Attractions.Struckout.GameMaster.V1;
 using Tk75Attractions.Struckout.V1;
 using System.Threading.Tasks;
 using UnityEngine;
+using Target = Struckout.Domain.TargetDefinition.Target;
 
 namespace Struckout.Bootstrap
 {
@@ -55,6 +56,8 @@ namespace Struckout.Bootstrap
             _master.GameStarted += OnGameStarted;
             _master.GameFinished += OnGameFinished;
             _master.ConnectionLost += OnConnectionLost;
+            _master.TargetAdded += OnTargetAdded;
+            _master.TargetRemoved += OnTargetRemoved;
         }
 
         private void OnGameStarted(Difficulty difficulty) =>
@@ -62,6 +65,12 @@ namespace Struckout.Bootstrap
 
         private void OnCollisionDetected(CollisionPoint point) =>
             ObserveAsync(_runtime.CollisionDetectedAsync(point)).Forget();
+
+        private void OnTargetAdded(Target target) =>
+            _dispatcher.Enqueue(() => _runtime.OnTargetAdded(target));
+
+        private void OnTargetRemoved(Guid id) =>
+            _dispatcher.Enqueue(() => _runtime.OnTargetRemoved(id));
 
         private void OnConnectionLost() => _dispatcher.Enqueue(_runtime.SuspendGame);
 
@@ -83,6 +92,8 @@ namespace Struckout.Bootstrap
             _master.GameStarted -= OnGameStarted;
             _master.GameFinished -= OnGameFinished;
             _master.ConnectionLost -= OnConnectionLost;
+            _master.TargetAdded -= OnTargetAdded;
+            _master.TargetRemoved -= OnTargetRemoved;
             _master.RemainingTimeChanged -= OnRemainingTimeChanged;
             _master.ScoreChanged -= OnScoreChanged;
             _context = null;

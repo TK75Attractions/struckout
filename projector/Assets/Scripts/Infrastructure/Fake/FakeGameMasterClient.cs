@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
+using Target = Struckout.Domain.TargetDefinition.Target;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Struckout.Infrastructure.Fake
@@ -49,6 +50,8 @@ namespace Struckout.Infrastructure.Fake
         public event Action GameFinished;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
+        public event Action<Target> TargetAdded;
+        public event Action<Guid> TargetRemoved;
 
         // ダミーは自分から切る以外に切れないので、この経路は発火しない。
         public event Action ConnectionLost;
@@ -69,9 +72,9 @@ namespace Struckout.Infrastructure.Fake
 
                 Debug.Log("[Fake] game_master connected");
 
+                RemoveAllTargets();
                 _started = true;
                 _totalScore = 0;
-                _targetRadii.Clear();
                 _startedDifficulty = Difficulty.Normal;
                 _gameCancellation = new CancellationTokenSource();
                 var elapsed = Stopwatch.StartNew();
@@ -106,6 +109,7 @@ namespace Struckout.Infrastructure.Fake
                         if (remaining <= TimeSpan.Zero)
                         {
                             _started = false;
+                            RemoveAllTargets();
                             RemainingTimeChanged?.Invoke(TimeSpan.Zero);
                             Debug.Log("[Fake] game_master -> GameFinished");
                             GameFinished?.Invoke();
@@ -121,22 +125,36 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        public Task<Guid?> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        public Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || !_started || token.IsCancellationRequested) return Task.FromResult<Guid?>(null);
+                if (!_connected || !_started || token.IsCancellationRequested) return Task.FromResult(false);
                 var id = Guid.NewGuid();
                 // Match protobuf's float precision before the server calculates in f64.
                 _targetRadii.Add(id, (float)radius);
-                return Task.FromResult<Guid?>(id);
+                TargetAdded?.Invoke(new Target(id,
+                    new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f)));
+                return Task.FromResult(true);
             }
         }
 
         public Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
         {
             lock (_stateLock)
-                return Task.FromResult(_connected && _started && !token.IsCancellationRequested && _targetRadii.Remove(targetId));
+            {
+                if (!_connected || !_started || token.IsCancellationRequested || !_targetRadii.Remove(targetId))
+                    return Task.FromResult(false);
+                TargetRemoved?.Invoke(targetId);
+                return Task.FromResult(true);
+            }
+        }
+
+        private void RemoveAllTargets()
+        {
+            var ids = new List<Guid>(_targetRadii.Keys);
+            _targetRadii.Clear();
+            foreach (var id in ids) TargetRemoved?.Invoke(id);
         }
 
         public Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
@@ -162,7 +180,6 @@ namespace Struckout.Infrastructure.Fake
             {
                 if (!_connected) return;
                 _connected = false;
-                _targetRadii.Clear();
                 _started = false;
                 cancellation = _gameCancellation;
                 gameTask = _gameTask;

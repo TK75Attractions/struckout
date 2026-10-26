@@ -2,7 +2,7 @@ namespace Struckout.Domain.TargetDefinition
 {
     /// <summary>
     /// Describes a placement before registration without inventing a local entity identity.
-    /// A Target is created only after game_master supplies its UUID.
+    /// A <see cref="Target"/> is created only when game_master publishes its UUID in TargetAdded.
     /// </summary>
     public readonly struct TargetGeometry
     {

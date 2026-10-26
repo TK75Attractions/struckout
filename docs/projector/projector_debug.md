@@ -23,15 +23,18 @@ ball_tracker の代わりには `sandbox/testTcpCLI` を使える。
 game_master は本物を起動すれば、Fake モードを使わずにシリアライズと gRPC のストリームを確認できる。
 描画やアニメーションだけを触るなら Fake モード (後述) を使う。
 
+現在の game_master は `TargetAdded` / `TargetRemoved` の配信が未実装。
+本物との接続で的を表示するには配信側の実装が必要で、Fake モードはこれらのイベントを通知する。
+
 ## 座標系と得点の約束事
 
 - `CollisionPoint` は**物理座標 (m)**。ball_tracker は的の面の上での着弾位置を送る。
   `x` が面に沿った横方向 (世界座標の y)、`y` が高さ (世界座標の z)
   (`ball_tracker/src/collision_output/network.rs`: `x = coll.y, y = coll.z`)。
-- projector は `GameStarted` 後に自分の盤面の的を `AddTarget` で登録し、応答の UUID を持つ的を生成・描画する。
+- projector は `GameStarted` 後に自分の盤面の的を `AddTarget` で登録し、`TargetAdded` の UUID と形状から的を生成・描画する。
 - 命中時は `HitTarget` を送り、game_master が半径から得点を計算する。
   HUD は `GameScoreChanged.total_score` を表示する。ゲーム ID や得点差分は送らない。
-- 命中後は `RemoveTarget` で元の的を削除し、`AddTarget` の応答で新しい UUID の別エンティティを生成する。
+- 命中後は `RemoveTarget` で元の的を削除し、`TargetRemoved` で描画を削除し、`TargetAdded` で新しい UUID の別エンティティを生成する。
   詳細は [projector_behavior.md](projector_behavior.md) を参照。
 
 ### 物理座標 → 盤面座標の変換

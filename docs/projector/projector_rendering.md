@@ -176,9 +176,10 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 - **`Target` の同一性はサーバーの UUID で決まる**。`Target.Id` に UUID を保持し、
   `UIService` も `Dictionary<Guid, Transform>` で描画を管理する
 - **未登録の `Target` は作らない**。生成候補の位置と大きさは `TargetGeometry` として計算し、
-  `AddTarget` の応答後に `Target` を作って描画・当たり判定に追加する
-- **命中後は元の的を削除し、別の的を生成する**。サーバーとローカルの元の UUID を削除し、
-  別の位置を登録してから、新しい UUID の `Target` と GameObject を作る。
+  `TargetAdded` の受信時にだけ `Target` を作って描画・当たり判定に追加する
+- **命中後は元の的を削除し、別の的を生成する**。削除・登録の要求とは別に、
+  `TargetRemoved` の受信で元の UUID を削除し、`TargetAdded` の受信で新しい UUID の
+  `Target` と GameObject を作る。
   `Target` の座標変更や同じ GameObject の移動は行わない
 - **着弾マーカーは当たり外れに関わらず出す**。座標変換がずれているのか
   単に外したのかを区別するため

@@ -48,14 +48,13 @@ namespace Struckout.Application
         }
 
         /// <summary>
-        /// Register geometry before constructing any local entities because game_master owns their identity.
+        /// Request registration of initial geometry; only TargetAdded events create local entities.
         /// Called on Unity's main thread so continuations can safely update the board.
         /// </summary>
         public async Task StartGameAsync(Difficulty difficulty)
         {
             if (_initialGeometry == null) throw new InvalidOperationException("GameSetup must run before starting a game.");
             CancelPendingOperations();
-            ClearLocalTargets();
             _gameCancellation = new CancellationTokenSource();
             var token = _gameCancellation.Token;
             _state.StartGame(difficulty);
@@ -70,36 +69,30 @@ namespace Struckout.Application
 
         private async Task RegisterTargetAsync(TargetGeometry geometry, CancellationToken token)
         {
-            var id = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
-            if (token.IsCancellationRequested) return;
-            if (!id.HasValue)
-            {
-                Debug.LogWarning("[Game] 的を登録できなかったため、生成しません。");
-                return;
-            }
-            var target = new Target(id.Value, geometry);
-            _state.AddTarget(target);
+            var accepted = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
+            if (!accepted && !token.IsCancellationRequested)
+                Debug.LogWarning("[Game] 的の登録を要求できませんでした。");
+        }
+
+        /// <summary>Apply an authoritative TargetAdded event, independently of the registration RPC response.</summary>
+        public void OnTargetAdded(Target target)
+        {
+            if (!_state.AddTarget(target)) Debug.LogWarning($"[Game] Notified target {target.Id} already exists in the GameRuntimeState");
             _uiService.AddTarget(target);
         }
 
-        private void RemoveLocalTarget(Guid id)
+        /// <summary>Apply an authoritative TargetRemoved event; RPC results never remove local targets.</summary>
+        public void OnTargetRemoved(Guid id)
         {
-            _state.RemoveTarget(id);
+            _pendingTargets.Remove(id);
+            if (!_state.RemoveTarget(id)) Debug.LogWarning($"[Game] There's no target with the notified id: {id}");
             if (!_uiService.RemoveTarget(id))
-            {
-                Debug.LogWarning($"Tried to remove the target which doesn't exist: id = {id}");
-            }
-        }
-
-        private void ClearLocalTargets()
-        {
-            foreach (var target in new List<Target>(_state.Targets)) RemoveLocalTarget(target.Id);
+                Debug.LogWarning($"[Game] 削除通知に対応する描画がありません: {id}");
         }
 
         public void FinishGame()
         {
             CancelPendingOperations();
-            ClearLocalTargets();
             _state.FinishGame();
             _uiService.SetGamePhase(GamePhase.Finished);
         }
@@ -108,7 +101,6 @@ namespace Struckout.Application
         public void SuspendGame()
         {
             CancelPendingOperations();
-            ClearLocalTargets();
             _state.SuspendGame();
             _uiService.SetGamePhase(GamePhase.Idle);
         }
@@ -122,7 +114,7 @@ namespace Struckout.Application
         }
 
         /// <summary>
-        /// Replace a hit target by removing its UUID and registering new geometry as a separate entity.
+        /// Request replacement of a hit target; target events are the only source of local state changes.
         /// Keep its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
         /// </summary>
         public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)
@@ -146,6 +138,7 @@ namespace Struckout.Application
             }
 
             var token = _gameCancellation.Token;
+            var removalRequested = false;
             try
             {
                 var hit = await _master.HitTargetAsync(target.Id, token);
@@ -157,23 +150,23 @@ namespace Struckout.Application
                     return;
                 }
 
+                removalRequested = true;
                 var removed = await _master.RemoveTargetAsync(target.Id, token);
                 if (token.IsCancellationRequested) return;
-                // If the deletion response was lost, stop displaying or accepting hits for the uncertain UUID.
-                RemoveLocalTarget(target.Id);
                 if (!removed)
                 {
                     Debug.LogWarning($"[Game] 的の削除を確認できないため、再生成を停止します: {target}");
                     return;
                 }
-                var others = _state.Targets.Select(other => other.Geometry).ToList();
+                var others = _state.Targets.Where(other => other.Id != target.Id).Select(other => other.Geometry).ToList();
                 var coordinate = _targetGenerator.PickRelocation(target.Geometry, others);
                 await RegisterTargetAsync(new TargetGeometry(coordinate, target.Type, target.Size), token);
             }
             finally
             {
-                // A subsequent game may already be processing another set of UUIDs.
-                if (!token.IsCancellationRequested) _pendingTargets.Remove(target.Id);
+                // Once deletion is requested, only TargetRemoved releases this UUID.
+                // A lost RPC response must not allow another hit on a possibly deleted target.
+                if (!token.IsCancellationRequested && !removalRequested) _pendingTargets.Remove(target.Id);
             }
         }
     }

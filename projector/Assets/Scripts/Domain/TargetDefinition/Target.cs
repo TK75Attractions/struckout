@@ -3,7 +3,7 @@ using System;
 namespace Struckout.Domain.TargetDefinition
 {
     /// <summary>
-    /// A registered target whose identity comes exclusively from game_master.
+    /// A registered target received in game_master's TargetAdded event.
     /// Replacement creates a new entity; existing geometry and UUID never change.
     /// </summary>
     public sealed class Target : IEquatable<Target>

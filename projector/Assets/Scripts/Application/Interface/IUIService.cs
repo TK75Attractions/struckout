@@ -15,7 +15,7 @@ namespace Struckout.Application.Interface
         /// <summary>game_master が確定した累計得点を表示する。</summary>
         void SetScore(uint totalScore);
 
-        /// <summary>AddTarget が返した UUID を持つ的を描画する。</summary>
+        /// <summary>TargetAdded で通知された UUID を持つ的を描画する。</summary>
         void AddTarget(Target target);
 
         /// <summary>

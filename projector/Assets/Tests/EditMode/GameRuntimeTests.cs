@@ -22,28 +22,40 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
             public event Action ConnectionLost { add { } remove { } }
+            public event Action<Target> TargetAdded;
+            public event Action<Guid> TargetRemoved;
             public readonly List<string> Calls = new();
             public readonly List<Guid> Hits = new();
             public readonly List<(TargetCoordinate Coordinate, double Radius)> Targets = new();
             public Guid CurrentId;
             public TaskCompletionSource<bool> PendingHit;
-            public TaskCompletionSource<Guid?> PendingRegistration;
+            public TaskCompletionSource<bool> PendingRegistration;
+            public bool PublishOnAdd = true;
+            public bool PublishOnRemove = true;
             public bool RemovalSucceeds = true;
             public Task<bool> ConnectAsync() => Task.FromResult(true);
             public Task DisconnectAsync() => Task.CompletedTask;
-            public Task<Guid?> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+            public async Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
             {
                 Calls.Add("add");
                 Targets.Add((coordinate, radius));
-                CurrentId = Guid.NewGuid();
-                return PendingRegistration?.Task ?? Task.FromResult<Guid?>(CurrentId);
+                var id = Guid.NewGuid();
+                CurrentId = id;
+                var accepted = PendingRegistration == null || await PendingRegistration.Task;
+                if (token.IsCancellationRequested) return false;
+                if (accepted && PublishOnAdd)
+                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f)));
+                return accepted;
             }
             public Task<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
             {
                 Calls.Add("remove");
                 Assert.That(id, Is.EqualTo(Hits[Hits.Count - 1]));
+                if (RemovalSucceeds && PublishOnRemove) EmitRemoved(id);
                 return Task.FromResult(RemovalSucceeds);
             }
+            public void EmitAdded(Target target) => TargetAdded?.Invoke(target);
+            public void EmitRemoved(Guid id) => TargetRemoved?.Invoke(id);
             public Task<bool> HitTargetAsync(Guid id, CancellationToken token = default)
             {
                 Calls.Add("hit");
@@ -84,6 +96,8 @@ namespace Struckout.Tests.Tests.EditMode
             var runtime = new GameRuntime(new CollisionSolver(new CollisionCoordinateTransform()), new TargetGenerator(), ui, client,
                 new GameSettings { initialTargetCount = 1 });
             runtime.GameSetup();
+            client.TargetAdded += runtime.OnTargetAdded;
+            client.TargetRemoved += runtime.OnTargetRemoved;
             return (runtime, client, ui);
         }
 
@@ -92,6 +106,15 @@ namespace Struckout.Tests.Tests.EditMode
             X = ui.Targets[0].Coordinate.X,
             Y = ui.Targets[0].Coordinate.Y,
         };
+
+        [Test]
+        public async Task Successful_add_rpc_alone_does_not_create_or_draw_a_target()
+        {
+            var (runtime, master, ui) = Create();
+            master.PublishOnAdd = false;
+            await runtime.StartGameAsync(Difficulty.Normal);
+            Assert.That(ui.Targets, Is.Empty, "TargetAdded を受信するまで状態と描画を変更しない");
+        }
 
         [Test]
         public async Task Hit_replaces_registration_and_uses_the_new_uuid()
@@ -133,7 +156,7 @@ namespace Struckout.Tests.Tests.EditMode
             await hit;
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit" }));
             Assert.That(ui.Added, Has.Count.EqualTo(1));
-            Assert.That(ui.Targets, Is.Empty);
+            Assert.That(ui.Targets, Has.Count.EqualTo(1));
             Assert.That(ui.Phase, Is.EqualTo(GamePhase.Finished));
         }
 
@@ -141,7 +164,7 @@ namespace Struckout.Tests.Tests.EditMode
         public async Task Old_registration_response_cannot_overwrite_a_new_games_uuid()
         {
             var (runtime, master, ui) = Create();
-            var pending = new TaskCompletionSource<Guid?>();
+            var pending = new TaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             var firstStart = runtime.StartGameAsync(Difficulty.Normal);
             await runtime.CollisionDetectedAsync(Center(ui));
@@ -150,7 +173,7 @@ namespace Struckout.Tests.Tests.EditMode
             master.PendingRegistration = null;
             await runtime.StartGameAsync(Difficulty.Hard);
             var newId = master.CurrentId;
-            pending.SetResult(Guid.NewGuid());
+            pending.SetResult(true);
             await firstStart;
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(master.Hits, Is.EqualTo(new[] { newId }));
@@ -177,11 +200,11 @@ namespace Struckout.Tests.Tests.EditMode
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
             var point = Center(ui);
-            var pending = new TaskCompletionSource<Guid?>();
+            var pending = new TaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             var hit = runtime.CollisionDetectedAsync(point);
             Assert.That(ui.Targets, Is.Empty);
-            pending.SetResult(null);
+            pending.SetResult(false);
             await hit;
             await runtime.CollisionDetectedAsync(point);
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit", "remove", "add" }));
@@ -202,31 +225,34 @@ namespace Struckout.Tests.Tests.EditMode
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(master.Hits, Is.Empty);
             Assert.That(ui.LastCollision, Is.EqualTo(CollisionResult.Ignored));
-            Assert.That(ui.Targets, Is.Empty);
+            Assert.That(ui.Targets, Has.Count.EqualTo(2));
         }
 
         [Test]
-        public async Task Target_is_created_and_drawn_only_after_add_target_returns_its_uuid()
+        public async Task Event_before_rpc_response_is_applied_without_waiting_for_the_response()
         {
             var (runtime, master, ui) = Create();
-            var pending = new TaskCompletionSource<Guid?>();
+            var pending = new TaskCompletionSource<bool>();
             master.PendingRegistration = pending;
+            master.PublishOnAdd = false;
             var start = runtime.StartGameAsync(Difficulty.Normal);
-            Assert.That(master.Calls, Is.EqualTo(new[] { "add" }));
             Assert.That(ui.Added, Is.Empty);
             var id = Guid.NewGuid();
-            pending.SetResult(id);
+            var geometry = master.Targets[0];
+            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Circle, (float)geometry.Radius * 2f)));
+            Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
+            Assert.That(start.IsCompleted, Is.False);
+            pending.SetResult(true);
             await start;
             Assert.That(ui.Targets, Has.Count.EqualTo(1));
-            Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
         }
 
         [Test]
         public async Task Failed_initial_registration_does_not_create_a_target()
         {
             var (runtime, master, ui) = Create();
-            master.PendingRegistration = new TaskCompletionSource<Guid?>();
-            master.PendingRegistration.SetResult(null);
+            master.PendingRegistration = new TaskCompletionSource<bool>();
+            master.PendingRegistration.SetResult(false);
             await runtime.StartGameAsync(Difficulty.Normal);
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(ui.Added, Is.Empty);
@@ -238,28 +264,77 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
-            var pending = new TaskCompletionSource<Guid?>();
+            var pending = new TaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             var hit = runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(ui.Targets, Is.Empty);
             runtime.FinishGame();
-            pending.SetResult(Guid.NewGuid());
+            pending.SetResult(true);
             await hit;
             Assert.That(ui.Targets, Is.Empty);
             Assert.That(ui.Added, Has.Count.EqualTo(1));
         }
 
         [Test]
-        public async Task Failed_deletion_removes_the_uncertain_uuid_from_rendering_and_hit_detection()
+        public async Task Failed_deletion_keeps_the_target_until_its_removal_event_and_blocks_further_hits()
         {
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
+            var id = ui.Targets[0].Id;
             var point = Center(ui);
             master.RemovalSucceeds = false;
             await runtime.CollisionDetectedAsync(point);
             await runtime.CollisionDetectedAsync(point);
-            Assert.That(ui.Targets, Is.Empty);
+            Assert.That(ui.Targets, Has.Count.EqualTo(1));
+            Assert.That(ui.Removed, Is.Empty);
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit", "remove" }));
+            master.EmitRemoved(id);
+            Assert.That(ui.Targets, Is.Empty);
+        }
+
+        [Test]
+        public async Task Successful_removal_response_alone_does_not_remove_a_target()
+        {
+            var (runtime, master, ui) = Create();
+            await runtime.StartGameAsync(Difficulty.Normal);
+            var original = ui.Targets[0];
+            master.PublishOnRemove = false;
+            master.PublishOnAdd = false;
+            await runtime.CollisionDetectedAsync(Center(ui));
+            Assert.That(ui.Targets[0], Is.SameAs(original));
+            Assert.That(ui.Removed, Is.Empty);
+            await runtime.CollisionDetectedAsync(Center(ui));
+            Assert.That(master.Hits, Has.Count.EqualTo(1));
+            master.EmitRemoved(original.Id);
+            Assert.That(ui.Targets, Is.Empty);
+        }
+
+        [Test]
+        public async Task Finish_disconnect_and_restart_do_not_remove_targets_without_events()
+        {
+            var (runtime, master, ui) = Create();
+            await runtime.StartGameAsync(Difficulty.Normal);
+            var id = ui.Targets[0].Id;
+            runtime.FinishGame();
+            runtime.SuspendGame();
+            master.PublishOnAdd = false;
+            await runtime.StartGameAsync(Difficulty.Normal);
+            Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
+            Assert.That(ui.Removed, Is.Empty);
+            master.EmitRemoved(id);
+            Assert.That(ui.Targets, Is.Empty);
+        }
+
+        [Test]
+        public async Task Duplicate_addition_and_unknown_removal_events_do_not_corrupt_state()
+        {
+            var (runtime, master, ui) = Create();
+            await runtime.StartGameAsync(Difficulty.Normal);
+            master.EmitAdded(ui.Targets[0]);
+            master.EmitRemoved(Guid.NewGuid());
+            Assert.That(ui.Targets, Has.Count.EqualTo(1));
+            Assert.That(ui.Added, Has.Count.EqualTo(1));
+            Assert.That(ui.Removed, Is.Empty);
         }
     }
 }
