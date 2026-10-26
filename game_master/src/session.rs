@@ -448,9 +448,10 @@ impl Sessions {
                 actual_state,
                 machine_id,
             })?;
-        let result = {
+        let (result, is_multi) = {
             let shared = state.shared.read();
-            let players = if shared.mode.is_multi() {
+            let is_multi = shared.mode.is_multi();
+            let players = if is_multi {
                 let another = self
                     .get_another(machine_id)
                     .expect("multi-play has two sessions");
@@ -463,15 +464,17 @@ impl Sessions {
                     player_id: state.player_id,
                 }
             };
-            Arc::new(GameRecord {
-                players,
-                started_at: shared.started_at,
-                difficulty: shared.difficulty,
-                score: shared.score,
-            })
+            (
+                Arc::new(GameRecord {
+                    players,
+                    started_at: shared.started_at,
+                    difficulty: shared.difficulty,
+                    score: shared.score,
+                }),
+                is_multi,
+            )
         };
-        let is_multi = matches!(result.players, GamePlayers::Multi { .. });
-        for ms in [&mut self.0.0, &mut self.0.1].into_iter().flatten() {
+        for ms in self.iter_active_mut() {
             if is_multi || ms.machine_id() == machine_id {
                 *ms = MachineSession::Finished(FinishedState {
                     machine_id: ms.machine_id(),
@@ -658,6 +661,21 @@ impl Sessions {
             (Some(id_1), Some(id_2)) => Some([id_1, id_2]),
             _ => None,
         }
+    }
+
+    /// Iterates over active sessions.
+    ///
+    /// See also [`Self::iter_active_mut()`].
+    #[allow(dead_code)] // pair of iter_active_mut()
+    fn iter_active(&self) -> impl Iterator<Item = &MachineSession> {
+        [&self.0.0, &self.0.1].into_iter().flatten()
+    }
+
+    /// Iterates over active sessions.
+    ///
+    /// Mutable version of [`Self::iter_active()`].
+    fn iter_active_mut(&mut self) -> impl Iterator<Item = &mut MachineSession> {
+        [&mut self.0.0, &mut self.0.1].into_iter().flatten()
     }
 }
 
