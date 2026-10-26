@@ -6,7 +6,6 @@ using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Tk75Attractions.Struckout.V1;
-using System.Threading.Tasks;
 using UnityEngine;
 using Target = Struckout.Domain.TargetDefinition.Target;
 
@@ -132,7 +131,7 @@ namespace Struckout.Bootstrap
             return UniTask.CompletedTask;
         }
 
-        private static async UniTaskVoid ObserveAsync(Task operation)
+        private static async UniTaskVoid ObserveAsync(UniTask operation)
         {
             try
             {

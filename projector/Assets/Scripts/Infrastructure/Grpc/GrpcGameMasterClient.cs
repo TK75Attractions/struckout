@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Cysharp.Net.Http;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -35,7 +35,7 @@ namespace Struckout.Infrastructure.Grpc
         private GameMasterSessionService.GameMasterSessionServiceClient _client;
 
         private CancellationTokenSource _listenCancellation;
-        private Task _listenTask;
+        private UniTask? _listenTask;
 
         /// <summary>machine_id に対応するゲームの開始・終了通知から管理する。</summary>
         private volatile bool _running;
@@ -59,9 +59,9 @@ namespace Struckout.Infrastructure.Grpc
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
-        public Task<bool> ConnectAsync()
+        public UniTask<bool> ConnectAsync()
         {
-            if (_channel != null) return Task.FromResult(true);
+            if (_channel != null) return UniTask.FromResult(true);
 
             var address = $"http://{_settings.masterHost}:{_settings.masterPort}";
 
@@ -79,14 +79,14 @@ namespace Struckout.Infrastructure.Grpc
             {
                 Debug.LogError($"[GameMaster] failed to open a channel to {address}: {ex.Message}");
                 Cleanup();
-                return Task.FromResult(false);
+                return UniTask.FromResult(false);
             }
 
             _listenCancellation = new CancellationTokenSource();
             _listenTask = ListenEventsAsync(_listenCancellation.Token);
 
             Debug.Log($"[GameMaster] listening for events on {address} as machine {_settings.machineId}");
-            return Task.FromResult(true);
+            return UniTask.FromResult(true);
         }
 
         /// <summary>
@@ -104,7 +104,7 @@ namespace Struckout.Infrastructure.Grpc
         /// 切断時は命中の送信を止める。状態の再取得 API がないため、
         /// 再接続後は次の GameStarted を待つ。
         /// </summary>
-        private async Task ListenEventsAsync(CancellationToken token)
+        private async UniTask ListenEventsAsync(CancellationToken token)
         {
             var lost = false;
             while (!token.IsCancellationRequested)
@@ -170,7 +170,7 @@ namespace Struckout.Infrastructure.Grpc
 
                 try
                 {
-                    await Task.Delay(ReconnectInterval, token);
+                    await UniTask.Delay(ReconnectInterval, DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
                 }
                 catch (OperationCanceledException)
                 {
@@ -282,7 +282,7 @@ namespace Struckout.Infrastructure.Grpc
             return local.Length == 1 ? new PlayerId(local[0].PlayerId) : null;
         }
 
-        public async Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
+        public async UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
         {
             if (_client == null || token.IsCancellationRequested) return null;
             try
@@ -297,7 +297,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
+        public async UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
         {
             if (_client == null || token.IsCancellationRequested) return null;
             try
@@ -313,7 +313,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
+        public async UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
         {
             if (_client == null || token.IsCancellationRequested) return null;
             try
@@ -328,7 +328,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        public async UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
         {
             if (_client == null || !_running || token.IsCancellationRequested) return false;
             try
@@ -353,7 +353,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
+        public async UniTask<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
         {
             if (_client == null || !_running || token.IsCancellationRequested) return false;
             try
@@ -373,7 +373,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
+        public async UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
         {
             if (_client == null || !_running || token.IsCancellationRequested) return false;
             try
@@ -393,7 +393,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task DisconnectAsync()
+        public async UniTask DisconnectAsync()
         {
             if (_channel == null) return;
 
@@ -403,7 +403,7 @@ namespace Struckout.Infrastructure.Grpc
             {
                 try
                 {
-                    await _listenTask;
+                    await _listenTask.Value;
                 }
                 catch (Exception ex)
                 {

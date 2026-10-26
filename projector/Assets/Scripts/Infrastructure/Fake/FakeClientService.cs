@@ -1,6 +1,6 @@
 using System;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Google.Protobuf;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
@@ -35,32 +35,32 @@ namespace Struckout.Infrastructure.Fake
 
         private bool _isConnected;
         private CancellationTokenSource _receiveCancellationToken;
-        private Task _task;
+        private UniTask? _task;
 
         public void RegisterPort(string host, int port) { }
 
-        public Task<bool> ConnectAsync()
+        public UniTask<bool> ConnectAsync()
         {
-            if (_isConnected) return Task.FromResult(true);
+            if (_isConnected) return UniTask.FromResult(true);
 
             _isConnected = true;
             _receiveCancellationToken = new CancellationTokenSource();
             _task = ReceiveCollisionAsync(_receiveCancellationToken.Token);
 
             Debug.Log("[Fake] tracker connected");
-            return Task.FromResult(true);
+            return UniTask.FromResult(true);
         }
 
-        public Task<bool> ConnectRetryAsync(uint maxAttempts) => ConnectAsync();
+        public UniTask<bool> ConnectRetryAsync(uint maxAttempts) => ConnectAsync();
 
-        public Task<bool> SendAsync(IMessage packet)
+        public UniTask<bool> SendAsync(IMessage packet)
         {
             // 対向がいないので送りっぱなしにできない。届いた内容だけ残す。
             Debug.Log($"[Fake] tracker <- {packet.Descriptor.Name} {packet}");
-            return Task.FromResult(_isConnected);
+            return UniTask.FromResult(_isConnected);
         }
 
-        public async Task DisconnectAsync()
+        public async UniTask DisconnectAsync()
         {
             if (!_isConnected) return;
 
@@ -70,7 +70,7 @@ namespace Struckout.Infrastructure.Fake
 
             try
             {
-                await _task;
+                if (_task.HasValue) await _task.Value;
             }
             catch (OperationCanceledException)
             {
@@ -82,7 +82,7 @@ namespace Struckout.Infrastructure.Fake
             _task = null;
         }
 
-        private async Task ReceiveCollisionAsync(CancellationToken token)
+        private async UniTask ReceiveCollisionAsync(CancellationToken token)
         {
             System.Random random = new();
 
@@ -105,7 +105,7 @@ namespace Struckout.Infrastructure.Fake
 
                 try
                 {
-                    await Task.Delay(IntervalMilliseconds, token);
+                    await UniTask.Delay(IntervalMilliseconds, DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
                 }
                 catch (OperationCanceledException)
                 {
