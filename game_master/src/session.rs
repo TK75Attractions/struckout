@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use struckout_macros::{EnumAsInner, EnumAsInnerMut};
 use struckout_proto::{
     Difficulty, GameMode, Target,
-    target::TargetData,
+    target::{Owner, OwnerSingle, TargetData},
     types::{MachineId, PlayerId},
 };
 use thiserror::Error;
@@ -43,8 +43,8 @@ pub enum SessionError {
     NoDifficulty(MachineId),
     #[error("game mode must be single-play or multi-play")]
     UnspecifiedGameMode,
-    #[error("multi-play mode is required to do this operation")]
-    NotMultiPlay,
+    #[error("multi-play mode is required to do this operation: {0}")]
+    NotMultiPlay(String),
     #[error("target {target_id} does not exist on machine {machine_id}")]
     TargetNotFound {
         machine_id: MachineId,
@@ -253,11 +253,18 @@ impl Sessions {
     }
 
     /// Registers a target in the running game so both multi-play machines can access it.
-    ///
-    /// Derives ownership from the authoritative mode rather than trusting client input:
-    /// single-play belongs to this machine, while multi-play belongs to all participants.
-    pub fn add_target(&mut self, mut target: Target) -> Result<Uuid, SessionError> {
-        let machine_id = target.machine_id.into();
+    pub fn add_target(
+        &mut self,
+        target_data: TargetData,
+        owner: Owner,
+    ) -> Result<Uuid, SessionError> {
+        let machine_id = match owner {
+            Owner::Single(OwnerSingle { machine_id }) => machine_id.into(),
+            // take random machine id when multi-play, since runtime state is shared between both machines
+            Owner::All(_) => self.machine_ids().ok_or(SessionError::NotMultiPlay(
+                "can't add target with Owner::All unless the session is multi-play".into(),
+            ))?[0],
+        };
         let ms = self
             .get_mut(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
@@ -271,13 +278,11 @@ impl Sessions {
             })?;
         let target_id = Uuid::new_v4();
         let mut shared = state.shared.write();
-        target.owner = Some(if shared.mode.is_multi() {
-            struckout_proto::target::Owner::All(struckout_proto::target::OwnerAll {})
-        } else {
-            struckout_proto::target::Owner::Single(struckout_proto::target::OwnerSingle {
-                machine_id: machine_id.into(),
-            })
-        });
+        let target = Target {
+            target_id: target_id.to_string(),
+            target_data: Some(target_data),
+            owner: Some(owner),
+        };
         shared.targets.insert(target_id, target);
         Ok(target_id)
     }
@@ -386,11 +391,16 @@ impl Sessions {
 
     /// Returns `Ok(score)` when current session is multi-play, otherwise [`SessionError::NotMultiPlay`].
     pub fn score_multi(&self) -> Result<u32, SessionError> {
+        // FIXME: machine_ids()で単純化できる気がする
         let Some(ms1) = &self.0.0 else {
-            return Err(SessionError::NotMultiPlay);
+            return Err(SessionError::NotMultiPlay(
+                "can't get score without machine_id".into(),
+            ));
         };
         let Some(ms2) = &self.0.1 else {
-            return Err(SessionError::NotMultiPlay);
+            return Err(SessionError::NotMultiPlay(
+                "can't get score without machine_id".into(),
+            ));
         };
         let (state1,) = ms1
             .as_running()
@@ -409,11 +419,15 @@ impl Sessions {
                 machine_id: ms2.machine_id(),
             })?;
         if !Arc::ptr_eq(&state1.shared, &state2.shared) {
-            return Err(SessionError::NotMultiPlay);
+            return Err(SessionError::NotMultiPlay(
+                "can't get score without machine_id".into(),
+            ));
         }
         let shared = state1.shared.read();
         if !shared.mode.is_multi() {
-            return Err(SessionError::NotMultiPlay);
+            return Err(SessionError::NotMultiPlay(
+                "can't get score without machine_id".into(),
+            ));
         }
         Ok(shared.score)
     }
@@ -549,6 +563,24 @@ impl Sessions {
             }
         }
     }
+
+    /// Returns machine ids registered to the session.
+    ///
+    /// If one of session slot is empty, `None` will be returned regardless of another session slot.
+    fn machine_ids(&self) -> Option<[MachineId; 2]> {
+        let mut id_1 = None;
+        let mut id_2 = None;
+        if let Some(ms) = &self.0.0 {
+            id_1 = Some(ms.machine_id());
+        }
+        if let Some(ms) = &self.0.1 {
+            id_2 = Some(ms.machine_id());
+        }
+        match (id_1, id_2) {
+            (Some(id_1), Some(id_2)) => Some([id_1, id_2]),
+            _ => None,
+        }
+    }
 }
 
 impl Default for Sessions {
@@ -674,41 +706,6 @@ mod tests {
             .set_ready(MachineId::new(2))
             .expect("difficulty is set");
         sessions
-    }
-
-    #[rstest]
-    #[case(GameMode::Single, 1)]
-    #[case(GameMode::Single, 2)]
-    #[case(GameMode::Multi, 1)]
-    #[case(GameMode::Multi, 2)]
-    fn target_owner_is_derived_from_session_mode(#[case] mode: GameMode, #[case] machine: u32) {
-        use struckout_proto::target::{Owner, OwnerAll, OwnerSingle};
-
-        let mut sessions = running_sessions(mode);
-        let machine_id = MachineId::new(machine);
-        let target_id = sessions
-            .add_target(Target {
-                machine_id: machine_id.into(),
-                owner: Some(Owner::Single(OwnerSingle { machine_id: 99 })),
-                ..Default::default()
-            })
-            .expect("running session");
-        let (state,) = sessions
-            .get(machine_id)
-            .expect("session exists")
-            .as_running()
-            .expect("running session");
-        let expected = if mode.is_multi() {
-            Owner::All(OwnerAll {})
-        } else {
-            Owner::Single(OwnerSingle {
-                machine_id: machine_id.into(),
-            })
-        };
-        assert_eq!(
-            state.shared.read().targets[&target_id].owner,
-            Some(expected)
-        );
     }
 
     #[rstest]

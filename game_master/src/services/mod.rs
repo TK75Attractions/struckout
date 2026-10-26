@@ -16,6 +16,7 @@ use struckout_proto::{
     SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
     StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
+    target::Owner,
     types::{GameId, MachineId, PlayerId},
 };
 use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
@@ -235,6 +236,10 @@ where
         ))
     }
 
+    /// Adds target to the current session.
+    ///
+    /// Owner of a target created by this RPC (i.e. by `projector`) is always [`Owner::Single`].
+    /// [`Owner::All`] can be used by special targets created by `game-master` internally.
     #[instrument]
     async fn add_target(
         &self,
@@ -251,15 +256,13 @@ where
                 struckout_proto::target::TargetData::Compass(compass)
             }
         };
-        let target = struckout_proto::Target {
-            machine_id,
-            target_data: Some(target_data),
-            owner: None,
-        };
         let target_id = self
             .sessions
             .write()
-            .add_target(target)
+            .add_target(
+                target_data,
+                Owner::Single(struckout_proto::target::OwnerSingle { machine_id }),
+            )
             .map_err(|e| Status::failed_precondition(e.to_string()))?;
         Ok(Response::new(AddTargetResponse {
             target_id: target_id.to_string(),
