@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
+using Struckout.Domain;
 using System;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
@@ -14,6 +15,7 @@ namespace Struckout.Bootstrap
     public class GameBootstrap : IAsyncDestroy
     {
         private readonly GameRuntime _runtime;
+        private readonly ScreenController _screens;
         private readonly ISensorProvider _sensorProvider;
         private readonly IUIService _service;
         private readonly IGameMasterClient _master;
@@ -27,9 +29,11 @@ namespace Struckout.Bootstrap
             ISensorProvider sensorProvider,
             IUIService uiService,
             IGameMasterClient master,
-            IMainThreadDispatcher dispatcher
+            IMainThreadDispatcher dispatcher,
+            ScreenController screens
         )
         {
+            _screens = screens ?? throw new ArgumentNullException(nameof(screens));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _sensorProvider = sensorProvider ?? throw new ArgumentNullException(nameof(sensorProvider));
             _service = uiService ?? throw new ArgumentNullException(nameof(uiService));
@@ -58,10 +62,16 @@ namespace Struckout.Bootstrap
             _master.ConnectionLost += OnConnectionLost;
             _master.TargetAdded += OnTargetAdded;
             _master.TargetRemoved += OnTargetRemoved;
+            _master.RankingScreenRequested += OnRankingScreenRequested;
+            _master.HomeScreenRequested += OnHomeScreenRequested;
         }
 
-        private void OnGameStarted(Difficulty difficulty) =>
-            _dispatcher.Enqueue(() => ObserveAsync(_runtime.StartGameAsync(difficulty)).Forget());
+        private void OnGameStarted(Difficulty difficulty, PlayerId playerId) =>
+            _dispatcher.Enqueue(() =>
+            {
+                _screens.ShowPlaying(playerId);
+                ObserveAsync(_runtime.StartGameAsync(difficulty)).Forget();
+            });
 
         private void OnCollisionDetected(CollisionPoint point) =>
             ObserveAsync(_runtime.CollisionDetectedAsync(point)).Forget();
@@ -72,10 +82,29 @@ namespace Struckout.Bootstrap
         private void OnTargetRemoved(Guid id) =>
             _dispatcher.Enqueue(() => _runtime.OnTargetRemoved(id));
 
-        private void OnConnectionLost() => _dispatcher.Enqueue(_runtime.SuspendGame);
+        private void OnConnectionLost() => _dispatcher.Enqueue(() =>
+        {
+            _runtime.SuspendGame();
+            _screens.Suspend();
+        });
 
-        private void OnGameFinished() =>
-            _dispatcher.Enqueue(_runtime.FinishGame);
+        private void OnGameFinished(GameId gameId) => _dispatcher.Enqueue(() =>
+        {
+            _runtime.FinishGame();
+            ObserveAsync(_screens.ShowScoreAsync(gameId)).Forget();
+        });
+
+        private void OnRankingScreenRequested() => _dispatcher.Enqueue(() =>
+        {
+            _runtime.FinishGame();
+            ObserveAsync(_screens.ShowRankingAsync()).Forget();
+        });
+
+        private void OnHomeScreenRequested() => _dispatcher.Enqueue(() =>
+        {
+            _runtime.SuspendGame();
+            _screens.ShowHome();
+        });
 
         private void OnRemainingTimeChanged(TimeSpan remaining) =>
             _dispatcher.Enqueue(() => _service.SetRemainingTime(remaining));
@@ -89,11 +118,14 @@ namespace Struckout.Bootstrap
             _context.PacketRouter.OnCollisionReceived -= _sensorProvider.GetSensorData;
             _sensorProvider.OnCollisionReceived -= OnCollisionDetected;
             _runtime.SuspendGame();
+            _screens.Dispose();
             _master.GameStarted -= OnGameStarted;
             _master.GameFinished -= OnGameFinished;
             _master.ConnectionLost -= OnConnectionLost;
             _master.TargetAdded -= OnTargetAdded;
             _master.TargetRemoved -= OnTargetRemoved;
+            _master.RankingScreenRequested -= OnRankingScreenRequested;
+            _master.HomeScreenRequested -= OnHomeScreenRequested;
             _master.RemainingTimeChanged -= OnRemainingTimeChanged;
             _master.ScoreChanged -= OnScoreChanged;
             _context = null;

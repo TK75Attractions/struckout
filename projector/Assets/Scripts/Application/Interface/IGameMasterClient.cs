@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Struckout.Domain;
 using System.Threading;
 using System.Threading.Tasks;
 using Struckout.Domain.TargetDefinition;
@@ -19,13 +21,16 @@ namespace Struckout.Application.Interface
         /// ゲームが始まった。この後で的を登録し、命中を通知できる。
         /// 受信スレッドから飛ぶので、UI に触る購読側はマーシャリングすること。
         /// </summary>
-        event Action<Difficulty> GameStarted;
+        event Action<Difficulty, PlayerId> GameStarted;
 
         /// <summary>
         /// 制限時間が尽きてゲームが終わった。これ以降、的の操作は受け付けられない。
         /// GameStarted と同じく受信スレッドから飛ぶ。
         /// </summary>
-        event Action GameFinished;
+        event Action<GameId> GameFinished;
+
+        event Action RankingScreenRequested;
+        event Action HomeScreenRequested;
 
         /// <summary>サーバーの残り時間。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
         event Action<TimeSpan> RemainingTimeChanged;
@@ -53,6 +58,10 @@ namespace Struckout.Application.Interface
 
         /// <summary>命中を通知する。得点はサーバーが計算して ScoreChanged で通知する。</summary>
         Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default);
+
+        Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default);
+        Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default);
+        Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default);
 
         Task DisconnectAsync();
     }

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using Struckout.Domain.TargetDefinition;
 using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Infrastructure.Grpc;
@@ -15,14 +17,21 @@ namespace Struckout.Tests.Tests.EditMode
         {
             TargetAdded = new Event.Types.TargetAdded
             {
-                TargetId = id.ToString(),
                 Target = new ProtoTarget
                 {
-                    MachineId = machineId,
+                    TargetId = id.ToString(),
+                    Single = new ProtoTarget.Types.OwnerSingle { MachineId = machineId },
                     Compass = new ProtoTarget.Types.Compass { X = 100, Y = 200, Radius = 50 },
                 },
             },
         };
+
+        private static void Dispatch(GrpcGameMasterClient client, Event received)
+        {
+            var method = typeof(GrpcGameMasterClient).GetMethod("HandleEvent", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+            method.Invoke(client, new object[] { received });
+        }
 
         [Test]
         public void Target_events_supply_server_identity_and_geometry_independently_of_rpc_responses()
@@ -33,13 +42,13 @@ namespace Struckout.Tests.Tests.EditMode
             client.TargetAdded += targets.Add;
             client.TargetRemoved += removed.Add;
             var id = Guid.NewGuid();
-            client.HandleEvent(Added(id));
+            Dispatch(client, Added(id));
             Assert.That(targets, Has.Count.EqualTo(1));
             Assert.That(targets[0].Id, Is.EqualTo(id));
             Assert.That(targets[0].Coordinate.X, Is.EqualTo(100));
             Assert.That(targets[0].Coordinate.Y, Is.EqualTo(200));
             Assert.That(targets[0].Radius, Is.EqualTo(50));
-            client.HandleEvent(new Event { TargetRemoved = new Event.Types.TargetRemoved { TargetId = id.ToString() } });
+            Dispatch(client, new Event { TargetRemoved = new Event.Types.TargetRemoved { TargetId = id.ToString() } });
             Assert.That(removed, Is.EqualTo(new[] { id }));
         }
 
@@ -49,7 +58,7 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             var targets = new List<Target>();
             client.TargetAdded += targets.Add;
-            client.HandleEvent(Added(Guid.NewGuid(), 8));
+            Dispatch(client, Added(Guid.NewGuid(), 8));
             Assert.That(targets, Is.Empty);
         }
 
@@ -64,9 +73,9 @@ namespace Struckout.Tests.Tests.EditMode
             client.TargetAdded += targets.Add;
             client.TargetRemoved += removed.Add;
             var added = Added(Guid.NewGuid());
-            added.TargetAdded.TargetId = id;
-            client.HandleEvent(added);
-            client.HandleEvent(new Event { TargetRemoved = new Event.Types.TargetRemoved { TargetId = id } });
+            added.TargetAdded.Target.TargetId = id;
+            Dispatch(client, added);
+            Dispatch(client, new Event { TargetRemoved = new Event.Types.TargetRemoved { TargetId = id } });
             Assert.That(targets, Is.Empty);
             Assert.That(removed, Is.Empty);
         }
@@ -83,7 +92,7 @@ namespace Struckout.Tests.Tests.EditMode
             client.TargetAdded += targets.Add;
             var added = Added(Guid.NewGuid());
             added.TargetAdded.Target.Compass.Radius = radius;
-            client.HandleEvent(added);
+            Dispatch(client, added);
             Assert.That(targets, Is.Empty);
         }
 
@@ -93,11 +102,103 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             var targets = new List<Target>();
             client.TargetAdded += targets.Add;
-            client.HandleEvent(new Event { TargetAdded = new Event.Types.TargetAdded { TargetId = Guid.NewGuid().ToString() } });
+            Dispatch(client, new Event { TargetAdded = new Event.Types.TargetAdded() });
             var added = Added(Guid.NewGuid());
             added.TargetAdded.Target.ClearTargetData();
-            client.HandleEvent(added);
+            Dispatch(client, added);
             Assert.That(targets, Is.Empty);
         }
+        [Test]
+        public void All_target_retains_shared_ownership()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var targets = new List<Target>();
+            client.TargetAdded += targets.Add;
+            var added = Added(Guid.NewGuid(), 8);
+            added.TargetAdded.Target.All = new ProtoTarget.Types.OwnerAll();
+            Dispatch(client, added);
+            Assert.That(targets, Has.Count.EqualTo(1));
+            Assert.That(targets[0].Ownership, Is.EqualTo(TargetOwnership.All));
+        }
+
+        [TestCase(7u, 71u)]
+        [TestCase(8u, 81u)]
+        public void Multi_play_selects_the_player_for_this_machine(uint machineId, uint expectedPlayer)
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = machineId });
+            PlayerId? received = null;
+            client.GameStarted += (_, player) => received = player;
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    Multi = new Event.Types.GameStarted.Types.Multi
+                    {
+                        Player1 = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 7, PlayerId = 71 },
+                        Player2 = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 8, PlayerId = 81 },
+                    },
+                },
+            });
+            Assert.That(received, Is.EqualTo(new PlayerId(expectedPlayer)));
+        }
+
+        [Test]
+        public void Single_play_and_finished_events_keep_player_and_game_identity_separate()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            PlayerId? player = null;
+            GameId? game = null;
+            client.GameStarted += (_, id) => player = id;
+            client.GameFinished += id => game = id;
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    Single = new Event.Types.GameStarted.Types.Single
+                    {
+                        Player = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 7, PlayerId = 71 },
+                    },
+                },
+            });
+            Dispatch(client, new Event { GameFinished = new Event.Types.GameFinished { GameId = 42 } });
+            Assert.That(player, Is.EqualTo(new PlayerId(71)));
+            Assert.That(game, Is.EqualTo(new GameId(42)));
+        }
+
+        [Test]
+        public void Navigation_events_are_filtered_by_machine_id()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var events = new List<string>();
+            client.RankingScreenRequested += () => events.Add("ranking");
+            client.HomeScreenRequested += () => events.Add("home");
+            foreach (var machine in new uint[] { 8, 7 })
+            {
+                Dispatch(client, new Event { NavigateToRankingScreenRequested = new Event.Types.NavigateToRankingScreenRequested { MachineId = machine } });
+                Dispatch(client, new Event { NavigateToHomeScreenRequsted = new Event.Types.NavigateToHomeScreenRequested { MachineId = machine } });
+            }
+            Assert.That(events, Is.EqualTo(new[] { "ranking", "home" }));
+        }
+
+        [Test]
+        public void Missing_or_unrelated_player_information_does_not_start_a_game()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var starts = 0;
+            client.GameStarted += (_, __) => starts++;
+            Dispatch(client, new Event { GameStarted = new Event.Types.GameStarted() });
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    Single = new Event.Types.GameStarted.Types.Single
+                    {
+                        Player = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 8, PlayerId = 71 },
+                    },
+                },
+            });
+            Assert.That(starts, Is.Zero);
+        }
+
     }
 }

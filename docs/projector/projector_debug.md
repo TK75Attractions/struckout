@@ -7,7 +7,7 @@ projector (Unity) は ball_tracker と game_master の 2 つにつながって�
 |---|---|---|---|---|
 | ball_tracker | 5000 | TCP | 受信 | `ProjectorPacket` (`CollisionPoint` / `TestMessage`) |
 | game_master | **8020** | **gRPC** | 受信 | `ListenEvents` のストリーム (`Event`) |
-| game_master | 8020 | gRPC | 送信 | `AddTarget` / `RemoveTarget` / `HitTarget` |
+| game_master | 8020 | gRPC | 送信 | `AddTarget` / `RemoveTarget` / `HitTarget`、結果・ランキング・本人履歴の取得 |
 
 ポートの定義は `api/spec/servers.yaml` が唯一の出どころ。Rust は `build.rs` が
 そこから読み、projector は `NetworkSettings` の既定値として持っている
@@ -108,7 +108,7 @@ Inspector の値を使い、`Player.log` に `[Collision] could not read ...` �
 
 - `FakeClientService` がランダムな衝突点 (物理座標、既定 x[-1,1] y[0,2] m) を流す
 - `FakeGameMasterClient` が接続直後に `GameStarted(NORMAL)` を、
-  90 秒後に `GameFinished` を流す
+  90 秒後にゲーム ID 付き `GameFinished` を流す。結果取得後、5 秒おきにランキング・ホームへの遷移通知を送る
 - `FakeGameMasterClient` が的の UUID と半径を保持し、本物と同じ式で得点を計算して通知する
 
 ## 2. 偽 ball_tracker につなぐ (testTcpCLI)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
 
@@ -6,8 +7,11 @@ namespace Struckout.Application.Interface
 {
     public interface IUIService
     {
-        /// <summary>投影画面をゲーム進行状態に合わせて切り替える。</summary>
-        void SetGamePhase(GamePhase phase);
+        /// <summary>サーバーからの通知に対応する画面を表示する。</summary>
+        void SetScreen(ProjectorScreen screen);
+        void ShowGameResult(uint score);
+        void ShowRanking(IReadOnlyList<RankingRow> rows);
+        void ShowScreenMessage(string message);
 
         /// <summary>game_master から受信した残り時間を表示する。</summary>
         void SetRemainingTime(TimeSpan remaining);

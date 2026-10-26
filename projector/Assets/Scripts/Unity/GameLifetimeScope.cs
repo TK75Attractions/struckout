@@ -107,7 +107,7 @@ namespace Struckout.Unity
             if (networkSettings.mode == NetworkMode.Fake)
             {
                 builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
-                builder.Register<IGameMasterClient, FakeGameMasterClient>(Lifetime.Singleton);
+                builder.Register<IGameMasterClient>(_ => new FakeGameMasterClient(), Lifetime.Singleton);
             }
             else
             {
@@ -122,6 +122,7 @@ namespace Struckout.Unity
             if (fieldCamera != null) builder.RegisterComponent(fieldCamera);
             else Debug.LogWarning("FieldCamera is not assigned; the camera will not match the field.");
             builder.Register<GameRuntime>(Lifetime.Singleton);
+            builder.Register<ScreenController>(Lifetime.Singleton);
 
             builder.Register<ICollisionSolver, CollisionSolver>(Lifetime.Singleton);
             builder.Register<ISensorProvider, SensorProvider>(Lifetime.Singleton);

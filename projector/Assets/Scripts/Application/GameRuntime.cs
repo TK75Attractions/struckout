@@ -58,7 +58,6 @@ namespace Struckout.Application
             _gameCancellation = new CancellationTokenSource();
             var token = _gameCancellation.Token;
             _state.StartGame(difficulty);
-            _uiService.SetGamePhase(GamePhase.Playing);
 
             foreach (var geometry in _initialGeometry)
             {
@@ -94,7 +93,6 @@ namespace Struckout.Application
         {
             CancelPendingOperations();
             _state.FinishGame();
-            _uiService.SetGamePhase(GamePhase.Finished);
         }
 
         /// <summary>Stop accepting hits after disconnection because the stream cannot restore a session snapshot.</summary>
@@ -102,7 +100,6 @@ namespace Struckout.Application
         {
             CancelPendingOperations();
             _state.SuspendGame();
-            _uiService.SetGamePhase(GamePhase.Idle);
         }
 
         private void CancelPendingOperations()
@@ -149,6 +146,8 @@ namespace Struckout.Application
                     Debug.LogWarning($"[Game] 命中を通知できませんでした: {target}");
                     return;
                 }
+
+                if (target.Ownership == TargetOwnership.All) return;
 
                 removalRequested = true;
                 var removed = await _master.RemoveTargetAsync(target.Id, token);

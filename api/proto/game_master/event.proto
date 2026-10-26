@@ -12,7 +12,24 @@ message Event {
   }
 
   message GameStarted {
+    message PlayerInfo {
+      uint32 machine_id = 1;
+      uint32 player_id = 2;
+    }
+    message Single {
+      PlayerInfo player = 1;
+    }
+
+    message Multi {
+      PlayerInfo player_1 = 1;
+      PlayerInfo player_2 = 2;
+    }
+
     Difficulty difficulty = 1;
+    oneof game_started_player_info {
+      Single single = 2;
+      Multi multi = 3;
+    }
   }
 
   message GameTimeLimitNotify {

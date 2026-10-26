@@ -17,10 +17,15 @@ namespace Struckout.Tests.Tests.EditMode
     {
         private sealed class Client : IGameMasterClient
         {
-            public event Action<Difficulty> GameStarted { add { } remove { } }
-            public event Action GameFinished { add { } remove { } }
+            public event Action<Difficulty, PlayerId> GameStarted { add { } remove { } }
+            public event Action<GameId> GameFinished { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
+            public event Action RankingScreenRequested { add { } remove { } }
+            public event Action HomeScreenRequested { add { } remove { } }
+            public Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default) => Task.FromResult<uint?>(null);
+            public Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default) => Task.FromResult<IReadOnlyList<RankingEntry>>(null);
+            public Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default) => Task.FromResult<IReadOnlyList<PlayerGame>>(null);
             public event Action ConnectionLost { add { } remove { } }
             public event Action<Target> TargetAdded;
             public event Action<Guid> TargetRemoved;
@@ -44,7 +49,7 @@ namespace Struckout.Tests.Tests.EditMode
                 var accepted = PendingRegistration == null || await PendingRegistration.Task;
                 if (token.IsCancellationRequested) return false;
                 if (accepted && PublishOnAdd)
-                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f)));
+                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f), TargetOwnership.Single));
                 return accepted;
             }
             public Task<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
@@ -69,20 +74,23 @@ namespace Struckout.Tests.Tests.EditMode
             public readonly List<Target> Targets = new();
             public readonly List<Target> Added = new();
             public readonly List<Guid> Removed = new();
-            public GamePhase Phase;
+            public ProjectorScreen Screen;
             public CollisionResult LastCollision;
-            public void SetGamePhase(GamePhase phase) => Phase = phase;
+            public void SetScreen(ProjectorScreen screen) => Screen = screen;
+            public void ShowGameResult(uint score) { }
+            public void ShowRanking(IReadOnlyList<RankingRow> rows) { }
+            public void ShowScreenMessage(string message) { }
             public void SetRemainingTime(TimeSpan remaining) { }
             public void SetScore(uint score) { }
             public void AddTarget(Target target)
             {
-                Assert.That(Targets.Exists(other => other.Id == target.Id), Is.False);
+                if (Targets.Exists(other => other.Id == target.Id)) return;
                 Targets.Add(target);
                 Added.Add(target);
             }
             public bool RemoveTarget(Guid id)
             {
-                Assert.That(Targets.RemoveAll(target => target.Id == id), Is.EqualTo(1));
+                if (Targets.RemoveAll(target => target.Id == id) == 0) return false;
                 Removed.Add(id);
                 return true;
             }
@@ -157,7 +165,8 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit" }));
             Assert.That(ui.Added, Has.Count.EqualTo(1));
             Assert.That(ui.Targets, Has.Count.EqualTo(1));
-            Assert.That(ui.Phase, Is.EqualTo(GamePhase.Finished));
+            await runtime.CollisionDetectedAsync(Center(ui));
+            Assert.That(ui.LastCollision, Is.EqualTo(CollisionResult.Ignored));
         }
 
         [Test]
@@ -239,7 +248,7 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(ui.Added, Is.Empty);
             var id = Guid.NewGuid();
             var geometry = master.Targets[0];
-            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Circle, (float)geometry.Radius * 2f)));
+            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Circle, (float)geometry.Radius * 2f), TargetOwnership.Single));
             Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
             Assert.That(start.IsCompleted, Is.False);
             pending.SetResult(true);
@@ -336,5 +345,24 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(ui.Added, Has.Count.EqualTo(1));
             Assert.That(ui.Removed, Is.Empty);
         }
+        [Test]
+        public async Task All_target_hits_do_not_request_removal_or_replacement()
+        {
+            var (runtime, master, ui) = Create();
+            master.PublishOnAdd = false;
+            await runtime.StartGameAsync(Difficulty.Normal);
+            var shared = new Target(Guid.NewGuid(),
+                new TargetGeometry(new TargetCoordinate(500, 500), TargetType.Circle, 100), TargetOwnership.All);
+            master.EmitAdded(shared);
+            master.Calls.Clear();
+            await runtime.CollisionDetectedAsync(Center(ui));
+            await runtime.CollisionDetectedAsync(Center(ui));
+            Assert.That(master.Calls, Is.EqualTo(new[] { "hit", "hit" }));
+            Assert.That(ui.Targets[0], Is.SameAs(shared));
+            Assert.That(ui.Removed, Is.Empty);
+            master.EmitRemoved(shared.Id);
+            Assert.That(ui.Targets, Is.Empty);
+        }
+
     }
 }

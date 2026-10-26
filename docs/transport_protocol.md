@@ -1,7 +1,9 @@
 ## game_master と projector の間
 
 `api/proto/game_master/` の `GameMasterSessionService` を gRPC で呼び出す。
-projector は `ListenEvents(machine_id)` のストリームで開始・残り時間・累計得点・終了を受け取る。
+projector は `ListenEvents(machine_id)` のストリームで開始・残り時間・累計得点・終了と画面遷移通知を受け取る。
+開始通知のプレイヤー情報を筐体ごとに選び、終了通知のゲーム ID で `GetGameResult` を呼ぶ。
+ランキング画面では `GetRanking` と `GetGamesByPlayer` の結果を統合する。
 各 projector は自分の盤面の的を `AddTarget(machine_id, target_data)` で登録し、
 応答の UUID で `HitTarget` を通知する。所有者の設定と得点計算は game_master が行う。
 移動時は `RemoveTarget` の後に新しい位置を登録する。

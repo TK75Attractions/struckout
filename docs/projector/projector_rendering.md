@@ -164,6 +164,8 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 | `Infrastructure/TargetGenerator.cs` | 的の**位置と大きさ**を決める | 中。見た目の前提を決めている |
 | `Domain/TargetDefinition/Target.cs` | サーバー UUID を持つ不変の的。`Size` は直径 | 低 |
 | `Application/GameRuntime.cs` | 的の登録・命中通知・削除と再生成。UI を呼ぶ側 | 低 |
+| `Application/ScreenController.cs` | 結果取得・ランキング統合と画面遷移。遅延応答のキャンセル | 中 |
+| `Unity/ResultScreenView.cs` | 日本語の結果画面と得点順の統合ランキング | 高 |
 
 ### 押さえておくべき約束事
 
@@ -335,7 +337,7 @@ Fake モードでは以下が動く。
 
 - `FakeClientService` がダミーの着弾を流す
 - `FakeGameMasterClient` が接続直後に `GameStarted` を、
-  90 秒後に `GameFinished` を流す
+  90 秒後にゲーム ID 付き `GameFinished` を流す。さらにランキングとホームへの遷移通知を送る
 - `FakeGameMasterClient` が的を登録し、game_master と同じ式で得点を計算して通知する
 
 つまり **描画とアニメーションの調整は対向を立てずに完結する。**

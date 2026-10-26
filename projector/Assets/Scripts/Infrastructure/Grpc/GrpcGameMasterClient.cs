@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Net.Http;
@@ -41,8 +43,10 @@ namespace Struckout.Infrastructure.Grpc
         /// <summary>game_master と切れたとき、購読をやり直す間隔。</summary>
         private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
 
-        public event Action<Difficulty> GameStarted;
-        public event Action GameFinished;
+        public event Action<Difficulty, PlayerId> GameStarted;
+        public event Action<GameId> GameFinished;
+        public event Action RankingScreenRequested;
+        public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
         public event Action ConnectionLost;
@@ -180,14 +184,19 @@ namespace Struckout.Infrastructure.Grpc
             switch (received.EventDataCase)
             {
                 case Event.EventDataOneofCase.GameStarted:
+                    var playerId = LocalPlayer(received.GameStarted);
+                    if (!playerId.HasValue)
+                    {
+                        Debug.LogWarning("[GameMaster] 開始通知に自分の筐体のプレイヤー情報がありません。");
+                        break;
+                    }
                     _running = true;
-                    GameStarted?.Invoke(received.GameStarted.Difficulty);
+                    GameStarted?.Invoke(received.GameStarted.Difficulty, playerId.Value);
                     break;
 
                 case Event.EventDataOneofCase.GameFinished:
-                    if (!_running) break;
                     _running = false;
-                    GameFinished?.Invoke();
+                    GameFinished?.Invoke(new GameId(received.GameFinished.GameId));
                     break;
 
                 case Event.EventDataOneofCase.GameTimeLimitNotify:
@@ -213,6 +222,16 @@ namespace Struckout.Infrastructure.Grpc
                     ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
                     break;
 
+                case Event.EventDataOneofCase.NavigateToRankingScreenRequested:
+                    if (received.NavigateToRankingScreenRequested.MachineId == _settings.machineId)
+                        RankingScreenRequested?.Invoke();
+                    break;
+
+                case Event.EventDataOneofCase.NavigateToHomeScreenRequsted:
+                    if (received.NavigateToHomeScreenRequsted.MachineId == _settings.machineId)
+                        HomeScreenRequested?.Invoke();
+                    break;
+
                 case Event.EventDataOneofCase.TargetAdded:
                     var added = received.TargetAdded;
                     var data = added.Target;
@@ -232,7 +251,8 @@ namespace Struckout.Infrastructure.Grpc
                         break;
                     }
                     TargetAdded?.Invoke(new DomainTarget(targetId,
-                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Circle, compass.Radius * 2f)));
+                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Circle, compass.Radius * 2f),
+                        data.OwnerCase == ProtoTarget.OwnerOneofCase.All ? TargetOwnership.All : TargetOwnership.Single));
                     break;
 
                 case Event.EventDataOneofCase.TargetRemoved:
@@ -247,6 +267,64 @@ namespace Struckout.Infrastructure.Grpc
                 default:
                     Debug.Log($"[GameMaster] unhandled event: {received.EventDataCase}");
                     break;
+            }
+        }
+
+        private PlayerId? LocalPlayer(Event.Types.GameStarted started)
+        {
+            var players = started.GameStartedPlayerInfoCase switch
+            {
+                Event.Types.GameStarted.GameStartedPlayerInfoOneofCase.Single => new[] { started.Single.Player },
+                Event.Types.GameStarted.GameStartedPlayerInfoOneofCase.Multi => new[] { started.Multi.Player1, started.Multi.Player2 },
+                _ => Array.Empty<Event.Types.GameStarted.Types.PlayerInfo>(),
+            };
+            var local = players.Where(player => player != null && player.MachineId == _settings.machineId).ToArray();
+            return local.Length == 1 ? new PlayerId(local[0].PlayerId) : null;
+        }
+
+        public async Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
+        {
+            if (_client == null || token.IsCancellationRequested) return null;
+            try
+            {
+                var response = await _client.GetGameResultAsync(new GetGameResultRequest { GameId = gameId.Value }, cancellationToken: token);
+                return response.TotalScore;
+            }
+            catch (RpcException error)
+            {
+                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] 結果の取得に失敗しました: {error.StatusCode} {error.Status.Detail}");
+                return null;
+            }
+        }
+
+        public async Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
+        {
+            if (_client == null || token.IsCancellationRequested) return null;
+            try
+            {
+                var response = await _client.GetRankingAsync(new GetRankingRequest { MaxItemNum = maxItemCount }, cancellationToken: token);
+                return response.TopN.Select(item => new RankingEntry(new GameId(item.GameId), item.TotalScore,
+                    new PlayerId(item.PlayerId), item.PlayerName)).ToArray();
+            }
+            catch (RpcException error)
+            {
+                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] ランキングの取得に失敗しました: {error.StatusCode} {error.Status.Detail}");
+                return null;
+            }
+        }
+
+        public async Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
+        {
+            if (_client == null || token.IsCancellationRequested) return null;
+            try
+            {
+                var response = await _client.GetGamesByPlayerAsync(new GetGamesByPlayerRequest { PlayerId = playerId.Value }, cancellationToken: token);
+                return response.Items.Select(item => new PlayerGame(new GameId(item.GameId), item.TotalScore)).ToArray();
+            }
+            catch (RpcException error)
+            {
+                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] プレイヤーの履歴を取得できませんでした: {error.StatusCode} {error.Status.Detail}");
+                return null;
             }
         }
 

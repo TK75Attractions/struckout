@@ -10,6 +10,7 @@ namespace Struckout.Domain.TargetDefinition
     {
         public Guid Id { get; }
         public TargetGeometry Geometry { get; }
+        public TargetOwnership Ownership { get; }
         public TargetCoordinate Coordinate => Geometry.Coordinate;
         public TargetType Type => Geometry.Type;
         public float Size => Geometry.Size;
@@ -17,11 +18,12 @@ namespace Struckout.Domain.TargetDefinition
         public float Radius => Geometry.Radius;
         public float RadiusSquared => Geometry.RadiusSquared;
 
-        public Target(Guid id, TargetGeometry geometry)
+        public Target(Guid id, TargetGeometry geometry, TargetOwnership ownership)
         {
             if (id == Guid.Empty) throw new ArgumentException("A registered target requires a non-empty UUID.", nameof(id));
             Id = id;
             Geometry = geometry;
+            Ownership = ownership;
         }
 
         public bool Equals(Target other) => other != null && Id == other.Id;
