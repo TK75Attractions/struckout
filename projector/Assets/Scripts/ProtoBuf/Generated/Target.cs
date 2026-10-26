@@ -25,30 +25,30 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChhnYW1lX21hc3Rlci90YXJnZXQucHJvdG8SKHRrNzVhdHRyYWN0aW9ucy5z",
-            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEitQMKBlRhcmdldBIdCgptYWNoaW5l",
-            "X2lkGAEgASgNUgltYWNoaW5lSWQSVAoHY29tcGFzcxgCIAEoCzI4LnRrNzVh",
-            "dHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0LkNv",
-            "bXBhc3NIAFIHY29tcGFzcxJWCgZzaW5nbGUYAyABKAsyPC50azc1YXR0cmFj",
-            "dGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Pd25lclNp",
-            "bmdsZUgBUgZzaW5nbGUSTQoDYWxsGAQgASgLMjkudGs3NWF0dHJhY3Rpb25z",
-            "LnN0cnVja291dC5nYW1lX21hc3Rlci52MS5UYXJnZXQuT3duZXJBbGxIAVID",
-            "YWxsGj0KB0NvbXBhc3MSDAoBeBgBIAEoAlIBeBIMCgF5GAIgASgCUgF5EhYK",
-            "BnJhZGl1cxgDIAEoAlIGcmFkaXVzGiwKC093bmVyU2luZ2xlEh0KCm1hY2hp",
-            "bmVfaWQYASABKA1SCW1hY2hpbmVJZBoKCghPd25lckFsbEINCgt0YXJnZXRf",
-            "ZGF0YUIHCgVvd25lciKWAQoQQWRkVGFyZ2V0UmVxdWVzdBIdCgptYWNoaW5l",
-            "X2lkGAEgASgNUgltYWNoaW5lSWQSVAoHY29tcGFzcxgCIAEoCzI4LnRrNzVh",
-            "dHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0LkNv",
-            "bXBhc3NIAFIHY29tcGFzc0INCgt0YXJnZXRfZGF0YSIwChFBZGRUYXJnZXRS",
-            "ZXNwb25zZRIbCgl0YXJnZXRfaWQYASABKAlSCHRhcmdldElkIlEKE1JlbW92",
-            "ZVRhcmdldFJlcXVlc3QSHQoKbWFjaGluZV9pZBgBIAEoDVIJbWFjaGluZUlk",
-            "EhsKCXRhcmdldF9pZBgCIAEoCVIIdGFyZ2V0SWQiFgoUUmVtb3ZlVGFyZ2V0",
-            "UmVzcG9uc2UiTgoQSGl0VGFyZ2V0UmVxdWVzdBIdCgptYWNoaW5lX2lkGAEg",
-            "ASgNUgltYWNoaW5lSWQSGwoJdGFyZ2V0X2lkGAIgASgJUgh0YXJnZXRJZCIT",
-            "ChFIaXRUYXJnZXRSZXNwb25zZWIGcHJvdG8z"));
+            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEiswMKBlRhcmdldBIbCgl0YXJnZXRf",
+            "aWQYASABKAlSCHRhcmdldElkElQKB2NvbXBhc3MYAiABKAsyOC50azc1YXR0",
+            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Db21w",
+            "YXNzSABSB2NvbXBhc3MSVgoGc2luZ2xlGAMgASgLMjwudGs3NWF0dHJhY3Rp",
+            "b25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5UYXJnZXQuT3duZXJTaW5n",
+            "bGVIAVIGc2luZ2xlEk0KA2FsbBgEIAEoCzI5LnRrNzVhdHRyYWN0aW9ucy5z",
+            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0Lk93bmVyQWxsSAFSA2Fs",
+            "bBo9CgdDb21wYXNzEgwKAXgYASABKAJSAXgSDAoBeRgCIAEoAlIBeRIWCgZy",
+            "YWRpdXMYAyABKAJSBnJhZGl1cxosCgtPd25lclNpbmdsZRIdCgptYWNoaW5l",
+            "X2lkGAEgASgNUgltYWNoaW5lSWQaCgoIT3duZXJBbGxCDQoLdGFyZ2V0X2Rh",
+            "dGFCBwoFb3duZXIilgEKEEFkZFRhcmdldFJlcXVlc3QSHQoKbWFjaGluZV9p",
+            "ZBgBIAEoDVIJbWFjaGluZUlkElQKB2NvbXBhc3MYAiABKAsyOC50azc1YXR0",
+            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Db21w",
+            "YXNzSABSB2NvbXBhc3NCDQoLdGFyZ2V0X2RhdGEiMAoRQWRkVGFyZ2V0UmVz",
+            "cG9uc2USGwoJdGFyZ2V0X2lkGAEgASgJUgh0YXJnZXRJZCJRChNSZW1vdmVU",
+            "YXJnZXRSZXF1ZXN0Eh0KCm1hY2hpbmVfaWQYASABKA1SCW1hY2hpbmVJZBIb",
+            "Cgl0YXJnZXRfaWQYAiABKAlSCHRhcmdldElkIhYKFFJlbW92ZVRhcmdldFJl",
+            "c3BvbnNlIk4KEEhpdFRhcmdldFJlcXVlc3QSHQoKbWFjaGluZV9pZBgBIAEo",
+            "DVIJbWFjaGluZUlkEhsKCXRhcmdldF9pZBgCIAEoCVIIdGFyZ2V0SWQiEwoR",
+            "SGl0VGFyZ2V0UmVzcG9uc2ViBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Parser, new[]{ "MachineId", "Compass", "Single", "All" }, new[]{ "TargetData", "Owner" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass.Parser, new[]{ "X", "Y", "Radius" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Parser, new[]{ "TargetId", "Compass", "Single", "All" }, new[]{ "TargetData", "Owner" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass.Parser, new[]{ "X", "Y", "Radius" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerSingle), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerSingle.Parser, new[]{ "MachineId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerAll), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerAll.Parser, null, null, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetRequest), global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetRequest.Parser, new[]{ "MachineId", "Compass" }, new[]{ "TargetData" }, null, null, null),
@@ -101,7 +101,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public Target(Target other) : this() {
-      machineId_ = other.machineId_;
+      targetId_ = other.targetId_;
       switch (other.TargetDataCase) {
         case TargetDataOneofCase.Compass:
           Compass = other.Compass.Clone();
@@ -126,15 +126,15 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       return new Target(this);
     }
 
-    /// <summary>Field number for the "machine_id" field.</summary>
-    public const int MachineIdFieldNumber = 1;
-    private uint machineId_;
+    /// <summary>Field number for the "target_id" field.</summary>
+    public const int TargetIdFieldNumber = 1;
+    private string targetId_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public uint MachineId {
-      get { return machineId_; }
+    public string TargetId {
+      get { return targetId_; }
       set {
-        machineId_ = value;
+        targetId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
@@ -230,7 +230,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (MachineId != other.MachineId) return false;
+      if (TargetId != other.TargetId) return false;
       if (!object.Equals(Compass, other.Compass)) return false;
       if (!object.Equals(Single, other.Single)) return false;
       if (!object.Equals(All, other.All)) return false;
@@ -243,7 +243,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (MachineId != 0) hash ^= MachineId.GetHashCode();
+      if (TargetId.Length != 0) hash ^= TargetId.GetHashCode();
       if (targetDataCase_ == TargetDataOneofCase.Compass) hash ^= Compass.GetHashCode();
       if (ownerCase_ == OwnerOneofCase.Single) hash ^= Single.GetHashCode();
       if (ownerCase_ == OwnerOneofCase.All) hash ^= All.GetHashCode();
@@ -267,9 +267,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (MachineId != 0) {
-        output.WriteRawTag(8);
-        output.WriteUInt32(MachineId);
+      if (TargetId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TargetId);
       }
       if (targetDataCase_ == TargetDataOneofCase.Compass) {
         output.WriteRawTag(18);
@@ -293,9 +293,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (MachineId != 0) {
-        output.WriteRawTag(8);
-        output.WriteUInt32(MachineId);
+      if (TargetId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TargetId);
       }
       if (targetDataCase_ == TargetDataOneofCase.Compass) {
         output.WriteRawTag(18);
@@ -319,8 +319,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (MachineId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MachineId);
+      if (TargetId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetId);
       }
       if (targetDataCase_ == TargetDataOneofCase.Compass) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Compass);
@@ -343,8 +343,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       if (other == null) {
         return;
       }
-      if (other.MachineId != 0) {
-        MachineId = other.MachineId;
+      if (other.TargetId.Length != 0) {
+        TargetId = other.TargetId;
       }
       switch (other.TargetDataCase) {
         case TargetDataOneofCase.Compass:
@@ -389,8 +389,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 8: {
-            MachineId = input.ReadUInt32();
+          case 10: {
+            TargetId = input.ReadString();
             break;
           }
           case 18: {
@@ -439,8 +439,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 8: {
-            MachineId = input.ReadUInt32();
+          case 10: {
+            TargetId = input.ReadString();
             break;
           }
           case 18: {

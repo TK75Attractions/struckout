@@ -216,12 +216,13 @@ namespace Struckout.Infrastructure.Grpc
                 case Event.EventDataOneofCase.TargetAdded:
                     var added = received.TargetAdded;
                     var data = added.Target;
-                    if (data == null || !Guid.TryParse(added.TargetId, out var targetId) || targetId == Guid.Empty)
+                    if (data == null || !Guid.TryParse(data.TargetId, out var targetId) || targetId == Guid.Empty)
                     {
                         Debug.LogWarning("[GameMaster] 的の追加通知に有効な UUID または的データがありません。");
                         break;
                     }
-                    if (data.MachineId != _settings.machineId) break;
+
+                    if (!data.IsOwnedBy(_settings.machineId)) break;
                     var compass = data.Compass;
                     if (compass == null || float.IsNaN(compass.X) || float.IsInfinity(compass.X) ||
                         float.IsNaN(compass.Y) || float.IsInfinity(compass.Y) ||

@@ -27,7 +27,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             "ChdnYW1lX21hc3Rlci9ldmVudC5wcm90bxIodGs3NWF0dHJhY3Rpb25zLnN0",
             "cnVja291dC5nYW1lX21hc3Rlci52MRoYZ2FtZV9tYXN0ZXIvdGFyZ2V0LnBy",
             "b3RvGhdnYW1lX21hc3Rlci90eXBlcy5wcm90bxoeZ29vZ2xlL3Byb3RvYnVm",
-            "L2R1cmF0aW9uLnByb3RvIogOCgVFdmVudBJgCgxnYW1lX3N0YXJ0ZWQYASAB",
+            "L2R1cmF0aW9uLnByb3RvIusNCgVFdmVudBJgCgxnYW1lX3N0YXJ0ZWQYASAB",
             "KAsyOy50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYx",
             "LkV2ZW50LkdhbWVTdGFydGVkSABSC2dhbWVTdGFydGVkEnoKFmdhbWVfdGlt",
             "ZV9saW1pdF9ub3RpZnkYAiABKAsyQy50azc1YXR0cmFjdGlvbnMuc3RydWNr",
@@ -63,14 +63,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             "cmVtYWluaW5nGjMKEEdhbWVTY29yZUNoYW5nZWQSHwoLdG90YWxfc2NvcmUY",
             "ASABKA1SCnRvdGFsU2NvcmUaDgoMR2FtZUZpbmlzaGVkGhEKD1R1dG9yaWFs",
             "U3RhcnRlZBodChtUdXRvcmlhbE5hdmlnYXRlZFRvUHJldmlvdXMaGQoXVHV0",
-            "b3JpYWxOYXZpZ2F0ZWRUb05leHQadAoLVGFyZ2V0QWRkZWQSSAoGdGFyZ2V0",
+            "b3JpYWxOYXZpZ2F0ZWRUb05leHQaVwoLVGFyZ2V0QWRkZWQSSAoGdGFyZ2V0",
             "GAEgASgLMjAudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rl",
-            "ci52MS5UYXJnZXRSBnRhcmdldBIbCgl0YXJnZXRfaWQYAiABKAlSCHRhcmdl",
-            "dElkGiwKDVRhcmdldFJlbW92ZWQSGwoJdGFyZ2V0X2lkGAEgASgJUgh0YXJn",
-            "ZXRJZEIMCgpldmVudF9kYXRhIjQKE0xpc3RlbkV2ZW50c1JlcXVlc3QSHQoK",
-            "bWFjaGluZV9pZBgBIAEoDVIJbWFjaGluZUlkIl0KFExpc3RlbkV2ZW50c1Jl",
-            "c3BvbnNlEkUKBWV2ZW50GAEgASgLMi8udGs3NWF0dHJhY3Rpb25zLnN0cnVj",
-            "a291dC5nYW1lX21hc3Rlci52MS5FdmVudFIFZXZlbnRiBnByb3RvMw=="));
+            "ci52MS5UYXJnZXRSBnRhcmdldBosCg1UYXJnZXRSZW1vdmVkEhsKCXRhcmdl",
+            "dF9pZBgBIAEoCVIIdGFyZ2V0SWRCDAoKZXZlbnRfZGF0YSI0ChNMaXN0ZW5F",
+            "dmVudHNSZXF1ZXN0Eh0KCm1hY2hpbmVfaWQYASABKA1SCW1hY2hpbmVJZCJd",
+            "ChRMaXN0ZW5FdmVudHNSZXNwb25zZRJFCgVldmVudBgBIAEoCzIvLnRrNzVh",
+            "dHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuRXZlbnRSBWV2",
+            "ZW50YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Tk75Attractions.Struckout.GameMaster.V1.TargetReflection.Descriptor, global::Tk75Attractions.Struckout.GameMaster.V1.TypesReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -82,7 +82,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TutorialStarted), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TutorialStarted.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TutorialNavigatedToPrevious), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TutorialNavigatedToPrevious.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TutorialNavigatedToNext), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TutorialNavigatedToNext.Parser, null, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TargetAdded), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TargetAdded.Parser, new[]{ "Target", "TargetId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TargetAdded), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TargetAdded.Parser, new[]{ "Target" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TargetRemoved), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.TargetRemoved.Parser, new[]{ "TargetId" }, null, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest), global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest.Parser, new[]{ "MachineId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse), global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse.Parser, new[]{ "Event" }, null, null, null, null)
@@ -2303,7 +2303,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public TargetAdded(TargetAdded other) : this() {
           target_ = other.target_ != null ? other.target_.Clone() : null;
-          targetId_ = other.targetId_;
           _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
         }
 
@@ -2325,18 +2324,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           }
         }
 
-        /// <summary>Field number for the "target_id" field.</summary>
-        public const int TargetIdFieldNumber = 2;
-        private string targetId_ = "";
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public string TargetId {
-          get { return targetId_; }
-          set {
-            targetId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-          }
-        }
-
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override bool Equals(object other) {
@@ -2353,7 +2340,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             return true;
           }
           if (!object.Equals(Target, other.Target)) return false;
-          if (TargetId != other.TargetId) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
 
@@ -2362,7 +2348,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         public override int GetHashCode() {
           int hash = 1;
           if (target_ != null) hash ^= Target.GetHashCode();
-          if (TargetId.Length != 0) hash ^= TargetId.GetHashCode();
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
           }
@@ -2385,10 +2370,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             output.WriteRawTag(10);
             output.WriteMessage(Target);
           }
-          if (TargetId.Length != 0) {
-            output.WriteRawTag(18);
-            output.WriteString(TargetId);
-          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(output);
           }
@@ -2403,10 +2384,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             output.WriteRawTag(10);
             output.WriteMessage(Target);
           }
-          if (TargetId.Length != 0) {
-            output.WriteRawTag(18);
-            output.WriteString(TargetId);
-          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(ref output);
           }
@@ -2419,9 +2396,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           int size = 0;
           if (target_ != null) {
             size += 1 + pb::CodedOutputStream.ComputeMessageSize(Target);
-          }
-          if (TargetId.Length != 0) {
-            size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetId);
           }
           if (_unknownFields != null) {
             size += _unknownFields.CalculateSize();
@@ -2440,9 +2414,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
               Target = new global::Tk75Attractions.Struckout.GameMaster.V1.Target();
             }
             Target.MergeFrom(other.Target);
-          }
-          if (other.TargetId.Length != 0) {
-            TargetId = other.TargetId;
           }
           _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
         }
@@ -2470,10 +2441,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
                 input.ReadMessage(Target);
                 break;
               }
-              case 18: {
-                TargetId = input.ReadString();
-                break;
-              }
             }
           }
         #endif
@@ -2498,10 +2465,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
                   Target = new global::Tk75Attractions.Struckout.GameMaster.V1.Target();
                 }
                 input.ReadMessage(Target);
-                break;
-              }
-              case 18: {
-                TargetId = input.ReadString();
                 break;
               }
             }

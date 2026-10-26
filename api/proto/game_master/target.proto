@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package tk75attractions.struckout.game_master.v1;
 
-// target_idはUUID
 message Target {
   message Compass {
     float x = 1;
@@ -10,7 +9,8 @@ message Target {
     float radius = 3;
   }
 
-  uint32 machine_id = 1;
+  // UUID
+  string target_id = 1;
 
   oneof target_data {
     Compass compass = 2;
