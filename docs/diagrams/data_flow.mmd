@@ -1,73 +1,73 @@
-block-beta
-    %% 外部への接続で画面遷移の方向が変わらないよう、行と列を明示する。
-    columns 1
-    block:Projector
-        columns 13
-        space:5 ProjectorTitle["プロジェクター"] space:7
-        Waiting1["待機画面"] space:3 ProjectorTutorial["チュートリアル"] space:5 Waiting2["待機画面2"] space ProjectorPlaying["プレイ中"]
-    end
-    space
-    block:Events
-        columns 13
-        TutorialStarted{{"TutorialStarted"}} space TutorialNavigatedToPrevious{{"TutorialNavigatedToPrevious"}} space TutorialNavigatedToNext{{"TutorialNavigatedToNext"}} space:5 SessionDifficultyChanged{{"SessionDifficultyChanged"}} space GameStarted{{"GameStarted"}}
-    end
-    block:Commands
-        columns 13
-        StartTutorial(["StartTutorial"]) space GoPreviousTutorial(["GoPreviousTutorial"]) space GoNextTutorial(["GoNextTutorial"]) space AddPlayer(["AddPlayer"]) space StartSession(["StartSession"]) space SetSessionDifficulty(["SetSessionDifficulty"]) space SetSessionReady(["SetSessionReady"])
-    end
-    block:TouchPanel
-        columns 13
-        space:5 TouchPanelTitle["タッチパネル"] space:7
-        Start["Start"] space Tutorial["Tutorial"] space:3 NameInputFirst["NameInputFirst"] space ModeSelect["ModeSelect"] space DifficultySelect["DifficultySelect"] space Playing["Playing"]
-        space:13
-        space:6 NameInputNonFirst["NameInputNonFirst"] space:6
+flowchart LR
+    subgraph Touchpanel["タッチパネル"]
+        Start["開始"]
+        NewName["新規プレイヤー名"]
+        ExistingName["登録済みプレイヤー名"]
+        Mode["モード選択"]
+        Difficulty["難易度選択・準備完了待ち"]
+        Playing["プレイ中"]
+        Finished["ゲーム終了"]
+        RankingControl["ランキング操作"]
+
+        Start -->|初回| NewName
+        Start -->|2回目以降| ExistingName
+        NewName --> Mode
+        ExistingName --> Mode
+        Mode --> Difficulty
+        Difficulty -->|GameStarted| Playing
+        Playing -->|GameFinished| Finished
+        Finished -->|ランキング表示を要求| RankingControl
+        RankingControl -->|ホーム復帰を要求| Start
     end
 
-    %% 画面遷移（左から右）
-    Waiting1 == "TutorialStarted" ==> ProjectorTutorial
-    ProjectorTutorial == "最後のチュートリアルで「次へ」" ==> Waiting2
-    Waiting2 == "GameStarted" ==> ProjectorPlaying
-    Start == "初めて" ==> Tutorial
-    Start == "2回目" ==> NameInputNonFirst
-    Tutorial == "最後のチュートリアルで「次へ」" ==> NameInputFirst
-    NameInputFirst ==> ModeSelect
-    NameInputNonFirst ==> ModeSelect
-    ModeSelect ==> DifficultySelect
-    DifficultySelect == "GameStarted" ==> Playing
+    subgraph GameMaster["game-master"]
+        AddPlayer(["AddPlayer"])
+        GetPlayer(["GetPlayer"])
+        StartSession(["StartSession"])
+        SetGameMode(["SetGameMode"])
+        SetSessionDifficulty(["SetSessionDifficulty"])
+        SetSessionReady(["SetSessionReady"])
+        DifficultyChanged{{"SessionDifficultyChanged"}}
+        GameStarted{{"GameStarted"}}
+        GameTimeAndScore{{"GameTimeLimitNotify / GameScoreChanged"}}
+        GameFinished{{"GameFinished"}}
+        GoRankingScreen(["GoRankingScreen ※未実装"])
+        GoHomeScreen(["GoHomeScreen ※未実装"])
+    end
 
-    %% チュートリアル開始
-    Start -- "初めて" --> StartTutorial
-    StartTutorial -.-> TutorialStarted
-    TutorialStarted -- "表示開始" --> ProjectorTutorial
+    subgraph Projector["プロジェクター"]
+        ProjectorWaiting["待機"]
+        ProjectorPlaying["プレイ中"]
+        ProjectorScore["結果表示"]
+        ProjectorRanking["ランキング表示"]
+        ProjectorHome["ホーム"]
 
-    %% チュートリアルの前のページへ
-    Tutorial -- "前" --> GoPreviousTutorial
-    GoPreviousTutorial -.-> TutorialNavigatedToPrevious
-    TutorialNavigatedToPrevious -- "前へ" --> ProjectorTutorial
+        ProjectorWaiting -->|GameStarted| ProjectorPlaying
+        ProjectorPlaying -->|GameFinished| ProjectorScore
+        ProjectorScore -->|画面遷移通知| ProjectorRanking
+        ProjectorRanking -->|画面遷移通知| ProjectorHome
+    end
 
-    %% チュートリアルの次のページへ
-    Tutorial -- "次へ" --> GoNextTutorial
-    GoNextTutorial -.-> TutorialNavigatedToNext
-    TutorialNavigatedToNext -- "次へ" --> ProjectorTutorial
+    NewName --> AddPlayer
+    ExistingName --> GetPlayer
+    Mode --> StartSession
+    Mode --> SetGameMode
+    Difficulty --> SetSessionDifficulty
+    SetSessionDifficulty -.-> DifficultyChanged
+    DifficultyChanged -.-> Difficulty
+    Difficulty --> SetSessionReady
+    SetSessionReady -.->|単独: 1台 / 協力: 両台が準備完了| GameStarted
+    GameStarted -.-> Playing
+    GameStarted -.-> ProjectorPlaying
+    GameTimeAndScore -.-> Playing
+    GameTimeAndScore -.-> ProjectorPlaying
+    GameFinished -.-> Finished
+    GameFinished -.-> ProjectorScore
+    Finished --> GoRankingScreen
+    RankingControl --> GoHomeScreen
+    GoRankingScreen -.-> ProjectorRanking
+    GoHomeScreen -.-> ProjectorHome
 
-    %% プレイヤー登録
-    NameInputFirst --> AddPlayer
-
-    %% セッション開始
-    ModeSelect --> StartSession
-
-    %% 難易度設定
-    DifficultySelect --> SetSessionDifficulty
-    SetSessionDifficulty -.-> SessionDifficultyChanged
-
-    %% ゲーム開始
-    DifficultySelect --> SetSessionReady
-    SetSessionReady -.-> GameStarted
-    GameStarted -- "表示開始" --> ProjectorPlaying
-
-    style Events fill:none,stroke:none
-    style Commands fill:none,stroke:none
+    style Touchpanel fill:#FFF7ED,stroke:#FB923C
+    style GameMaster fill:#F8FAFC,stroke:#94A3B8
     style Projector fill:#F0FDFA,stroke:#2DD4BF
-    style TouchPanel fill:#FFF7ED,stroke:#FB923C
-    style ProjectorTitle fill:none,stroke:none
-    style TouchPanelTitle fill:none,stroke:none
