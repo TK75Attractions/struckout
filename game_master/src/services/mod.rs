@@ -1,6 +1,7 @@
+mod conversion;
+use conversion::SuccessfulEvent;
 mod player;
 pub use player::GameMasterPlayerServiceImpl;
-
 #[cfg(test)]
 mod tests;
 
@@ -9,13 +10,14 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 use parking_lot::RwLock;
 use struckout_proto::{
     self, AddTargetRequest, AddTargetResponse, CompleteSessionRequest, CompleteSessionResponse,
-    Difficulty, GameMode, GetGameResultRequest, GetGameResultResponse, GoNextTutorialRequest,
-    GoNextTutorialResponse, GoPreviousTutorialRequest, GoPreviousTutorialResponse,
-    HitTargetRequest, HitTargetResponse, ListenEventsRequest, ListenEventsResponse,
-    RemoveTargetRequest, RemoveTargetResponse, SetGameModeRequest, SetGameModeResponse,
-    SetSessionDifficultyRequest, SetSessionDifficultyResponse, SetSessionReadyRequest,
-    SetSessionReadyResponse, StartSessionRequest, StartSessionResponse, StartTutorialRequest,
-    StartTutorialResponse,
+    Difficulty, GameMode, GetGameResultRequest, GetGameResultResponse, GetGamesByPlayerRequest,
+    GetGamesByPlayerResponse, GetRankingRequest, GetRankingResponse, GoHomeScreenRequest,
+    GoHomeScreenResponse, GoNextTutorialRequest, GoNextTutorialResponse, GoPreviousTutorialRequest,
+    GoPreviousTutorialResponse, GoRankingScreenRequest, GoRankingScreenResponse, HitTargetRequest,
+    HitTargetResponse, ListenEventsRequest, ListenEventsResponse, RemoveTargetRequest,
+    RemoveTargetResponse, SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
+    SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
+    StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
     target::Owner,
     types::{MachineId, PlayerId},
@@ -313,13 +315,14 @@ where
         req: Request<GetGameResultRequest>,
     ) -> Result<Response<GetGameResultResponse>, Status> {
         let GetGameResultRequest { machine_id } = req.into_inner();
-        let total_score = self
+        let result = self
             .sessions
             .read()
             .game_result(machine_id.into())
-            .map_err(|e| Status::failed_precondition(e.to_string()))?
-            .score;
-        Ok(Response::new(GetGameResultResponse { total_score }))
+            .map_err(|e| Status::failed_precondition(e.to_string()))?;
+        Ok(Response::new(GetGameResultResponse {
+            total_score: result.score,
+        }))
     }
 
     #[instrument]
@@ -416,6 +419,38 @@ where
             }
         }
     }
+
+    #[instrument]
+    async fn get_ranking(
+        &self,
+        _req: Request<GetRankingRequest>,
+    ) -> Result<Response<GetRankingResponse>, Status> {
+        todo!()
+    }
+
+    #[instrument]
+    async fn get_games_by_player(
+        &self,
+        _req: Request<GetGamesByPlayerRequest>,
+    ) -> Result<Response<GetGamesByPlayerResponse>, Status> {
+        todo!()
+    }
+
+    #[instrument]
+    async fn go_ranking_screen(
+        &self,
+        _req: Request<GoRankingScreenRequest>,
+    ) -> Result<Response<GoRankingScreenResponse>, Status> {
+        todo!()
+    }
+
+    #[instrument]
+    async fn go_home_screen(
+        &self,
+        _req: Request<GoHomeScreenRequest>,
+    ) -> Result<Response<GoHomeScreenResponse>, Status> {
+        todo!()
+    }
 }
 
 /// Filters events from `event_rx` by `machine_id` and pass it through the response stream.
@@ -479,63 +514,4 @@ pub struct Event {
 pub enum EventTarget {
     Single(MachineId),
     All,
-}
-
-/// Events which occur in the service. This can be converted to [`struckout_proto::Event`].
-///
-/// With this type, you don't need to convert proto types like `u32` or [`prost_types::Duration`]
-/// to domain type like [`GameId`] or [`time::SignedDuration`] each time.
-#[derive(Debug, Clone)]
-pub enum SuccessfulEvent {
-    /// [`struckout_proto::event::GameStarted`]
-    GameStarted { difficulty: Difficulty },
-    /// [`struckout_proto::event::GameTimeLimitNotify`]
-    GameTimeLimitNotify { remaining: time::SignedDuration },
-    /// [`struckout_proto::event::GameScoreChanged`]
-    GameScoreChanged { total_score: u32 },
-    /// [`struckout_proto::event::GameFinished`]
-    GameFinished,
-    /// [`struckout_proto::event::SessionDifficultyChanged`]
-    SessionDifficultyChanged(Difficulty),
-    /// [`struckout_proto::event::TutorialStarted`]
-    TutorialStarted,
-    /// [`struckout_proto::event::TutorialNavigatedToPrevious`]
-    TutorialNavigatedToPrevious,
-    /// [`struckout_proto::event::TutorialNavigatedToNext`]
-    TutotialNavigatedToNext,
-}
-
-impl From<SuccessfulEvent> for struckout_proto::event::EventData {
-    fn from(ev: SuccessfulEvent) -> Self {
-        use struckout_proto::event::*;
-        match ev {
-            SuccessfulEvent::GameStarted { difficulty } => EventData::GameStarted(GameStarted {
-                difficulty: difficulty.into(),
-            }),
-            SuccessfulEvent::GameScoreChanged { total_score } => {
-                EventData::GameScoreChanged(GameScoreChanged { total_score })
-            }
-            SuccessfulEvent::GameTimeLimitNotify { remaining } => {
-                EventData::GameTimeLimitNotify(GameTimeLimitNotify {
-                    remaining: Some(prost_types::Duration {
-                        seconds: remaining.whole_seconds(),
-                        nanos: remaining.subsec_nanoseconds(),
-                    }),
-                })
-            }
-            SuccessfulEvent::GameFinished => EventData::GameFinished(GameFinished {}),
-            SuccessfulEvent::SessionDifficultyChanged(difficulty) => {
-                EventData::SessionDifficultyChanged(SessionDifficultyChanged {
-                    difficulty: difficulty.into(),
-                })
-            }
-            SuccessfulEvent::TutorialStarted => EventData::TutorialStarted(TutorialStarted {}),
-            SuccessfulEvent::TutorialNavigatedToPrevious => {
-                EventData::TutorialNavigatedToPrevious(TutorialNavigatedToPrevious {})
-            }
-            SuccessfulEvent::TutotialNavigatedToNext => {
-                EventData::TutorialNavigatedToNext(TutorialNavigatedToNext {})
-            }
-        }
-    }
 }

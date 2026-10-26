@@ -25,12 +25,26 @@ message Event {
 
   message GameFinished {}
 
-  /* ----- Tutorials ----- */
-  message TutorialStarted {}
+  /* ----- Navigations ----- */
+  message StartTutorialRequested {
+    uint32 machine_id = 1;
+  }
 
-  message TutorialNavigatedToPrevious {}
+  message NavigateToPreviousTutorialRequested {
+    uint32 machine_id = 1;
+  }
 
-  message TutorialNavigatedToNext {}
+  message NavigateToNextTutorialRequested {
+    uint32 machine_id = 1;
+  }
+
+  message NavigateToRankingScreenRequested {
+    uint32 machine_id = 1;
+  }
+
+  message NavigateToHomeScreenRequested {
+    uint32 machine_id = 1;
+  }
 
   /* ----- Targets ----- */
   message TargetAdded {
@@ -50,12 +64,17 @@ message Event {
     GameFinished game_finished = 3;
     GameScoreChanged game_score_changed = 4;
     SessionDifficultyChanged session_difficulty_changed = 5;
-    /* ----- Tutorials ----- */
-    TutorialStarted tutorial_started = 6;
-    TutorialNavigatedToPrevious tutorial_navigated_to_previous = 7;
-    TutorialNavigatedToNext tutorial_navigated_to_next = 8;
-    TargetAdded target_added = 9;
-    TargetRemoved target_removed = 10;
+
+    /* ----- Navigations ----- */
+    StartTutorialRequested start_tutorial_requested = 6;
+    NavigateToPreviousTutorialRequested navigate_to_previous_tutorial_requested = 7;
+    NavigateToNextTutorialRequested navigate_to_next_tutorial_requested = 8;
+    NavigateToRankingScreenRequested navigate_to_ranking_screen_requested = 9;
+    NavigateToHomeScreenRequested navigate_to_home_screen_requsted = 10;
+
+    /* ----- Targets ----- */
+    TargetAdded target_added = 11;
+    TargetRemoved target_removed = 12;
   }
 }
 

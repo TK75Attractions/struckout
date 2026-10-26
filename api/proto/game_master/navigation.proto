@@ -19,3 +19,15 @@ message GoNextTutorialRequest {
 }
 
 message GoNextTutorialResponse {}
+
+message GoRankingScreenRequest {
+  uint32 machine_id = 1;
+}
+
+message GoRankingScreenResponse {}
+
+message GoHomeScreenRequest {
+  uint32 machine_id = 1;
+}
+
+message GoHomeScreenResponse {}

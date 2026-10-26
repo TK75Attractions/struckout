@@ -3,8 +3,8 @@ syntax = "proto3";
 package tk75attractions.struckout.game_master.v1;
 
 import "game_master/event.proto";
+import "game_master/navigation.proto";
 import "game_master/target.proto";
-import "game_master/tutorial.proto";
 import "game_master/types.proto";
 
 // Service provided by `game_master`.
@@ -35,11 +35,17 @@ service GameMasterSessionService {
   // Gets the finished result of the current session on the specified machine.
   rpc GetGameResult(GetGameResultRequest) returns (GetGameResultResponse);
 
+  // Gets the ranking to the specified rank.
+  rpc GetRanking(GetRankingRequest) returns (GetRankingResponse);
+
+  // Gets the games played by the specified player.
+  rpc GetGamesByPlayer(GetGamesByPlayerRequest) returns (GetGamesByPlayerResponse);
+
   // Releases a finished session. Multi-play waits for both machines to call this.
   // Used by `projector`.
   rpc CompleteSession(CompleteSessionRequest) returns (CompleteSessionResponse);
 
-  /* ----- Tutorial ----- */
+  /* ----- Navigation ----- */
 
   // Starts tutorial on the specified machine. Used by `touchpanel`.
   rpc StartTutorial(StartTutorialRequest) returns (StartTutorialResponse);
@@ -49,6 +55,12 @@ service GameMasterSessionService {
 
   // Navigates to the next tutorial. Used by `touchpanel`.
   rpc GoNextTutorial(GoNextTutorialRequest) returns (GoNextTutorialResponse);
+
+  // Navigates to the ranking screen. Used by `touchpanel`.
+  rpc GoRankingScreen(GoRankingScreenRequest) returns (GoRankingScreenResponse);
+
+  // Navigates to the home screen. Used by `touchpanel`.
+  rpc GoHomeScreen(GoHomeScreenRequest) returns (GoHomeScreenResponse);
 
   /* ----- Targets ----- */
 
@@ -81,7 +93,37 @@ message GetGameResultRequest {
 }
 
 message GetGameResultResponse {
-  uint32 total_score = 1;
+  uint32 game_id = 1;
+  uint32 total_score = 2;
+}
+
+message GetRankingRequest {
+  // トップN位まで取得する
+  uint32 max_item_num = 1;
+}
+
+message GetRankingResponse {
+  message RankingItem {
+    uint32 game_id = 1;
+    uint32 total_score = 2;
+    uint32 player_id = 3;
+    string player_name = 4;
+  }
+
+  repeated RankingItem top_n = 1;
+}
+
+message GetGamesByPlayerRequest {
+  uint32 player_id = 1;
+}
+
+message GetGamesByPlayerResponse {
+  message GamesByPlayerItem {
+    uint32 game_id = 1;
+    uint32 total_score = 2;
+  }
+
+  repeated GamesByPlayerItem items = 1;
 }
 
 message SetSessionDifficultyRequest {
