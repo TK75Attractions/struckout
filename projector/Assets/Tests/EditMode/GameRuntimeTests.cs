@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using Struckout.Application;
 using Struckout.Application.Interface;
@@ -23,9 +24,9 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action<uint> ScoreChanged { add { } remove { } }
             public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
-            public Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default) => Task.FromResult<uint?>(null);
-            public Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default) => Task.FromResult<IReadOnlyList<RankingEntry>>(null);
-            public Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default) => Task.FromResult<IReadOnlyList<PlayerGame>>(null);
+            public UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default) => UniTask.FromResult<uint?>(null);
+            public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
+            public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<PlayerGame>>(null);
             public event Action ConnectionLost { add { } remove { } }
             public event Action<Target> TargetAdded;
             public event Action<Guid> TargetRemoved;
@@ -33,14 +34,14 @@ namespace Struckout.Tests.Tests.EditMode
             public readonly List<Guid> Hits = new();
             public readonly List<(TargetCoordinate Coordinate, double Radius)> Targets = new();
             public Guid CurrentId;
-            public TaskCompletionSource<bool> PendingHit;
-            public TaskCompletionSource<bool> PendingRegistration;
+            public UniTaskCompletionSource<bool> PendingHit;
+            public UniTaskCompletionSource<bool> PendingRegistration;
             public bool PublishOnAdd = true;
             public bool PublishOnRemove = true;
             public bool RemovalSucceeds = true;
-            public Task<bool> ConnectAsync() => Task.FromResult(true);
-            public Task DisconnectAsync() => Task.CompletedTask;
-            public async Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+            public UniTask<bool> ConnectAsync() => UniTask.FromResult(true);
+            public UniTask DisconnectAsync() => UniTask.CompletedTask;
+            public async UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
             {
                 Calls.Add("add");
                 Targets.Add((coordinate, radius));
@@ -52,20 +53,20 @@ namespace Struckout.Tests.Tests.EditMode
                     EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f), TargetOwnership.Single));
                 return accepted;
             }
-            public Task<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
+            public UniTask<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
             {
                 Calls.Add("remove");
                 Assert.That(id, Is.EqualTo(Hits[Hits.Count - 1]));
                 if (RemovalSucceeds && PublishOnRemove) EmitRemoved(id);
-                return Task.FromResult(RemovalSucceeds);
+                return UniTask.FromResult(RemovalSucceeds);
             }
             public void EmitAdded(Target target) => TargetAdded?.Invoke(target);
             public void EmitRemoved(Guid id) => TargetRemoved?.Invoke(id);
-            public Task<bool> HitTargetAsync(Guid id, CancellationToken token = default)
+            public UniTask<bool> HitTargetAsync(Guid id, CancellationToken token = default)
             {
                 Calls.Add("hit");
                 Hits.Add(id);
-                return PendingHit?.Task ?? Task.FromResult(true);
+                return PendingHit?.Task ?? UniTask.FromResult(true);
             }
         }
 
@@ -155,12 +156,12 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Hard);
-            master.PendingHit = new TaskCompletionSource<bool>();
+            master.PendingHit = new UniTaskCompletionSource<bool>();
             var hit = runtime.CollisionDetectedAsync(Center(ui));
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(master.Hits, Has.Count.EqualTo(1));
             runtime.FinishGame();
-            master.PendingHit.SetResult(true);
+            master.PendingHit.TrySetResult(true);
             await hit;
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit" }));
             Assert.That(ui.Added, Has.Count.EqualTo(1));
@@ -173,7 +174,7 @@ namespace Struckout.Tests.Tests.EditMode
         public async Task Old_registration_response_cannot_overwrite_a_new_games_uuid()
         {
             var (runtime, master, ui) = Create();
-            var pending = new TaskCompletionSource<bool>();
+            var pending = new UniTaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             var firstStart = runtime.StartGameAsync(Difficulty.Normal);
             await runtime.CollisionDetectedAsync(Center(ui));
@@ -182,7 +183,7 @@ namespace Struckout.Tests.Tests.EditMode
             master.PendingRegistration = null;
             await runtime.StartGameAsync(Difficulty.Hard);
             var newId = master.CurrentId;
-            pending.SetResult(true);
+            pending.TrySetResult(true);
             await firstStart;
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(master.Hits, Is.EqualTo(new[] { newId }));
@@ -194,8 +195,8 @@ namespace Struckout.Tests.Tests.EditMode
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
             var original = ui.Targets[0];
-            master.PendingHit = new TaskCompletionSource<bool>();
-            master.PendingHit.SetResult(false);
+            master.PendingHit = new UniTaskCompletionSource<bool>();
+            master.PendingHit.TrySetResult(false);
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit" }));
             Assert.That(ui.Targets[0], Is.SameAs(original));
@@ -209,11 +210,11 @@ namespace Struckout.Tests.Tests.EditMode
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
             var point = Center(ui);
-            var pending = new TaskCompletionSource<bool>();
+            var pending = new UniTaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             var hit = runtime.CollisionDetectedAsync(point);
             Assert.That(ui.Targets, Is.Empty);
-            pending.SetResult(false);
+            pending.TrySetResult(false);
             await hit;
             await runtime.CollisionDetectedAsync(point);
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit", "remove", "add" }));
@@ -241,7 +242,7 @@ namespace Struckout.Tests.Tests.EditMode
         public async Task Event_before_rpc_response_is_applied_without_waiting_for_the_response()
         {
             var (runtime, master, ui) = Create();
-            var pending = new TaskCompletionSource<bool>();
+            var pending = new UniTaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             master.PublishOnAdd = false;
             var start = runtime.StartGameAsync(Difficulty.Normal);
@@ -250,8 +251,8 @@ namespace Struckout.Tests.Tests.EditMode
             var geometry = master.Targets[0];
             master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Circle, (float)geometry.Radius * 2f), TargetOwnership.Single));
             Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
-            Assert.That(start.IsCompleted, Is.False);
-            pending.SetResult(true);
+            Assert.That(start.Status, Is.EqualTo(UniTaskStatus.Pending));
+            pending.TrySetResult(true);
             await start;
             Assert.That(ui.Targets, Has.Count.EqualTo(1));
         }
@@ -260,8 +261,8 @@ namespace Struckout.Tests.Tests.EditMode
         public async Task Failed_initial_registration_does_not_create_a_target()
         {
             var (runtime, master, ui) = Create();
-            master.PendingRegistration = new TaskCompletionSource<bool>();
-            master.PendingRegistration.SetResult(false);
+            master.PendingRegistration = new UniTaskCompletionSource<bool>();
+            master.PendingRegistration.TrySetResult(false);
             await runtime.StartGameAsync(Difficulty.Normal);
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(ui.Added, Is.Empty);
@@ -273,12 +274,12 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
-            var pending = new TaskCompletionSource<bool>();
+            var pending = new UniTaskCompletionSource<bool>();
             master.PendingRegistration = pending;
             var hit = runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(ui.Targets, Is.Empty);
             runtime.FinishGame();
-            pending.SetResult(true);
+            pending.TrySetResult(true);
             await hit;
             Assert.That(ui.Targets, Is.Empty);
             Assert.That(ui.Added, Has.Count.EqualTo(1));

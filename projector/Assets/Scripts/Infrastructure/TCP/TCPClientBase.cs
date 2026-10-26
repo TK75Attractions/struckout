@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Google.Protobuf;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
@@ -22,7 +22,7 @@ namespace Struckout.Infrastructure.TCP
         private CancellationTokenSource _receiveCancellationToken;
         public event Action<T> OnReceived;
         public event Action ConnectionLost;
-        private Task _receiveTask;
+        private UniTask? _receiveTask;
         private readonly IMessageParser<T> _parser;
         private bool _isRegister;
         private readonly SemaphoreSlim _slim = new(1, 1);
@@ -47,7 +47,7 @@ namespace Struckout.Infrastructure.TCP
             _isRegister = true;
         }
 
-        public async Task<bool> ConnectAsync()
+        public async UniTask<bool> ConnectAsync()
         {
             await _slim.WaitAsync();
 
@@ -93,7 +93,7 @@ namespace Struckout.Infrastructure.TCP
             }
         }
 
-        public async Task DisconnectAsync()
+        public async UniTask DisconnectAsync()
         {
             await _slim.WaitAsync();
 
@@ -110,7 +110,7 @@ namespace Struckout.Infrastructure.TCP
                 _receiveCancellationToken?.Cancel();
                 try
                 {
-                    if (_receiveTask != null) await _receiveTask;
+                    if (_receiveTask.HasValue) await _receiveTask.Value;
                 }
                 catch (Exception ex)
                 {
@@ -126,7 +126,6 @@ namespace Struckout.Infrastructure.TCP
 
                 Debug.Log("Done");
 
-                await Task.CompletedTask;
             }
             finally
             {
@@ -134,7 +133,7 @@ namespace Struckout.Infrastructure.TCP
             }
         }
 
-        public async Task<bool> ConnectRetryAsync(uint maxAttempts)
+        public async UniTask<bool> ConnectRetryAsync(uint maxAttempts)
         {
             for (var attempt = 0; attempt < maxAttempts; attempt++)
             {
@@ -151,12 +150,12 @@ namespace Struckout.Infrastructure.TCP
                 }
 
                 // 指数バックオフ。ただし相手 (ball_tracker) が後から起動したときにすぐつながるよう、間隔は 5 秒までにする
-                await Task.Delay(TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt), MaxRetryDelaySeconds)));
+                await UniTask.Delay(TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt), MaxRetryDelaySeconds)), DelayType.Realtime);
             }
             return false;
         }
 
-        public async Task<bool> SendAsync(IMessage packet)
+        public async UniTask<bool> SendAsync(IMessage packet)
         {
             if (packet == null) throw new ArgumentNullException(nameof(packet));
 
@@ -191,7 +190,7 @@ namespace Struckout.Infrastructure.TCP
             }
         }
 
-        private async Task ReceiveDataAsync(CancellationToken token)
+        private async UniTask ReceiveDataAsync(CancellationToken token)
         {
             // 自分から切ったのか、相手都合で切れたのかを区別する。
             // 後者だけを ConnectionLost として通知したい。
@@ -300,7 +299,7 @@ namespace Struckout.Infrastructure.TCP
             }
         }
 
-        private async Task<byte[]> ReadByteAsync(CancellationToken token)
+        private async UniTask<byte[]> ReadByteAsync(CancellationToken token)
         {
             var lengthBuffer = new byte[4];
             await ReadExactAsync(lengthBuffer, 4, token);
@@ -310,7 +309,7 @@ namespace Struckout.Infrastructure.TCP
             return dataBuffer;
         }
 
-        private async Task ReadExactAsync(byte[] buffer, int length, CancellationToken token)
+        private async UniTask ReadExactAsync(byte[] buffer, int length, CancellationToken token)
         {
             var totalRead = length;
             var offset = 0;

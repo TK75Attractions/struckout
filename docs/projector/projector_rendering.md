@@ -285,8 +285,8 @@ await し、**そのあとで** `GameBootstrap` が購読するため、開始�
 | Unity | **6000.5.2f1**（`ProjectVersion.txt` が固定） |
 | レンダーパイプライン | URP 2D（`Assets/Settings/Renderer2D.asset`） |
 | DI | VContainer |
-| 非同期 | UniTask |
-| テスト | EditMode **105 件**。`Assets/Tests/EditMode/` |
+| 非同期 | 手書きの非同期 API は UniTask。gRPC・TCP など .NET の API が返す Task は実装内で await する。EditMode テストのメソッドは NUnit に合わせて Task を返す |
+| テスト | EditMode **181 件**。`Assets/Tests/EditMode/` |
 
 HDR は有効、MSAA は無効。`Assets/DefaultVolumeProfile.asset` は存在するが
 **全項目が中立値**（Bloom intensity 0）。ポストプロセスの土台は揃っていて

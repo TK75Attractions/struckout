@@ -1,5 +1,5 @@
 using System;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace Struckout.Application.Interface
 {
@@ -13,11 +13,11 @@ namespace Struckout.Application.Interface
         /// 受信スレッドから飛んでくるので、UI に触る購読側はマーシャリングすること。
         /// </summary>
         event Action ConnectionLost;
-        Task<bool> ConnectAsync();
+        UniTask<bool> ConnectAsync();
 
         /// <summary>失敗したら指数バックオフで <paramref name="maxAttempts"/> 回まで接続を試す。</summary>
-        Task<bool> ConnectRetryAsync(uint maxAttempts);
+        UniTask<bool> ConnectRetryAsync(uint maxAttempts);
 
-        Task DisconnectAsync();
+        UniTask DisconnectAsync();
     }
 }

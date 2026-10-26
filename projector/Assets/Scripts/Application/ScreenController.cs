@@ -1,6 +1,6 @@
 using System;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
@@ -30,7 +30,7 @@ namespace Struckout.Application
             _ui.SetScreen(ProjectorScreen.Playing);
         }
 
-        public async Task ShowScoreAsync(GameId gameId)
+        public async UniTask ShowScoreAsync(GameId gameId)
         {
             var token = BeginRequest(ProjectorScreen.Score);
             _gameId = gameId;
@@ -45,7 +45,7 @@ namespace Struckout.Application
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         }
 
-        public async Task ShowRankingAsync()
+        public async UniTask ShowRankingAsync()
         {
             var token = BeginRequest(ProjectorScreen.Ranking);
             if (!_playerId.HasValue)
@@ -60,10 +60,8 @@ namespace Struckout.Application
             {
                 var rankingTask = _master.GetRankingAsync(RankingResults.TopItemCount, token);
                 var historyTask = _master.GetGamesByPlayerAsync(playerId, token);
-                await Task.WhenAll(rankingTask, historyTask);
+                var (ranking, history) = await UniTask.WhenAll(rankingTask, historyTask);
                 if (token.IsCancellationRequested) return;
-                var ranking = await rankingTask;
-                var history = await historyTask;
                 if (ranking == null || history == null)
                 {
                     _ui.ShowScreenMessage("ランキングの取得に失敗しました。");

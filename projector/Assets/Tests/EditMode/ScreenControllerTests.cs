@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using Struckout.Application;
 using Struckout.Application.Interface;
@@ -28,35 +29,35 @@ namespace Struckout.Tests.Tests.EditMode
             public uint? Score = 888;
             public IReadOnlyList<RankingEntry> Ranking = Array.Empty<RankingEntry>();
             public IReadOnlyList<PlayerGame> History = Array.Empty<PlayerGame>();
-            public TaskCompletionSource<uint?> PendingScore;
-            public TaskCompletionSource<IReadOnlyList<RankingEntry>> PendingRanking;
-            public TaskCompletionSource<IReadOnlyList<PlayerGame>> PendingHistory;
+            public UniTaskCompletionSource<uint?> PendingScore;
+            public UniTaskCompletionSource<IReadOnlyList<RankingEntry>> PendingRanking;
+            public UniTaskCompletionSource<IReadOnlyList<PlayerGame>> PendingHistory;
             public GameId? RequestedGame;
             public PlayerId? RequestedPlayer;
             public uint? RequestedCount;
             public CancellationToken ScoreToken;
             public CancellationToken RankingToken;
-            public Task<bool> ConnectAsync() => Task.FromResult(true);
-            public Task DisconnectAsync() => Task.CompletedTask;
-            public Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default) => Task.FromResult(true);
-            public Task<bool> RemoveTargetAsync(Guid id, CancellationToken token = default) => Task.FromResult(true);
-            public Task<bool> HitTargetAsync(Guid id, CancellationToken token = default) => Task.FromResult(true);
-            public Task<uint?> GetGameResultAsync(GameId id, CancellationToken token = default)
+            public UniTask<bool> ConnectAsync() => UniTask.FromResult(true);
+            public UniTask DisconnectAsync() => UniTask.CompletedTask;
+            public UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default) => UniTask.FromResult(true);
+            public UniTask<bool> RemoveTargetAsync(Guid id, CancellationToken token = default) => UniTask.FromResult(true);
+            public UniTask<bool> HitTargetAsync(Guid id, CancellationToken token = default) => UniTask.FromResult(true);
+            public UniTask<uint?> GetGameResultAsync(GameId id, CancellationToken token = default)
             {
                 RequestedGame = id;
                 ScoreToken = token;
-                return PendingScore?.Task ?? Task.FromResult(Score);
+                return PendingScore?.Task ?? UniTask.FromResult(Score);
             }
-            public Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default)
+            public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default)
             {
                 RequestedCount = count;
                 RankingToken = token;
-                return PendingRanking?.Task ?? Task.FromResult(Ranking);
+                return PendingRanking?.Task ?? UniTask.FromResult(Ranking);
             }
-            public Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId id, CancellationToken token = default)
+            public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId id, CancellationToken token = default)
             {
                 RequestedPlayer = id;
-                return PendingHistory?.Task ?? Task.FromResult(History);
+                return PendingHistory?.Task ?? UniTask.FromResult(History);
             }
         }
 
@@ -106,14 +107,14 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task A_late_score_response_cannot_overwrite_home()
         {
-            var client = new Client { PendingScore = new TaskCompletionSource<uint?>() };
+            var client = new Client { PendingScore = new UniTaskCompletionSource<uint?>() };
             var ui = new UI();
             using var screens = new ScreenController(client, ui);
             screens.ShowPlaying(new PlayerId(7));
             var pending = screens.ShowScoreAsync(new GameId(42));
             screens.ShowHome();
             Assert.That(client.ScoreToken.IsCancellationRequested, Is.True);
-            client.PendingScore.SetResult(123);
+            client.PendingScore.TrySetResult(123);
             await pending;
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Home));
             Assert.That(ui.Score, Is.Null);
@@ -124,8 +125,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client
             {
-                PendingRanking = new TaskCompletionSource<IReadOnlyList<RankingEntry>>(),
-                PendingHistory = new TaskCompletionSource<IReadOnlyList<PlayerGame>>(),
+                PendingRanking = new UniTaskCompletionSource<IReadOnlyList<RankingEntry>>(),
+                PendingHistory = new UniTaskCompletionSource<IReadOnlyList<PlayerGame>>(),
             };
             var ui = new UI();
             using var screens = new ScreenController(client, ui);
@@ -135,8 +136,8 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(client.RequestedPlayer, Is.EqualTo(new PlayerId(7)));
             screens.ShowPlaying(new PlayerId(9));
             Assert.That(client.RankingToken.IsCancellationRequested, Is.True);
-            client.PendingRanking.SetResult(Array.Empty<RankingEntry>());
-            client.PendingHistory.SetResult(Array.Empty<PlayerGame>());
+            client.PendingRanking.TrySetResult(Array.Empty<RankingEntry>());
+            client.PendingHistory.TrySetResult(Array.Empty<PlayerGame>());
             await pending;
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Playing));
             Assert.That(ui.Rows, Is.Null);

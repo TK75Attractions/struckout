@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Struckout.Domain;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Target = Struckout.Domain.TargetDefinition.Target;
@@ -48,21 +48,21 @@ namespace Struckout.Application.Interface
         event Action ConnectionLost;
 
         /// <summary>接続してイベントの購読を始める。</summary>
-        Task<bool> ConnectAsync();
+        UniTask<bool> ConnectAsync();
 
         /// <summary>円形の的の登録を要求する。状態への追加は TargetAdded の受信時に行う。</summary>
-        Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default);
+        UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default);
 
         /// <summary>的の削除を要求する。状態からの削除は TargetRemoved の受信時に行う。</summary>
-        Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default);
+        UniTask<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default);
 
         /// <summary>命中を通知する。得点はサーバーが計算して ScoreChanged で通知する。</summary>
-        Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default);
+        UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default);
 
-        Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default);
-        Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default);
-        Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default);
+        UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default);
+        UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default);
+        UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default);
 
-        Task DisconnectAsync();
+        UniTask DisconnectAsync();
     }
 }

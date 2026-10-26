@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
@@ -51,7 +51,7 @@ namespace Struckout.Application
         /// Requests registration of initial geometry; only TargetAdded events create local entities.
         /// Called on Unity's main thread so continuations can safely update the board.
         /// </summary>
-        public async Task StartGameAsync(Difficulty difficulty)
+        public async UniTask StartGameAsync(Difficulty difficulty)
         {
             if (_initialGeometry == null) throw new InvalidOperationException("GameSetup must run before starting a game.");
             CancelPendingOperations();
@@ -66,7 +66,7 @@ namespace Struckout.Application
             }
         }
 
-        private async Task RegisterTargetAsync(TargetGeometry geometry, CancellationToken token)
+        private async UniTask RegisterTargetAsync(TargetGeometry geometry, CancellationToken token)
         {
             var accepted = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
             if (!accepted && !token.IsCancellationRequested)
@@ -117,7 +117,7 @@ namespace Struckout.Application
         /// Requests replacement of a hit target; target events control local state during play.
         /// Keeps its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
         /// </summary>
-        public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)
+        public async UniTask CollisionDetectedAsync(CollisionPoint collisionPoint)
         {
             var x = (float)collisionPoint.X;
             var y = (float)collisionPoint.Y;

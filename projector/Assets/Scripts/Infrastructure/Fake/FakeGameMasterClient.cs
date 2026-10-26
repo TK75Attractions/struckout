@@ -4,7 +4,7 @@ using Struckout.Domain;
 using System.Collections.Generic;
 using Struckout.Domain.TargetDefinition;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
@@ -81,17 +81,17 @@ namespace Struckout.Infrastructure.Fake
         public event Action ConnectionLost;
 
         private CancellationTokenSource _gameCancellation;
-        private Task _gameTask;
+        private UniTask? _gameTask;
         private readonly object _stateLock = new();
         private uint _totalScore;
         private readonly Dictionary<Guid, double> _targetRadii = new();
         private bool _connected;
 
-        public Task<bool> ConnectAsync()
+        public UniTask<bool> ConnectAsync()
         {
             lock (_stateLock)
             {
-                if (_connected) return Task.FromResult(true);
+                if (_connected) return UniTask.FromResult(true);
                 _connected = true;
 
                 Debug.Log("[Fake] game_master connected");
@@ -109,7 +109,7 @@ namespace Struckout.Infrastructure.Fake
 
                 _gameTask = RunGameAsync(elapsed, _gameCancellation.Token);
 
-                return Task.FromResult(true);
+                return UniTask.FromResult(true);
             }
         }
 
@@ -117,7 +117,7 @@ namespace Struckout.Infrastructure.Fake
         /// 本物と同じく、制限時間が尽きたら終了を通知する。
         /// 実装が終了を無視していないかを Fake モードでも確かめられるようにしてある。
         /// </summary>
-        private async Task RunGameAsync(Stopwatch elapsed, CancellationToken token)
+        private async UniTask RunGameAsync(Stopwatch elapsed, CancellationToken token)
         {
             try
             {
@@ -125,7 +125,7 @@ namespace Struckout.Infrastructure.Fake
                 {
                     var remaining = _gameDuration - elapsed.Elapsed;
                     if (remaining > TimeSpan.Zero)
-                        await Task.Delay(remaining < TimeSpan.FromSeconds(1) ? remaining : TimeSpan.FromSeconds(1), token);
+                        await UniTask.Delay(remaining < TimeSpan.FromSeconds(1) ? remaining : TimeSpan.FromSeconds(1), DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
 
                     lock (_stateLock)
                     {
@@ -145,13 +145,15 @@ namespace Struckout.Infrastructure.Fake
                         RemainingTimeChanged?.Invoke(remaining);
                     }
                 }
-                await Task.Delay(_screenDuration, token);
+                if (_screenDuration > TimeSpan.Zero)
+                    await UniTask.Delay(_screenDuration, DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
                 lock (_stateLock)
                 {
                     if (token.IsCancellationRequested) return;
                     RankingScreenRequested?.Invoke();
                 }
-                await Task.Delay(_screenDuration, token);
+                if (_screenDuration > TimeSpan.Zero)
+                    await UniTask.Delay(_screenDuration, DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
                 lock (_stateLock)
                 {
                     if (token.IsCancellationRequested) return;
@@ -163,28 +165,28 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        public Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        public UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || !_started || token.IsCancellationRequested) return Task.FromResult(false);
+                if (!_connected || !_started || token.IsCancellationRequested) return UniTask.FromResult(false);
                 var id = Guid.NewGuid();
                 // Match protobuf's float precision before the server calculates in f64.
                 _targetRadii.Add(id, (float)radius);
                 TargetAdded?.Invoke(new Target(id,
                     new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f), TargetOwnership.Single));
-                return Task.FromResult(true);
+                return UniTask.FromResult(true);
             }
         }
 
-        public Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
+        public UniTask<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
         {
             lock (_stateLock)
             {
                 if (!_connected || !_started || token.IsCancellationRequested || !_targetRadii.Remove(targetId))
-                    return Task.FromResult(false);
+                    return UniTask.FromResult(false);
                 TargetRemoved?.Invoke(targetId);
-                return Task.FromResult(true);
+                return UniTask.FromResult(true);
             }
         }
 
@@ -195,55 +197,55 @@ namespace Struckout.Infrastructure.Fake
             foreach (var id in ids) TargetRemoved?.Invoke(id);
         }
 
-        public Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
+        public UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
         {
             lock (_stateLock)
             {
                 if (!_connected || !_started || token.IsCancellationRequested || !_targetRadii.TryGetValue(targetId, out var radius) ||
                     double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0)
-                    return Task.FromResult(false);
+                    return UniTask.FromResult(false);
                 var points = Math.Truncate(100000.0 / radius);
-                if (points > uint.MaxValue || points + _totalScore > uint.MaxValue) return Task.FromResult(false);
+                if (points > uint.MaxValue || points + _totalScore > uint.MaxValue) return UniTask.FromResult(false);
                 _totalScore += (uint)points;
                 ScoreChanged?.Invoke(_totalScore);
-                return Task.FromResult(true);
+                return UniTask.FromResult(true);
             }
         }
 
-        public Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
+        public UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
         {
             lock (_stateLock)
-                return Task.FromResult<uint?>(_connected && !token.IsCancellationRequested && _results.TryGetValue(gameId, out var score) ? score : null);
+                return UniTask.FromResult<uint?>(_connected && !token.IsCancellationRequested && _results.TryGetValue(gameId, out var score) ? score : null);
         }
 
-        public Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
+        public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || token.IsCancellationRequested) return Task.FromResult<IReadOnlyList<RankingEntry>>(null);
+                if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
                 var entries = Enumerable.Range(1, 10).Select(i => new RankingEntry(new GameId((uint)i),
                     (uint)(2000 - i * 100), i == 5 ? FakePlayer : new PlayerId((uint)i + 1),
                     i == 5 ? "サンプル" : "プレイヤー" + i)).ToList();
                 foreach (var game in _results.Where(game => game.Key.Value > 10))
                     entries.Add(new RankingEntry(game.Key, game.Value, FakePlayer, "サンプル"));
-                return Task.FromResult<IReadOnlyList<RankingEntry>>(entries.OrderByDescending(entry => entry.Score)
+                return UniTask.FromResult<IReadOnlyList<RankingEntry>>(entries.OrderByDescending(entry => entry.Score)
                     .ThenBy(entry => entry.GameId.Value).Take((int)Math.Min(maxItemCount, int.MaxValue)).ToArray());
             }
         }
 
-        public Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
+        public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || token.IsCancellationRequested) return Task.FromResult<IReadOnlyList<PlayerGame>>(null);
-                return Task.FromResult<IReadOnlyList<PlayerGame>>(playerId.Equals(FakePlayer)
+                if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<PlayerGame>>(null);
+                return UniTask.FromResult<IReadOnlyList<PlayerGame>>(playerId.Equals(FakePlayer)
                     ? _results.Select(game => new PlayerGame(game.Key, game.Value)).ToArray() : Array.Empty<PlayerGame>());
             }
         }
 
-        public async Task DisconnectAsync()
+        public async UniTask DisconnectAsync()
         {
-            Task gameTask;
+            UniTask? gameTask;
             CancellationTokenSource cancellation;
             lock (_stateLock)
             {
@@ -257,7 +259,7 @@ namespace Struckout.Infrastructure.Fake
                 cancellation?.Cancel();
             }
 
-            if (gameTask != null) await gameTask;
+            if (gameTask.HasValue) await gameTask.Value;
             cancellation?.Dispose();
 
             Debug.Log("[Fake] game_master disconnected");
