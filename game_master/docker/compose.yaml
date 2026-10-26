@@ -5,7 +5,7 @@ services:
         condition: service_healthy
     build:
       context: ../../
-      dockerfile: ./game_master/Dockerfile
+      dockerfile: ./game_master/docker/Dockerfile
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     ports:
