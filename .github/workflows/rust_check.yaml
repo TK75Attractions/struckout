@@ -65,7 +65,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
       - name: Run custom lints
-        run: mise run //game-master:lint
+        run: mise run //game_master:lint
         env:
           MISE_TASK_RUN_AUTO_INSTALL: '0'
       - name: Run check
