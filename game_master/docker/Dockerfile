@@ -15,7 +15,7 @@ RUN groupadd --system builder --gid 1000 \
     && useradd --system --create-home -g builder --uid 1000 builder
 USER builder
 
-COPY --from=ghcr.io/jdx/mise@sha256:1e0a39bc5a3b089b9b9305b6cd53e5d32ed5327e6241db5ec412fc2eabd44b02 /usr/local/bin/mise /usr/bin/mise
+COPY --from=ghcr.io/jdx/mise:latest /usr/local/bin/mise /usr/bin/mise
 
 WORKDIR /build/
 
