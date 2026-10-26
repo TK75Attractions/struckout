@@ -5,6 +5,8 @@ use struckout_proto::{
     types::{GameId, MachineId},
 };
 
+use crate::GamePlayers;
+
 /// Events which occur in the service. This can be converted to [`struckout_proto::Event`].
 ///
 /// With this type, you don't need to convert proto types like `u32` or [`prost_types::Duration`]
@@ -12,7 +14,10 @@ use struckout_proto::{
 #[derive(Debug, Clone)]
 pub enum SuccessfulEvent {
     /// [`struckout_proto::event::GameStarted`]
-    GameStarted { difficulty: Difficulty },
+    GameStarted {
+        difficulty: Difficulty,
+        players: GamePlayers,
+    },
     /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
     /// [`struckout_proto::event::GameScoreChanged`]
@@ -43,8 +48,35 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
     fn from(ev: SuccessfulEvent) -> Self {
         use struckout_proto::event::*;
         match ev {
-            SuccessfulEvent::GameStarted { difficulty } => EventData::GameStarted(GameStarted {
+            SuccessfulEvent::GameStarted {
+                difficulty,
+                players,
+            } => EventData::GameStarted(GameStarted {
                 difficulty: difficulty.into(),
+                game_started_player_info: Some(match players {
+                    GamePlayers::Single {
+                        machine_id,
+                        player_id,
+                    } => game_started::GameStartedPlayerInfo::Single(game_started::Single {
+                        player: Some(game_started::PlayerInfo {
+                            machine_id: machine_id.into(),
+                            player_id: player_id.into(),
+                        }),
+                    }),
+                    GamePlayers::Multi(
+                        (machine_id_1, player_id_1),
+                        (machine_id_2, player_id_2),
+                    ) => game_started::GameStartedPlayerInfo::Multi(game_started::Multi {
+                        player_1: Some(game_started::PlayerInfo {
+                            machine_id: machine_id_1.into(),
+                            player_id: player_id_1.into(),
+                        }),
+                        player_2: Some(game_started::PlayerInfo {
+                            machine_id: machine_id_2.into(),
+                            player_id: player_id_2.into(),
+                        }),
+                    }),
+                }),
             }),
             SuccessfulEvent::GameScoreChanged { total_score } => {
                 EventData::GameScoreChanged(GameScoreChanged { total_score })

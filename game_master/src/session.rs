@@ -455,9 +455,10 @@ impl Sessions {
                 let another = self
                     .get_another(machine_id)
                     .expect("multi-play has two sessions");
-                GamePlayers::Multi {
-                    player_ids: [state.player_id, another.player_id()],
-                }
+                GamePlayers::Multi(
+                    (state.machine_id, state.player_id),
+                    (another.machine_id(), another.player_id()),
+                )
             } else {
                 GamePlayers::Single {
                     machine_id,
@@ -563,7 +564,10 @@ impl Sessions {
                         targets: HashMap::new(),
                     })),
                 });
-                Ok(SetReadyAction::RunSingle { difficulty })
+                Ok(SetReadyAction::RunSingle {
+                    difficulty,
+                    player_id,
+                })
             }
             GameMode::Multi => {
                 let Some(another_ms) = self.get_another(machine_id) else {
@@ -606,7 +610,6 @@ impl Sessions {
                     score: 0,
                     targets: HashMap::new(),
                 }));
-                let action = SetReadyAction::RunMulti { difficulty };
                 {
                     let ms = self
                         .get_mut(machine_id)
@@ -625,6 +628,11 @@ impl Sessions {
                         shared,
                     });
                 }
+                let action = SetReadyAction::RunMulti {
+                    difficulty,
+                    player_1: (machine_id, player_id),
+                    player_2: (another_machine_id, another_player_id),
+                };
                 Ok(action)
             }
         }
@@ -672,8 +680,15 @@ impl Default for Sessions {
 
 /// Returned from [`Sessions::set_ready()`].
 pub enum SetReadyAction {
-    RunSingle { difficulty: Difficulty },
-    RunMulti { difficulty: Difficulty },
+    RunSingle {
+        difficulty: Difficulty,
+        player_id: PlayerId,
+    },
+    RunMulti {
+        difficulty: Difficulty,
+        player_1: (MachineId, PlayerId),
+        player_2: (MachineId, PlayerId),
+    },
     WaitForAnother,
 }
 

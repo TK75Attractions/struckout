@@ -33,7 +33,7 @@ use tracing::{instrument, trace, warn};
 use uuid::Uuid;
 
 use crate::{
-    DataSource, DataSourceImpl, GetGameResultError,
+    DataSource, DataSourceImpl, GamePlayers, GetGameResultError,
     session::{HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
@@ -354,12 +354,21 @@ where
                 sessions.set_ready(machine_id)
             };
             match action {
-                Ok(SetReadyAction::RunSingle { difficulty }) => {
+                Ok(SetReadyAction::RunSingle {
+                    difficulty,
+                    player_id,
+                }) => {
                     if self
                         .event_tx
                         .send(Event {
                             target: EventTarget::Single(machine_id),
-                            data: Ok(SuccessfulEvent::GameStarted { difficulty }),
+                            data: Ok(SuccessfulEvent::GameStarted {
+                                difficulty,
+                                players: GamePlayers::Single {
+                                    machine_id,
+                                    player_id,
+                                },
+                            }),
                         })
                         .is_err()
                     {
@@ -381,12 +390,22 @@ where
                     );
                     Ok(Response::new(SetSessionReadyResponse {}))
                 }
-                Ok(SetReadyAction::RunMulti { difficulty }) => {
+                Ok(SetReadyAction::RunMulti {
+                    difficulty,
+                    player_1,
+                    player_2,
+                }) => {
                     if self
                         .event_tx
                         .send(Event {
                             target: EventTarget::Single(machine_id),
-                            data: Ok(SuccessfulEvent::GameStarted { difficulty }),
+                            data: Ok(SuccessfulEvent::GameStarted {
+                                difficulty,
+                                players: GamePlayers::Multi(
+                                    (player_1.0, player_1.1),
+                                    (player_2.0, player_2.1),
+                                ),
+                            }),
                         })
                         .is_err()
                     {

@@ -60,9 +60,7 @@ pub enum GamePlayers {
         machine_id: MachineId,
         player_id: PlayerId,
     },
-    Multi {
-        player_ids: [PlayerId; 2],
-    },
+    Multi((MachineId, PlayerId), (MachineId, PlayerId)),
 }
 
 /// Captures the final result so database I/O cannot observe later score changes.

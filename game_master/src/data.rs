@@ -76,9 +76,9 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
                     machine_id,
                     player_id,
                 } => (Some(machine_id.into()), player_id.into(), None, MODE_SINGLE),
-                GamePlayers::Multi {
-                    player_ids: [first, second],
-                } => (None, first.into(), Some(second.into()), MODE_MULTI),
+                GamePlayers::Multi((_, first), (_, second)) => {
+                    (None, first.into(), Some(second.into()), MODE_MULTI)
+                }
             };
         let started_at = PlainDateTime::new(game.started_at.date(), game.started_at.time());
         let res = sqlx::query!(
@@ -216,6 +216,7 @@ mod tests {
 
     use parking_lot::Mutex;
     use sqlx::mysql::MySqlPoolOptions;
+    use struckout_proto::types::MachineId;
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
     use time::{Date, Month, Time, UtcDateTime};
     use tokio::{runtime::Runtime, sync::Mutex as TokioMutex};
@@ -319,7 +320,7 @@ mod tests {
                 .expect("should insert player");
             ds.save_game(GameRecord {
                 players: GamePlayers::Single {
-                    machine_id: struckout_proto::types::MachineId::new(0),
+                    machine_id: MachineId::new(0),
                     player_id,
                 },
                 started_at: UtcDateTime::now(),
@@ -410,12 +411,10 @@ mod tests {
                 .expect("should insert player");
             let second = ds.add_player("David").await.expect("should insert player");
             let players = if multi {
-                GamePlayers::Multi {
-                    player_ids: [first, second],
-                }
+                GamePlayers::Multi((MachineId::new(1), first), (MachineId::new(2), second))
             } else {
                 GamePlayers::Single {
-                    machine_id: struckout_proto::types::MachineId::new(7),
+                    machine_id: MachineId::new(7),
                     player_id: first,
                 }
             };
@@ -461,7 +460,7 @@ mod tests {
             let player_id = ds.add_player("Result player").await.expect("insert player");
             let game = GameRecord {
                 players: GamePlayers::Single {
-                    machine_id: struckout_proto::types::MachineId::new(1),
+                    machine_id: MachineId::new(1),
                     player_id,
                 },
                 started_at: UtcDateTime::now(),
