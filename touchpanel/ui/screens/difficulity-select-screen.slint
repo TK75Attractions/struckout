@@ -16,6 +16,9 @@ enum Difficulity { Normal, Hard, VeryHard }
 
 global Adopter {
     in property <Difficulity> selected-difficulity;
+    in property <bool> busy;
+    in property <bool> ready;
+    in property <string> error-msg;
 
     callback select-difficulity(val: Difficulity);
     callback start-game();
@@ -51,6 +54,7 @@ export component DifficulitySelectScreen inherits Rectangle {
                     font-size: root.comp_button_font_size;
                     layout-lr: root.comp_margin_lr;
                     layout-tb: root.comp_margin_tb;
+                    enabled: !Adopter.busy && !Adopter.ready;
                     text: "NORMAL";
                     width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
                     emphasize: Adopter.selected-difficulity == Difficulity.Normal;
@@ -66,6 +70,7 @@ export component DifficulitySelectScreen inherits Rectangle {
                     font-size: root.comp_button_font_size;
                     layout-lr: root.comp_margin_lr;
                     layout-tb: root.comp_margin_tb;
+                    enabled: !Adopter.busy && !Adopter.ready;
                     text: "HARD";
                     width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
                     emphasize: Adopter.selected-difficulity == Difficulity.Hard;
@@ -81,6 +86,7 @@ export component DifficulitySelectScreen inherits Rectangle {
                     font-size: root.comp_button_font_size;
                     layout-lr: root.comp_margin_lr;
                     layout-tb: root.comp_margin_tb;
+                    enabled: !Adopter.busy && !Adopter.ready;
                     text: "VERY HARD";
                     width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
                     emphasize: Adopter.selected-difficulity == Difficulity.VeryHard;
@@ -104,7 +110,8 @@ export component DifficulitySelectScreen inherits Rectangle {
                     border-color: StruckoutPalette.ref_primary_60;
 
                     Text {
-                        text: difficulty-text(Adopter.selected-difficulity);
+                        text: Adopter.error-msg != "" ? Adopter.error-msg : Adopter.ready ? "もう1人の準備完了を待っています" : difficulty-text(Adopter.selected-difficulity);
+                        wrap: word-wrap;
                         color: StruckoutPalette.ref_primary_90;
                         font-size: FontSettings.body-large.font-size;
                         font-weight: FontSettings.body-large.font-weight;
@@ -118,7 +125,8 @@ export component DifficulitySelectScreen inherits Rectangle {
                 y: parent.height - self.height;
                 height: 100%;
                 width: self.preferred-width * 1.5;
-                text: "START";
+                enabled: !Adopter.busy && !Adopter.ready;
+                text: Adopter.ready ? "待機中" : "START";
                 font-family: Fonts.oxanium;
                 font-size: root.comp_button_font_size;
                 corner: Corner.RightBottom;

@@ -102,7 +102,7 @@ where
                 let res = rx.await.unwrap();
                 match res {
                     Ok(Some(player_id)) => {
-                        nc.navigate(NavRoute::DifficulitySelect { player_id });
+                        nc.navigate(NavRoute::ModeSelect { player_id });
                     }
                     Ok(None) => {
                         error_msg_prop.set("入力されているプレイヤー名は存在しません。以前遊んだ際のプレイヤー名を忘れた場合は一つ前の画面に戻って新規プレイしてください。".to_shared_string());

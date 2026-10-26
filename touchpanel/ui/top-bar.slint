@@ -118,6 +118,7 @@ component TopBarItem {
 export component TopBar {
     in property <int> current-item-idx;
     in property <[string]> items;
+    in property <bool> show-backbutton;
     callback click-backbutton();
 
     max-height: 52px;
@@ -131,7 +132,7 @@ export component TopBar {
     HorizontalLayout {
         alignment: LayoutAlignment.space-between;
 
-        CornerButton {
+        if root.show-backbutton: CornerButton {
             width: self.preferred-width * 1.5;
             icon: Icons.arrow-back;
             corner: Corner.LeftTop;

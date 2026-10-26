@@ -1,11 +1,8 @@
-//! Similar to Data Layer in Android.
-//! This module deals with data sources (e.g. database).
+//! Communication and state shared by the presentation layer.
 
 mod game_master;
-pub use game_master::{ConnectError, RequestError, Session};
+pub use game_master::{ConnectError, GameMasterClient, RequestError};
 mod remaining_time;
 pub use remaining_time::*;
-use struckout_proto::game_master_service_client::GameMasterServiceClient;
-
-pub type GameMasterClient =
-    game_master::GameMasterClient<GameMasterServiceClient<tonic::transport::Channel>>;
+mod session;
+pub use session::{Session, SessionPhase};

@@ -1,0 +1,43 @@
+import { TwoColorOutlinedButton } from "../components/button.slint";
+
+global Adopter {
+    in property <bool> busy;
+    in property <bool> back-enabled;
+    in property <string> error-msg;
+    callback select-single();
+    callback select-multi();
+}
+
+export component ModeSelectScreen {
+    VerticalLayout {
+        alignment: center;
+        cross-axis-alignment: center;
+        spacing: 24px;
+        padding: 32px;
+        Text {
+            text: "プレイモードを選んでください";
+            font-size: 24px;
+        }
+
+        TwoColorOutlinedButton {
+            text: "1人でプレイ";
+            font-size: 32px;
+            enabled: !Adopter.busy;
+            clicked => { Adopter.select-single(); }
+        }
+
+        TwoColorOutlinedButton {
+            text: "2人で協力プレイ";
+            font-size: 32px;
+            enabled: !Adopter.busy;
+            clicked => { Adopter.select-multi(); }
+        }
+
+        Text {
+            text: Adopter.error-msg;
+            wrap: word-wrap;
+        }
+    }
+}
+
+export { Adopter as ModeSelectAdopter }

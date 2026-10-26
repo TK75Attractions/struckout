@@ -191,7 +191,7 @@ where
         slint::spawn_local(async move {
             match rx.await.unwrap() {
                 Ok(player_id) => {
-                    nc.navigate(NavRoute::DifficulitySelect { player_id });
+                    nc.navigate(NavRoute::ModeSelect { player_id });
                 }
                 Err(e) => {
                     msg.set(
@@ -305,7 +305,7 @@ mod tests {
             let NameInputScreenTest { worker, mut vm, .. } = test;
             async move {
                 // first call
-                let first_handle = vm.on_push_character_impl("テ".to_shared_string());
+                let _first_handle = vm.on_push_character_impl("テ".to_shared_string());
                 let error_msg_prop = vm.state.error_msg.clone();
                 worker.spawn_local({
                     let worker = worker.clone();
@@ -343,7 +343,6 @@ mod tests {
     }
 
     struct NameInputScreenTest {
-        pub route: Rc<RefCell<UiNavRoute>>,
         pub worker: WorkerThread<MockPlayerRepository, SmolExecutor>,
         pub vm: NameInputViewModel<MockPlayerRepository, SmolExecutor>,
     }
@@ -367,7 +366,7 @@ mod tests {
                 state,
                 gm_cancel_tok: None,
             };
-            Self { route, worker, vm }
+            Self { worker, vm }
         }
     }
 }

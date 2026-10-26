@@ -1,117 +1,153 @@
-use slint::{ComponentHandle, Global};
+use futures_util::StreamExt;
+use slint::{ComponentHandle, Global, ToSharedString};
+use stern::{WorkerThread, nav::NavDestination, worker::SlintExecutor};
+use struckout_proto::Difficulty;
 use tokio::sync::oneshot;
-
-use crate::{Application, Context, NavController};
-use stern::{
-    WorkerThread,
-    nav::NavDestination,
-    worker::{ForegroundExecutor, SlintExecutor},
-};
-use struckout_proto::types::PlayerId;
+use tokio_stream::wrappers::WatchStream;
+use tokio_util::sync::CancellationToken;
 use touchpanel_ui::{
     DifficulitySelectPropertyMappers, DifficulitySelectStates, DifficulitySelectViewModelTrait,
     NavRoute, NavRouteKind,
 };
-use tracing::{debug, error, trace};
+
+use crate::{Application, Context, data::SessionPhase};
 
 touchpanel_ui::define_difficulity_select_mapper! {}
+viewmodel_rc!(DifficulitySelectViewModel, DifficulitySelectAdopter);
 
-viewmodel_rc!(
-    DifficulitySelectViewModel<SlintExecutor>,
-    DifficulitySelectAdopter
-);
-
-#[derive(derive_more::Debug)]
-struct DifficulitySelectViewModel<E> {
-    nav_controller: NavController,
-    worker: WorkerThread<Context, E>,
+struct DifficulitySelectViewModel {
+    worker: WorkerThread<Context, SlintExecutor>,
     state: DifficulitySelectStates<Mapper>,
-    player_id: Option<PlayerId>,
+    bindings: Vec<CancellationToken>,
 }
 
-impl DifficulitySelectViewModel<SlintExecutor> {
+impl DifficulitySelectViewModel {
     fn new(application: &Application) -> Self {
         Self {
-            nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
-            state: DifficulitySelectStates::<Mapper>::new(
+            state: DifficulitySelectStates::new(
                 application
                     .ui
                     .global::<touchpanel_ui::DifficulitySelectAdopter>()
                     .as_weak(),
             ),
-            player_id: None,
+            bindings: Vec::new(),
         }
     }
-}
 
-impl<E> DifficulitySelectViewModelTrait for DifficulitySelectViewModel<E>
-where
-    E: ForegroundExecutor,
-{
-    fn on_start_game(&mut self) {
-        trace!("DifficulitySelectViewModel::on_start_game");
+    fn load(&mut self) {
+        for token in self.bindings.drain(..) {
+            token.cancel();
+        }
+        self.state.busy.set(false);
+        self.state.error_msg.set("".into());
+        let session = self
+            .worker
+            .context()
+            .game_master
+            .get()
+            .expect("connection is initialized")
+            .session();
+        self.bindings.push(
+            self.state.selected_difficulity.clone().bind(
+                &self.worker,
+                WatchStream::new(session.clone())
+                    .fuse()
+                    .map(|session| session.difficulty.unwrap_or(Difficulty::Normal).into()),
+            ),
+        );
+        self.bindings.push(
+            self.state.ready.clone().bind(
+                &self.worker,
+                WatchStream::new(session.clone())
+                    .fuse()
+                    .map(|session| session.phase == SessionPhase::Ready),
+            ),
+        );
+        if session.borrow().difficulty.is_none() {
+            self.set_difficulty(Difficulty::Normal);
+        }
+    }
 
-        let nc = self.nav_controller.clone();
+    fn set_difficulty(&self, difficulty: Difficulty) {
+        if self.state.busy.get() || self.state.ready.get() {
+            return;
+        }
+        self.state.busy.set(true);
+        self.state.error_msg.set("".into());
         let (tx, rx) = oneshot::channel();
-
-        let difficulty_ui = self.state.selected_difficulity.get();
-        let difficulty = difficulty_ui.into();
-        let player_id = self
-            .player_id
-            .expect("should be some while this screen is shown");
-
         self.worker.spawn_cx(async move |cx| {
-            let mut gm = cx.game_master.get().unwrap().clone();
-            let res = gm.start_game(player_id, difficulty).await;
-            tx.send(res).unwrap();
+            let mut gm = cx
+                .game_master
+                .get()
+                .expect("connection is initialized")
+                .clone();
+            let _ = tx.send(gm.set_session_difficulty(difficulty).await);
         });
-        slint::spawn_local(async move {
-            match rx.await.unwrap() {
-                Ok(game_id) => {
-                    nc.navigate(NavRoute::Playing(difficulty_ui, game_id));
-                }
-                Err(err) => {
-                    error!(?err, "an error occured while running game");
-                    nc.navigate(NavRoute::Fallback(err.to_string()));
+        self.worker.spawn_local({
+            let busy = self.state.busy.clone();
+            let error_msg = self.state.error_msg.clone();
+            async move {
+                let result = rx.await.expect("difficulty request must complete");
+                busy.set(false);
+                if let Err(error) = result {
+                    error_msg
+                        .set(format!("難易度の設定に失敗しました: {error}").to_shared_string());
                 }
             }
-        })
-        .unwrap();
-    }
-
-    fn on_select_difficulity(&mut self, val: touchpanel_ui::Difficulity) {
-        trace!(?val, "DifficulitySelectViewModel::on_select_difficulity");
-        self.state.selected_difficulity.set(val);
+        });
     }
 }
 
-pub struct DifficultySelectDestination(
-    #[allow(unused)] // may used when some arg is added to the route
-    DifficulitySelectViewModelRc,
-);
+impl DifficulitySelectViewModelTrait for DifficulitySelectViewModel {
+    fn on_start_game(&mut self) {
+        if self.state.busy.get() || self.state.ready.get() {
+            return;
+        }
+        self.state.busy.set(true);
+        self.state.error_msg.set("".into());
+        let (tx, rx) = oneshot::channel();
+        self.worker.spawn_cx(async move |cx| {
+            let mut gm = cx
+                .game_master
+                .get()
+                .expect("connection is initialized")
+                .clone();
+            let _ = tx.send(gm.set_session_ready().await);
+        });
+        self.worker.spawn_local({
+            let busy = self.state.busy.clone();
+            let error_msg = self.state.error_msg.clone();
+            async move {
+                let result = rx.await.expect("readiness request must complete");
+                busy.set(false);
+                if let Err(error) = result {
+                    error_msg
+                        .set(format!("準備完了の送信に失敗しました: {error}").to_shared_string());
+                }
+            }
+        });
+    }
 
+    fn on_select_difficulity(&mut self, value: touchpanel_ui::Difficulity) {
+        self.set_difficulty(value.into());
+    }
+}
+
+pub struct DifficultySelectDestination(DifficulitySelectViewModelRc);
 impl DifficultySelectDestination {
     pub fn new(application: &Application) -> Self {
         Self(DifficulitySelectViewModelRc::new(application))
     }
 }
-
 impl NavDestination<NavRoute> for DifficultySelectDestination {
     fn load(&mut self, route: &NavRoute) {
-        debug!("loading DifficultySelectViewModel");
-        let NavRoute::DifficulitySelect { player_id } = route else {
-            panic!("matched variant should be given");
+        let NavRoute::DifficulitySelect = route else {
+            unreachable!("difficulty selection route is required")
         };
-
-        let mut guard = self.0.borrow_mut();
-        guard.player_id = Some(*player_id);
+        self.0.borrow_mut().load();
     }
-
     fn route(&self) -> NavRouteKind {
         NavRouteKind::DifficulitySelect
     }
 }
-
-#[cfg(test)]
-mod tests {}

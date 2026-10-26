@@ -20,6 +20,10 @@ import { ConnectingScreen } from "./screens/connecting-screen.slint";
 import {
     NameInputNonFirstScreen,
 } from "./screens/name-input-non-first-screen.slint";
+import {
+    ModeSelectScreen,
+    ModeSelectAdopter,
+} from "./screens/mode-select-screen.slint";
 //@xtask-import
 
 export {
@@ -42,6 +46,7 @@ export { ConnectingAdopter } from "./screens/connecting-screen.slint";
 export {
     NameInputNonFirstAdopter,
 } from "./screens/name-input-non-first-screen.slint";
+export { ModeSelectAdopter } from "./screens/mode-select-screen.slint";
 //@xtask-export
 
 enum UiNavRoute {
@@ -54,111 +59,116 @@ enum UiNavRoute {
     Fallback,
     ConnectionFailed,
     Connecting,
-    NameInputNonFirst
+    NameInputNonFirst,
+    ModeSelect,
     //@xtask-enum
 }
 
 export component AppWindow inherits Window {
-        full-screen: true;
-        default-font-family: "Oxanium,Noto Sans JP";
+    full-screen: true;
+    default-font-family: "Oxanium,Noto Sans JP";
 
-        in property <UiNavRoute> nav-route;
-        callback click-backbutton();
+    in property <UiNavRoute> nav-route;
+    callback click-backbutton();
 
-        pure function items(route: UiNavRoute) -> [string] {
-            if route == UiNavRoute.Start {
-                return [];
-            } else if route == UiNavRoute.NameInputFirst {
-                return ["PLAYER NAME", "DIFFICULTY"];
-            } else if route == UiNavRoute.NameInputNonFirst {
-                return ["PLAYER NAME", "DIFFICULTY"];
-            } else if route == UiNavRoute.DifficulitySelect {
-                return ["PLAYER NAME", "DIFFICULTY"];
-            } else if route == UiNavRoute.Playing {
-                return [];
-            } else if route == UiNavRoute.Score {
-                return ["SCORE", "RANKING"];
-            } else if route == UiNavRoute.Ranking {
-                return ["SCORE", "RANKING"];
-            } else if route == UiNavRoute.Fallback {
-                return [];
-            } else if route == UiNavRoute.ConnectionFailed {
-                return [];
-            } else if route == UiNavRoute.Connecting {
-                return [];
-            }
-            return ["UNKNOWN ROUTE"];
+    pure function items(route: UiNavRoute) -> [string] {
+        if route == UiNavRoute.Start {
+            return [];
+        } else if route == UiNavRoute.NameInputFirst {
+            return ["PLAYER NAME", "MODE", "DIFFICULTY"];
+        } else if route == UiNavRoute.NameInputNonFirst {
+            return ["PLAYER NAME", "MODE", "DIFFICULTY"];
+        } else if route == UiNavRoute.DifficulitySelect || route == UiNavRoute.ModeSelect {
+            return ["PLAYER NAME", "MODE", "DIFFICULTY"];
+        } else if route == UiNavRoute.Playing {
+            return [];
+        } else if route == UiNavRoute.Score {
+            return [];
+        } else if route == UiNavRoute.Ranking {
+            return [];
+        } else if route == UiNavRoute.Fallback {
+            return [];
+        } else if route == UiNavRoute.ConnectionFailed {
+            return [];
+        } else if route == UiNavRoute.Connecting {
+            return [];
         }
+        return ["UNKNOWN ROUTE"];
+    }
 
-        pure function current-item-idx(route: UiNavRoute) -> int {
-            if route == UiNavRoute.Start {
-                return 0;
-            } else if route == UiNavRoute.NameInputFirst {
-                return 0;
-            } else if route == UiNavRoute.NameInputNonFirst {
-                return 0;
-            } else if route == UiNavRoute.DifficulitySelect {
-                return 1;
-            } else if route == UiNavRoute.Playing {
-                return 0;
-            } else if route == UiNavRoute.Score {
-                return 0;
-            } else if route == UiNavRoute.Ranking {
-                return 1;
-            } else if route == UiNavRoute.Fallback {
-                return 0;
-            } else if route == UiNavRoute.ConnectionFailed {
-                return 0;
-            } else if route == UiNavRoute.Connecting {
-                return 0;
-            }
+    pure function current-item-idx(route: UiNavRoute) -> int {
+        if route == UiNavRoute.Start {
+            return 0;
+        } else if route == UiNavRoute.NameInputFirst {
+            return 0;
+        } else if route == UiNavRoute.NameInputNonFirst {
+            return 0;
+        } else if route == UiNavRoute.ModeSelect {
+            return 1;
+        } else if route == UiNavRoute.DifficulitySelect {
+            return 2;
+        } else if route == UiNavRoute.Playing {
+            return 0;
+        } else if route == UiNavRoute.Score {
+            return 0;
+        } else if route == UiNavRoute.Ranking {
+            return 1;
+        } else if route == UiNavRoute.Fallback {
+            return 0;
+        } else if route == UiNavRoute.ConnectionFailed {
+            return 0;
+        } else if route == UiNavRoute.Connecting {
             return 0;
         }
+        return 0;
+    }
 
-        pure function show-topbar(route: UiNavRoute) -> bool {
-            if route == UiNavRoute.Start {
-                return false;
-            } else if route == UiNavRoute.NameInputFirst {
-                return true;
-            } else if route == UiNavRoute.NameInputNonFirst {
-                return true;
-            } else if route == UiNavRoute.DifficulitySelect {
-                return true;
-            } else if route == UiNavRoute.Playing {
-                return false;
-            } else if route == UiNavRoute.Score {
-                return true;
-            } else if route == UiNavRoute.Ranking {
-                return true;
-            } else if route == UiNavRoute.Fallback {
-                return false;
-            } else if route == UiNavRoute.ConnectionFailed {
-                return false;
-            } else if route == UiNavRoute.Connecting {
-                return false;
-            }
+    pure function show-topbar(route: UiNavRoute) -> bool {
+        if route == UiNavRoute.Start {
+            return false;
+        } else if route == UiNavRoute.NameInputFirst {
+            return true;
+        } else if route == UiNavRoute.NameInputNonFirst {
+            return true;
+        } else if route == UiNavRoute.DifficulitySelect || route == UiNavRoute.ModeSelect {
+            return true;
+        } else if route == UiNavRoute.Playing {
+            return false;
+        } else if route == UiNavRoute.Score {
+            return false;
+        } else if route == UiNavRoute.Ranking {
+            return false;
+        } else if route == UiNavRoute.Fallback {
+            return false;
+        } else if route == UiNavRoute.ConnectionFailed {
+            return false;
+        } else if route == UiNavRoute.Connecting {
             return false;
         }
-
-        VerticalLayout {
-            if show-topbar(root.nav-route): topbar := TopBar {
-                items: items(nav-route);
-                current-item-idx: current-item-idx(nav-route);
-                click-backbutton => {
-                    root.click-backbutton();
-                }
-            }
-
-            if nav-route == UiNavRoute.Start: StartScreen { }
-            if nav-route == UiNavRoute.NameInputFirst: NameInputFirstScreen { }
-            if nav-route == UiNavRoute.DifficulitySelect:DifficulitySelectScreen { }
-            if nav-route == UiNavRoute.Playing: PlayingScreen { }
-            if nav-route == UiNavRoute.Score: ScoreScreen { }
-            if nav-route == UiNavRoute.Ranking: RankingScreen { }
-            if nav-route == UiNavRoute.Fallback: FallbackScreen { }
-            if nav-route == UiNavRoute.ConnectionFailed: ConnectionFailedScreen { }
-            if nav-route == UiNavRoute.Connecting: ConnectingScreen { }
-            if nav-route == UiNavRoute.NameInputNonFirst: NameInputNonFirstScreen { }
-        //@xtask-screen
-        }
+        return false;
     }
+
+    VerticalLayout {
+        if show-topbar(root.nav-route): topbar := TopBar {
+            items: items(nav-route);
+            show-backbutton: root.nav-route == UiNavRoute.NameInputFirst || root.nav-route == UiNavRoute.NameInputNonFirst || (root.nav-route == UiNavRoute.ModeSelect && !ModeSelectAdopter.busy && ModeSelectAdopter.back-enabled);
+            current-item-idx: current-item-idx(nav-route);
+            click-backbutton => {
+                root.click-backbutton();
+            }
+        }
+
+        if nav-route == UiNavRoute.Start: StartScreen { }
+        if nav-route == UiNavRoute.NameInputFirst: NameInputFirstScreen { }
+        if nav-route == UiNavRoute.DifficulitySelect:DifficulitySelectScreen { }
+        if nav-route == UiNavRoute.Playing: PlayingScreen { }
+        if nav-route == UiNavRoute.Score: ScoreScreen { }
+        if nav-route == UiNavRoute.Ranking: RankingScreen { }
+        if nav-route == UiNavRoute.Fallback: FallbackScreen { }
+        if nav-route == UiNavRoute.ConnectionFailed: ConnectionFailedScreen { }
+        if nav-route == UiNavRoute.Connecting: ConnectingScreen { }
+        if nav-route == UiNavRoute.NameInputNonFirst: NameInputNonFirstScreen { }
+        if nav-route == UiNavRoute.ModeSelect: ModeSelectScreen { }
+        //@xtask-screen
+    }
+}
