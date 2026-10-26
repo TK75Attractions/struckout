@@ -18,8 +18,8 @@ jobs:
       version: ${{ steps.info.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
+      - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: protoc mold
       - name: Get commit hash and version of this release
@@ -67,8 +67,8 @@ jobs:
             touchpanel
             xtask
             macros
-      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
+      - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }}
       - name: Install fontconfig for Linux
@@ -196,7 +196,7 @@ jobs:
             launcher
             mise.toml
             mise.lock
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
         with:
           working_directory: launcher
           install_args: dotnet
@@ -230,7 +230,7 @@ jobs:
             api/proto
             mise.toml
             mise.lock
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
         with:
           working_directory: camera
           install_args: java protoc python
@@ -299,7 +299,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/game-master
           tags: type=raw,value=${{ needs.get-version.outputs.version }}
       - name: Build and push game-master image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./game_master/docker/Dockerfile

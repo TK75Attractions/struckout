@@ -115,7 +115,7 @@ async fn handle_connection(
     drop(writer);
 }
 
-/// 設定を当てる。解析画像の大きさが変わったときと、最初の設定では、ffmpeg を起動し直す。
+/// 設定を当てる。動画か解析画像の大きさが変わったときと、最初の設定では、ffmpeg を起動し直す。
 fn apply_config(
     pipeline: Option<Pipeline>,
     config: &VideoStreamConfig,

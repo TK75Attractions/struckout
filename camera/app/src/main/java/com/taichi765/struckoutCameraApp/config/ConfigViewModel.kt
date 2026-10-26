@@ -36,14 +36,19 @@ class ConfigViewModel @Inject constructor(
         configRepository.detectionOutputKind,
         networkManager.state,
         configRepository.cameraPose,
-        // combine が型つきで受け取れるのは 5 本までなので、2 つをまとめる。
-        configRepository.detectionArea.combine(configRepository.focalLengthRatio) { area, ratio ->
-            area to ratio
+        // combine が型つきで受け取れるのは 5 本までなので、解析と撮影の設定をまとめる。
+        combine(
+            configRepository.detectionArea,
+            configRepository.focalLengthRatio,
+            configRepository.highSpeedStreamSize,
+        ) { area, ratio, size ->
+            Triple(area, ratio, size)
         },
-    ) { recodingModeEnabled, detectionOutputKind, connectionState, cameraPose, (detectionArea, focalLengthRatio) ->
+    ) { recodingModeEnabled, detectionOutputKind, connectionState, cameraPose, (detectionArea, focalLengthRatio, streamSize) ->
         ConfigUiState(
             recodingModeEnabled,
             detectionOutputKind = detectionOutputKind,
+            highSpeedStreamSize = streamSize,
             tcpIsConnected = connectionState.tcpIsConnected(),
             udpIsConnected = connectionState.udpIsConnected(),
             locationX = cameraPose.x.toString(),
@@ -77,6 +82,12 @@ class ConfigViewModel @Inject constructor(
      */
     fun applyChanges(newState: ConfigUiState) {
         val oldState = uiState.value
+
+        if (newState.highSpeedStreamSize != oldState.highSpeedStreamSize) {
+            viewModelScope.launch {
+                configRepository.setHighSpeedStreamSize(newState.highSpeedStreamSize)
+            }
+        }
 
         if (newState.recodingModeEnabled != oldState.recodingModeEnabled) {
             viewModelScope.launch {

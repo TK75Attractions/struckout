@@ -87,14 +87,19 @@ class PcVideoStreamer(
     fun stop() {
         running = false
         thread?.interrupt()
-        thread = null
         runCatching { socket?.close() }
+        // 再起動で running が true に戻る前に、古い送信ループを確実に終える。
+        thread?.join()
+        thread = null
         _active.value = false
         queue.clear()
+        lastCodecConfig = null
+        waitingForKeyFrame = true
     }
 
     /** エンコーダーが出したデータを渡す (コーデックのスレッド)。PC につながっていなければ捨てる。 */
     fun offer(data: ByteArray, sensorTimestampNanos: Long, keyFrame: Boolean, codecConfig: Boolean) {
+        if (!running) return
         if (codecConfig) {
             lastCodecConfig = data
         }

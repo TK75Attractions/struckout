@@ -7,6 +7,7 @@ import androidx.annotation.CallSuper
 import com.taichi765.struckoutCameraApp.camera.DetectionArea
 import com.taichi765.struckoutCameraApp.config.ConfigStoreRepository
 import com.taichi765.struckoutCameraApp.config.DetectionOutputKind
+import com.taichi765.struckoutCameraApp.config.HighSpeedStreamSize
 import com.taichi765.struckoutCameraApp.di.ApplicationScope
 import com.taichi765.struckoutCameraApp.network.DeviceIdentity
 import com.taichi765.struckoutCameraApp.network.NetworkManager
@@ -132,6 +133,12 @@ class RemoteControlReceiver : InjectableBroadcastReceiver() {
 
     private suspend fun setConfig(intent: Intent): String {
         val applied = mutableListOf<String>()
+        intent.getStringExtra("stream_size")?.let { text ->
+            val size = HighSpeedStreamSize.entries.firstOrNull { it.configValue == text }
+                ?: return "error: stream_size must be 1280x720 or 640x480"
+            configRepository.setHighSpeedStreamSize(size)
+            applied += "stream_size=${size.configValue}"
+        }
         intent.getStringExtra("output")?.let { text ->
             val kind = DetectionOutputKind.entries.firstOrNull { it.name.equals(text, ignoreCase = true) }
                 ?: return "error: output must be one of ${DetectionOutputKind.entries}"
@@ -172,6 +179,7 @@ class RemoteControlReceiver : InjectableBroadcastReceiver() {
         return listOf(
             "device_id=${deviceIdentity.deviceId}",
             "output=${configRepository.detectionOutputKind.value}",
+            "stream_size=${configRepository.highSpeedStreamSize.value.configValue}",
             "tcp=${if (networkManager.state.first().tcpIsConnected()) "connected" else "disconnected"}",
             "camera_screen=${commands.cameraScreenActive}",
             "focal_ratio=${configRepository.focalLengthRatio.value}",

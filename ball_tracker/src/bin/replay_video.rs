@@ -269,7 +269,7 @@ struct Detected {
 }
 
 enum Meta {
-    Settings(AnalysisSettings),
+    Settings(Box<AnalysisSettings>),
     Frame {
         sensor_ns: i64,
         timestamp_ms: i64,
@@ -315,27 +315,9 @@ fn analyze_recording(
     };
     let camera_id = settings.camera_id;
     let (width, height) = (settings.width, settings.height);
-    let hwaccel: Vec<&str> = hwaccel
-        .map(|name| vec!["-hwaccel", name])
-        .unwrap_or_default();
+    let layout = ball_tracker::video::decode::DecodeLayout::from_settings(&settings);
     let mut child = Command::new(ffmpeg)
-        .args(["-hide_banner", "-loglevel", "error"])
-        .args(&hwaccel)
-        .args([
-            "-f",
-            "h264",
-            "-i",
-            "pipe:0",
-            "-vf",
-            &format!("scale={width}:{height}:flags=area"),
-            "-fps_mode",
-            "passthrough",
-            "-f",
-            "rawvideo",
-            "-pix_fmt",
-            "rgb24",
-            "pipe:1",
-        ])
+        .args(ball_tracker::video::decode::ffmpeg_args(&settings, hwaccel))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -349,12 +331,13 @@ fn analyze_recording(
     let reader = thread::spawn(move || {
         let mut analyzer = Analyzer::new(first_settings).with_options(detection);
         let mut image = vec![0u8; width * height * 3];
+        let mut nv12 = vec![0u8; layout.frame_bytes()];
         let mut out = Vec::new();
         let mut decoded = 0;
-        while stdout.read_exact(&mut image).is_ok() {
+        while stdout.read_exact(&mut nv12).is_ok() {
             let (sensor_ns, timestamp_ms, captured_at) = loop {
                 match meta_rx.recv() {
-                    Ok(Meta::Settings(settings)) => analyzer.update(settings),
+                    Ok(Meta::Settings(settings)) => analyzer.update(*settings),
                     Ok(Meta::Frame {
                         sensor_ns,
                         timestamp_ms,
@@ -364,6 +347,7 @@ fn analyze_recording(
                 }
             };
             decoded += 1;
+            layout.convert(&nv12, &mut image);
             if let Some(packet) = analyzer.analyze(&image, sensor_ns, timestamp_ms).packet {
                 out.push(Detected {
                     camera_id,
@@ -391,12 +375,14 @@ fn analyze_recording(
                 match AnalysisSettings::from_config(&config) {
                     Ok(mut next) => {
                         overrides.apply(&mut next);
-                        if next.width == width && next.height == height {
+                        if next.width == width && next.height == height
+                            && next.video_width == settings.video_width
+                            && next.video_height == settings.video_height {
                             settings = next.clone();
-                            let _ = meta_tx.send(Meta::Settings(next));
+                            let _ = meta_tx.send(Meta::Settings(Box::new(next)));
                         } else {
                             eprintln!(
-                                "camera {camera_id}: analysis size changed; ignored the new config"
+                                "camera {camera_id}: video or analysis size changed; ignored the new config"
                             );
                         }
                     }

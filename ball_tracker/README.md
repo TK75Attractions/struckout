@@ -52,7 +52,12 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
 追いつかないため)。`src/video/` がそれを受けて、アプリが送るのと同じ `DetectionsPacket` を作る。これより先は、
 アプリから検出を受け取ったときと同じ。
 
-- デコードと縮小は ffmpeg に任せる (`--ffmpeg`、既定は PATH の `ffmpeg`)。カメラごとに 1 つ起動する。
+- デコードは ffmpeg に任せる (`--ffmpeg`、既定は PATH の `ffmpeg`)。カメラごとに 1 つ起動し、NV12 を出す。
+  動画が解析画像の 2 倍なら、Rust で輝度の 2x2 を平均して縮小し、元の色差を使って RGB24 に変換する。
+  同じ大きさなら縮小せず RGB24 に変換する。それ以外の倍率だけ ffmpeg の `scale=幅:高さ:flags=area` で縮小する。
+  変換はカメラのフルレンジ BT.601 (yuvj420p) を前提にするため、リミテッドレンジの動画では色が少しずれる。
+  引数と変換は `video/decode.rs` にまとめ、`replay_video` と `bench_analysis` でも同じ処理を使う。
+  動画か解析画像の大きさが変わったら ffmpeg を起動し直す。BMP のスナップショットは変換後の RGB を保存する。
   ffmpeg の出力には時刻が付かないので、書いた順に出てくるものとして、受け取ったフレームの時刻を順に割り当てる
   (アプリは B フレームを使わない)。
 - 解析 (`video/tracker.rs`) はアプリの `ObjectTracker` (OpenCV) を移したもの。背景との差、二値化、
@@ -66,12 +71,18 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   1 フレーム 3〜5 ms が 0.5 ms (人が写った区間の 95% で 13 ms が 2.6 ms) になった。
 - `bench_analysis` で、録画の一部を使って、解析の時間と検出の結果の指紋を測れる。解析を変えたときは、指紋が
   変わらないこと (結果が同じであること) と、時間を確かめる。途中の区間はデコードに数分かかるので、`--cache` で
-  デコードした画像を使い回す。
+  ffmpeg が出した NV12 を使い回す。解析と変換の時間は別々に出す。
+  キャッシュには識別情報 (形式・サイズ・開始位置) を付ける。旧 RGB キャッシュは使えないので別のパスで作り直す。
 
   ```bash
   cargo run --release --bin bench_analysis -- recordings/2026-10-16_experiment_3/video/camera0_20261016-064230.vsp \
       --skip 33600 --frames 1200 --cache /tmp/run3_camera0.raw
   ```
+  録画パスはリポジトリルートからの相対パス。`ball_tracker/` から実行する場合は `../recordings/` にする。
+  2026-10-23 の変換単体の計測 (Snapdragon X、合成 NV12、`rustc -O`、2000 枚を 3 回) では、
+  1280x720 → 640x360 が 0.243 / 0.246 / 0.249 ms/フレームだった。
+  同日の指定録画 (`--skip 33600 --frames 1200`) の変更前後の計測は、どちらも ffmpeg の起動が
+  アクセス拒否 (OS error 5) で失敗した。検出数・指紋・解析時間・録画での変換時間の比較は未確認。
 - 範囲、内部パラメータ、向き、解析の設定は、アプリが `VideoStreamConfig` で送ってくる値を使う。
 - 遅れは、60fps の録画を流して受け取ってから解析し終えるまで 50〜60 ms (2026-10-15)。
   `scripts/recording_analysis/stream_video_to_tracker.py` で、録画をアプリと同じ手順で流して確かめられる。
@@ -81,18 +92,26 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   | 項目 | 内容 |
   |---|---|
   | `fps` | 解析したフレームの数 (1 秒あたり) |
+  | `dropped_before_ffmpeg` | この 10 秒間に ffmpeg に書く前に捨てたフレームの数 |
+  | `dropped_after_ffmpeg` | この 10 秒間に ffmpeg から読み、解析せずに捨てたフレームの数 |
+  | `convert_ms` | NV12 の縮小と RGB24 への変換にかかった時間の平均 |
   | `analysis_ms` | 解析にかかった時間の平均 |
   | `delay_ms_p50`、`delay_ms_p95`、`max_delay_ms` | 受け取ってから解析し終えるまで |
   | `queued` | 受け取って、まだ解析していないフレームの数 |
   | `input_ms_p95` | 受け取ってから ffmpeg に書き始めるまで (ffmpeg が標準入力を読まないあいだ伸びる) |
-  | `ffmpeg_ms_p50`、`ffmpeg_ms_p95` | ffmpeg に書き始めてから、縮小した画像を読み終えるまで。解析が遅れて ffmpeg の出力が詰まっているあいだも含む |
+  | `ffmpeg_ms_p50`、`ffmpeg_ms_p95` | ffmpeg に書き始めてから、NV12 を読み終えるまで。解析が遅れて ffmpeg の出力が詰まっているあいだも含む |
   | `queued_in_ffmpeg` | ffmpeg に書いて、まだ出てきていないフレームの数 |
   | `wait_ms` | 解析のスレッドが ffmpeg の出力を待っていた時間の平均 |
   | `send_ms` | 解析のスレッドが検出を追跡に渡すのを待っていた時間の平均 |
 
-  追いついているあいだは、`wait_ms` + `analysis_ms` + `send_ms` が 1 フレームの間隔 (120fps で 8.33 ms) に近い。
-  `queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと縮小) が
+  追いついているあいだは、`wait_ms` + `convert_ms` + `analysis_ms` + `send_ms` が 1 フレームの間隔 (120fps で 8.33 ms) に近い。
+  `queued` が増えているときに `wait_ms` が 0 に近ければ解析が、`wait_ms` が残っていれば ffmpeg (デコードと NV12 の出力) が
   追いついていない。
+  受信から 0.3 秒を超えた入力は、次の新しいキーフレームまで捨てて追いつく (キーフレームの間隔は 1 秒)。
+  ffmpeg から出た画像も、受信から 0.3 秒を超えていれば解析せずに読み流し、書き込み側も次のキーフレームまで
+  捨てる (デコードしても捨てるだけのフレームを書き続けないように)。捨てた間の着弾は出ない。
+  0.3 秒は、追跡が撮影から 0.5 秒 (`RAY_LIFETIME`) を過ぎた視線を捨てることから決めた (`video/pipeline.rs` の
+  `MAX_DELAY`)。
 - `--no-video-analysis` で受け付けをやめると、アプリは自分で解析する。
 
 ### 視線の集まりからボールを見つける

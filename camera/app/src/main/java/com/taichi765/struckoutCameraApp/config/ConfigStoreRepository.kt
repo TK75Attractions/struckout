@@ -9,6 +9,7 @@ interface ConfigStoreRepository : CameraPoseDataSource {
     val recordingModeEnabled: StateFlow<Boolean>
     val detectionOutputKind: StateFlow<DetectionOutputKind>
     val detectionArea: StateFlow<DetectionArea>
+    val highSpeedStreamSize: StateFlow<HighSpeedStreamSize>
 
     /**
      * 焦点距離を、解析画像の幅に対する比で指定する。0 のときは端末が返す値から計算する。
@@ -21,6 +22,7 @@ interface ConfigStoreRepository : CameraPoseDataSource {
     suspend fun updateCameraPose(pose: CameraBallTracker.CameraPose)
     suspend fun updateDetectionArea(area: DetectionArea)
     suspend fun updateFocalLengthRatio(ratio: Double)
+    suspend fun setHighSpeedStreamSize(size: HighSpeedStreamSize)
 
     companion object {
         const val ENABLE_RECORDING_MODE_DEFAULT = false
