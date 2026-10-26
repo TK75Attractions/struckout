@@ -66,6 +66,7 @@ jobs:
             migrations/mysql
             touchpanel
             xtask
+            macros
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16
       - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7
         with:
