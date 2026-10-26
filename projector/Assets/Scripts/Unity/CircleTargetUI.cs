@@ -8,20 +8,10 @@ namespace Struckout.Unity
     [RequireComponent(typeof(SpriteRenderer))]
     public class CircleTargetUI : MonoBehaviour, ITargetUI
     {
-        [FormerlySerializedAs("_moveDurationSeconds")]
-        [SerializeField]
-        [Tooltip("移動にかける秒数。0 なら瞬間移動する。")]
-        private float moveDurationSeconds = 0.15f;
-
         [FormerlySerializedAs("_visibilityDurationSeconds")]
         [SerializeField]
-        [Tooltip("開始・終了時に的がフェードする秒数。")]
+        [Tooltip("登録済みの的がフェードインする秒数。")]
         private float visibilityDurationSeconds = 0.3f;
-
-        [FormerlySerializedAs("_moveSquash")]
-        [SerializeField]
-        [Tooltip("命中後の移動中にだけ縮む割合。外径と判定の差を小さく抑える。")]
-        private float moveSquash = 0.05f;
 
         [FormerlySerializedAs("_rotationAmplitudeDegrees")]
         [SerializeField]
@@ -31,7 +21,7 @@ namespace Struckout.Unity
         [FormerlySerializedAs("_rippleDurationSeconds")]
         [Header("Hit Ripple")]
         [SerializeField, Min(0.01f)]
-        [Tooltip("的の移動元と移動先で波紋が広がる秒数。")]
+        [Tooltip("的の削除位置と新しい的の生成位置で波紋が広がる秒数。")]
         private float rippleDurationSeconds = 0.32f;
 
         [FormerlySerializedAs("_rippleEndScale")]
@@ -51,12 +41,6 @@ namespace Struckout.Unity
         private float _targetVisibility;
         private float _visibilityDelay;
         private float _rotationPhase;
-
-        private Vector3 _moveFrom;
-        private Vector3 _moveTo;
-        private float _moveElapsed;
-        private bool _moving;
-        private float _moveSquashAmount;
 
         private void Awake()
         {
@@ -86,10 +70,10 @@ namespace Struckout.Unity
             transform.localPosition = ToWorld(target);
             ApplyDiameter(target);
 
-            _moving = false;
             _visibility = 0f;
             _targetVisibility = 0f;
             ApplyVisuals();
+            SpawnRipple(transform.localPosition, startScale: 0.08f);
         }
 
         public void SetPresentationVisible(bool visible, float delaySeconds = 0f, bool immediate = false)
@@ -104,52 +88,14 @@ namespace Struckout.Unity
             ApplyVisuals();
         }
 
-        public void MoveTo(Target target)
+        public void Remove()
         {
-            _target = target;
-            var sourcePosition = transform.localPosition;
-            var destination = ToWorld(target);
-
-            // 元の着弾演出を残し、移動元から波紋を広げる。
-            SpawnRipple(sourcePosition, startScale: 1f);
-
-            // 大きさは変わらない仕様だが、変わっても破綻しないよう毎回合わせておく。
-            ApplyDiameter(target);
-
-            if (moveDurationSeconds <= 0f)
-            {
-                transform.localPosition = destination;
-                _moving = false;
-                _moveSquashAmount = 0f;
-                ApplyVisuals();
-                SpawnRipple(destination, startScale: 0.08f);
-                return;
-            }
-
-            _moveFrom = sourcePosition;
-            _moveTo = destination;
-            _moveElapsed = 0f;
-            _moving = true;
+            SpawnRipple(transform.localPosition, startScale: 1f);
+            Destroy(gameObject);
         }
 
         private void Update()
         {
-            if (_moving)
-            {
-                _moveElapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(_moveElapsed / moveDurationSeconds);
-
-                // 端で滑らかに止め、移動中だけ少し縮めて速度を感じさせる。
-                transform.localPosition = Vector3.Lerp(_moveFrom, _moveTo, Mathf.SmoothStep(0f, 1f, t));
-                _moveSquashAmount = Mathf.Sin(t * Mathf.PI) * Mathf.Clamp01(moveSquash);
-                if (t >= 1f)
-                {
-                    _moving = false;
-                    _moveSquashAmount = 0f;
-                    SpawnRipple(_moveTo, startScale: 0.08f);
-                }
-            }
-
             if (_visibilityDelay > 0f) _visibilityDelay -= Time.deltaTime;
             else if (!Mathf.Approximately(_visibility, _targetVisibility))
             {
@@ -174,8 +120,8 @@ namespace Struckout.Unity
             renderer.color = rippleColor;
             renderer.sortingOrder = (_renderer != null ? _renderer.sortingOrder : 0) + 1;
 
-            float worldDiameter = _world.ToWorldLength(_target.Diameter);
-            float spriteWidth = sprite.bounds.size.x;
+            var worldDiameter = _world.ToWorldLength(_target.Diameter);
+            var spriteWidth = sprite.bounds.size.x;
             ripple.transform.localScale = spriteWidth > 0f
                 ? Vector3.one * (worldDiameter / spriteWidth)
                 : Vector3.one;
@@ -193,8 +139,8 @@ namespace Struckout.Unity
                 _renderer.color = color;
             }
 
-            transform.localScale = _baseScale * (1f - _moveSquashAmount);
-            float rotation = _visibility > 0f
+            transform.localScale = _baseScale;
+            var rotation = _visibility > 0f
                 ? Mathf.Sin(Time.time * 1.8f + _rotationPhase) * rotationAmplitudeDegrees
                 : 0f;
             transform.localRotation = Quaternion.Euler(0f, 0f, rotation);
@@ -213,9 +159,9 @@ namespace Struckout.Unity
         {
             if (_world == null) return;
 
-            float desired = _world.ToWorldLength(target.Diameter);
+            var desired = _world.ToWorldLength(target.Diameter);
 
-            float spriteWidth = _renderer != null && _renderer.sprite != null
+            var spriteWidth = _renderer != null && _renderer.sprite != null
                 ? _renderer.sprite.bounds.size.x
                 : 0f;
 

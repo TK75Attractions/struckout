@@ -2,19 +2,79 @@ syntax = "proto3";
 
 package tk75attractions.struckout.game_master.v1;
 
-import "google/protobuf/duration.proto";
+import "game_master/event.proto";
+import "game_master/navigation.proto";
+import "game_master/target.proto";
+import "game_master/types.proto";
 
-enum Difficulty {
-  DIFFICULTY_UNSPECIFIED = 0;
-  DIFFICULTY_NORMAL = 1;
-  DIFFICULTY_HARD = 2;
-  DIFFICULTY_VERYHARD = 3;
-}
+// Service provided by `game_master`.
+//
+// ## Single-play
+// | game-master |
+// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready |
+//
+// ## Multi-play
+// | game-master | ------------------------------------------------------------------------------------------------ GameStarted |
+// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession ----- SetSessionPlayer -- SetSessionDifficulty ------ Ready ----- |
+// |  machine 2  | ----- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready
+//
+// See also: docs/diagrams/data_flow.mmd
+service GameMasterSessionService {
+  // Used by `touchpanel`.
+  // The session is discarded after the finished result is saved.
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
 
-enum GameMode {
-  GAME_MODE_UNSPECIFIED = 0;
-  GAME_MODE_SINGLE = 1;
-  GAME_MODE_MULTI = 2;
+  // Sets difficulty to the session. Used by `touchpanel`.
+  rpc SetSessionDifficulty(SetSessionDifficultyRequest) returns (SetSessionDifficultyResponse);
+
+  rpc SetGameMode(SetGameModeRequest) returns (SetGameModeResponse);
+
+  // Sets readiness to the session. Used by `touchpanel`.
+  rpc SetSessionReady(SetSessionReadyRequest) returns (SetSessionReadyResponse);
+
+  // Gets a game result using the specified game_id.
+  rpc GetGameResult(GetGameResultRequest) returns (GetGameResultResponse);
+
+  // Gets the ranking to the specified rank.
+  rpc GetRanking(GetRankingRequest) returns (GetRankingResponse);
+
+  // Gets the games played by the specified player.
+  rpc GetGamesByPlayer(GetGamesByPlayerRequest) returns (GetGamesByPlayerResponse);
+
+  /* ----- Navigation ----- */
+
+  // Starts tutorial on the specified machine. Used by `touchpanel`.
+  rpc StartTutorial(StartTutorialRequest) returns (StartTutorialResponse);
+
+  // Navigates to the previous tutorial. Used by `touchpanel`.
+  rpc GoPreviousTutorial(GoPreviousTutorialRequest) returns (GoPreviousTutorialResponse);
+
+  // Navigates to the next tutorial. Used by `touchpanel`.
+  rpc GoNextTutorial(GoNextTutorialRequest) returns (GoNextTutorialResponse);
+
+  // Navigates to the ranking screen. Used by `touchpanel`.
+  rpc GoRankingScreen(GoRankingScreenRequest) returns (GoRankingScreenResponse);
+
+  // Navigates to the home screen. Used by `touchpanel`.
+  rpc GoHomeScreen(GoHomeScreenRequest) returns (GoHomeScreenResponse);
+
+  /* ----- Targets ----- */
+
+  // Adds a target to a session. Used by `projector`
+  rpc AddTarget(AddTargetRequest) returns (AddTargetResponse);
+
+  // Removes a target from a session. Used by `projector`.
+  rpc RemoveTarget(RemoveTargetRequest) returns (RemoveTargetResponse);
+
+  // Ball is hit to the target. Used by `projector`.
+  //
+  // Causes `GameScoreChanged` event to be emitted.
+  rpc HitTarget(HitTargetRequest) returns (HitTargetResponse);
+
+  /* ----- Events ----- */
+
+  // Notify events occured in game_master.
+  rpc ListenEvents(ListenEventsRequest) returns (stream ListenEventsResponse);
 }
 
 message StartSessionRequest {
@@ -24,22 +84,6 @@ message StartSessionRequest {
 
 message StartSessionResponse {}
 
-message ListenEventsRequest {
-  uint32 machine_id = 1;
-}
-
-message ListenEventsResponse {
-  Event event = 1;
-}
-
-message AddScoreRequest {
-  uint32 machine_id = 1;
-  uint32 game_id = 2;
-  uint32 score_to_add = 3;
-}
-
-message AddScoreResponse {}
-
 message GetGameResultRequest {
   uint32 game_id = 1;
 }
@@ -48,23 +92,34 @@ message GetGameResultResponse {
   uint32 total_score = 1;
 }
 
-message StartTutorialRequest {
-  uint32 machine_id = 1;
+message GetRankingRequest {
+  // トップN位まで取得する
+  uint32 max_item_num = 1;
 }
 
-message StartTutorialResponse {}
+message GetRankingResponse {
+  message RankingItem {
+    uint32 game_id = 1;
+    uint32 total_score = 2;
+    uint32 player_id = 3;
+    string player_name = 4;
+  }
 
-message GoPreviousTutorialRequest {
-  uint32 machine_id = 1;
+  repeated RankingItem top_n = 1;
 }
 
-message GoPreviousTutorialResponse {}
-
-message GoNextTutorialRequest {
-  uint32 machine_id = 1;
+message GetGamesByPlayerRequest {
+  uint32 player_id = 1;
 }
 
-message GoNextTutorialResponse {}
+message GetGamesByPlayerResponse {
+  message GamesByPlayerItem {
+    uint32 game_id = 1;
+    uint32 total_score = 2;
+  }
+
+  repeated GamesByPlayerItem items = 1;
+}
 
 message SetSessionDifficultyRequest {
   Difficulty difficulty = 1;
@@ -80,84 +135,8 @@ message SetGameModeRequest {
 
 message SetGameModeResponse {}
 
-message SetSessionReadyRequest {}
+message SetSessionReadyRequest {
+  uint32 machine_id = 1;
+}
 
 message SetSessionReadyResponse {}
-
-message Event {
-  message TutorialStarted {}
-
-  message TutorialNavigatedToPrevious {}
-
-  message TutorialNavigatedToNext {}
-
-  message DifficultyChanged {}
-
-  message GameStarted {
-    Difficulty difficulty = 1;
-    uint32 game_id = 2;
-  }
-
-  message GameTimeLimitNotify {
-    google.protobuf.Duration remaining = 1;
-    uint32 game_id = 2;
-  }
-
-  message GameScoreChanged {
-    uint32 total_score = 1;
-    uint32 game_id = 2;
-  }
-
-  message GameFinished {
-    uint32 game_id = 2;
-  }
-
-  oneof event_data {
-    GameStarted game_started = 3;
-    GameTimeLimitNotify game_time_limit_notify = 4;
-    GameFinished game_finished = 5;
-    GameScoreChanged game_score_changed = 6;
-  }
-}
-
-// Service provided by `game_master`.
-//
-// ## Single-play
-// | game-master |
-// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready |
-//
-// ## Multi-play
-// | game-master | ------------------------------------------------------------------------------------------------ GameStarted |
-// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession ----- SetSessionPlayer -- SetSessionDifficulty ------ Ready ----- |
-// |  machine 2  | ----- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready
-service GameMasterSessionService {
-  // Used by `touchpanel`.
-  // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
-  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
-
-  // Sets difficulty to the session. Used by `touchpanel`.
-  rpc SetSessionDifficulty(SetSessionDifficultyRequest) returns (SetSessionDifficultyResponse);
-
-  rpc SetGameMode(SetGameModeRequest) returns (SetGameModeResponse);
-
-  // Sets readiness to the session. Used by `touchpanel`.
-  rpc SetSessionReady(SetSessionReadyRequest) returns (SetSessionReadyResponse);
-
-  // Starts tutorial on the specified machine. Used by `touchpanel`.
-  rpc StartTutorial(StartTutorialRequest) returns (StartTutorialResponse);
-
-  // Navigates to the previous tutorial. Used by `touchpanel`.
-  rpc GoPreviousTutorial(GoPreviousTutorialRequest) returns (GoPreviousTutorialResponse);
-
-  // Navigates to the next tutorial. Used by `touchpanel`.
-  rpc GoNextTutorial(GoNextTutorialRequest) returns (GoNextTutorialResponse);
-
-  // Notify events occured in game_master.
-  rpc ListenEvents(ListenEventsRequest) returns (stream ListenEventsResponse);
-
-  // Adds score for the game. Used by `projector`.
-  rpc AddScore(AddScoreRequest) returns (AddScoreResponse);
-
-  // Gets the result of a specific game.
-  rpc GetGameResult(GetGameResultRequest) returns (GetGameResultResponse);
-}

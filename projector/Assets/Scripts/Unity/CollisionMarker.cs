@@ -61,7 +61,7 @@ namespace Struckout.Unity
         {
             _elapsed += Time.deltaTime;
 
-            float progress = lifetimeSeconds <= 0f
+            var progress = lifetimeSeconds <= 0f
                 ? 1f
                 : Mathf.Clamp01(_elapsed / lifetimeSeconds);
 
@@ -72,7 +72,7 @@ namespace Struckout.Unity
 
         private void Apply(float progress)
         {
-            float eased = 1f - (1f - progress) * (1f - progress);
+            var eased = 1f - (1f - progress) * (1f - progress);
             transform.localScale = _baseScale * Mathf.Lerp(startScale, endScale, eased);
             transform.localRotation = Quaternion.Euler(0f, 0f, _rotationDegrees * eased);
 

@@ -4,8 +4,7 @@ namespace Struckout.Domain
     /// projector から見たゲームの進行状態。
     ///
     /// 得点を送ってよいのは <see cref="Playing"/> の間だけ。
-    /// game_master はセッション外の得点を running_games に見つけられず、
-    /// NotFound を返す (service.rs の add_score)。
+    /// 表示画面は ProjectorScreen で別に管理する。
     /// </summary>
     public enum GamePhase
     {

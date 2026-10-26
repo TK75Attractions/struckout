@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.game_master.v1;
+
+import "game_master/target.proto";
+import "game_master/types.proto";
+import "google/protobuf/duration.proto";
+
+message Event {
+  message SessionDifficultyChanged {
+    Difficulty difficulty = 1;
+  }
+
+  message GameStarted {
+    message PlayerInfo {
+      uint32 machine_id = 1;
+      uint32 player_id = 2;
+    }
+    message Single {
+      PlayerInfo player = 1;
+    }
+
+    message Multi {
+      PlayerInfo player_1 = 1;
+      PlayerInfo player_2 = 2;
+    }
+
+    Difficulty difficulty = 1;
+    oneof game_started_player_info {
+      Single single = 2;
+      Multi multi = 3;
+    }
+  }
+
+  message GameTimeLimitNotify {
+    google.protobuf.Duration remaining = 1;
+  }
+
+  message GameScoreChanged {
+    uint32 total_score = 1;
+  }
+
+  message GameFinished {
+    uint32 game_id = 1;
+  }
+
+  /* ----- Navigations ----- */
+  message StartTutorialRequested {
+    uint32 machine_id = 1;
+  }
+
+  message NavigateToPreviousTutorialRequested {
+    uint32 machine_id = 1;
+  }
+
+  message NavigateToNextTutorialRequested {
+    uint32 machine_id = 1;
+  }
+
+  message NavigateToRankingScreenRequested {
+    uint32 machine_id = 1;
+  }
+
+  message NavigateToHomeScreenRequested {
+    uint32 machine_id = 1;
+  }
+
+  /* ----- Targets ----- */
+  message TargetAdded {
+    Target target = 1;
+  }
+
+  message TargetRemoved {
+    string target_id = 1;
+  }
+
+  // TODO: 機能追加したらコメントアウト外す
+  // message TargetModified {}
+
+  oneof event_data {
+    GameStarted game_started = 1;
+    GameTimeLimitNotify game_time_limit_notify = 2;
+    GameFinished game_finished = 3;
+    GameScoreChanged game_score_changed = 4;
+    SessionDifficultyChanged session_difficulty_changed = 5;
+
+    /* ----- Navigations ----- */
+    StartTutorialRequested start_tutorial_requested = 6;
+    NavigateToPreviousTutorialRequested navigate_to_previous_tutorial_requested = 7;
+    NavigateToNextTutorialRequested navigate_to_next_tutorial_requested = 8;
+    NavigateToRankingScreenRequested navigate_to_ranking_screen_requested = 9;
+    NavigateToHomeScreenRequested navigate_to_home_screen_requsted = 10;
+
+    /* ----- Targets ----- */
+    TargetAdded target_added = 11;
+    TargetRemoved target_removed = 12;
+  }
+}
+
+message ListenEventsRequest {
+  uint32 machine_id = 1;
+}
+
+message ListenEventsResponse {
+  Event event = 1;
+}

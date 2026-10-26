@@ -22,11 +22,11 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 初期配置は毎回同じになる()
         {
-            var first = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
-            var second = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var first = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var second = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
 
             Assert.That(second.Count, Is.EqualTo(first.Count));
-            for (int i = 0; i < first.Count; i++)
+            for (var i = 0; i < first.Count; i++)
             {
                 Assert.That(second[i].Coordinate.X, Is.EqualTo(first[i].Coordinate.X).Within(Tolerance));
                 Assert.That(second[i].Coordinate.Y, Is.EqualTo(first[i].Coordinate.Y).Within(Tolerance));
@@ -40,11 +40,11 @@ namespace Struckout.Tests.Tests.EditMode
         public void 移動先は画面内に収まる()
         {
             var generator = new TargetGenerator();
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
             var moved = targets[0];
-            var others = new List<Target> { targets[1], targets[2], targets[3] };
+            var others = new List<TargetGeometry> { targets[1], targets[2], targets[3] };
 
-            for (int i = 0; i < 200; i++)
+            for (var i = 0; i < 200; i++)
             {
                 var destination = generator.PickRelocation(moved, others);
 
@@ -57,19 +57,19 @@ namespace Struckout.Tests.Tests.EditMode
         public void 移動先は他の的と重ならない()
         {
             var generator = new TargetGenerator();
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
             var moved = targets[0];
-            var others = new List<Target> { targets[1], targets[2], targets[3] };
+            var others = new List<TargetGeometry> { targets[1], targets[2], targets[3] };
 
-            for (int i = 0; i < 200; i++)
+            for (var i = 0; i < 200; i++)
             {
                 var destination = generator.PickRelocation(moved, others);
 
                 foreach (var other in others)
                 {
-                    float dx = destination.X - other.Coordinate.X;
-                    float dy = destination.Y - other.Coordinate.Y;
-                    float distance = (float)System.Math.Sqrt(dx * dx + dy * dy);
+                    var dx = destination.X - other.Coordinate.X;
+                    var dy = destination.Y - other.Coordinate.Y;
+                    var distance = (float)System.Math.Sqrt(dx * dx + dy * dy);
 
                     Assert.That(distance, Is.GreaterThan(moved.Radius + other.Radius),
                         $"移動先が {other} と重なっている");
@@ -83,14 +83,14 @@ namespace Struckout.Tests.Tests.EditMode
             // 決定的に選ぶと、空いた場所が必ず最も条件のよい点になり、
             // 撃った的が同じところへ戻ってきてしまう。
             var generator = new TargetGenerator();
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
             var moved = targets[0];
-            var others = new List<Target> { targets[1], targets[2], targets[3] };
+            var others = new List<TargetGeometry> { targets[1], targets[2], targets[3] };
 
             var first = generator.PickRelocation(moved, others);
 
-            bool differs = false;
-            for (int i = 0; i < 50 && !differs; i++)
+            var differs = false;
+            for (var i = 0; i < 50 && !differs; i++)
             {
                 var next = generator.PickRelocation(moved, others);
                 differs = System.Math.Abs(next.X - first.X) > Tolerance
@@ -103,7 +103,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 初期配置は既知の座標になる()
         {
-            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
 
             Assert.That(targets.Count, Is.EqualTo(4));
 
@@ -118,15 +118,15 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 的どうしは重ならない()
         {
-            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
 
-            for (int i = 0; i < targets.Count; i++)
+            for (var i = 0; i < targets.Count; i++)
             {
-                for (int j = i + 1; j < targets.Count; j++)
+                for (var j = i + 1; j < targets.Count; j++)
                 {
-                    float dx = targets[i].Coordinate.X - targets[j].Coordinate.X;
-                    float dy = targets[i].Coordinate.Y - targets[j].Coordinate.Y;
-                    float distance = Mathf(dx, dy);
+                    var dx = targets[i].Coordinate.X - targets[j].Coordinate.X;
+                    var dy = targets[i].Coordinate.Y - targets[j].Coordinate.Y;
+                    var distance = Mathf(dx, dy);
 
                     Assert.That(distance, Is.GreaterThan(targets[i].Radius + targets[j].Radius),
                         $"的 {i} と {j} が重なっている");
@@ -137,7 +137,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 的は画面内に収まる()
         {
-            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
 
             foreach (var target in targets)
             {
@@ -149,7 +149,7 @@ namespace Struckout.Tests.Tests.EditMode
         private static float Mathf(float dx, float dy) =>
             (float)System.Math.Sqrt(dx * dx + dy * dy);
 
-        private static void AssertTarget(Target target, float x, float y, float diameter)
+        private static void AssertTarget(TargetGeometry target, float x, float y, float diameter)
         {
             Assert.That(target.Coordinate.X, Is.EqualTo(x).Within(Tolerance));
             Assert.That(target.Coordinate.Y, Is.EqualTo(y).Within(Tolerance));
@@ -164,7 +164,7 @@ namespace Struckout.Tests.Tests.EditMode
             var field = new FieldBounds(1280f, 800f);
             var generator = new TargetGenerator(field);
 
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
 
             foreach (var target in targets)
             {
@@ -179,10 +179,10 @@ namespace Struckout.Tests.Tests.EditMode
             var field = new FieldBounds(1280f, 800f);
             var generator = new TargetGenerator(field);
 
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<Target>());
+            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
             var moved = targets[0];
 
-            for (int i = 0; i < 32; i++)
+            for (var i = 0; i < 32; i++)
             {
                 var destination = generator.PickRelocation(moved, targets);
 

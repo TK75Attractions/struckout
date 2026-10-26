@@ -6,10 +6,10 @@ namespace Struckout.Infrastructure.Fake
 {
     public class FakeTargetGenerator : ITargetGenerator
     {
-        public IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> targets)
+        public IReadOnlyList<TargetGeometry> GenerateTargets(int num, TargetType type, IReadOnlyList<TargetGeometry> targets)
         {
-            List<Target> result = new();
-            for (int i = 0; i < num; i++)
+            List<TargetGeometry> result = new();
+            for (var i = 0; i < num; i++)
             {
                 var target = GenerateTarget(TargetType.Circle, i * 50, i * 50, 50);
 
@@ -19,22 +19,22 @@ namespace Struckout.Infrastructure.Fake
             return result;
         }
 
-        public Target GenerateTarget(TargetType type, IReadOnlyList<Target> targets)
+        public TargetGeometry GenerateTarget(TargetType type, IReadOnlyList<TargetGeometry> targets)
         {
             return GenerateTarget(TargetType.Circle, 50, 50, 50);
         }
 
         /// <summary>ダミーなので、決まった場所に置き直すだけ。</summary>
-        public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
+        public TargetCoordinate PickRelocation(TargetGeometry target, IReadOnlyList<TargetGeometry> others)
             => new(100f, 100f);
 
-        public Target GenerateTarget(TargetType type, float x, float y, float size)
+        public TargetGeometry GenerateTarget(TargetType type, float x, float y, float size)
         {
             TargetCoordinate coordinate = new(
                 x,
                 y
             );
-            Target target = new(
+            TargetGeometry target = new(
                 coordinate,
                 type,
                 size

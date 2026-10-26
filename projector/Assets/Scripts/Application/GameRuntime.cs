@@ -1,148 +1,172 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
-
+using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Application
 {
     public class GameRuntime
     {
         private readonly ICollisionSolver _collisionSolver;
-        private readonly IPointCalculator _pointCalculator;
         private readonly ITargetGenerator _targetGenerator;
         private readonly IUIService _uiService;
+        private readonly IGameMasterClient _master;
         private readonly GameSettings _settings;
-        private Action<Target> _collisionTargetAction;
-
-        /// <summary>
-        /// 的に当たって得点が入ったときの「増分」。
-        /// game_master (session.rs) は cur_score += score としているので、累計ではなく差分を流す。
-        /// </summary>
-        public event Action<int> ScoreAdded;
-
         private readonly GameRuntimeState _state = new();
+        private readonly HashSet<Guid> _pendingTargets = new();
+        private IReadOnlyList<TargetGeometry> _initialGeometry;
+        private CancellationTokenSource _gameCancellation;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GameRuntime(
             ICollisionSolver collisionSolver,
-            IPointCalculator pointCalculator,
             ITargetGenerator targetGenerator,
             IUIService uiService,
-            GameSettings settings
-        )
+            IGameMasterClient master,
+            GameSettings settings)
         {
             _collisionSolver = collisionSolver;
-            _pointCalculator = pointCalculator;
             _targetGenerator = targetGenerator;
             _uiService = uiService;
+            _master = master;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         public void GameSetup()
         {
-            // 個数は変えない。撃たれた的は消えず、別の場所へ移動する。
-            _state.AddTargets(_targetGenerator, _settings.initialTargetCount, TargetType.Circle);
-            UpdateUI();
-        }
-
-        public void AddCollisionTargetAction(Action<Target> action)
-        {
-            _collisionTargetAction += action;
-        }
-
-        public void RemoveCollisionTargetAction(Action<Target> action)
-        {
-            _collisionTargetAction -= action;
+            // Geometry has no identity and cannot participate in rendering or hit detection.
+            _initialGeometry = _targetGenerator.GenerateTargets(
+                _settings.initialTargetCount, TargetType.Circle, Array.Empty<TargetGeometry>());
         }
 
         /// <summary>
-        /// UI がまだ無い的の分だけ生成する。
-        /// 実装側が生成済みの的を読み飛ばすので、何度呼んでも二重には作られない。
+        /// Request registration of initial geometry; only TargetAdded events create local entities.
+        /// Called on Unity's main thread so continuations can safely update the board.
         /// </summary>
-        public void UpdateUI()
+        public async Task StartGameAsync(Difficulty difficulty)
         {
-            _uiService.InstantiateTargets(_state.Targets);
-        }
-
-        /// <summary>
-        /// game_master から StartGame が届いたときに呼ぶ。これを受けるまでは得点を送らない。
-        /// </summary>
-        public void StartGame(Difficulty difficulty)
-        {
+            if (_initialGeometry == null) throw new InvalidOperationException("GameSetup must run before starting a game.");
+            CancelPendingOperations();
+            _gameCancellation = new CancellationTokenSource();
+            var token = _gameCancellation.Token;
             _state.StartGame(difficulty);
-            _uiService.SetGamePhase(GamePhase.Playing);
-            Debug.Log($"[Game] started ({difficulty})");
+
+            foreach (var geometry in _initialGeometry)
+            {
+                await RegisterTargetAsync(geometry, token);
+                if (token.IsCancellationRequested) return;
+            }
         }
 
-        /// <summary>
-        /// game_master から GameFinished が届いたときに呼ぶ。以降は得点を送らない。
-        /// </summary>
+        private async Task RegisterTargetAsync(TargetGeometry geometry, CancellationToken token)
+        {
+            var accepted = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
+            if (!accepted && !token.IsCancellationRequested)
+                Debug.LogWarning("[Game] 的の登録を要求できませんでした。");
+        }
+
+        /// <summary>Apply an authoritative TargetAdded event, independently of the registration RPC response.</summary>
+        public void OnTargetAdded(Target target)
+        {
+            if (!_state.AddTarget(target)) Debug.LogWarning($"[Game] Notified target {target.Id} already exists in the GameRuntimeState");
+            _uiService.AddTarget(target);
+        }
+
+        /// <summary>Apply an authoritative TargetRemoved event; RPC results never remove local targets.</summary>
+        public void OnTargetRemoved(Guid id)
+        {
+            _pendingTargets.Remove(id);
+            if (!_state.RemoveTarget(id)) Debug.LogWarning($"[Game] There's no target with the notified id: {id}");
+            if (!_uiService.RemoveTarget(id))
+                Debug.LogWarning($"[Game] 削除通知に対応する描画がありません: {id}");
+        }
+
         public void FinishGame()
         {
+            CancelPendingOperations();
             _state.FinishGame();
-            _uiService.SetGamePhase(GamePhase.Finished);
-            Debug.Log($"[Game] finished (score={_state.Score})");
         }
 
-        public void CollisionDetected(CollisionPoint collisionPoint)
+        /// <summary>Stop accepting hits after disconnection because the stream cannot restore a session snapshot.</summary>
+        public void SuspendGame()
         {
-            float x = (float)collisionPoint.X;
-            float y = (float)collisionPoint.Y;
+            CancelPendingOperations();
+            _state.SuspendGame();
+        }
 
-            // ゲームが動いていない間に当たっても判定しない。
-            // game_master はセッション外の得点を running_games に見つけられず、
-            // NotFound を返す (service.rs の add_score)。
+        private void CancelPendingOperations()
+        {
+            _gameCancellation?.Cancel();
+            _gameCancellation?.Dispose();
+            _gameCancellation = null;
+            _pendingTargets.Clear();
+        }
+
+        /// <summary>
+        /// Request replacement of a hit target; target events are the only source of local state changes.
+        /// Keep its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
+        /// </summary>
+        public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)
+        {
+            var x = (float)collisionPoint.X;
+            var y = (float)collisionPoint.Y;
             if (_state.Phase != GamePhase.Playing)
             {
                 _uiService.ShowCollisionMarker(x, y, CollisionResult.Ignored);
-                Debug.Log($"[Hit] ignored: the game is not running (phase={_state.Phase})");
+                return;
+            }
+            if (!_collisionSolver.TryCollision(collisionPoint, _state.Targets, out var target))
+            {
+                _uiService.ShowCollisionMarker(x, y, CollisionResult.Missed);
+                return;
+            }
+            if (!_pendingTargets.Add(target.Id))
+            {
+                _uiService.ShowCollisionMarker(x, y, CollisionResult.Ignored);
                 return;
             }
 
-            bool hit = _collisionSolver.TryCollision(collisionPoint, _state.Targets, out Target hitTarget);
-
-            // 着弾位置は当たり外れに関わらず出す。外れが見えないと、
-            // 座標変換がずれているのか単に的を外したのかが区別できない。
-            var result = hit ? CollisionResult.Scored : CollisionResult.Missed;
-            _uiService.ShowCollisionMarker(x, y, result);
-
-            if (!hit)
+            var token = _gameCancellation.Token;
+            var removalRequested = false;
+            try
             {
-                Debug.Log($"[Hit] missed: point=({collisionPoint.X:F0}, {collisionPoint.Y:F0}) targets={_state.Targets.Count}");
-                return;
+                var hit = await _master.HitTargetAsync(target.Id, token);
+                if (token.IsCancellationRequested) return;
+                _uiService.ShowCollisionMarker(x, y, hit ? CollisionResult.Scored : CollisionResult.Ignored);
+                if (!hit)
+                {
+                    Debug.LogWarning($"[Game] 命中を通知できませんでした: {target}");
+                    return;
+                }
+
+                if (target.Ownership == TargetOwnership.All) return;
+
+                removalRequested = true;
+                var removed = await _master.RemoveTargetAsync(target.Id, token);
+                if (token.IsCancellationRequested) return;
+                if (!removed)
+                {
+                    Debug.LogWarning($"[Game] 的の削除を確認できないため、再生成を停止します: {target}");
+                    return;
+                }
+                var others = _state.Targets.Where(other => other.Id != target.Id).Select(other => other.Geometry).ToList();
+                var coordinate = _targetGenerator.PickRelocation(target.Geometry, others);
+                await RegisterTargetAsync(new TargetGeometry(coordinate, target.Type, target.Size), token);
             }
-
-            _collisionTargetAction?.Invoke(hitTarget);
-
-            int points = _pointCalculator.CalculatePoint(hitTarget);
-            _state.AddScore(points);
-            ScoreAdded?.Invoke(points);
-
-            MoveAfterHit(hitTarget);
-        }
-
-        /// <summary>
-        /// 当たった的を別の場所へ移す。難易度を問わず共通の挙動
-        /// (docs/projector_behavior.md)。的は消さず、同じものが動く。
-        /// </summary>
-        private void MoveAfterHit(Target hitTarget)
-        {
-            var others = new List<Target>(_state.Targets.Count);
-            foreach (var target in _state.Targets)
+            finally
             {
-                if (!ReferenceEquals(target, hitTarget)) others.Add(target);
+                // Once deletion is requested, only TargetRemoved releases this UUID.
+                // A lost RPC response must not allow another hit on a possibly deleted target.
+                if (!token.IsCancellationRequested && !removalRequested) _pendingTargets.Remove(target.Id);
             }
-
-            hitTarget.MoveTo(_targetGenerator.PickRelocation(hitTarget, others));
-
-            // 当たり判定は移動先で即座に有効になる。見た目が追いつくまでの短い間だけ
-            // 表示位置と判定位置がずれるが、演出のための猶予なので許容する。
-            _uiService.MoveTarget(hitTarget);
         }
     }
 }

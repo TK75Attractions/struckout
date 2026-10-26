@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.game_master.v1;
+
+message Target {
+  message Compass {
+    float x = 1;
+    float y = 2;
+    float radius = 3;
+  }
+
+  // UUID
+  string target_id = 1;
+
+  oneof target_data {
+    Compass compass = 2;
+  }
+
+  message OwnerSingle {
+    // machine_id of the owning single-play session.
+    uint32 machine_id = 1;
+  }
+  message OwnerAll {}
+
+  oneof owner {
+    OwnerSingle single = 3;
+    OwnerAll all = 4;
+  }
+}
+
+message AddTargetRequest {
+  uint32 machine_id = 1;
+
+  oneof target_data {
+    Target.Compass compass = 2;
+  }
+}
+
+message AddTargetResponse {
+  string target_id = 1;
+}
+
+message RemoveTargetRequest {
+  uint32 machine_id = 1;
+  string target_id = 2;
+}
+
+message RemoveTargetResponse {}
+
+message HitTargetRequest {
+  uint32 machine_id = 1;
+  string target_id = 2;
+}
+
+message HitTargetResponse {}

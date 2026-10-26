@@ -380,6 +380,7 @@ MonoBehaviour:
   _circleUI: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
   _hudCanvas: {fileID: 637544012}
   _displayFont: {fileID: 12800000, guid: 88c57f85fb174101a0fdba227a9b60b8, type: 3}
+  resultFont: {fileID: 12800000, guid: aec0a93495f845d9a7d15e93532f1040, type: 3}
   _backgroundSprite: {fileID: 21300000, guid: d024158e449411e459fe04b45ca3cddc, type: 3}
   _idleSprite: {fileID: 21300000, guid: 75479ef23d330034f8d65accde54221a, type: 3}
   _finishedSprite: {fileID: 21300000, guid: 5abc6990bc639e04c83de7bf85d601b7, type: 3}
@@ -768,13 +769,6 @@ MonoBehaviour:
     LogConversions: 1
   _gameSettings:
     InitialTargetCount: 4
-  _scoreSettings:
-    Tiers:
-    - MaxDiameter: 150
-      Points: 5
-    - MaxDiameter: 300
-      Points: 3
-    DefaultPoints: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

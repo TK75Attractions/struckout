@@ -1,16 +1,21 @@
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
+using Struckout.Domain;
 using System;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
+using Tk75Attractions.Struckout.GameMaster.V1;
 using Tk75Attractions.Struckout.V1;
+using System.Threading.Tasks;
 using UnityEngine;
+using Target = Struckout.Domain.TargetDefinition.Target;
 
 namespace Struckout.Bootstrap
 {
     public class GameBootstrap : IAsyncDestroy
     {
         private readonly GameRuntime _runtime;
+        private readonly ScreenController _screens;
         private readonly ISensorProvider _sensorProvider;
         private readonly IUIService _service;
         private readonly IGameMasterClient _master;
@@ -24,9 +29,11 @@ namespace Struckout.Bootstrap
             ISensorProvider sensorProvider,
             IUIService uiService,
             IGameMasterClient master,
-            IMainThreadDispatcher dispatcher
+            IMainThreadDispatcher dispatcher,
+            ScreenController screens
         )
         {
+            _screens = screens ?? throw new ArgumentNullException(nameof(screens));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _sensorProvider = sensorProvider ?? throw new ArgumentNullException(nameof(sensorProvider));
             _service = uiService ?? throw new ArgumentNullException(nameof(uiService));
@@ -34,35 +41,70 @@ namespace Struckout.Bootstrap
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         }
 
-        internal async UniTask Initialize(
+        internal void Initialize(
             RuntimeContext context
             )
         {
             if (_service == null) throw new Exception("There are no IUIService in uiService");
             _context = context;
 
-            // Fake の遅延購読でも、開始通知より先に初期盤面を準備する。
+            // 開始通知より先に配置を準備する。登録済みの的だけを後で生成・描画する。
             _runtime.GameSetup();
 
             context.PacketRouter.OnCollisionReceived += _sensorProvider.GetSensorData;
-            _sensorProvider.OnCollisionReceived += _runtime.CollisionDetected;
-
-            // 的の見た目の更新は GameRuntime が IUIService を直接叩く。
-            // ここでは得点の送信だけを繋ぐ。
-            _runtime.ScoreAdded += OnScoreAdded;
+            _sensorProvider.OnCollisionReceived += OnCollisionDetected;
 
             // すべて同じ dispatcher を経由し、開始・HUD 更新・終了の順序を保つ。
             _master.RemainingTimeChanged += OnRemainingTimeChanged;
             _master.ScoreChanged += OnScoreChanged;
             _master.GameStarted += OnGameStarted;
             _master.GameFinished += OnGameFinished;
+            _master.ConnectionLost += OnConnectionLost;
+            _master.TargetAdded += OnTargetAdded;
+            _master.TargetRemoved += OnTargetRemoved;
+            _master.RankingScreenRequested += OnRankingScreenRequested;
+            _master.HomeScreenRequested += OnHomeScreenRequested;
         }
 
-        private void OnGameStarted(Difficulty difficulty) =>
-            _dispatcher.Enqueue(() => _runtime.StartGame(difficulty));
+        private void OnGameStarted(Difficulty difficulty, PlayerId playerId) =>
+            _dispatcher.Enqueue(() =>
+            {
+                _screens.ShowPlaying(playerId);
+                ObserveAsync(_runtime.StartGameAsync(difficulty)).Forget();
+            });
 
-        private void OnGameFinished() =>
-            _dispatcher.Enqueue(_runtime.FinishGame);
+        private void OnCollisionDetected(CollisionPoint point) =>
+            ObserveAsync(_runtime.CollisionDetectedAsync(point)).Forget();
+
+        private void OnTargetAdded(Target target) =>
+            _dispatcher.Enqueue(() => _runtime.OnTargetAdded(target));
+
+        private void OnTargetRemoved(Guid id) =>
+            _dispatcher.Enqueue(() => _runtime.OnTargetRemoved(id));
+
+        private void OnConnectionLost() => _dispatcher.Enqueue(() =>
+        {
+            _runtime.SuspendGame();
+            _screens.Suspend();
+        });
+
+        private void OnGameFinished(GameId gameId) => _dispatcher.Enqueue(() =>
+        {
+            _runtime.FinishGame();
+            ObserveAsync(_screens.ShowScoreAsync(gameId)).Forget();
+        });
+
+        private void OnRankingScreenRequested() => _dispatcher.Enqueue(() =>
+        {
+            _runtime.FinishGame();
+            ObserveAsync(_screens.ShowRankingAsync()).Forget();
+        });
+
+        private void OnHomeScreenRequested() => _dispatcher.Enqueue(() =>
+        {
+            _runtime.SuspendGame();
+            _screens.ShowHome();
+        });
 
         private void OnRemainingTimeChanged(TimeSpan remaining) =>
             _dispatcher.Enqueue(() => _service.SetRemainingTime(remaining));
@@ -74,37 +116,31 @@ namespace Struckout.Bootstrap
         {
             if (_context == null) return UniTask.CompletedTask;
             _context.PacketRouter.OnCollisionReceived -= _sensorProvider.GetSensorData;
-            _sensorProvider.OnCollisionReceived -= _runtime.CollisionDetected;
-            _runtime.ScoreAdded -= OnScoreAdded;
+            _sensorProvider.OnCollisionReceived -= OnCollisionDetected;
+            _runtime.SuspendGame();
+            _screens.Dispose();
             _master.GameStarted -= OnGameStarted;
             _master.GameFinished -= OnGameFinished;
+            _master.ConnectionLost -= OnConnectionLost;
+            _master.TargetAdded -= OnTargetAdded;
+            _master.TargetRemoved -= OnTargetRemoved;
+            _master.RankingScreenRequested -= OnRankingScreenRequested;
+            _master.HomeScreenRequested -= OnHomeScreenRequested;
             _master.RemainingTimeChanged -= OnRemainingTimeChanged;
             _master.ScoreChanged -= OnScoreChanged;
             _context = null;
             return UniTask.CompletedTask;
         }
 
-        private void OnScoreAdded(int points)
+        private static async UniTaskVoid ObserveAsync(Task operation)
         {
-            SendScoreAsync(points).Forget();
-        }
-
-        /// <summary>
-        /// game_master には得点の増分を送る (AddScoreRequest.score_to_add)。
-        /// 送信に失敗してもゲームは続けたいので、ここで握って警告に留める。
-        /// </summary>
-        private async UniTaskVoid SendScoreAsync(int points)
-        {
-            if (points <= 0)
-            {
-                Debug.LogWarning($"[Network] skipped sending a non-positive score delta ({points})");
-                return;
-            }
-
             try
             {
-                bool sent = await _master.AddScoreAsync(points);
-                if (!sent) Debug.LogWarning($"[Network] failed to send score delta {points}");
+                await operation;
+            }
+            catch (OperationCanceledException)
+            {
+                // The game ended or the connection was lost.
             }
             catch (Exception ex)
             {

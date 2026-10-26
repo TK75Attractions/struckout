@@ -29,7 +29,7 @@ namespace Struckout.Unity
         private const int OverlaySortingOrder = 100;
         private const int MarkerSortingOrder = 150;
 
-        private Dictionary<Target, Transform> _targetToTransform;
+        private Dictionary<Guid, Transform> _targetToTransform;
         [FormerlySerializedAs("_circleUI")] [SerializeField]
         private Transform circleUI;
 
@@ -37,6 +37,7 @@ namespace Struckout.Unity
         [Header("Game HUD")]
         [SerializeField] private Canvas hudCanvas;
         [FormerlySerializedAs("_displayFont")] [SerializeField] private Font displayFont;
+        [SerializeField] private Font resultFont;
 
         [FormerlySerializedAs("_backgroundSprite")]
         [Header("Projected Screens")]
@@ -89,11 +90,11 @@ namespace Struckout.Unity
         private WorldCoordinateTransform _world;
         private SpriteRenderer _idleRenderer;
         private SpriteRenderer _finishedRenderer;
-        private TextMesh _finishedText;
+        private ResultScreenView _results;
         private GameObject _hud;
         private Text _scoreText;
         private Text _remainingTimeText;
-        private GamePhase _phase = GamePhase.Idle;
+        private ProjectorScreen _screen = ProjectorScreen.Home;
         private float _idleOpacity = 1f;
         private float _finishedOpacity;
 
@@ -110,8 +111,11 @@ namespace Struckout.Unity
             CreateFieldSprite("ArenaBackground", backgroundSprite, BackgroundSortingOrder);
             _idleRenderer = CreateFieldSprite("IdleScreen", idleSprite, OverlaySortingOrder);
             _finishedRenderer = CreateFieldSprite("FinishedScreen", finishedSprite, OverlaySortingOrder);
-            _finishedText = CreateFinishedText();
             CreateHud();
+            if (hudCanvas == null || displayFont == null || resultFont == null)
+                throw new InvalidOperationException("[UI] HUD Canvas と表示用フォント・日本語フォントを設定してください。");
+            _results = new ResultScreenView(hudCanvas, resultFont, displayFont);
+            SetScreen(ProjectorScreen.Home);
             SetAlpha(_idleRenderer, _idleOpacity);
             SetAlpha(_finishedRenderer, _finishedOpacity);
         }
@@ -127,36 +131,13 @@ namespace Struckout.Unity
             renderer.sortingOrder = sortingOrder;
 
             // 画面比率に関係なく、論理盤面と同じ矩形を覆う。
-            float width = _world.ToWorldLength(_world.Field.width);
-            float height = _world.ToWorldLength(_world.Field.height);
+            var width = _world.ToWorldLength(_world.Field.width);
+            var height = _world.ToWorldLength(_world.Field.height);
             go.transform.localScale = new Vector3(
                 width / sprite.bounds.size.x,
                 height / sprite.bounds.size.y,
                 1f);
             return renderer;
-        }
-
-        private TextMesh CreateFinishedText()
-        {
-            if (finishedSprite == null) return null;
-
-            var go = new GameObject("FinishedMessage", typeof(TextMesh));
-            go.transform.SetParent(transform, false);
-            var label = go.GetComponent<TextMesh>();
-            label.text = "TIME UP";
-            label.anchor = TextAnchor.MiddleCenter;
-            label.alignment = TextAlignment.Center;
-            label.fontSize = 100;
-            label.characterSize = 1.2f;
-            label.font = displayFont;
-            label.color = new Color(1f, 1f, 1f, 0f);
-            var textRenderer = go.GetComponent<MeshRenderer>();
-            if (textRenderer != null)
-            {
-                if (displayFont != null) textRenderer.sharedMaterial = displayFont.material;
-                textRenderer.sortingOrder = OverlaySortingOrder + 1;
-            }
-            return label;
         }
 
         private void CreateHud()
@@ -234,7 +215,7 @@ namespace Struckout.Unity
         public void SetRemainingTime(TimeSpan remaining)
         {
             if (_remainingTimeText == null) return;
-            long seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
+            var seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
             _remainingTimeText.text = string.Format(CultureInfo.InvariantCulture,
                 "TIME  {0:00}:{1:00}", seconds / 60, seconds % 60);
         }
@@ -249,19 +230,14 @@ namespace Struckout.Unity
         {
             if (_world == null) return;
 
-            float step = screenFadeSeconds <= 0f
+            var step = screenFadeSeconds <= 0f
                 ? 1f
                 : Time.deltaTime / screenFadeSeconds;
-            _idleOpacity = Mathf.MoveTowards(_idleOpacity, _phase == GamePhase.Idle ? 1f : 0f, step);
-            _finishedOpacity = Mathf.MoveTowards(_finishedOpacity, _phase == GamePhase.Finished ? 1f : 0f, step);
+            _idleOpacity = Mathf.MoveTowards(_idleOpacity, _screen == ProjectorScreen.Home ? 1f : 0f, step);
+            _finishedOpacity = Mathf.MoveTowards(_finishedOpacity, _screen == ProjectorScreen.Score ? 1f : 0f, step);
             SetAlpha(_idleRenderer, _idleOpacity);
             SetAlpha(_finishedRenderer, _finishedOpacity);
 
-            if (!_finishedText) return;
-
-            var color = _finishedText.color;
-            color.a = _finishedOpacity;
-            _finishedText.color = color;
         }
 
         private static void SetAlpha(SpriteRenderer renderer, float alpha)
@@ -272,49 +248,45 @@ namespace Struckout.Unity
             renderer.color = color;
         }
 
-        public void SetGamePhase(GamePhase phase)
+        public void SetScreen(ProjectorScreen screen)
         {
-            _phase = phase;
+            _screen = screen;
+            _results?.SetScreen(screen);
             if (_hud != null)
             {
-                _hud.SetActive(phase != GamePhase.Idle);
-                if (phase == GamePhase.Playing)
+                _hud.SetActive(screen == ProjectorScreen.Playing);
+                if (screen == ProjectorScreen.Playing)
                 {
                     SetScore(0);
                     _remainingTimeText.text = "TIME  --:--";
                 }
-                else if (phase == GamePhase.Finished)
+                else if (screen == ProjectorScreen.Score)
                 {
                     SetRemainingTime(TimeSpan.Zero);
                 }
             }
-            int index = 0;
-            foreach (var transform in _targetToTransform.Values)
+            var index = 0;
+            foreach (var trans in _targetToTransform.Values)
             {
-                if (transform != null && transform.TryGetComponent<CircleTargetUI>(out var targetUI))
+                if (trans != null && trans.TryGetComponent<CircleTargetUI>(out var targetUI))
                 {
-                    targetUI.SetPresentationVisible(phase == GamePhase.Playing, index * 0.07f);
+                    targetUI.SetPresentationVisible(screen == ProjectorScreen.Playing, index * 0.07f);
                     index++;
                 }
             }
         }
 
-        public void InstantiateTargets(IReadOnlyList<Target> targets)
-        {
-            foreach (var target in targets)
-            {
-                if (target == null) Debug.Log("Target is null");
-                InstantiateTarget(target);
-            }
-        }
+        public void ShowGameResult(uint score) => _results?.ShowScore(score);
+        public void ShowRanking(IReadOnlyList<RankingRow> rows) => _results?.ShowRanking(rows);
+        public void ShowScreenMessage(string message) => _results?.ShowMessage(message);
 
-        public void InstantiateTarget(Target target)
+        public void AddTarget(Target target)
         {
-            Transform trans;
             if (target == null) return;
             if (_targetToTransform == null) throw new InvalidOperationException("UIService is not initialized.");
-            if (_targetToTransform.ContainsKey(target)) return;
+            if (_targetToTransform.ContainsKey(target.Id)) return;
 
+            Transform instantiatedTrans;
             switch (target.Type)
             {
                 case TargetType.Circle:
@@ -324,38 +296,38 @@ namespace Struckout.Unity
                         return;
                     }
 
-                    if (!TryInstantiateTargetUI<CircleTargetUI>(circleUI, out var transform))
+                    if (!TryInstantiateTargetUI<CircleTargetUI>(circleUI, out var trans))
                     {
                         Debug.LogError("CircleTargetUI is null");
                         return;
                     }
-                    trans = transform;
+                    instantiatedTrans = trans;
                     break;
                 default:
                     Debug.LogError($"Missing TargetType {target.Type}");
                     return;
             }
-            var ui = trans.GetComponent<ITargetUI>() ?? throw new Exception("The PrefabDoesn't Contain ITargetUI");
+            var ui = instantiatedTrans.GetComponent<ITargetUI>() ?? throw new InvalidOperationException("The Prefab doesn't contain ITargetUI");
             ui.Initialize(target, _world);
-            _targetToTransform[target] = trans;
-            if (trans.TryGetComponent<CircleTargetUI>(out var circle))
+            _targetToTransform[target.Id] = instantiatedTrans;
+            if (instantiatedTrans.TryGetComponent<CircleTargetUI>(out var circle))
             {
-                circle.SetPresentationVisible(_phase == GamePhase.Playing,
-                    _phase == GamePhase.Playing ? (_targetToTransform.Count - 1) * 0.07f : 0f,
-                    _phase != GamePhase.Playing);
+                circle.SetPresentationVisible(_screen == ProjectorScreen.Playing,
+                    _screen == ProjectorScreen.Playing ? (_targetToTransform.Count - 1) * 0.07f : 0f,
+                    _screen != ProjectorScreen.Playing);
             }
         }
 
-        bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform transform) where TTargetUI : MonoBehaviour, ITargetUI
+        private bool TryInstantiateTargetUI<TTargetUI>(Transform prefab, out Transform trans) where TTargetUI : MonoBehaviour, ITargetUI
         {
             if (prefab.GetComponent<TTargetUI>() == null)
             {
-                transform = null;
+                trans = null;
                 Debug.LogError("There are no ITargetUI");
                 return false;
             }
 
-            transform = Instantiate(prefab, _uiRoot.TargetRoot);
+            trans = Instantiate(prefab, _uiRoot.TargetRoot);
             return true;
         }
 
@@ -381,7 +353,7 @@ namespace Struckout.Unity
                 CollisionResult.Ignored => ignoredImpactSprite,
                 _ => missedImpactSprite,
             };
-            float size = result switch
+            var size = result switch
             {
                 CollisionResult.Scored => scoredImpactSize,
                 CollisionResult.Ignored => ignoredImpactSize,
@@ -420,8 +392,8 @@ namespace Struckout.Unity
             renderer.sortingOrder = MarkerSortingOrder;
 
             // 的と同じ理屈で、スプライトの実寸から倍率を出す。
-            float desired = _world.ToWorldLength(size);
-            float spriteWidth = renderer.sprite.bounds.size.x;
+            var desired = _world.ToWorldLength(size);
+            var spriteWidth = renderer.sprite.bounds.size.x;
             go.transform.localScale = spriteWidth > 0f
                 ? Vector3.one * (desired / spriteWidth)
                 : Vector3.one;
@@ -443,39 +415,20 @@ namespace Struckout.Unity
             return go.transform;
         }
 
-        public void MoveTarget(Target target)
+        /// <summary>
+        /// Removes target from UI.
+        /// </summary>
+        /// <param name="id">Id of the target to remove.</param>
+        /// <returns>Whether target existed and was removed successfully or not.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public bool RemoveTarget(Guid id)
         {
-            if (!_targetToTransform.TryGetValue(target, out var transform))
-            {
-                Debug.LogWarning(
-                    $"No UI for {target}. UI count={_targetToTransform.Count}");
-                return;
-            }
-
-            if (transform == null)
-            {
-                Debug.LogWarning($"The UI for {target} has been destroyed unexpectedly.");
-                _targetToTransform.Remove(target);
-                return;
-            }
-
-            try
-            {
-                ITargetUI targetui = transform.GetComponent<ITargetUI>();
-                if (targetui == null)
-                {
-                    Debug.LogError("The target UI has no ITargetUI.");
-                    return;
-                }
-
-                // 的は消さない。同じ GameObject を新しい座標へ移すだけ。
-                // Target は同一性で扱うので、辞書の対応づけはそのままでよい。
-                targetui.MoveTo(target);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError(ex);
-            }
+            if (!_targetToTransform.Remove(id, out var targetTrans)) return false;
+            if (targetTrans == null) return false;
+            var targetUI = targetTrans.GetComponent<ITargetUI>()
+                ?? throw new InvalidOperationException("The target UI has no ITargetUI.");
+            targetUI.Remove();
+            return true;
         }
     }
 }

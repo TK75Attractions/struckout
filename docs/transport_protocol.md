@@ -1,12 +1,13 @@
-## game-masterとprojectorの間
-game-master -> projectorは主に画面遷移のコマンドや描画に必要なデータ(e.g. ランキングのデータ)を送る。  
-projector -> game-masterは得点が入ったときに更新する。  
+## game_master と projector の間
 
-選択肢としてはgRPC、Protobuf on WebSocket、Protobuf on TCPの3つがある。  
-JSON on WebSocketなどを省いたのはJSONが型安全でないため。  
-gRPCはUnityに導入しようとするとかなり地雷でgRPC特有の機能(e.g. 認証)が必要なわけでもないので、コストに比べてリターンがあまりない。  
-WebSocketは@taichi765も@smallfishsetもミリしらなのでどうしても必要でない限りは避けたい。  
-TCPはtracker -> projectorですでに使っており学習コストがない上、性能上も特に問題ないということでTCP on Protobufを使う。
+`api/proto/game_master/` の `GameMasterSessionService` を gRPC で呼び出す。
+projector は `ListenEvents(machine_id)` のストリームで開始・残り時間・累計得点・終了と画面遷移通知を受け取る。
+開始通知のプレイヤー情報を筐体ごとに選び、終了通知のゲーム ID で `GetGameResult` を呼ぶ。
+ランキング画面では `GetRanking` と `GetGamesByPlayer` の結果を統合する。
+各 projector は自分の盤面の的を `AddTarget(machine_id, target_data)` で登録し、
+応答の UUID で `HitTarget` を通知する。所有者の設定と得点計算は game_master が行う。
+移動時は `RemoveTarget` の後に新しい位置を登録する。
+詳細は [projector の挙動](projector/projector_behavior.md) を参照。
 
 ## カメラとball_trackerの間
 定義は `api/proto/camera__ball-tracker.proto`。どちらの接続も TCP で、パケットは「長さ (u32、リトルエンディアン) + Protobuf」。

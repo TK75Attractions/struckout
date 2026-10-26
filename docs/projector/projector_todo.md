@@ -261,5 +261,25 @@ Rust 側の担当者に相談する話。
 |---|---|
 | `sandbox/testTcpCLI/bin`・`obj` が `.gitignore` に入っているのに追跡されたまま。ビルドのたびに差分が出る | `git rm --cached` で外す。同僚のコミットにも含まれる領域なので要相談 |
 | ~~ball_tracker が `CollisionPoint` に `(x, z)` を詰めている箇所の `// FIXME: これあってる?`~~ | 解決済み。世界座標の `(y, z)` を送るように直した。`Collision Transform` の係数は盤面の位置に合わせて決め直すこと |
-| `AddCollisionTargetAction` / `RemoveCollisionTargetAction` / `GameRuntimeState.RemoveTarget` が未使用 | 的を消さなくなったため。拡張点として残してあるが、使わないなら整理する |
 | `FakeSensorProvider` が未登録 | 前任者のテストダブルとして意図的に残している |
+
+## 2026-10-24 に確認した JSON 設定テストの不整合（issue 案・未起票）
+
+### [projector] CollisionTransformStore の旧形式 JSON の読み込み仕様とテストを整合させる
+
+ラベル案: `c: projector`
+
+Unity 6000.5.2f1 の EditMode テストで、次の既存テストが失敗する。
+
+- `CollisionTransformStoreTests.一メートルあたりが正でなければ読まずに理由を返す`
+- `CollisionTransformStoreTests.書かれていない項目は既定値になる`
+
+テストの JSON は `PixelsPerMetreX` / `OriginX` だが、現在の
+`CollisionCoordinateTransform` のフィールドは `pixelsPerMetreX` / `originX`。
+`JsonUtility.FromJsonOverwrite` はこの入力を反映せず既定値を残すため、
+負の係数を拒否するテストでは成功が返り、原点を読むテストでは `5` の代わりに `960` が残る。
+保存して読み直す既存テストは成功する。
+
+旧形式ファイルの互換性が必要かを確認し、必要なら読み込み時に旧名を扱う。
+互換性が不要ならテスト入力を現在のフィールド名に合わせ、負の係数を渡す検証を維持する。
+game_master の proto への追従とは別の変更で対応する。

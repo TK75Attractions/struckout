@@ -36,9 +36,9 @@ namespace Struckout.Bootstrap
             _runtimeContext.AddDestroyEvent(_networkBootstrap);
             _runtimeContext.AddDestroyEvent(_gameBootstrap);
 
-            await _gameBootstrap.Initialize(_runtimeContext);
+            _gameBootstrap.Initialize(_runtimeContext);
 
-            NetworkConnectionResult result = await _networkBootstrap.Initialize();
+            var result = await _networkBootstrap.Initialize();
 
             switch (result)
             {
@@ -68,6 +68,7 @@ namespace Struckout.Bootstrap
             if (destroyList == null)
             {
                 Debug.Log("The DestroyList is null");
+                return;
             }
 
             foreach (var destroy in destroyList)

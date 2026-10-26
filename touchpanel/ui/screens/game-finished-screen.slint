@@ -1,0 +1,34 @@
+import { TwoColorOutlinedButton } from "../components/button.slint";
+
+global Adopter {
+    in property <bool> busy;
+    in property <string> error-msg;
+    callback next-clicked();
+}
+
+export component GameFinishedScreen {
+    VerticalLayout {
+        alignment: center;
+        cross-axis-alignment: center;
+        spacing: 32px;
+        padding: 32px;
+        Text {
+            text: "ゲームが終了しました";
+            font-size: 32px;
+        }
+
+        TwoColorOutlinedButton {
+            text: "プロジェクターにランキングを表示";
+            font-size: 28px;
+            enabled: !Adopter.busy;
+            clicked => { Adopter.next-clicked(); }
+        }
+
+        Text {
+            text: Adopter.error-msg;
+            wrap: word-wrap;
+        }
+    }
+}
+
+export { Adopter as GameFinishedAdopter }

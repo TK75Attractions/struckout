@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Security;
 using Struckout.Domain;
 using UnityEngine;
@@ -33,6 +32,7 @@ namespace Struckout.Infrastructure
         /// <summary>
         /// 入力源を明示して解決する。テストから優先順位を確かめるために公開している。
         /// </summary>
+        /// <param name="inspectorSettings">Inspectorで設定されているNetworkSettings。</param>
         /// <param name="commandLine">"-key value" を辞書にしたもの。</param>
         /// <param name="environment">環境変数を引く関数。無ければ null を返す。</param>
         public static NetworkSettings Resolve(
@@ -55,20 +55,18 @@ namespace Struckout.Infrastructure
             settings.mode = ResolveMode(commandLine, environment, settings.mode);
 
             settings.trackerHost = ResolveString(commandLine, environment, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.trackerHost);
-            settings.trackerPort = ResolveInt(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.trackerPort);
+            settings.trackerPort = ResolveUShort(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.trackerPort);
 
             settings.masterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.masterHost);
-            settings.masterPort = ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.masterPort);
+            settings.masterPort = ResolveUShort(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.masterPort);
 
-            // 号機番号は ListenEvents の絞り込みキーになったので、筐体ごとに
-            // 別ビルドを作らずに変えられる必要がある。負の値は uint に載らないので弾く。
             settings.machineId = Math.Max(
                 0,
-                ResolveInt(commandLine, environment, "machineId", "STRUCKOUT_MACHINE_ID", settings.machineId));
+                ResolveUInt(commandLine, environment, "machineId", "STRUCKOUT_MACHINE_ID", settings.machineId));
 
             settings.connectAttempts = Math.Max(
                 1,
-                ResolveInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.connectAttempts));
+                ResolveUInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.connectAttempts));
 
             return settings;
         }
@@ -102,7 +100,7 @@ namespace Struckout.Infrastructure
                 return result;
             }
 
-            for (int i = 0; i < args.Length - 1; i++)
+            for (var i = 0; i < args.Length - 1; i++)
             {
                 if (!args[i].StartsWith("-", StringComparison.Ordinal)) continue;
 
@@ -132,15 +130,27 @@ namespace Struckout.Infrastructure
             string argName, string envName, string fallback)
             => Lookup(commandLine, environment, argName, envName) ?? fallback;
 
-        private static int ResolveInt(
-            IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment,
-            string argName, string envName, int fallback)
+
+        private static ushort ResolveUShort(IReadOnlyDictionary<string, string> commandLine,
+            Func<string, string> environment, string argName, string envName, ushort fallback)
         {
             var raw = Lookup(commandLine, environment, argName, envName);
-            if (raw == null) return fallback;
+            if (raw is null) return fallback;
 
-            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)) return value;
+            if (ushort.TryParse(raw, out var value)) return value;
+            
+            Debug.LogWarning($"[NetworkSettings] '{raw}' is not a valid value for {argName}; falling back to {fallback}");
+            return fallback;
+        }
 
+        private static uint ResolveUInt(IReadOnlyDictionary<string, string> commandLine,
+            Func<string, string> environment, string argName, string envName, uint fallback)
+        {
+            var raw = Lookup(commandLine, environment, argName, envName);
+            if (raw is null) return fallback;
+
+            if (uint.TryParse(raw, out var value)) return value;
+            
             Debug.LogWarning($"[NetworkSettings] '{raw}' is not a valid value for {argName}; falling back to {fallback}");
             return fallback;
         }

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::{Application, Config, Context, NavController, presentation::connect_to_game_master};
+use crate::{
+    Application, Config, Context, NavController,
+    presentation::{connect_to_game_master, observe_session},
+};
 use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{
     WorkerThread,
@@ -50,10 +53,10 @@ where
     fn on_retry_connection(&mut self) {
         let nc = self.nav_controller.clone();
         let config = self.config.clone();
-        let mut worker = self.worker.clone();
+        let worker = self.worker.clone();
         slint::spawn_local(async move {
             debug!("retrying connection to game-master");
-            let game_master = match connect_to_game_master(&worker,nc, config).await{
+            let game_master = match connect_to_game_master(&worker, nc.clone(), config).await{
                 Ok(v) => v,
                 Err(_) =>{
                     warn!("failed to connect to game-master. user can retry it.");
@@ -61,9 +64,11 @@ where
                 }
             };
             {
-                let cx = worker.context();
+                let cx = worker.background_executor().context();
                 cx.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
             }
+            observe_session(&worker, nc.clone());
+            nc.navigate(NavRoute::Start);
             debug!("connection retry to game-master succeeds and initialized worker context with game-master client");
         })
         .unwrap();

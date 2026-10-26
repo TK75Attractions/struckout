@@ -74,7 +74,7 @@ namespace Struckout.Tests.Tests.EditMode
             var world = new WorldCoordinateTransform();
 
             // 4:3 では横を収めるほうが厳しい。960px / (4/3) / 100 = 7.2
-            float size = world.OrthographicSizeFor(4f / 3f);
+            var size = world.OrthographicSizeFor(4f / 3f);
 
             Assert.That(size, Is.EqualTo(7.2f).Within(Tolerance));
 
@@ -87,7 +87,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var world = new WorldCoordinateTransform();
 
-            float size = world.OrthographicSizeFor(21f / 9f);
+            var size = world.OrthographicSizeFor(21f / 9f);
 
             Assert.That(size, Is.EqualTo(5.4f).Within(Tolerance));
 
@@ -100,9 +100,9 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var world = new WorldCoordinateTransform();
 
-            foreach (float aspect in new[] { 1f, 4f / 3f, 16f / 10f, 16f / 9f, 21f / 9f, 32f / 9f })
+            foreach (var aspect in new[] { 1f, 4f / 3f, 16f / 10f, 16f / 9f, 21f / 9f, 32f / 9f })
             {
-                float size = world.OrthographicSizeFor(aspect);
+                var size = world.OrthographicSizeFor(aspect);
 
                 Assert.That(size, Is.GreaterThanOrEqualTo(5.4f - Tolerance), $"aspect={aspect}");
                 Assert.That(size * aspect, Is.GreaterThanOrEqualTo(9.6f - Tolerance), $"aspect={aspect}");

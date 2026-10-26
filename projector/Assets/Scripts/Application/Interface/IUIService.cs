@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
 
@@ -7,8 +7,11 @@ namespace Struckout.Application.Interface
 {
     public interface IUIService
     {
-        /// <summary>投影画面をゲーム進行状態に合わせて切り替える。</summary>
-        void SetGamePhase(GamePhase phase);
+        /// <summary>サーバーからの通知に対応する画面を表示する。</summary>
+        void SetScreen(ProjectorScreen screen);
+        void ShowGameResult(uint score);
+        void ShowRanking(IReadOnlyList<RankingRow> rows);
+        void ShowScreenMessage(string message);
 
         /// <summary>game_master から受信した残り時間を表示する。</summary>
         void SetRemainingTime(TimeSpan remaining);
@@ -16,12 +19,16 @@ namespace Struckout.Application.Interface
         /// <summary>game_master が確定した累計得点を表示する。</summary>
         void SetScore(uint totalScore);
 
-        void InstantiateTargets(IReadOnlyList<Target> targets);
+        /// <summary>TargetAdded で通知された UUID を持つ的を描画する。</summary>
+        void AddTarget(Target target);
+
         /// <summary>
-        /// 的が移動したことを見た目に反映する。的は消えない。
-        /// 座標は <paramref name="target"/> が既に持っている。
+        /// Removes target from UI.
         /// </summary>
-        void MoveTarget(Target target);
+        /// <param name="id">Id of the target to remove.</param>
+        /// <returns>Whether target existed and was removed successfully or not.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        bool RemoveTarget(Guid id);
 
         /// <summary>
         /// ボールが当たった位置を描画座標で受け取り、その場にマーカーを出す。

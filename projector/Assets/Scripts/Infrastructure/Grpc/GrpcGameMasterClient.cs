@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Net.Http;
@@ -7,10 +9,13 @@ using Grpc.Net.Client;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
+using Struckout.Domain.TargetDefinition;
 using UnityEngine;
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
-using Event = Tk75Attractions.Struckout.V1.Event;
+using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;
+using DomainTarget = Struckout.Domain.TargetDefinition.Target;
+using ProtoTarget = Tk75Attractions.Struckout.GameMaster.V1.Target;
 
 namespace Struckout.Infrastructure.Grpc
 {
@@ -27,22 +32,26 @@ namespace Struckout.Infrastructure.Grpc
 
         private YetAnotherHttpHandler _handler;
         private GrpcChannel _channel;
-        private GameMasterService.GameMasterServiceClient _client;
+        private GameMasterSessionService.GameMasterSessionServiceClient _client;
 
         private CancellationTokenSource _listenCancellation;
         private Task _listenTask;
 
-        /// <summary>進行中のゲーム。GameStarted を受け取るまでは無い。</summary>
-        private uint? _gameId;
+        /// <summary>machine_id に対応するゲームの開始・終了通知から管理する。</summary>
+        private volatile bool _running;
 
         /// <summary>game_master と切れたとき、購読をやり直す間隔。</summary>
         private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
 
-        public event Action<Difficulty> GameStarted;
-        public event Action GameFinished;
+        public event Action<Difficulty, PlayerId> GameStarted;
+        public event Action<GameId> GameFinished;
+        public event Action RankingScreenRequested;
+        public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
         public event Action ConnectionLost;
+        public event Action<DomainTarget> TargetAdded;
+        public event Action<Guid> TargetRemoved;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GrpcGameMasterClient(NetworkSettings settings)
@@ -64,7 +73,7 @@ namespace Struckout.Infrastructure.Grpc
                     HttpHandler = _handler,
                     DisposeHttpClient = true,
                 });
-                _client = new GameMasterService.GameMasterServiceClient(_channel);
+                _client = new GameMasterSessionService.GameMasterSessionServiceClient(_channel);
             }
             catch (Exception ex)
             {
@@ -87,22 +96,22 @@ namespace Struckout.Infrastructure.Grpc
         /// gRPC のチャネルは遅延接続なので、ConnectAsync の時点では失敗しない。
         ///
         /// machine_id での絞り込みは game_master 側が行う
-        /// (service.rs の pass_events_through_by_machine_id)。
+        /// (services/mod.rs)。
         /// 号機番号を間違えると、繋がってはいるのにイベントが一件も来ない。
         ///
         /// 切れたら (game_master の再起動、まだ起動していないなど) <see cref="ReconnectInterval"/> おきに
         /// 購読をやり直す。projector を起動し直さなくてよい。切れたことは最初の 1 回だけ知らせる。
-        /// 切れているあいだに終わったゲームの GameFinished は届かないので、次の GameStarted までは
-        /// 遊んでいる状態のまま残る。
+        /// 切断時は命中の送信を止める。状態の再取得 API がないため、
+        /// 再接続後は次の GameStarted を待つ。
         /// </summary>
         private async Task ListenEventsAsync(CancellationToken token)
         {
-            bool lost = false;
+            var lost = false;
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    var request = new ListenEventsRequest { MachineId = (uint)_settings.machineId };
+                    var request = new ListenEventsRequest { MachineId = _settings.machineId };
                     using var call = _client.ListenEvents(request, cancellationToken: token);
 
                     // 応答のヘッダーが届いたら、つながっている。イベントはゲームが動くまで来ない
@@ -125,7 +134,7 @@ namespace Struckout.Infrastructure.Grpc
                         HandleEvent(received);
                     }
 
-                    if (!lost) Debug.LogWarning("[GameMaster] the event stream ended.");
+                    Debug.LogWarning("[GameMaster] the event stream ended.");
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
@@ -148,6 +157,7 @@ namespace Struckout.Infrastructure.Grpc
                 if (!lost)
                 {
                     lost = true;
+                    _running = false;
                     try
                     {
                         ConnectionLost?.Invoke();
@@ -174,21 +184,23 @@ namespace Struckout.Infrastructure.Grpc
             switch (received.EventDataCase)
             {
                 case Event.EventDataOneofCase.GameStarted:
-                    // game_id は Event 直下にある。得点を送るのに要るのはこれだけ。
-                    _gameId = received.GameId;
-                    GameStarted?.Invoke(received.GameStarted.Difficulty);
+                    var playerId = LocalPlayer(received.GameStarted);
+                    if (!playerId.HasValue)
+                    {
+                        Debug.LogWarning("[GameMaster] 開始通知に自分の筐体のプレイヤー情報がありません。");
+                        break;
+                    }
+                    _running = true;
+                    GameStarted?.Invoke(received.GameStarted.Difficulty, playerId.Value);
                     break;
 
                 case Event.EventDataOneofCase.GameFinished:
-                    if (_gameId != received.GameId) break;
-                    // これ以降 game_master は running_games から外すので、
-                    // 得点を送っても NotFound で弾かれる。手元でも送信を止める。
-                    _gameId = null;
-                    GameFinished?.Invoke();
+                    _running = false;
+                    GameFinished?.Invoke(new GameId(received.GameFinished.GameId));
                     break;
 
                 case Event.EventDataOneofCase.GameTimeLimitNotify:
-                    if (_gameId != received.GameId) break;
+                    if (!_running) break;
                     var remaining = received.GameTimeLimitNotify.Remaining;
                     if (remaining == null) break;
 
@@ -206,8 +218,50 @@ namespace Struckout.Infrastructure.Grpc
                     break;
 
                 case Event.EventDataOneofCase.GameScoreChanged:
-                    if (_gameId != received.GameId) break;
+                    if (!_running) break;
                     ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
+                    break;
+
+                case Event.EventDataOneofCase.NavigateToRankingScreenRequested:
+                    if (received.NavigateToRankingScreenRequested.MachineId == _settings.machineId)
+                        RankingScreenRequested?.Invoke();
+                    break;
+
+                case Event.EventDataOneofCase.NavigateToHomeScreenRequsted:
+                    if (received.NavigateToHomeScreenRequsted.MachineId == _settings.machineId)
+                        HomeScreenRequested?.Invoke();
+                    break;
+
+                case Event.EventDataOneofCase.TargetAdded:
+                    var added = received.TargetAdded;
+                    var data = added.Target;
+                    if (data == null || !Guid.TryParse(data.TargetId, out var targetId) || targetId == Guid.Empty)
+                    {
+                        Debug.LogWarning("[GameMaster] 的の追加通知に有効な UUID または的データがありません。");
+                        break;
+                    }
+
+                    if (!data.IsOwnedBy(_settings.machineId)) break;
+                    var compass = data.Compass;
+                    if (compass == null || float.IsNaN(compass.X) || float.IsInfinity(compass.X) ||
+                        float.IsNaN(compass.Y) || float.IsInfinity(compass.Y) ||
+                        float.IsNaN(compass.Radius) || compass.Radius <= 0 || float.IsInfinity(compass.Radius * 2f))
+                    {
+                        Debug.LogWarning("[GameMaster] 的の追加通知に有効な円の形状がありません。");
+                        break;
+                    }
+                    TargetAdded?.Invoke(new DomainTarget(targetId,
+                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Circle, compass.Radius * 2f),
+                        data.OwnerCase == ProtoTarget.OwnerOneofCase.All ? TargetOwnership.All : TargetOwnership.Single));
+                    break;
+
+                case Event.EventDataOneofCase.TargetRemoved:
+                    if (!Guid.TryParse(received.TargetRemoved.TargetId, out var removedId) || removedId == Guid.Empty)
+                    {
+                        Debug.LogWarning("[GameMaster] 的の削除通知に有効な UUID がありません。");
+                        break;
+                    }
+                    TargetRemoved?.Invoke(removedId);
                     break;
 
                 default:
@@ -216,39 +270,125 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async Task<bool> AddScoreAsync(int scoreToAdd)
+        private PlayerId? LocalPlayer(Event.Types.GameStarted started)
         {
-            if (_client == null)
+            var players = started.GameStartedPlayerInfoCase switch
             {
-                Debug.LogWarning("[GameMaster] not connected; the score was not sent.");
-                return false;
-            }
+                Event.Types.GameStarted.GameStartedPlayerInfoOneofCase.Single => new[] { started.Single.Player },
+                Event.Types.GameStarted.GameStartedPlayerInfoOneofCase.Multi => new[] { started.Multi.Player1, started.Multi.Player2 },
+                _ => Array.Empty<Event.Types.GameStarted.Types.PlayerInfo>(),
+            };
+            var local = players.Where(player => player != null && player.MachineId == _settings.machineId).ToArray();
+            return local.Length == 1 ? new PlayerId(local[0].PlayerId) : null;
+        }
 
-            if (_gameId is not uint gameId)
-            {
-                Debug.LogWarning("[GameMaster] no game is running; the score was not sent.");
-                return false;
-            }
-
-            if (scoreToAdd < 0)
-            {
-                Debug.LogWarning($"[GameMaster] refused to send a negative score delta ({scoreToAdd}).");
-                return false;
-            }
-
+        public async Task<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
+        {
+            if (_client == null || token.IsCancellationRequested) return null;
             try
             {
-                await _client.AddScoreAsync(new AddScoreRequest
+                var response = await _client.GetGameResultAsync(new GetGameResultRequest { GameId = gameId.Value }, cancellationToken: token);
+                return response.TotalScore;
+            }
+            catch (RpcException error)
+            {
+                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] 結果の取得に失敗しました: {error.StatusCode} {error.Status.Detail}");
+                return null;
+            }
+        }
+
+        public async Task<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
+        {
+            if (_client == null || token.IsCancellationRequested) return null;
+            try
+            {
+                var response = await _client.GetRankingAsync(new GetRankingRequest { MaxItemNum = maxItemCount }, cancellationToken: token);
+                return response.TopN.Select(item => new RankingEntry(new GameId(item.GameId), item.TotalScore,
+                    new PlayerId(item.PlayerId), item.PlayerName)).ToArray();
+            }
+            catch (RpcException error)
+            {
+                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] ランキングの取得に失敗しました: {error.StatusCode} {error.Status.Detail}");
+                return null;
+            }
+        }
+
+        public async Task<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
+        {
+            if (_client == null || token.IsCancellationRequested) return null;
+            try
+            {
+                var response = await _client.GetGamesByPlayerAsync(new GetGamesByPlayerRequest { PlayerId = playerId.Value }, cancellationToken: token);
+                return response.Items.Select(item => new PlayerGame(new GameId(item.GameId), item.TotalScore)).ToArray();
+            }
+            catch (RpcException error)
+            {
+                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] プレイヤーの履歴を取得できませんでした: {error.StatusCode} {error.Status.Detail}");
+                return null;
+            }
+        }
+
+        public async Task<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        {
+            if (_client == null || !_running || token.IsCancellationRequested) return false;
+            try
+            {
+                await _client.AddTargetAsync(new AddTargetRequest
                 {
-                    MachineId = (uint)_settings.machineId,
-                    GameId = gameId,
-                    ScoreToAdd = (uint)scoreToAdd,
-                });
+                    MachineId = _settings.machineId,
+                    Compass = new ProtoTarget.Types.Compass
+                    {
+                        X = coordinate.X,
+                        Y = coordinate.Y,
+                        Radius = (float)radius,
+                    },
+                }, cancellationToken: token);
                 return true;
             }
             catch (RpcException ex)
             {
-                Debug.LogWarning($"[GameMaster] AddScore failed: {ex.Status.StatusCode} {ex.Status.Detail}");
+                if (!token.IsCancellationRequested)
+                    Debug.LogWarning($"[GameMaster] 的の登録に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
+                return false;
+            }
+        }
+
+        public async Task<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default)
+        {
+            if (_client == null || !_running || token.IsCancellationRequested) return false;
+            try
+            {
+                await _client.RemoveTargetAsync(new RemoveTargetRequest
+                {
+                    MachineId = _settings.machineId,
+                    TargetId = targetId.ToString(),
+                }, cancellationToken: token);
+                return true;
+            }
+            catch (RpcException ex)
+            {
+                if (!token.IsCancellationRequested)
+                    Debug.LogWarning($"[GameMaster] 的の削除に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
+                return false;
+            }
+        }
+
+        public async Task<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
+        {
+            if (_client == null || !_running || token.IsCancellationRequested) return false;
+            try
+            {
+                await _client.HitTargetAsync(new HitTargetRequest
+                {
+                    MachineId = _settings.machineId,
+                    TargetId = targetId.ToString(),
+                }, cancellationToken: token);
+                return true;
+            }
+            catch (RpcException ex)
+            {
+                if (!token.IsCancellationRequested)
+                    Debug.LogWarning($"[GameMaster] 命中の通知に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
                 return false;
             }
         }
@@ -288,7 +428,7 @@ namespace Struckout.Infrastructure.Grpc
             _handler = null;
 
             _client = null;
-            _gameId = null;
+            _running = false;
         }
     }
 }

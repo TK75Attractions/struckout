@@ -24,12 +24,15 @@ namespace Struckout.Infrastructure.TCP
         public event Action ConnectionLost;
         private Task _receiveTask;
         private readonly IMessageParser<T> _parser;
-        private bool _isRegister = false;
+        private bool _isRegister;
         private readonly SemaphoreSlim _slim = new(1, 1);
         private readonly SemaphoreSlim _sendSlim = new(1, 1);
         private const double MaxRetryDelaySeconds = 5;
 
-        private ConnectionState Transit(ConnectionState to) => _state = ConnectionStateMachine.Transition(_state, to);
+        private void Transit(ConnectionState to)
+        {
+            _state = ConnectionStateMachine.Transition(_state, to);
+        }
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public TcpClientBase(IMessageParser<T> parser)
@@ -131,9 +134,9 @@ namespace Struckout.Infrastructure.TCP
             }
         }
 
-        public async Task<bool> ConnectRetryAsync(int maxAttempts)
+        public async Task<bool> ConnectRetryAsync(uint maxAttempts)
         {
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            for (var attempt = 0; attempt < maxAttempts; attempt++)
             {
                 try
                 {
@@ -164,8 +167,8 @@ namespace Struckout.Infrastructure.TCP
                 return false;
             }
 
-            byte[] payload = packet.ToByteArray();
-            byte[] frame = new byte[4 + payload.Length];
+            var payload = packet.ToByteArray();
+            var frame = new byte[4 + payload.Length];
             BinaryPrimitives.WriteUInt32LittleEndian(frame.AsSpan(0, 4), (uint)payload.Length);
             payload.CopyTo(frame, 4);
 
@@ -192,7 +195,7 @@ namespace Struckout.Infrastructure.TCP
         {
             // 自分から切ったのか、相手都合で切れたのかを区別する。
             // 後者だけを ConnectionLost として通知したい。
-            bool lostUnexpectedly = false;
+            var lostUnexpectedly = false;
 
             while (_state == ConnectionState.Connected && !token.IsCancellationRequested)
             {
@@ -299,22 +302,22 @@ namespace Struckout.Infrastructure.TCP
 
         private async Task<byte[]> ReadByteAsync(CancellationToken token)
         {
-            byte[] lengthBuffer = new byte[4];
+            var lengthBuffer = new byte[4];
             await ReadExactAsync(lengthBuffer, 4, token);
-            uint length = BinaryPrimitives.ReadUInt32LittleEndian(lengthBuffer);
-            byte[] dataBuffer = new byte[length];
+            var length = BinaryPrimitives.ReadUInt32LittleEndian(lengthBuffer);
+            var dataBuffer = new byte[length];
             await ReadExactAsync(dataBuffer, (int)length, token);
             return dataBuffer;
         }
 
         private async Task ReadExactAsync(byte[] buffer, int length, CancellationToken token)
         {
-            int totalRead = length;
-            int offset = 0;
+            var totalRead = length;
+            var offset = 0;
 
             while (offset < totalRead)
             {
-                int received = await _networkStream.ReadAsync(buffer, offset, totalRead - offset, token);
+                var received = await _networkStream.ReadAsync(buffer, offset, totalRead - offset, token);
                 if (received == 0)
                 {
                     throw new Exception("Connection closed by the server.");

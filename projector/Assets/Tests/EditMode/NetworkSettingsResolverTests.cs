@@ -14,14 +14,14 @@ namespace Struckout.Tests.Tests.EditMode
         private static Dictionary<string, string> Args(params string[] pairs)
         {
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i + 1 < pairs.Length; i += 2) result[pairs[i]] = pairs[i + 1];
+            for (var i = 0; i + 1 < pairs.Length; i += 2) result[pairs[i]] = pairs[i + 1];
             return result;
         }
 
         private static Func<string, string> Env(params string[] pairs)
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i + 1 < pairs.Length; i += 2) map[pairs[i]] = pairs[i + 1];
+            for (var i = 0; i + 1 < pairs.Length; i += 2) map[pairs[i]] = pairs[i + 1];
             return name => map.TryGetValue(name, out var value) ? value : null;
         }
 

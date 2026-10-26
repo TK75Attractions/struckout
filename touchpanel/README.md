@@ -1,4 +1,4 @@
-# game-master
+# touchpanel
 
 ## アーキテクチャ
 

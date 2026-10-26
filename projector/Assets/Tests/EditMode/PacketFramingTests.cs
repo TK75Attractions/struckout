@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using Google.Protobuf;
 using NUnit.Framework;
 using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -55,7 +56,7 @@ namespace Struckout.Tests.Tests.EditMode
             BinaryPrimitives.WriteUInt32LittleEndian(frame.AsSpan(0, 4), (uint)payload.Length);
             payload.CopyTo(frame, 4);
 
-            uint length = BinaryPrimitives.ReadUInt32LittleEndian(frame.AsSpan(0, 4));
+            var length = BinaryPrimitives.ReadUInt32LittleEndian(frame.AsSpan(0, 4));
             Assert.That(length, Is.EqualTo((uint)payload.Length));
 
             var body = new byte[length];
@@ -79,10 +80,10 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(new CollisionPoint(), Is.Not.Null);
 
             // game_master とは gRPC。メッセージとサービスのスタブが要る。
-            Assert.That(new AddScoreRequest(), Is.Not.Null);
+            Assert.That(new HitTargetRequest(), Is.Not.Null);
             Assert.That(new ListenEventsRequest(), Is.Not.Null);
-            Assert.That(new Tk75Attractions.Struckout.V1.Event(), Is.Not.Null);
-            Assert.That(typeof(GameMasterService.GameMasterServiceClient), Is.Not.Null);
+            Assert.That(new Event(), Is.Not.Null);
+            Assert.That(typeof(GameMasterSessionService.GameMasterSessionServiceClient), Is.Not.Null);
         }
     }
 }

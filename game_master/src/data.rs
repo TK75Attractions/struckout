@@ -3,16 +3,14 @@ use std::{future::Future, ops::DerefMut};
 use sqlx::{MySql, MySqlConnection, Pool};
 use struckout_proto::{
     Difficulty, GameMode,
-    types::{GameId, MachineId, PlayerId},
+    types::{GameId, PlayerId},
 };
-use time::{PlainDateTime, UtcDateTime};
+use time::PlainDateTime;
 
 use crate::{
-    AddPlayerError, DataSource, GetGameResultError, GetPlayerError, ValidatePlayerNameError,
+    AddPlayerError, DataSource, GamePlayers, GameRecord, GetGameResultError, GetPlayerError,
+    SaveGameError, ValidatePlayerNameError,
 };
-
-const STATUS_FINISHED: &str = "finished";
-const STATUS_RUNNING: &str = "running";
 
 const MODE_SINGLE: &str = "single";
 const MODE_MULTI: &str = "multi";
@@ -67,120 +65,43 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         Ok(last_inserted.into())
     }
 
-    /// Inserts new game into database.
+    /// Saves the game result to the database.
     ///
-    /// `started_at` takes [`UtcDateTime`] because it is clearly defined as UTC time and not local time,
-    /// but in the function it will be converted to [`PlainDateTime`] since `sqlx`'s MySQL type mapping does not
-    /// support [`UtcDateTime`].
-    ///
-    /// See also: [https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html#time]
-    async fn insert_game_single(
-        &self,
-        machine_id: MachineId,
-        player_id: PlayerId,
-        started_at: UtcDateTime,
-        difficulty: Difficulty,
-    ) -> Result<GameId, sqlx::Error> {
+    /// UTC is converted to PlainDateTime because MySQL's DATETIME has no time zone.
+    async fn save_game(&self, game: GameRecord) -> Result<GameId, SaveGameError> {
         let mut conn = self.db.acquire().await?;
-        let machine_id: u32 = machine_id.into();
-        let player_id: u32 = player_id.into();
-        let started_at = PlainDateTime::new(started_at.date(), started_at.time());
+        let (machine_id, player_id_1, player_id_2, mode): (Option<u32>, u32, Option<u32>, &str) =
+            match game.players {
+                GamePlayers::Single {
+                    machine_id,
+                    player_id,
+                } => (Some(machine_id.into()), player_id.into(), None, MODE_SINGLE),
+                GamePlayers::Multi((_, first), (_, second)) => {
+                    (None, first.into(), Some(second.into()), MODE_MULTI)
+                }
+            };
+        let started_at = PlainDateTime::new(game.started_at.date(), game.started_at.time());
         let res = sqlx::query!(
-            "INSERT INTO games (
-                machine_id,
-                player_id_1,
-                started_at ,
-                difficulty,
-                status,
-                mode
-            ) VALUES (?, ?, ?, ?, ?, ?)",
-            machine_id,
-            player_id,
-            started_at,
-            difficulty.to_mysql_enum(),
-            STATUS_RUNNING,
-            MODE_SINGLE
-        )
-        .execute(&mut *conn)
-        .await?;
-        let last_insert_id: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
-        Ok(last_insert_id.into())
+            "INSERT INTO games (machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode)
+             VALUES (?, ?, ?, ?, ?, ?, ?)",
+            machine_id, player_id_1, player_id_2, started_at,
+            game.difficulty.to_mysql_enum(), game.score, mode
+        ).execute(&mut *conn).await?;
+        let last_inserted: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
+        Ok(last_inserted.into())
     }
 
-    /// Inserts new game into database.
-    ///
-    /// `started_at` takes [`UtcDateTime`] because it is clearly defined as UTC time and not local time,
-    /// but in the function it will be converted to [`PlainDateTime`] since `sqlx`'s MySQL type mapping does not
-    /// support [`UtcDateTime`].
-    ///
-    /// See also: [https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html#time]
-    async fn insert_game_multi(
-        &self,
-        player_ids: [PlayerId; 2],
-        started_at: UtcDateTime,
-        difficulty: Difficulty,
-    ) -> Result<GameId, sqlx::Error> {
-        let mut conn = self.db.acquire().await?;
-        let player_id_1: u32 = player_ids[0].into();
-        let player_id_2: u32 = player_ids[1].into();
-        let started_at = PlainDateTime::new(started_at.date(), started_at.time());
-        let res = sqlx::query!(
-            "INSERT INTO games (
-                player_id_1,
-                player_id_2,
-                started_at,
-                difficulty,
-                status,
-                mode
-            ) VALUES (?, ?, ?, ?, ?, ?)",
-            player_id_1,
-            player_id_2,
-            started_at,
-            difficulty.to_mysql_enum(),
-            STATUS_RUNNING,
-            MODE_MULTI,
-        )
-        .execute(&mut *conn)
-        .await?;
-        let last_insert_id: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
-        Ok(last_insert_id.into())
-    }
-
-    /// Completes the game with final score.
-    async fn complete_game(&self, game_id: GameId, score: u32) -> Result<(), sqlx::Error> {
-        let mut conn = self.db.acquire().await?;
-        let game_id: u32 = game_id.into();
-        sqlx::query!(
-            "UPDATE games SET status = 'finished', score = ? WHERE game_id = ?",
-            score,
-            game_id
-        )
-        .execute(&mut *conn)
-        .await?;
-        Ok(())
-    }
-
-    /// Gets the result of a completed game.
-    async fn get_game_result(&self, game_id: GameId) -> Result<GameRecord, GetGameResultError> {
+    /// Reads a persisted result so clients can fetch it after its session was discarded.
+    async fn get_game_result(&self, game_id: GameId) -> Result<u32, GetGameResultError> {
         let mut conn = self.db.acquire().await?;
         let row = sqlx::query!(
-            "SELECT score, status FROM games WHERE game_id = ?",
+            "SELECT score FROM games WHERE game_id = ?",
             game_id.into_inner()
         )
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => GetGameResultError::GameNotFound,
-            _ => e.into(),
-        })?;
-
-        if row.status != STATUS_FINISHED {
-            return Err(GetGameResultError::NotYetCompleted);
-        }
-        // guaranteed by CHECK constraint
-        let score = row.score.unwrap();
-
-        Ok(GameRecord { score })
+        .fetch_optional(&mut *conn)
+        .await?
+        .ok_or(GetGameResultError::NotFound(game_id))?;
+        Ok(row.score)
     }
 
     async fn validate_player_name(
@@ -212,11 +133,6 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
             None => Err(GetPlayerError::NotExist(name)),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct GameRecord {
-    pub score: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -300,8 +216,9 @@ mod tests {
 
     use parking_lot::Mutex;
     use sqlx::mysql::MySqlPoolOptions;
+    use struckout_proto::types::MachineId;
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
-    use time::{Date, Month, Time};
+    use time::{Date, Month, Time, UtcDateTime};
     use tokio::{runtime::Runtime, sync::Mutex as TokioMutex};
 
     type TestTransaction = Arc<TokioMutex<sqlx::Transaction<'static, MySql>>>;
@@ -401,12 +318,15 @@ mod tests {
                 .add_player("Rollback")
                 .await
                 .expect("should insert player");
-            ds.insert_game_single(
-                MachineId::new(0),
-                player_id,
-                UtcDateTime::now(),
-                Difficulty::Normal,
-            )
+            ds.save_game(GameRecord {
+                players: GamePlayers::Single {
+                    machine_id: MachineId::new(0),
+                    player_id,
+                },
+                started_at: UtcDateTime::now(),
+                difficulty: Difficulty::Normal,
+                score: 500,
+            })
             .await
             .expect("should insert game");
         });
@@ -479,108 +399,97 @@ mod tests {
         });
     }
 
-    #[test]
-    fn insert_game_single_succeeds() {
+    #[rstest::rstest]
+    #[case(false)]
+    #[case(true)]
+    fn save_game_succeeds(#[case] multi: bool) {
         with_test_transaction(|txn| async move {
             let ds = DataSourceImpl::new(txn.clone());
-
-            let player_id = ds.add_player("Bob").await.expect("failed to insert player");
-
-            let game_id = ds
-                .insert_game_single(
-                    MachineId::new(0),
-                    player_id,
-                    time::UtcDateTime::new(
-                        Date::from_calendar_date(2026, Month::September, 6).unwrap(),
-                        Time::from_hms(12, 41, 23).unwrap(),
-                    ),
-                    Difficulty::Normal,
-                )
-                .await
-                .expect("should succeed");
-
-            let exists: bool = sqlx::query_scalar!(
-                "SELECT EXISTS(SELECT 1 FROM games WHERE game_id = ?) AS `exists: bool`",
-                game_id.into_inner()
-            )
-            .fetch_one(&mut **txn.lock().await)
-            .await
-            .expect("failed to fetch inserted game");
-            assert!(exists);
-        });
-    }
-
-    #[test]
-    fn insert_game_multi_succeeds() {
-        with_test_transaction(|txn| async move {
-            let ds = DataSourceImpl::new(txn.clone());
-
-            let player_id_1 = ds
+            let first = ds
                 .add_player("Charles")
                 .await
-                .expect("failed to insert player");
-            let player_id_2 = ds
-                .add_player("David")
-                .await
-                .expect("failed to insert player");
-
+                .expect("should insert player");
+            let second = ds.add_player("David").await.expect("should insert player");
+            let players = if multi {
+                GamePlayers::Multi((MachineId::new(1), first), (MachineId::new(2), second))
+            } else {
+                GamePlayers::Single {
+                    machine_id: MachineId::new(7),
+                    player_id: first,
+                }
+            };
+            let started_at = UtcDateTime::new(
+                Date::from_calendar_date(2026, Month::September, 6).unwrap(),
+                Time::from_hms(12, 41, 23).unwrap(),
+            );
             let game_id = ds
-                .insert_game_multi(
-                    [player_id_1, player_id_2],
-                    time::UtcDateTime::new(
-                        Date::from_calendar_date(2026, Month::September, 6).unwrap(),
-                        Time::from_hms(12, 41, 23).unwrap(),
-                    ),
-                    Difficulty::Normal,
-                )
+                .save_game(GameRecord {
+                    players,
+                    started_at,
+                    difficulty: Difficulty::Normal,
+                    score: 500,
+                })
                 .await
-                .expect("should succeed");
-
-            let exists: bool = sqlx::query_scalar!(
-                "SELECT EXISTS(SELECT 1 FROM games WHERE game_id = ?) AS `exists: bool`",
-                game_id.into_inner()
-            )
-            .fetch_one(&mut **txn.lock().await)
-            .await
-            .expect("failed to fetch inserted game");
-            assert!(exists);
+                .expect("should save final result");
+            let row = sqlx::query!("SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?", game_id.into_inner())
+                .fetch_one(&mut **txn.lock().await).await.expect("should fetch saved game");
+            assert_eq!(row.machine_id, if multi { None } else { Some(7) });
+            assert_eq!(row.player_id_1, first.into_inner());
+            assert_eq!(
+                row.player_id_2,
+                if multi {
+                    Some(second.into_inner())
+                } else {
+                    None
+                }
+            );
+            assert_eq!(
+                row.started_at,
+                PlainDateTime::new(started_at.date(), started_at.time())
+            );
+            assert_eq!(row.difficulty, "normal");
+            assert_eq!(row.score, 500);
+            assert_eq!(row.mode, if multi { "multi" } else { "single" });
         });
     }
 
     #[test]
-    fn complete_game_succeeds() {
+    fn get_game_result_returns_the_score_for_the_requested_game() {
         with_test_transaction(|txn| async move {
-            let ds = DataSourceImpl::new(txn.clone());
-
-            let player_id = ds.add_player("Bob").await.unwrap();
-
-            let game_id = ds
-                .insert_game_single(
-                    MachineId::new(0),
+            let ds = DataSourceImpl::new(txn);
+            let player_id = ds.add_player("Result player").await.expect("insert player");
+            let game = GameRecord {
+                players: GamePlayers::Single {
+                    machine_id: MachineId::new(1),
                     player_id,
-                    time::UtcDateTime::new(
-                        Date::from_calendar_date(2026, Month::September, 6).unwrap(),
-                        Time::from_hms(12, 41, 23).unwrap(),
-                    ),
-                    Difficulty::Normal,
-                )
+                },
+                started_at: UtcDateTime::now(),
+                difficulty: Difficulty::Normal,
+                score: 123,
+            };
+            let first = ds.save_game(game.clone()).await.expect("save first game");
+            let second = ds
+                .save_game(GameRecord { score: 456, ..game })
                 .await
-                .unwrap();
+                .expect("save second game");
 
-            const SCORE: u32 = 500;
+            assert_eq!(ds.get_game_result(first).await.expect("first result"), 123);
+            assert_eq!(
+                ds.get_game_result(second).await.expect("second result"),
+                456
+            );
+        });
+    }
 
-            ds.complete_game(game_id, SCORE)
-                .await
-                .expect("should succeed");
+    #[test]
+    fn get_game_result_returns_not_found_for_an_unknown_id() {
+        with_test_transaction(|txn| async move {
+            let ds = DataSourceImpl::new(txn);
+            let game_id = GameId::new(u32::MAX);
 
-            let game_id: u32 = game_id.into();
-            let updated =
-                sqlx::query!("SELECT status, score FROM games WHERE game_id = ?", game_id)
-                    .fetch_one(&mut **txn.lock().await)
-                    .await
-                    .unwrap();
-            assert!(updated.score.is_some_and(|v| v == SCORE));
-            assert_eq!(&updated.status, "finished");
+            let error = ds.get_game_result(game_id).await.expect_err("unknown game");
+
+            assert_matches!(error, GetGameResultError::NotFound(id) if id == game_id);
         });
     }
 

@@ -51,7 +51,7 @@ namespace Struckout.Infrastructure.Fake
             return Task.FromResult(true);
         }
 
-        public Task<bool> ConnectRetryAsync(int maxAttempts) => ConnectAsync();
+        public Task<bool> ConnectRetryAsync(uint maxAttempts) => ConnectAsync();
 
         public Task<bool> SendAsync(IMessage packet)
         {
@@ -88,8 +88,8 @@ namespace Struckout.Infrastructure.Fake
 
             while (_isConnected && !token.IsCancellationRequested)
             {
-                float x = FieldMinX + (float)random.NextDouble() * (FieldMaxX - FieldMinX);
-                float y = FieldMinY + (float)random.NextDouble() * (FieldMaxY - FieldMinY);
+                var x = FieldMinX + (float)random.NextDouble() * (FieldMaxX - FieldMinX);
+                var y = FieldMinY + (float)random.NextDouble() * (FieldMaxY - FieldMinY);
 
                 ProjectorPacket packet = new()
                 {

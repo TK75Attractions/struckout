@@ -56,6 +56,23 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public void 既定の保存先はユーザーの設定ディレクトリ配下になる()
+        {
+            var path = CollisionTransformStore.ResolvePath(new Dictionary<string, string>(), _ => null, null);
+
+            Assert.That(path, Is.EqualTo(Path.Combine(ProjectorPaths.ConfigDirectory, CollisionTransformStore.FileName)));
+        }
+
+        [Test]
+        public void 空の上書きは既定の保存先を変えない()
+        {
+            var args = new Dictionary<string, string> { [CollisionTransformStore.ArgName] = " " };
+            var path = CollisionTransformStore.ResolvePath(args, _ => " ", null);
+
+            Assert.That(path, Is.EqualTo(Path.Combine(ProjectorPaths.ConfigDirectory, CollisionTransformStore.FileName)));
+        }
+
+        [Test]
         public void 保存して読み直すと同じ値になる()
         {
             var path = Path.Combine(_directory, "sub", CollisionTransformStore.FileName);
@@ -72,7 +89,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             CollisionTransformStore.Save(saved, path);
             var loaded = new CollisionCoordinateTransform();
-            bool ok = CollisionTransformStore.TryLoadInto(loaded, path, out var error);
+            var ok = CollisionTransformStore.TryLoadInto(loaded, path, out var error);
 
             Assert.That(ok, Is.True, error);
             Assert.That(loaded.ToString(), Is.EqualTo(saved.ToString()));
@@ -84,7 +101,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var target = new CollisionCoordinateTransform { originX = 123f };
 
-            bool ok = CollisionTransformStore.TryLoadInto(target, Path.Combine(_directory, "none.json"), out var error);
+            var ok = CollisionTransformStore.TryLoadInto(target, Path.Combine(_directory, "none.json"), out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(error, Is.Null);
@@ -96,10 +113,10 @@ namespace Struckout.Tests.Tests.EditMode
         {
             Directory.CreateDirectory(_directory);
             var path = Path.Combine(_directory, CollisionTransformStore.FileName);
-            File.WriteAllText(path, "{ \"PixelsPerMetreX\": -900, \"OriginX\": 5 }");
+            File.WriteAllText(path, "{ \"pixelsPerMetreX\": -900, \"originX\": 5 }");
             var target = new CollisionCoordinateTransform { originX = 123f };
 
-            bool ok = CollisionTransformStore.TryLoadInto(target, path, out var error);
+            var ok = CollisionTransformStore.TryLoadInto(target, path, out var error);
 
             Assert.That(ok, Is.False);
             Assert.That(error, Is.Not.Null);
@@ -109,7 +126,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 書かれていない項目は既定値になる()
         {
-            var loaded = CollisionTransformStore.FromJson("{ \"OriginX\": 5 }");
+            var loaded = CollisionTransformStore.FromJson("{ \"originX\": 5 }");
 
             Assert.That(loaded.originX, Is.EqualTo(5f));
             Assert.That(loaded.pixelsPerMetreX, Is.EqualTo(new CollisionCoordinateTransform().pixelsPerMetreX));

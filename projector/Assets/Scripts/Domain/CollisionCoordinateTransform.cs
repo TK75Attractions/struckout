@@ -28,21 +28,21 @@ namespace Struckout.Domain
 
         /// <summary>物理座標の原点 (0, 0) が描画座標のどこに来るか。</summary>
         [FormerlySerializedAs("OriginX")] public float originX = 960f;
-        [FormerlySerializedAs("OriginY")] public float originY = 0f;
+        [FormerlySerializedAs("OriginY")] public float originY;
 
         /// <summary>軸の向きが逆だったとき用。</summary>
-        [FormerlySerializedAs("FlipX")] public bool flipX = false;
-        [FormerlySerializedAs("FlipY")] public bool flipY = false;
+        [FormerlySerializedAs("FlipX")] public bool flipX;
+        [FormerlySerializedAs("FlipY")] public bool flipY;
 
         /// <summary>
         /// 縦横が入れ替わっていたとき用。
         /// ball_tracker は CollisionPoint に、的の面に沿った横方向 (世界座標の y) と
         /// 高さ (世界座標の z) を詰めるので、通常は使わない。
         /// </summary>
-        [FormerlySerializedAs("SwapAxes")] public bool swapAxes = false;
+        [FormerlySerializedAs("SwapAxes")] public bool swapAxes;
 
         /// <summary>変換前後の値をログに出す。係数を合わせ込むとき用。</summary>
-        [FormerlySerializedAs("LogConversions")] public bool logConversions = false;
+        [FormerlySerializedAs("LogConversions")] public bool logConversions;
 
         /// <summary>物理座標 (m) → 描画座標。</summary>
         public (double X, double Y) ToRenderSpace(double physicalX, double physicalY)
@@ -52,8 +52,8 @@ namespace Struckout.Domain
                 (physicalX, physicalY) = (physicalY, physicalX);
             }
 
-            double x = originX + (flipX ? -physicalX : physicalX) * pixelsPerMetreX;
-            double y = originY + (flipY ? -physicalY : physicalY) * pixelsPerMetreY;
+            var x = originX + (flipX ? -physicalX : physicalX) * pixelsPerMetreX;
+            var y = originY + (flipY ? -physicalY : physicalY) * pixelsPerMetreY;
 
             return (x, y);
         }
@@ -61,8 +61,8 @@ namespace Struckout.Domain
         /// <summary>描画座標 → 物理座標 (m)。<see cref="ToRenderSpace"/> の逆。</summary>
         public (double X, double Y) ToPhysical(double renderX, double renderY)
         {
-            double x = (renderX - originX) / pixelsPerMetreX;
-            double y = (renderY - originY) / pixelsPerMetreY;
+            var x = (renderX - originX) / pixelsPerMetreX;
+            var y = (renderY - originY) / pixelsPerMetreY;
             if (flipX) x = -x;
             if (flipY) y = -y;
             if (swapAxes)
@@ -101,14 +101,14 @@ namespace Struckout.Domain
         private static (float Origin, float Scale, bool Flip) FitAxis(
             double render1, double measured1, double render2, double measured2, string axis)
         {
-            double span = measured2 - measured1;
+            var span = measured2 - measured1;
             if (Math.Abs(span) < 1e-6)
             {
                 throw new ArgumentException($"the two points are at the same {axis} position");
             }
 
             // 描画 = Origin + 符号 * 1m あたり * 物理。符号つきの傾きが負なら向きが逆
-            double slope = (render2 - render1) / span;
+            var slope = (render2 - render1) / span;
             return ((float)(render1 - slope * measured1), (float)Math.Abs(slope), slope < 0);
         }
 

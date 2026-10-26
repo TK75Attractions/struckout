@@ -1,0 +1,34 @@
+import { TwoColorOutlinedButton } from "../components/button.slint";
+
+global Adopter {
+    in property <bool> busy;
+    in property <string> error-msg;
+    callback move-to-start-screen();
+}
+
+export component RankingControlScreen {
+    VerticalLayout {
+        alignment: center;
+        cross-axis-alignment: center;
+        spacing: 32px;
+        padding: 32px;
+        Text {
+            text: "プロジェクターでランキングを表示中";
+            font-size: 28px;
+        }
+
+        TwoColorOutlinedButton {
+            text: "ホームに戻る";
+            font-size: 28px;
+            enabled: !Adopter.busy;
+            clicked => { Adopter.move-to-start-screen(); }
+        }
+
+        Text {
+            text: Adopter.error-msg;
+            wrap: word-wrap;
+        }
+    }
+}
+
+export { Adopter as RankingControlAdopter }

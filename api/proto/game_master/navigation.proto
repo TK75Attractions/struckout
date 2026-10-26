@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.game_master.v1;
+
+message StartTutorialRequest {
+  uint32 machine_id = 1;
+}
+
+message StartTutorialResponse {}
+
+message GoPreviousTutorialRequest {
+  uint32 machine_id = 1;
+}
+
+message GoPreviousTutorialResponse {}
+
+message GoNextTutorialRequest {
+  uint32 machine_id = 1;
+}
+
+message GoNextTutorialResponse {}
+
+message GoRankingScreenRequest {
+  uint32 machine_id = 1;
+}
+
+message GoRankingScreenResponse {}
+
+message GoHomeScreenRequest {
+  uint32 machine_id = 1;
+}
+
+message GoHomeScreenResponse {}

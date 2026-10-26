@@ -65,12 +65,12 @@ namespace Struckout.Infrastructure
             sb.Append($"[Hit] point=({point.X:F1}, {point.Y:F1}) targets={targets.Count} -> ");
             sb.AppendLine(hit == null ? "MISS" : $"HIT at ({hit.Coordinate.X:F1}, {hit.Coordinate.Y:F1})");
 
-            for (int i = 0; i < targets.Count; i++)
+            for (var i = 0; i < targets.Count; i++)
             {
                 var t = targets[i];
-                double dx = point.X - t.Coordinate.X;
-                double dy = point.Y - t.Coordinate.Y;
-                double distance = Math.Sqrt(dx * dx + dy * dy);
+                var dx = point.X - t.Coordinate.X;
+                var dy = point.Y - t.Coordinate.Y;
+                var distance = Math.Sqrt(dx * dx + dy * dy);
 
                 sb.AppendLine(
                     $"    [{i}] centre=({t.Coordinate.X:F1}, {t.Coordinate.Y:F1}) " +

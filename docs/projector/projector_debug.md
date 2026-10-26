@@ -7,7 +7,7 @@ projector (Unity) は ball_tracker と game_master の 2 つにつながって�
 |---|---|---|---|---|
 | ball_tracker | 5000 | TCP | 受信 | `ProjectorPacket` (`CollisionPoint` / `TestMessage`) |
 | game_master | **8020** | **gRPC** | 受信 | `ListenEvents` のストリーム (`Event`) |
-| game_master | 8020 | gRPC | 送信 | `AddScore` |
+| game_master | 8020 | gRPC | 送信 | `AddTarget` / `RemoveTarget` / `HitTarget`、結果・ランキング・本人履歴の取得 |
 
 ポートの定義は `api/spec/servers.yaml` が唯一の出どころ。Rust は `build.rs` が
 そこから読み、projector は `NetworkSettings` の既定値として持っている
@@ -16,27 +16,26 @@ projector (Unity) は ball_tracker と game_master の 2 つにつながって�
 TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 `api/rust/src/lib.rs` の `write_packet` / `read_packet`。
 
-## デバッグ用の対向は 2 つある
+## デバッグ用の対向
 
-| 対向 | プログラム | 立て方 |
-|---|---|---|
-| ball_tracker | `sandbox/testTcpCLI` (C#) | `dotnet run --project sandbox/testTcpCLI` |
-| game_master | `sandbox/fake_game_master` (Rust) | `cargo run` (**リポジトリには入っていない**。下記) |
+ball_tracker の代わりには `sandbox/testTcpCLI` を使える。
+`dotnet run --project sandbox/testTcpCLI` で起動する。
+game_master は本物を起動すれば、Fake モードを使わずにシリアライズと gRPC のストリームを確認できる。
+描画やアニメーションだけを触るなら Fake モード (後述) を使う。
 
-2 つとも立てれば、projector は **Fake モードではなく本物の通信経路のまま**動く。
-シリアライズや gRPC のストリームまで含めて確かめたいときはこちら。
-描画やアニメーションだけを触るなら Fake モード (後述) のほうが早い。
+現在の game_master は `TargetAdded` / `TargetRemoved` の配信が未実装。
+本物との接続で的を表示するには配信側の実装が必要で、Fake モードはこれらのイベントを通知する。
 
 ## 座標系と得点の約束事
 
 - `CollisionPoint` は**物理座標 (m)**。ball_tracker は的の面の上での着弾位置を送る。
   `x` が面に沿った横方向 (世界座標の y)、`y` が高さ (世界座標の z)
   (`ball_tracker/src/collision_output/network.rs`: `x = coll.y, y = coll.z`)。
-- **得点は差分**。game_master (`game_master/src/service.rs`) が `game.score += score_to_add`
-  としているので、projector は累計ではなく的に当たったぶんだけを送る。
-- `AddScore` には `game_id` が要る。projector は `GameStarted` を受け取ったときに
-  `Event.game_id` を覚える。**ゲームが始まっていないと得点は送れない**
-  (本物は `NotFound` を返す。偽物も同じ)。
+- projector は `GameStarted` 後に自分の盤面の的を `AddTarget` で登録し、`TargetAdded` の UUID と形状から的を生成・描画する。
+- 命中時は `HitTarget` を送り、game_master が半径から得点を計算する。
+  HUD は `GameScoreChanged.total_score` を表示する。ゲーム ID や得点差分は送らない。
+- 命中後は `RemoveTarget` で元の的を削除し、`TargetRemoved` で描画を削除し、`TargetAdded` で新しい UUID の別エンティティを生成する。
+  詳細は [projector_behavior.md](projector_behavior.md) を参照。
 
 ### 物理座標 → 盤面座標の変換
 
@@ -65,7 +64,21 @@ Inspector の値は既定値で、起動時に設定ファイル `collision_tran
 |---|---|
 | コマンドライン | `StruckOut.exe -collisionTransform C:\struckout\collision_transform.json` |
 | 環境変数 | `STRUCKOUT_COLLISION_TRANSFORM` |
-| 既定 | `%USERPROFILE%\AppData\LocalLow\DefaultCompany\StruckOut\collision_transform.json` (Editor とプレイヤーで共通) |
+| 既定 | `<dirs::config_dir()>/struckout/projector/collision_transform.json` (Editor とプレイヤーで共通) |
+
+既定の設定ディレクトリは launcher・ball_tracker と同じ規則で決まる。
+
+| OS | 設定ディレクトリ |
+|---|---|
+| Linux | `$XDG_CONFIG_HOME/struckout/projector` (未設定・空・相対パスなら `~/.config/struckout/projector`) |
+| Windows | `%APPDATA%\struckout\projector` |
+| macOS | `~/Library/Application Support/struckout/projector` |
+
+F2 の「保存」と起動時の読み込みは同じパスを使い、保存時にディレクトリがなければ作る。
+従来の `Application.persistentDataPath` にある設定は自動では移さないため、既存の
+`collision_transform.json` を上のディレクトリへ移すか、コマンドライン・環境変数でそのファイルを指定する。
+projector 独自の保存処理はこの設定ファイルだけで、データディレクトリへ保存するファイルは現在ない。
+Unity 自身が出力する `Player.log` は Unity の保存先に従い、起動時の `-logFile` で変更できる。
 
 ファイルが無ければ Inspector の値のまま動く。中身がおかしい (1 m あたりが 0 以下など) ときも
 Inspector の値を使い、`Player.log` に `[Collision] could not read ...` と出る。
@@ -95,8 +108,8 @@ Inspector の値を使い、`Player.log` に `[Collision] could not read ...` �
 
 - `FakeClientService` がランダムな衝突点 (物理座標、既定 x[-1,1] y[0,2] m) を流す
 - `FakeGameMasterClient` が接続直後に `GameStarted(NORMAL)` を、
-  150 秒後に `GameFinished` を流す
-- 得点計算は**本物**が動く (`PointCalculator`)。送信先だけがログになる
+  90 秒後にゲーム ID 付き `GameFinished` を流す。結果取得後、5 秒おきにランキング・ホームへの遷移通知を送る
+- `FakeGameMasterClient` が的の UUID と半径を保持し、本物と同じ式で得点を計算して通知する
 
 ## 2. 偽 ball_tracker につなぐ (testTcpCLI)
 
@@ -122,65 +135,15 @@ Collision Transform の係数しだいで、既定値なら `hit 0 1` が画面�
 
 ポートを変えたいときは `listen sensor 6000` のように第 2 引数で指定する。
 
-## 3. 偽 game_master につなぐ (fake_game_master)
+## 3. 手元の偽 game_master を使う場合
 
-本物は MySQL を要求するので、イベント処理を触るたびに Docker を立てるのは重い。
-こちらは DB を持たず、`GameMasterService` のうち対向が実際に使うところだけを喋る。
+追跡対象外の `sandbox/fake_game_master` は旧サービス向けの開発用ツールだった。
+現在の `api/proto/game_master/` の契約への対応は、このリポジトリでは保証しない。
+対向なしの確認には Fake モード、実通信の確認には本物の game_master を使う。
 
-> **これはリポジトリに入っていない。** projector (Unity) を触る人だけが使う道具なので、
-> `sandbox/fake_game_master/` は `.gitignore` で追跡から外してある。
-> 手元に無ければ作り直しが要る。ルートの cargo ワークスペースには属さない
-> 独立クレートなので、ルートのビルドはこれが無くても壊れない。
-
-```bash
-cd sandbox/fake_game_master
-cargo run
-```
-
-```
-> start                  # NORMAL で開始。GameStarted が飛ぶ
-> start hard 20          # HARD で 20 秒だけのゲーム
-> finish                 # 時間を待たずに終わらせる
-> status                 # 進行中のゲームと購読者の数
-> exit
-```
-
-| 起動オプション | 意味 | 既定 |
-|---|---|---|
-| `--port` | gRPC のポート | `api/spec/servers.yaml` の 8020 |
-| `--machine-id` | 対話コマンドが対象にする号機 | 1 |
-| `--duration` | ゲームの長さ (秒) | 150 (本物と同じ) |
-
-projector が送ってきた `AddScore` はその場で表示される。送信側が実装できたかの
-確認はここを見るのが早い。
-
-### 号機番号がずれていると何も起きない
-
-game_master は `machine_id` でイベントを絞る (`pass_events_through_by_machine_id`)。
-**繋がってはいるのにイベントが一件も来ない**ときは、まずここを疑うこと。
-
-- projector 側: `GameLifetimeScope` の `Network Settings > Machine Id`
-  (シーンに値が無ければ既定の 1)
-- 偽 game_master 側: `--machine-id`
-
-`status` が `listeners : 0` のままなら、そもそも projector が繋がっていない。
-
-### 実装している RPC
-
-| RPC | 使う側 | 偽物の挙動 |
-|---|---|---|
-| `ListenEvents` | projector | 号機で絞ってイベントを流す |
-| `AddScore` | projector | 加算して表示。ゲームが無ければ `NotFound` (本物と同じ) |
-| `StartGame` | touchpanel | ゲームを開始し、そのゲームのイベントを返す |
-| `AddPlayer` | touchpanel | 通し番号を返すだけ。名前は覚えない |
-
-`GameTimeLimitNotify` は本物と同じく毎秒流れる。projector は今これを捨てているが、
-ストリームが生きているかの確認にはなる。
-
-**本物と違うところ**: 偽物は `ListenEvents` で繋いできた相手に、既に始まっている
-ゲームがあれば `GameStarted` を流し直す。本物は流さないので、touchpanel が
-start したあとに projector を繋ぐと開始を取りこぼす。
-先に projector を立ち上げておけば本物でも問題ない。
+projector の `Network Settings > Machine Id` と、touchpanel がセッションを開始する
+`machine_id` を一致させる。イベントはマシンごとに配信される。
+projector をセッション開始前に接続すること。途中から購読しても開始通知は再送されない。
 
 ## 4. 本物の game_master を使う
 

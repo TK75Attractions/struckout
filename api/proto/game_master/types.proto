@@ -1,0 +1,17 @@
+// Primitive types shared across other proto files.
+syntax = "proto3";
+
+package tk75attractions.struckout.game_master.v1;
+
+enum Difficulty {
+  DIFFICULTY_UNSPECIFIED = 0;
+  DIFFICULTY_NORMAL = 1;
+  DIFFICULTY_HARD = 2;
+  DIFFICULTY_VERYHARD = 3;
+}
+
+enum GameMode {
+  GAME_MODE_UNSPECIFIED = 0;
+  GAME_MODE_SINGLE = 1;
+  GAME_MODE_MULTI = 2;
+}

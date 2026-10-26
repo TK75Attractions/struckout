@@ -27,11 +27,11 @@ namespace Struckout.Infrastructure
             _xSize = field.width;
             _ySize = field.height;
         }
-        public IReadOnlyList<Target> GenerateTargets(int num, TargetType type, IReadOnlyList<Target> existTarget)
+        public IReadOnlyList<TargetGeometry> GenerateTargets(int num, TargetType type, IReadOnlyList<TargetGeometry> existTarget)
         {
-            List<Target> targets = new(existTarget);
-            List<Target> newTargets = new();
-            for (int i = 0; i < num; i++)
+            List<TargetGeometry> targets = new(existTarget);
+            List<TargetGeometry> newTargets = new();
+            for (var i = 0; i < num; i++)
             {
                 var target = GenerateTarget(type, targets);
                 targets.Add(target);
@@ -40,16 +40,16 @@ namespace Struckout.Infrastructure
             return newTargets;
         }
 
-        public Target GenerateTarget(TargetType type, IReadOnlyList<Target> targets)
+        public TargetGeometry GenerateTarget(TargetType type, IReadOnlyList<TargetGeometry> targets)
         {
 
-            float maxX = 0f;
-            float maxY = 0f;
-            float maxScore = 0f;
-            for (int i = 1; i < 200; i++)
+            var maxX = 0f;
+            var maxY = 0f;
+            var maxScore = 0f;
+            for (var i = 1; i < 200; i++)
             {
-                float x = RadicalInverse(i, 2) * _xSize;
-                float y = RadicalInverse(i, 3) * _ySize;
+                var x = RadicalInverse(i, 2) * _xSize;
+                var y = RadicalInverse(i, 3) * _ySize;
 
                 var score = GetScore(x, y, targets);
                 if (maxScore < score)
@@ -60,17 +60,17 @@ namespace Struckout.Infrastructure
                 }
             }
             if (targets.Count == 0) return GenerateTarget(type, maxX, maxY, 500);
-            return GenerateTarget(type, maxX, maxY, (float)maxScore);
+            return GenerateTarget(type, maxX, maxY, maxScore);
         }
 
-        public TargetCoordinate PickRelocation(Target target, IReadOnlyList<Target> others)
+        public TargetCoordinate PickRelocation(TargetGeometry target, IReadOnlyList<TargetGeometry> others)
         {
             // 的が画面から出ないように、中心が取りうる範囲を半径ぶん狭めておく。
-            float radius = target.Radius;
-            float minX = radius;
-            float maxX = _xSize - radius;
-            float minY = radius;
-            float maxY = _ySize - radius;
+            var radius = target.Radius;
+            var minX = radius;
+            var maxX = _xSize - radius;
+            var minY = radius;
+            var maxY = _ySize - radius;
 
             // 画面より大きい的は動かしようがない。真ん中に置く。
             if (maxX <= minX || maxY <= minY)
@@ -79,14 +79,14 @@ namespace Struckout.Infrastructure
             }
 
             TargetCoordinate fallback = default;
-            float bestClearance = float.NegativeInfinity;
+            var bestClearance = float.NegativeInfinity;
 
-            for (int attempt = 0; attempt < RelocationAttempts; attempt++)
+            for (var attempt = 0; attempt < RelocationAttempts; attempt++)
             {
-                float x = minX + (float)_random.NextDouble() * (maxX - minX);
-                float y = minY + (float)_random.NextDouble() * (maxY - minY);
+                var x = minX + (float)_random.NextDouble() * (maxX - minX);
+                var y = minY + (float)_random.NextDouble() * (maxY - minY);
 
-                float clearance = Clearance(x, y, target, others);
+                var clearance = Clearance(x, y, target, others);
                 if (clearance > 0f) return new TargetCoordinate(x, y);
 
                 // どれも重なるようなら、いちばんマシだったところに置く。
@@ -101,27 +101,27 @@ namespace Struckout.Infrastructure
         }
 
         /// <summary>他の的の縁までの余白。負なら重なっている。</summary>
-        private float Clearance(float x, float y, Target target, IReadOnlyList<Target> others)
+        private float Clearance(float x, float y, TargetGeometry target, IReadOnlyList<TargetGeometry> others)
         {
-            float clearance = float.MaxValue;
+            var clearance = float.MaxValue;
             foreach (var other in others)
             {
-                float dx = x - other.Coordinate.X;
-                float dy = y - other.Coordinate.Y;
-                float gap = MathF.Sqrt(dx * dx + dy * dy) - other.Radius - target.Radius;
+                var dx = x - other.Coordinate.X;
+                var dy = y - other.Coordinate.Y;
+                var gap = MathF.Sqrt(dx * dx + dy * dy) - other.Radius - target.Radius;
                 clearance = MathF.Min(clearance, gap);
             }
             return clearance;
         }
 
-        public Target GenerateTarget(TargetType type, float x, float y, float size)
+        public TargetGeometry GenerateTarget(TargetType type, float x, float y, float size)
         {
             TargetCoordinate coordinate = new(
                 x,
                 y
             );
 
-            Target target = new(
+            TargetGeometry target = new(
                 coordinate,
                 type,
                 size
@@ -130,9 +130,9 @@ namespace Struckout.Infrastructure
             return target;
         }
 
-        private float GetScore(float x, float y, IReadOnlyList<Target> targets)
+        private float GetScore(float x, float y, IReadOnlyList<TargetGeometry> targets)
         {
-            float score = float.MaxValue;
+            var score = float.MaxValue;
             foreach (var target in targets)
             {
                 var tempScore = GetScore(x, y, target);
@@ -141,20 +141,20 @@ namespace Struckout.Infrastructure
             return score;
         }
 
-        private float GetScore(float x, float y, Target targets)
+        private float GetScore(float x, float y, TargetGeometry targets)
         {
             var score = MathF.Sqrt((x - targets.Coordinate.X) * (x - targets.Coordinate.X) + (y - targets.Coordinate.Y) * (y - targets.Coordinate.Y)) - targets.Radius;
             score = MathF.Min(score, x);
             score = MathF.Min(score, y);
             score = MathF.Min(score, _xSize - x);
             score = MathF.Min(score, _ySize - y);
-            return (float)score;
+            return score;
         }
 
         private float RadicalInverse(int index, int baseValue)
         {
-            float result = 0.0f;
-            float f = 1f / baseValue;
+            var result = 0.0f;
+            var f = 1f / baseValue;
 
             while (index > 0)
             {

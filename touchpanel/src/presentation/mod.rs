@@ -2,13 +2,14 @@ use std::{sync::Arc, time::Duration};
 
 use crate::{
     Application, Config, Context, NavController,
-    data::GameMasterClient,
+    data::{GameMasterClient, SessionPhase},
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulty_select::DifficultySelectDestination, fallback::FallbackDestination,
+        game_finished::GameFinishedDestination, mode_select::ModeSelectDestination,
         name_input_first::NameInputFirstDestination,
         name_input_non_first::NameInputNonFirstDestination, playing::PlayingDestination,
-        ranking::RankingDestination, score::ScoreDestination, start::StartScreenDestination,
+        ranking_control::RankingControlDestination, start::StartScreenDestination,
     },
 };
 use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
@@ -58,17 +59,18 @@ pub mod connecting;
 pub mod connection_failed;
 pub mod difficulty_select;
 pub mod fallback;
+pub mod game_finished;
+pub mod mode_select;
 pub mod name_input_first;
 pub mod name_input_non_first;
 pub mod playing;
-pub mod ranking;
-pub mod score;
+pub mod ranking_control;
 pub mod start;
 //@xtask-pub-mod
 
 /// Connects to game-master's gRPC server. **Must be called within tokio context**.
 ///
-/// When succeeded, it navigates to `StartScreen` and returns connected [`GameMasterClient`].
+/// When succeeded, it returns a client with its event subscription already active.
 /// When failed, it navigates to `ConnectionFailedScreen` with error message.
 async fn connect_to_game_master<E>(
     worker: &WorkerThread<Context, E>,
@@ -91,10 +93,7 @@ where
         }
     });
     match rx.await.expect("channel should not be closed") {
-        Ok(Ok(v)) => {
-            nc.navigate(NavRoute::Start);
-            Ok(v)
-        }
+        Ok(Ok(v)) => Ok(v),
         Ok(Err(e)) => {
             nc.navigate(NavRoute::ConnectionFailed(format!(
                 "game-masterへの接続に失敗しました: {}",
@@ -117,11 +116,11 @@ where
 /// [AppWindow::run]: crate::ui::AppWindow::run
 pub fn init_worker_context(application: &Application) {
     let nc = application.nav_controller.clone();
-    let mut worker = application.worker.clone();
+    let worker = application.worker.clone();
     let config = application.config.clone();
     slint::spawn_local(async move {
         debug!("initializing worker context");
-        let game_master = match connect_to_game_master(&worker, nc, config).await {
+        let game_master = match connect_to_game_master(&worker, nc.clone(), config).await {
             Ok(v) => v,
             Err(_) => {
                 warn!("failed to connect to game-master. user can retry it.");
@@ -130,14 +129,50 @@ pub fn init_worker_context(application: &Application) {
         };
 
         {
-            let cx = worker.context();
+            let cx = worker.background_executor().context();
             cx.game_master
                 .set(game_master)
                 .expect("this should be a first successful attempt to connect to game-master");
         }
+        observe_session(&worker, nc.clone());
+        nc.navigate(NavRoute::Start);
         debug!("worker context initialized successfully");
     })
     .unwrap();
+}
+
+/// Observes the retained snapshot so start and finish events cannot be lost during navigation.
+fn observe_session<E: ForegroundExecutor>(worker: &WorkerThread<Context, E>, nc: NavController) {
+    let mut session = worker
+        .background_executor()
+        .context()
+        .game_master
+        .get()
+        .expect("connection is initialized")
+        .session();
+    worker.spawn_local(async move {
+        let mut previous_phase = SessionPhase::Idle;
+        loop {
+            let snapshot = session.borrow_and_update().clone();
+            if let Some(error) = snapshot.error {
+                nc.navigate(NavRoute::Fallback(format!(
+                    "game-masterとの通信に失敗しました: {error}"
+                )));
+                break;
+            }
+            if snapshot.phase != previous_phase {
+                match snapshot.phase {
+                    SessionPhase::Running => nc.navigate(NavRoute::Playing),
+                    SessionPhase::Finished(_) => nc.navigate(NavRoute::GameFinished),
+                    _ => {}
+                }
+                previous_phase = snapshot.phase;
+            }
+            if session.changed().await.is_err() {
+                break;
+            }
+        }
+    });
 }
 
 /// Registers each [`NavDestination`][crate::nav::NavDestination]s at [`NavHost`].
@@ -145,13 +180,14 @@ pub fn attach_navhost(application: &Application) {
     NavHost::builder(application.nav_controller.clone())
         .register(StartScreenDestination::new(application))
         .register(NameInputFirstDestination::new(application))
+        .register(ModeSelectDestination::new(application))
         .register(DifficultySelectDestination::new(application))
         .register(FallbackDestination::new(application))
         .register(ConnectionFailedDestination::new(application))
         .register(PlayingDestination::new(application))
-        .register(ScoreDestination::new(application))
+        .register(GameFinishedDestination::new(application))
         .register(ConnectingDestination::new(application))
-        .register(RankingDestination::new(application))
+        .register(RankingControlDestination::new(application))
         .register(NameInputNonFirstDestination::new(application))
         //@xtask-register
         .finish()

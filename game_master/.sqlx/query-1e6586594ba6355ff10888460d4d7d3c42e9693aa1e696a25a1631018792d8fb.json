@@ -1,0 +1,133 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "machine_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "UNSIGNED",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "machine_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "player_id_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "player_id_1"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "player_id_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "MULTIPLE_KEY | UNSIGNED",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "player_id_2"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "started_at",
+        "type_info": {
+          "type": "Datetime",
+          "flags": "NOT_NULL | BINARY | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 19
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "difficulty",
+        "type_info": {
+          "type": "Blob",
+          "flags": "NOT_NULL | BLOB | NO_DEFAULT_VALUE",
+          "collation": 255,
+          "max_size": 262140
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "difficulty"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "score",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "mode",
+        "type_info": {
+          "type": "String",
+          "flags": "NOT_NULL | ENUM | NO_DEFAULT_VALUE",
+          "collation": 255,
+          "max_size": 24
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "mode"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1e6586594ba6355ff10888460d4d7d3c42e9693aa1e696a25a1631018792d8fb"
+}
