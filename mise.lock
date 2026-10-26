@@ -75,6 +75,21 @@ version = "10.0.401"
 backend = "core:dotnet"
 specifiers = ["10"]
 
+[[tools."github:rui314/mold"]]
+version = "3.0.0"
+backend = "github:rui314/mold"
+specifiers = ["latest"]
+
+[tools."github:rui314/mold"."platforms.linux-x64"]
+checksum = "sha256:6c90d4a474c7c0409dfb575be03a5345878ac14fdba18de8b40fa58c60121189"
+url = "https://github.com/rui314/mold/releases/download/v3.0.0/mold-3.0.0-x86_64-linux.tar.gz"
+url_api = "https://api.github.com/repos/rui314/mold/releases/assets/612122001"
+
+[tools."github:rui314/mold"."platforms.windows-x64"]
+checksum = "sha256:1421fccaf7efee77e53f1dc365f90acb791bedff6be486aed0c0313393e6b8ec"
+url = "https://github.com/rui314/mold/releases/download/v3.0.0/mold-3.0.0-x86_64-windows.zip"
+url_api = "https://api.github.com/repos/rui314/mold/releases/assets/612122004"
+
 [[tools.grpcurl]]
 version = "1.9.4"
 backend = "aqua:fullstorydev/grpcurl"
@@ -156,26 +171,6 @@ url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0
 [tools.java."platforms.windows-x64"]
 checksum = "sha256:f9d6e191ab098c0d416e7d588a24420a8621cd2f4720dab2459b8b7b2d2d8b4e"
 url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip"
-
-[[tools.mold]]
-version = "3.0.0"
-backend = "aqua:rui314/mold"
-specifiers = ["latest"]
-
-[tools.mold."platforms.linux-x64"]
-checksum = "sha256:6c90d4a474c7c0409dfb575be03a5345878ac14fdba18de8b40fa58c60121189"
-url = "https://github.com/rui314/mold/releases/download/v3.0.0/mold-3.0.0-x86_64-linux.tar.gz"
-url_api = "https://api.github.com/repos/rui314/mold/releases/assets/612122001"
-
-[tools.mold."platforms.windows-arm64"]
-checksum = "sha256:1421fccaf7efee77e53f1dc365f90acb791bedff6be486aed0c0313393e6b8ec"
-url = "https://github.com/rui314/mold/releases/download/v3.0.0/mold-3.0.0-x86_64-windows.zip"
-url_api = "https://api.github.com/repos/rui314/mold/releases/assets/612122004"
-
-[tools.mold."platforms.windows-x64"]
-checksum = "sha256:1421fccaf7efee77e53f1dc365f90acb791bedff6be486aed0c0313393e6b8ec"
-url = "https://github.com/rui314/mold/releases/download/v3.0.0/mold-3.0.0-x86_64-windows.zip"
-url_api = "https://api.github.com/repos/rui314/mold/releases/assets/612122004"
 
 [[tools.protoc]]
 version = "35.1"
