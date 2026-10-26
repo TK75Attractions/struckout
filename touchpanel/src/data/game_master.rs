@@ -272,8 +272,8 @@ async fn listen_events<S>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::{pin::Pin, time::Duration};
+
     use struckout_proto::{
         self as proto,
         event::{
@@ -289,6 +289,8 @@ mod tests {
     };
     use tokio::sync::{Notify, broadcast, mpsc};
     use tonic::{Request, Response, transport::Server};
+
+    use super::*;
 
     #[derive(Debug, PartialEq)]
     enum Command {

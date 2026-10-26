@@ -1,10 +1,11 @@
-use crate::Application;
 use slint::{ComponentHandle as _, Global as _};
 use stern::nav::NavDestination;
 use touchpanel_ui::{
     ConnectingPropertyMappers, ConnectingStates, ConnectingViewModelTrait, NavRoute, NavRouteKind,
 };
 use tracing::debug;
+
+use crate::Application;
 
 touchpanel_ui::define_connecting_mapper! {}
 

@@ -207,8 +207,6 @@ impl MySqlEnum for GameMode {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::{
         assert_matches,
         sync::{Arc, LazyLock},
@@ -220,6 +218,8 @@ mod tests {
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
     use time::{Date, Month, Time, UtcDateTime};
     use tokio::{runtime::Runtime, sync::Mutex as TokioMutex};
+
+    use super::*;
 
     type TestTransaction = Arc<TokioMutex<sqlx::Transaction<'static, MySql>>>;
 

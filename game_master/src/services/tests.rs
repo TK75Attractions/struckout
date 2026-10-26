@@ -4,13 +4,12 @@ use std::assert_matches;
 use rstest::rstest;
 use struckout_proto::{event::EventData, types::GameId};
 
+use super::*;
 use crate::{
     AddPlayerError, GetPlayerError, PlayerId, ValidatePlayerNameError,
     data::Player,
     session::{ConfiguringDifficultyState, ConfiguringGameModeState},
 };
-
-use super::*;
 
 #[derive(Clone)]
 struct StubDataSource {

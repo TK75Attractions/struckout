@@ -47,12 +47,13 @@ async fn start_server(listener: TcpListener) -> HealthReporter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tonic::transport::Endpoint;
     use tonic_health::pb::{
         HealthCheckRequest, health_check_response::ServingStatus as ResponseStatus,
         health_client::HealthClient,
     };
+
+    use super::*;
 
     #[tokio::test]
     async fn reports_not_serving_until_marked_serving() {

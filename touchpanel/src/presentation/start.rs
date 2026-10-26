@@ -1,12 +1,11 @@
 use slint::{ComponentHandle, Global};
 use stern::nav::NavDestination;
-use tracing::{debug, trace};
-
-use crate::{Application, NavController};
-
 use touchpanel_ui::{
     NavRoute, NavRouteKind, StartPropertyMappers, StartStates, StartViewModelTrait,
 };
+use tracing::{debug, trace};
+
+use crate::{Application, NavController};
 
 viewmodel_rc!(StartViewModel, StartAdopter);
 

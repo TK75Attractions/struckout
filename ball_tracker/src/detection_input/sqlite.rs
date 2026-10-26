@@ -1,14 +1,13 @@
 use anyhow::Context;
+use itertools::Itertools as _;
 use prost::Message as _;
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 use struckout_proto::DetectionsPacket;
 use tokio::sync::mpsc;
 use tracing::warn;
 
-use crate::detection_input::{DetectionInput, db::FrameEntity};
-
 use super::PairedFrames;
-use itertools::Itertools as _;
+use crate::detection_input::{DetectionInput, db::FrameEntity};
 
 pub struct SqliteDetectionInput {}
 

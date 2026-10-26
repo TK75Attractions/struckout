@@ -1,5 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
+use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
+use tokio::{sync::oneshot, time::timeout};
+use touchpanel_ui::NavRoute;
+use tracing::{debug, warn};
+
 use crate::{
     Application, Config, Context, NavController,
     data::{GameMasterClient, SessionPhase},
@@ -12,10 +17,6 @@ use crate::{
         ranking_control::RankingControlDestination, start::StartScreenDestination,
     },
 };
-use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
-use tokio::{sync::oneshot, time::timeout};
-use touchpanel_ui::NavRoute;
-use tracing::{debug, warn};
 
 /// Defines `XxxViewModelRc` which wraps `XxxViewModel`.
 ///

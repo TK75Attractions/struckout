@@ -1,9 +1,5 @@
 use std::sync::Arc;
 
-use crate::{
-    Application, Config, Context, NavController,
-    presentation::{connect_to_game_master, observe_session},
-};
 use slint::{ComponentHandle, Global, ToSharedString};
 use stern::{
     WorkerThread,
@@ -15,6 +11,11 @@ use touchpanel_ui::{
     NavRoute, NavRouteKind,
 };
 use tracing::{debug, warn};
+
+use crate::{
+    Application, Config, Context, NavController,
+    presentation::{connect_to_game_master, observe_session},
+};
 
 touchpanel_ui::define_connection_failed_mapper! {}
 

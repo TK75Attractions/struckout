@@ -3,12 +3,11 @@ use std::ffi::OsStr;
 use backon::{ExponentialBuilder, Retryable as _};
 use clap::Parser;
 use game_master::{DataSourceImpl, GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
+use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use struckout_proto::{
     game_master_player_service_server::GameMasterPlayerServiceServer,
     game_master_session_service_server::GameMasterSessionServiceServer,
 };
-
-use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use thiserror::Error;
 use tokio::{
     signal::unix::{self, SignalKind},

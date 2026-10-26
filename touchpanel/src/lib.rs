@@ -1,10 +1,10 @@
+use std::sync::{Arc, OnceLock};
+
 use clap::Parser;
 use slint::ComponentHandle;
-use std::sync::{Arc, OnceLock};
 use stern::{WorkerThread, worker::SlintExecutor};
-use tracing::info;
-
 use touchpanel_ui::NavRoute;
+use tracing::info;
 
 use crate::{
     data::GameMasterClient,

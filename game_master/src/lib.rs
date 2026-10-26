@@ -1,12 +1,11 @@
 use std::future::Future;
 
-use thiserror::Error;
-use time::UtcDateTime;
-
 use struckout_proto::{
     Difficulty,
     types::{GameId, MachineId, PlayerId},
 };
+use thiserror::Error;
+use time::UtcDateTime;
 
 mod data;
 pub use data::DataSourceImpl;

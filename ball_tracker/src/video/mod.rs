@@ -13,9 +13,9 @@ mod pipeline;
 pub mod recorder;
 pub mod tracker;
 mod transport;
-pub use transport::{VIDEO_ADDR_DEFAULT, VideoTransport};
-
 use std::path::PathBuf;
+
+pub use transport::{VIDEO_ADDR_DEFAULT, VideoTransport};
 
 /// PC で解析するときの設定。
 #[derive(Debug, Clone)]

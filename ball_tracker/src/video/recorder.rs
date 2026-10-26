@@ -151,8 +151,9 @@ pub fn recordings_in(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use struckout_proto::{VideoFrame, VideoStreamConfig};
+
+    use super::*;
 
     #[test]
     fn reads_back_what_was_recorded() {

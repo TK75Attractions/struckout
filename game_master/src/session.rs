@@ -3,7 +3,6 @@
 use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::RwLock;
-
 use struckout_macros::{EnumAsInner, EnumAsInnerMut};
 use struckout_proto::{
     Difficulty, GameMode, Target,
@@ -11,11 +10,11 @@ use struckout_proto::{
     types::{MachineId, PlayerId},
 };
 use thiserror::Error;
+use time::UtcDateTime;
 use tracing::trace;
 use uuid::Uuid;
 
 use crate::{GamePlayers, GameRecord, services::EventTarget};
-use time::UtcDateTime;
 
 /// Owns machine sessions so configuration and readiness share a single source of state.
 ///

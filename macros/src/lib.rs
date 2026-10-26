@@ -2,8 +2,7 @@ use heck::ToSnakeCase;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
-use syn::ext::IdentExt;
-use syn::{Data, DeriveInput, Fields, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, ext::IdentExt, parse_macro_input};
 
 /// Generates shared accessors so callers can inspect fields without repeating matches.
 ///

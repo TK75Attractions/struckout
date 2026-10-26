@@ -1,6 +1,7 @@
 pub mod yaml {
-    use serde::Deserialize;
     use std::{collections::HashMap, path::Path};
+
+    use serde::Deserialize;
     use thiserror::Error;
 
     #[derive(Debug, Error)]

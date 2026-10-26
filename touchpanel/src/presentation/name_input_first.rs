@@ -8,17 +8,16 @@ use struckout_proto::{types::PlayerId, validate_player_name_response::ValidatePl
 use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 use tonic::Status;
+use touchpanel_ui::{
+    KeyBoardMode, NameInputFirstPropertyMappers, NameInputFirstStates,
+    NameInputFirstViewModelTrait, NavRoute, NavRouteKind,
+};
 use tracing::{Instrument, debug, instrument, trace};
 
 use crate::{
     Application, Context, NavController,
     data::RequestError,
     keyboard::{keyboard_modify, pop_player_name},
-};
-
-use touchpanel_ui::{
-    KeyBoardMode, NameInputFirstPropertyMappers, NameInputFirstStates,
-    NameInputFirstViewModelTrait, NavRoute, NavRouteKind,
 };
 
 touchpanel_ui::define_name_input_first_mapper! {}

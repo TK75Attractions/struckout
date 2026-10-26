@@ -1,10 +1,10 @@
 use slint::{ComponentHandle, Global, ToSharedString};
-
-use crate::Application;
 use stern::nav::NavDestination;
 use touchpanel_ui::{
     FallbackPropertyMappers, FallbackStates, FallbackViewModelTrait, NavRoute, NavRouteKind,
 };
+
+use crate::Application;
 
 touchpanel_ui::define_fallback_mapper! {}
 
