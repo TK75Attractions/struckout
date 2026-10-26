@@ -1,12 +1,15 @@
 use std::{future::Future, ops::DerefMut};
 
 use sqlx::{MySql, MySqlConnection, Pool};
-use struckout_proto::{Difficulty, GameMode, types::PlayerId};
+use struckout_proto::{
+    Difficulty, GameMode,
+    types::{GameId, PlayerId},
+};
 use time::PlainDateTime;
 
 use crate::{
-    AddPlayerError, DataSource, GamePlayers, GameRecord, GetPlayerError, SaveGameError,
-    ValidatePlayerNameError,
+    AddPlayerError, DataSource, GamePlayers, GameRecord, GetGameResultError, GetPlayerError,
+    SaveGameError, ValidatePlayerNameError,
 };
 
 const MODE_SINGLE: &str = "single";
@@ -62,10 +65,10 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         Ok(last_inserted.into())
     }
 
-    /// Inserts the final result only after session completion, keeping live games in memory.
+    /// Saves the game result to the database.
     ///
     /// UTC is converted to PlainDateTime because MySQL's DATETIME has no time zone.
-    async fn save_game(&self, game: GameRecord) -> Result<(), SaveGameError> {
+    async fn save_game(&self, game: GameRecord) -> Result<GameId, SaveGameError> {
         let mut conn = self.db.acquire().await?;
         let (machine_id, player_id_1, player_id_2, mode): (Option<u32>, u32, Option<u32>, &str) =
             match game.players {
@@ -78,13 +81,27 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
                 } => (None, first.into(), Some(second.into()), MODE_MULTI),
             };
         let started_at = PlainDateTime::new(game.started_at.date(), game.started_at.time());
-        sqlx::query!(
+        let res = sqlx::query!(
             "INSERT INTO games (machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode)
              VALUES (?, ?, ?, ?, ?, ?, ?)",
             machine_id, player_id_1, player_id_2, started_at,
             game.difficulty.to_mysql_enum(), game.score, mode
         ).execute(&mut *conn).await?;
-        Ok(())
+        let last_inserted: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
+        Ok(last_inserted.into())
+    }
+
+    /// Reads a persisted result so clients can fetch it after its session was discarded.
+    async fn get_game_result(&self, game_id: GameId) -> Result<u32, GetGameResultError> {
+        let mut conn = self.db.acquire().await?;
+        let row = sqlx::query!(
+            "SELECT score FROM games WHERE game_id = ?",
+            game_id.into_inner()
+        )
+        .fetch_optional(&mut *conn)
+        .await?
+        .ok_or(GetGameResultError::NotFound(game_id))?;
+        Ok(row.score)
     }
 
     async fn validate_player_name(
@@ -406,15 +423,16 @@ mod tests {
                 Date::from_calendar_date(2026, Month::September, 6).unwrap(),
                 Time::from_hms(12, 41, 23).unwrap(),
             );
-            ds.save_game(GameRecord {
-                players,
-                started_at,
-                difficulty: Difficulty::Normal,
-                score: 500,
-            })
-            .await
-            .expect("should save final result");
-            let row = sqlx::query!("SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games")
+            let game_id = ds
+                .save_game(GameRecord {
+                    players,
+                    started_at,
+                    difficulty: Difficulty::Normal,
+                    score: 500,
+                })
+                .await
+                .expect("should save final result");
+            let row = sqlx::query!("SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?", game_id.into_inner())
                 .fetch_one(&mut **txn.lock().await).await.expect("should fetch saved game");
             assert_eq!(row.machine_id, if multi { None } else { Some(7) });
             assert_eq!(row.player_id_1, first.into_inner());
@@ -433,6 +451,46 @@ mod tests {
             assert_eq!(row.difficulty, "normal");
             assert_eq!(row.score, 500);
             assert_eq!(row.mode, if multi { "multi" } else { "single" });
+        });
+    }
+
+    #[test]
+    fn get_game_result_returns_the_score_for_the_requested_game() {
+        with_test_transaction(|txn| async move {
+            let ds = DataSourceImpl::new(txn);
+            let player_id = ds.add_player("Result player").await.expect("insert player");
+            let game = GameRecord {
+                players: GamePlayers::Single {
+                    machine_id: struckout_proto::types::MachineId::new(1),
+                    player_id,
+                },
+                started_at: UtcDateTime::now(),
+                difficulty: Difficulty::Normal,
+                score: 123,
+            };
+            let first = ds.save_game(game.clone()).await.expect("save first game");
+            let second = ds
+                .save_game(GameRecord { score: 456, ..game })
+                .await
+                .expect("save second game");
+
+            assert_eq!(ds.get_game_result(first).await.expect("first result"), 123);
+            assert_eq!(
+                ds.get_game_result(second).await.expect("second result"),
+                456
+            );
+        });
+    }
+
+    #[test]
+    fn get_game_result_returns_not_found_for_an_unknown_id() {
+        with_test_transaction(|txn| async move {
+            let ds = DataSourceImpl::new(txn);
+            let game_id = GameId::new(u32::MAX);
+
+            let error = ds.get_game_result(game_id).await.expect_err("unknown game");
+
+            assert_matches!(error, GetGameResultError::NotFound(id) if id == game_id);
         });
     }
 

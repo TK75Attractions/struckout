@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT score FROM games WHERE game_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "score",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "main_dev.games",
+            "name": "score"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6e2cd52c1c308ae532acba7f1de58541d4a066a15aa49aab4d5e61bd366683de"
+}

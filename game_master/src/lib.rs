@@ -5,7 +5,7 @@ use time::UtcDateTime;
 
 use struckout_proto::{
     Difficulty,
-    types::{MachineId, PlayerId},
+    types::{GameId, MachineId, PlayerId},
 };
 
 mod data;
@@ -18,8 +18,15 @@ mod session;
 use crate::data::Player;
 
 pub trait DataSource: Clone + Send + Sync + 'static {
-    fn save_game(&self, game: GameRecord)
-    -> impl Future<Output = Result<(), SaveGameError>> + Send;
+    fn save_game(
+        &self,
+        game: GameRecord,
+    ) -> impl Future<Output = Result<GameId, SaveGameError>> + Send;
+
+    fn get_game_result(
+        &self,
+        game_id: GameId,
+    ) -> impl Future<Output = Result<u32, GetGameResultError>> + Send;
 
     fn add_player(
         &self,
@@ -58,7 +65,7 @@ pub enum GamePlayers {
     },
 }
 
-/// Retains the final result until session completion makes it ready for persistence.
+/// Captures the final result so database I/O cannot observe later score changes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GameRecord {
     pub players: GamePlayers,
@@ -70,6 +77,15 @@ pub struct GameRecord {
 /// Error returned from [`DataSource::save_game()`].
 #[derive(Debug, Error)]
 pub enum SaveGameError {
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::get_game_result()`].
+#[derive(Debug, Error)]
+pub enum GetGameResultError {
+    #[error("game {0} not found in the database")]
+    NotFound(GameId),
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }

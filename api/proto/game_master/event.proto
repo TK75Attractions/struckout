@@ -23,7 +23,9 @@ message Event {
     uint32 total_score = 1;
   }
 
-  message GameFinished {}
+  message GameFinished {
+    uint32 game_id = 1;
+  }
 
   /* ----- Navigations ----- */
   message StartTutorialRequested {

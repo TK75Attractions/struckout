@@ -9,13 +9,13 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
 use struckout_proto::{
-    self, AddTargetRequest, AddTargetResponse, CompleteSessionRequest, CompleteSessionResponse,
-    Difficulty, GameMode, GetGameResultRequest, GetGameResultResponse, GetGamesByPlayerRequest,
-    GetGamesByPlayerResponse, GetRankingRequest, GetRankingResponse, GoHomeScreenRequest,
-    GoHomeScreenResponse, GoNextTutorialRequest, GoNextTutorialResponse, GoPreviousTutorialRequest,
-    GoPreviousTutorialResponse, GoRankingScreenRequest, GoRankingScreenResponse, HitTargetRequest,
-    HitTargetResponse, ListenEventsRequest, ListenEventsResponse, RemoveTargetRequest,
-    RemoveTargetResponse, SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
+    self, AddTargetRequest, AddTargetResponse, Difficulty, GameMode, GetGameResultRequest,
+    GetGameResultResponse, GetGamesByPlayerRequest, GetGamesByPlayerResponse, GetRankingRequest,
+    GetRankingResponse, GoHomeScreenRequest, GoHomeScreenResponse, GoNextTutorialRequest,
+    GoNextTutorialResponse, GoPreviousTutorialRequest, GoPreviousTutorialResponse,
+    GoRankingScreenRequest, GoRankingScreenResponse, HitTargetRequest, HitTargetResponse,
+    ListenEventsRequest, ListenEventsResponse, RemoveTargetRequest, RemoveTargetResponse,
+    SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
     SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
     StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
@@ -33,7 +33,7 @@ use tracing::{instrument, trace, warn};
 use uuid::Uuid;
 
 use crate::{
-    DataSource, DataSourceImpl,
+    DataSource, DataSourceImpl, GetGameResultError,
     session::{HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
@@ -68,7 +68,7 @@ where
         mut complete_rx: mpsc::Receiver<()>,
     ) {
         complete_rx.recv().await.expect("complete channel closed");
-        {
+        let (machine_id, game) = {
             let mut sessions = self.sessions.write();
             let machine_id = match ev_target {
                 EventTarget::Single(machine_id) => machine_id,
@@ -77,12 +77,27 @@ where
             sessions
                 .finish_game(machine_id)
                 .expect("only running games have a completion timer");
-        }
+            let game = sessions
+                .game_result(machine_id)
+                .expect("game was finished above")
+                .clone();
+            (machine_id, game)
+        };
+        let data = self
+            .data_source
+            .save_game(game)
+            .await
+            .map(|game_id| SuccessfulEvent::GameFinished { game_id })
+            .map_err(|e| Status::internal(e.to_string()));
+        self.sessions
+            .write()
+            .discard_game(machine_id)
+            .expect("the finished game is retained during database I/O");
         if self
             .event_tx
             .send(Event {
                 target: ev_target,
-                data: Ok(SuccessfulEvent::GameFinished),
+                data,
             })
             .is_err()
         {
@@ -314,35 +329,16 @@ where
         &self,
         req: Request<GetGameResultRequest>,
     ) -> Result<Response<GetGameResultResponse>, Status> {
-        let GetGameResultRequest { machine_id } = req.into_inner();
-        let result = self
-            .sessions
-            .read()
-            .game_result(machine_id.into())
-            .map_err(|e| Status::failed_precondition(e.to_string()))?;
-        Ok(Response::new(GetGameResultResponse {
-            total_score: result.score,
-        }))
-    }
-
-    #[instrument]
-    async fn complete_session(
-        &self,
-        req: Request<CompleteSessionRequest>,
-    ) -> Result<Response<CompleteSessionResponse>, Status> {
-        let CompleteSessionRequest { machine_id } = req.into_inner();
-        let game = self
-            .sessions
-            .write()
-            .complete_session(machine_id.into())
-            .map_err(|e| Status::failed_precondition(e.to_string()))?;
-        if let Some(game) = game {
-            self.data_source
-                .save_game(game)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
-        }
-        Ok(Response::new(CompleteSessionResponse {}))
+        let GetGameResultRequest { game_id } = req.into_inner();
+        let total_score = self
+            .data_source
+            .get_game_result(game_id.into())
+            .await
+            .map_err(|e| match e {
+                GetGameResultError::NotFound(_) => Status::not_found(e.to_string()),
+                GetGameResultError::Sqlx(_) => Status::internal(e.to_string()),
+            })?;
+        Ok(Response::new(GetGameResultResponse { total_score }))
     }
 
     #[instrument]

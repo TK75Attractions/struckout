@@ -492,11 +492,10 @@ impl Sessions {
             .get(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
         match ms {
-            MachineSession::Finished(state)
-            | MachineSession::WaitingForSessionCompletion(state) => Ok(&state.result),
+            MachineSession::Finished(state) => Ok(&state.result),
             _ => Err(SessionError::InvalidState {
                 msg: "result is only available after the game finishes",
-                expected_state: "Finished or WaitingForSessionCompletion",
+                expected_state: "Finished",
                 actual_state: ms
                     .as_finished()
                     .expect_err("finished states were handled above"),
@@ -505,26 +504,12 @@ impl Sessions {
         }
     }
 
-    /// Removes a finished game only after all its machines acknowledge completion.
-    ///
-    /// The returned record is detached before database I/O so even a failed save
-    /// cannot retain sessions or cause a duplicate save on a repeated request.
-    pub fn complete_session(
-        &mut self,
-        machine_id: MachineId,
-    ) -> Result<Option<GameRecord>, SessionError> {
-        let result = self.game_result(machine_id)?.clone();
-        if matches!(result.players, GamePlayers::Multi { .. }) {
-            let another = self
-                .get_another(machine_id)
-                .expect("multi-play retains both sessions until completion");
-            if !matches!(another, MachineSession::WaitingForSessionCompletion(_)) {
-                let ms = self.get_mut(machine_id).expect("session was checked above");
-                if let MachineSession::Finished(state) = ms {
-                    *ms = MachineSession::WaitingForSessionCompletion(state.clone());
-                }
-                return Ok(None);
-            }
+    /// Discards the frozen game after a database save attempt, releasing both multi-play machines.
+    pub fn discard_game(&mut self, machine_id: MachineId) -> Result<(), SessionError> {
+        if matches!(
+            self.game_result(machine_id)?.players,
+            GamePlayers::Multi { .. }
+        ) {
             self.0 = (None, None);
         } else if self
             .0
@@ -536,7 +521,7 @@ impl Sessions {
         } else {
             self.0.1 = None;
         }
-        Ok(Some(result))
+        Ok(())
     }
 
     /// Sets the session on `machine_id` ready.
@@ -700,7 +685,6 @@ pub enum MachineSession {
     WaitingForAnotherMachine(WaitingForAnotherMachineState),
     Running(RunningState),
     Finished(FinishedState),
-    WaitingForSessionCompletion(FinishedState),
 }
 
 /// Keeps mode selection data separate from states that require a selected mode.
@@ -737,7 +721,7 @@ pub struct RunningState {
     pub shared: Arc<RwLock<SharedRunningState>>,
 }
 
-/// Keeps the immutable result available until both multi-play machines leave.
+/// Keeps the immutable result while the completed game is being saved.
 #[derive(Debug, Clone)]
 pub struct FinishedState {
     pub machine_id: MachineId,
@@ -763,8 +747,7 @@ impl MachineSession {
             MachineSession::ConfiguringDifficulty(state) => state.machine_id,
             MachineSession::WaitingForAnotherMachine(state) => state.machine_id,
             MachineSession::Running(state) => state.machine_id,
-            MachineSession::Finished(state)
-            | MachineSession::WaitingForSessionCompletion(state) => state.machine_id,
+            MachineSession::Finished(state) => state.machine_id,
         }
     }
 
@@ -775,8 +758,7 @@ impl MachineSession {
             MachineSession::ConfiguringDifficulty(state) => state.player_id,
             MachineSession::WaitingForAnotherMachine(state) => state.player_id,
             MachineSession::Running(state) => state.player_id,
-            MachineSession::Finished(state)
-            | MachineSession::WaitingForSessionCompletion(state) => state.player_id,
+            MachineSession::Finished(state) => state.player_id,
         }
     }
 }
@@ -1117,10 +1099,8 @@ mod tests {
         sessions
             .finish_game(second)
             .expect("second game is running");
-        let game = sessions
-            .complete_session(first)
-            .unwrap()
-            .expect("single-play completes immediately");
+        let game = sessions.game_result(first).expect("finished game").clone();
+        sessions.discard_game(first).expect("discard saved game");
         assert_eq!(game.score, 123);
         assert_eq!(game.started_at, started_at);
         assert!(sessions.get(first).is_none());
@@ -1129,9 +1109,8 @@ mod tests {
             .insert(first, PlayerId::new(3))
             .expect("a new session can start on the freed machine");
         sessions
-            .complete_session(second)
-            .unwrap()
-            .expect("second game can complete independently");
+            .discard_game(second)
+            .expect("second game can be discarded independently");
         assert!(
             sessions
                 .get(first)
@@ -1273,8 +1252,7 @@ mod tests {
                 assert!(Arc::ptr_eq(&actual.shared, &expected.shared));
                 assert_eq!(actual.shared.read().score, 10);
             }
-            MachineSession::Finished(expected)
-            | MachineSession::WaitingForSessionCompletion(expected) => {
+            MachineSession::Finished(expected) => {
                 assert_eq!(actual.machine_id(), expected.machine_id);
                 assert_eq!(actual.player_id(), expected.player_id);
                 assert_eq!(

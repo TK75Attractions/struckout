@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games",
+  "query": "SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?",
   "describe": {
     "columns": [
       {
@@ -117,7 +117,7 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       true,
@@ -129,5 +129,5 @@
       false
     ]
   },
-  "hash": "c2daf57ded6e3fc3c2d1040529cffa19a76b2c94fc98d511589ddc62039c7b1b"
+  "hash": "1e6586594ba6355ff10888460d4d7d3c42e9693aa1e696a25a1631018792d8fb"
 }

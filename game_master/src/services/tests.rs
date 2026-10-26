@@ -2,7 +2,7 @@
 use std::assert_matches;
 
 use rstest::rstest;
-use struckout_proto::event::EventData;
+use struckout_proto::{event::EventData, types::GameId};
 
 use crate::{
     AddPlayerError, GetPlayerError, PlayerId, ValidatePlayerNameError,
@@ -18,8 +18,12 @@ struct StubDataSource {
 }
 
 impl DataSource for StubDataSource {
-    async fn save_game(&self, _game: crate::GameRecord) -> Result<(), crate::SaveGameError> {
-        Ok(())
+    async fn save_game(&self, _game: crate::GameRecord) -> Result<GameId, crate::SaveGameError> {
+        Ok(GameId::new(1))
+    }
+
+    async fn get_game_result(&self, game_id: GameId) -> Result<u32, crate::GetGameResultError> {
+        Err(crate::GetGameResultError::NotFound(game_id))
     }
 
     async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
@@ -655,15 +659,40 @@ async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: to
 struct RecordingDataSource {
     saved: Arc<parking_lot::Mutex<Vec<crate::GameRecord>>>,
     fail_save: bool,
+    fail_get_result: bool,
+    save_started: Arc<tokio::sync::Notify>,
+    save_gate: Option<Arc<tokio::sync::Semaphore>>,
 }
 
 impl DataSource for RecordingDataSource {
-    async fn save_game(&self, game: crate::GameRecord) -> Result<(), crate::SaveGameError> {
+    async fn save_game(&self, game: crate::GameRecord) -> Result<GameId, crate::SaveGameError> {
         self.saved.lock().push(game);
+        self.save_started.notify_one();
+        if let Some(gate) = &self.save_gate {
+            gate.acquire()
+                .await
+                .expect("save gate remains open")
+                .forget();
+        }
         if self.fail_save {
             Err(sqlx::Error::PoolClosed.into())
         } else {
-            Ok(())
+            Ok(GameId::new(42))
+        }
+    }
+
+    async fn get_game_result(&self, game_id: GameId) -> Result<u32, crate::GetGameResultError> {
+        if self.fail_get_result {
+            return Err(sqlx::Error::PoolClosed.into());
+        }
+        if game_id == GameId::new(42) {
+            self.saved
+                .lock()
+                .first()
+                .map(|game| game.score)
+                .ok_or(crate::GetGameResultError::NotFound(game_id))
+        } else {
+            Err(crate::GetGameResultError::NotFound(game_id))
         }
     }
 
@@ -728,17 +757,13 @@ fn running_recorded_service(
     service
 }
 
-fn finished_recorded_service(
-    mode: GameMode,
-    data_source: RecordingDataSource,
-) -> GameMasterSessionServiceImpl<RecordingDataSource> {
-    let service = running_recorded_service(mode, data_source);
-    service
-        .sessions
-        .write()
-        .finish_game(MachineId::new(1))
-        .expect("finish running game");
-    service
+async fn complete_game(
+    service: &GameMasterSessionServiceImpl<RecordingDataSource>,
+    target: EventTarget,
+) {
+    let (tx, rx) = mpsc::channel(1);
+    tx.send(()).await.expect("notify game completion");
+    service.clone().handle_game_completion(target, rx).await;
 }
 
 #[rstest]
@@ -763,54 +788,76 @@ async fn set_session_ready_does_not_save_game(#[case] mode: GameMode) {
 #[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
 #[case::multi(GameMode::Multi, EventTarget::All)]
 #[tokio::test]
-async fn game_completion_retains_results_without_saving(
+async fn game_completion_saves_the_final_score(
     #[case] mode: GameMode,
     #[case] target: EventTarget,
 ) {
     let ds = RecordingDataSource::default();
     let service = running_recorded_service(mode, ds.clone());
-    let (tx, rx) = mpsc::channel(1);
-    tx.send(()).await.expect("notify game completion");
 
-    service.clone().handle_game_completion(target, rx).await;
+    complete_game(&service, target).await;
 
-    assert!(ds.saved.lock().is_empty());
-    let sessions = service.sessions.read();
-    for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
-        assert_eq!(
-            sessions
-                .game_result(MachineId::new(machine_id))
-                .expect("result retained")
-                .score,
-            123
-        );
-    }
+    let saved = ds.saved.lock();
+    assert_eq!(saved.len(), 1);
+    assert_eq!(saved[0].score, 123);
 }
 
 #[rstest]
-#[case::single(GameMode::Single)]
-#[case::multi(GameMode::Multi)]
+#[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
+#[case::multi(GameMode::Multi, EventTarget::All)]
 #[tokio::test]
-async fn complete_session_saves_result_and_discards_sessions(#[case] mode: GameMode) {
-    let ds = RecordingDataSource::default();
-    let service = finished_recorded_service(mode, ds.clone());
-    let expected = service
-        .sessions
-        .read()
-        .game_result(MachineId::new(1))
-        .expect("finished result")
-        .clone();
-    let machine_count = if mode.is_multi() { 2 } else { 1 };
+async fn game_finished_contains_the_saved_game_id(
+    #[case] mode: GameMode,
+    #[case] target: EventTarget,
+) {
+    let service = running_recorded_service(mode, RecordingDataSource::default());
+    let mut stream = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("listen for completion")
+        .into_inner();
 
-    for machine_id in 1..=machine_count {
-        service
-            .complete_session(Request::new(CompleteSessionRequest { machine_id }))
-            .await
-            .expect("complete finished session");
+    complete_game(&service, target).await;
+
+    assert_event!(
+        stream,
+        EventData::GameFinished(struckout_proto::event::GameFinished { game_id: 42 })
+    );
+}
+
+#[rstest]
+#[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
+#[case::multi(GameMode::Multi, EventTarget::All)]
+#[tokio::test]
+async fn game_completion_discards_sessions_after_saving(
+    #[case] mode: GameMode,
+    #[case] target: EventTarget,
+) {
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
+    let ds = RecordingDataSource {
+        save_gate: Some(gate.clone()),
+        ..Default::default()
+    };
+    let service = running_recorded_service(mode, ds.clone());
+    let task = tokio::spawn({
+        let service = service.clone();
+        async move { complete_game(&service, target).await }
+    });
+    ds.save_started.notified().await;
+    for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
+        assert!(
+            service
+                .sessions
+                .read()
+                .get(MachineId::new(machine_id))
+                .is_some()
+        );
     }
 
-    assert_eq!(*ds.saved.lock(), [expected]);
-    for machine_id in 1..=machine_count {
+    gate.add_permits(1);
+    task.await.expect("game completion task succeeds");
+
+    for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
         assert!(
             service
                 .sessions
@@ -821,78 +868,53 @@ async fn complete_session_saves_result_and_discards_sessions(#[case] mode: GameM
     }
 }
 
-#[rstest]
-#[case::first_machine(1)]
-#[case::second_machine(2)]
 #[tokio::test]
-async fn multi_play_completion_waits_for_the_other_machine(#[case] machine_id: u32) {
-    let ds = RecordingDataSource::default();
-    let service = finished_recorded_service(GameMode::Multi, ds.clone());
+async fn game_finished_waits_for_the_database_save() {
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
+    let ds = RecordingDataSource {
+        save_gate: Some(gate.clone()),
+        ..Default::default()
+    };
+    let service = running_recorded_service(GameMode::Single, ds.clone());
+    let mut events = service.event_tx.subscribe();
+    let task = tokio::spawn({
+        let service = service.clone();
+        async move { complete_game(&service, EventTarget::Single(MachineId::new(1))).await }
+    });
+    ds.save_started.notified().await;
 
-    service
-        .complete_session(Request::new(CompleteSessionRequest { machine_id }))
-        .await
-        .expect("acknowledge first completion");
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+    gate.add_permits(1);
+    task.await.expect("game completion task succeeds");
 
-    assert!(ds.saved.lock().is_empty());
-    let sessions = service.sessions.read();
-    for machine_id in [1, 2] {
-        assert!(sessions.get(MachineId::new(machine_id)).is_some());
-    }
-}
-
-#[tokio::test]
-async fn repeated_multi_play_completion_keeps_waiting_for_the_other_machine() {
-    let ds = RecordingDataSource::default();
-    let service = finished_recorded_service(GameMode::Multi, ds.clone());
-    service
-        .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
-        .await
-        .expect("acknowledge first completion");
-
-    service
-        .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
-        .await
-        .expect("repeated completion succeeds");
-
-    assert!(ds.saved.lock().is_empty());
-    let sessions = service.sessions.read();
-    for machine_id in [1, 2] {
-        assert!(sessions.get(MachineId::new(machine_id)).is_some());
-    }
+    assert_matches!(
+        events.try_recv().expect("completion event").data,
+        Ok(SuccessfulEvent::GameFinished { .. })
+    );
 }
 
 #[rstest]
-#[case::single(GameMode::Single)]
-#[case::multi(GameMode::Multi)]
+#[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
+#[case::multi(GameMode::Multi, EventTarget::All)]
 #[tokio::test]
-async fn complete_session_discards_sessions_when_save_fails(#[case] mode: GameMode) {
-    let service = finished_recorded_service(
+async fn game_completion_discards_sessions_when_save_fails(
+    #[case] mode: GameMode,
+    #[case] target: EventTarget,
+) {
+    let service = running_recorded_service(
         mode,
         RecordingDataSource {
             fail_save: true,
             ..Default::default()
         },
     );
-    let last_machine = if mode.is_multi() {
-        service
-            .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
-            .await
-            .expect("wait for the other machine");
-        2
-    } else {
-        1
-    };
 
-    let error = service
-        .complete_session(Request::new(CompleteSessionRequest {
-            machine_id: last_machine,
-        }))
-        .await
-        .expect_err("database save fails");
+    complete_game(&service, target).await;
 
-    assert_eq!(error.code(), tonic::Code::Internal);
-    for machine_id in 1..=last_machine {
+    for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
         assert!(
             service
                 .sessions
@@ -903,108 +925,76 @@ async fn complete_session_discards_sessions_when_save_fails(#[case] mode: GameMo
     }
 }
 
-#[rstest]
-#[case::single(GameMode::Single)]
-#[case::multi(GameMode::Multi)]
 #[tokio::test]
-async fn get_game_result_returns_the_current_session_score(#[case] mode: GameMode) {
-    let service = finished_recorded_service(mode, RecordingDataSource::default());
+async fn game_completion_notifies_a_save_error() {
+    let service = running_recorded_service(
+        GameMode::Single,
+        RecordingDataSource {
+            fail_save: true,
+            ..Default::default()
+        },
+    );
+    let mut events = service.event_tx.subscribe();
 
-    for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
-        let result = service
-            .get_game_result(Request::new(GetGameResultRequest { machine_id }))
-            .await
-            .expect("finished result")
-            .into_inner();
+    complete_game(&service, EventTarget::Single(MachineId::new(1))).await;
 
-        assert_eq!(result.total_score, 123);
-    }
+    assert_eq!(
+        events
+            .try_recv()
+            .expect("error event")
+            .data
+            .expect_err("save failed")
+            .code(),
+        tonic::Code::Internal
+    );
 }
 
 #[tokio::test]
-async fn get_game_result_remains_available_while_waiting_for_session_completion() {
-    let service = finished_recorded_service(GameMode::Multi, RecordingDataSource::default());
-    service
-        .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
-        .await
-        .expect("wait for the other machine");
+async fn get_game_result_reads_the_persisted_score_without_a_session() {
+    let ds = RecordingDataSource::default();
+    ds.saved.lock().push(crate::GameRecord {
+        players: crate::GamePlayers::Single {
+            machine_id: MachineId::new(1),
+            player_id: PlayerId::new(11),
+        },
+        started_at: time::UtcDateTime::now(),
+        difficulty: Difficulty::Normal,
+        score: 123,
+    });
+    let service = GameMasterSessionServiceImpl::new(ds);
 
     let result = service
-        .get_game_result(Request::new(GetGameResultRequest { machine_id: 1 }))
+        .get_game_result(Request::new(GetGameResultRequest { game_id: 42 }))
         .await
-        .expect("result retained while waiting")
+        .expect("persisted result")
         .into_inner();
 
-    assert_eq!(result.total_score, 123);
-}
-
-#[rstest]
-#[case::missing(false)]
-#[case::running(true)]
-#[tokio::test]
-async fn get_game_result_rejects_sessions_without_a_finished_result(#[case] running: bool) {
-    let ds = RecordingDataSource::default();
-    let service = if running {
-        running_recorded_service(GameMode::Single, ds)
-    } else {
-        GameMasterSessionServiceImpl::new(ds)
-    };
-
-    let error = service
-        .get_game_result(Request::new(GetGameResultRequest { machine_id: 1 }))
-        .await
-        .expect_err("no finished result");
-
-    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(result, GetGameResultResponse { total_score: 123 });
 }
 
 #[tokio::test]
-async fn complete_session_rejects_running_sessions() {
-    let service = running_recorded_service(GameMode::Single, RecordingDataSource::default());
-
-    let error = service
-        .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
-        .await
-        .expect_err("game is still running");
-
-    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
-}
-
-#[tokio::test]
-async fn hit_target_rejects_finished_sessions() {
-    let service = finished_recorded_service(GameMode::Single, RecordingDataSource::default());
-
-    let error = service
-        .hit_target(Request::new(HitTargetRequest {
-            machine_id: 1,
-            target_id: Uuid::nil().to_string(),
-        }))
-        .await
-        .expect_err("game has finished");
-
-    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
-}
-
-#[rstest]
-#[case::missing(false)]
-#[case::configuring(true)]
-#[tokio::test]
-async fn complete_session_rejects_configuring_and_missing_sessions(#[case] configuring: bool) {
+async fn get_game_result_returns_not_found_for_an_unknown_game_id() {
     let service = GameMasterSessionServiceImpl::new(RecordingDataSource::default());
-    if configuring {
-        service
-            .start_session(Request::new(StartSessionRequest {
-                machine_id: 1,
-                player_id: 11,
-            }))
-            .await
-            .expect("new session");
-    }
 
     let error = service
-        .complete_session(Request::new(CompleteSessionRequest { machine_id: 1 }))
+        .get_game_result(Request::new(GetGameResultRequest { game_id: 999 }))
         .await
-        .expect_err("session has no finished game");
+        .expect_err("unknown game");
 
-    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(error.code(), tonic::Code::NotFound);
+}
+
+#[tokio::test]
+async fn get_game_result_reports_database_errors() {
+    let service = GameMasterSessionServiceImpl::new(RecordingDataSource {
+        fail_get_result: true,
+        ..Default::default()
+    });
+
+    let error = service
+        .get_game_result(Request::new(GetGameResultRequest { game_id: 42 }))
+        .await
+        .expect_err("database query fails");
+
+    assert_eq!(error.code(), tonic::Code::Internal);
 }
