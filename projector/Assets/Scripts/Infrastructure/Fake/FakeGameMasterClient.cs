@@ -134,7 +134,7 @@ namespace Struckout.Infrastructure.Fake
                         if (remaining <= TimeSpan.Zero)
                         {
                             _started = false;
-                            RemoveAllTargets();
+                            _targetRadii.Clear();
                             RemainingTimeChanged?.Invoke(TimeSpan.Zero);
                             Debug.Log("[Fake] game_master -> GameFinished");
                             _results[_currentGameId] = _totalScore;

@@ -11,6 +11,7 @@
 ゲーム終了時は `MachineSession::Running` から `Finished` に遷移し、得点を確定する。
 保存中の的の追加・削除や命中通知は受け付けない。
 `save_game()` が結果を DB に保存して返した `game_id` を `GameFinished` イベントに載せる。
+終了時の一括 `TargetRemoved` は送信せず、projector は `GameFinished` でローカルの的を消す。
 DB 保存後、通知前にセッションを破棄する。マルチプレイでは共有結果を1件保存し、両セッションを破棄する。
 結果を画面に表示し終えるまでセッションを保持する処理や `CompleteSession` RPC は提供しない。
 
@@ -19,7 +20,7 @@ DB 保存後、通知前にセッションを破棄する。マルチプレイ�
 
 ## 結果の取得
 
-`GetGameResult(game_id)` は指定 ID の結果を DB から取得し、`game_id` と `total_score` を返す。
+`GetGameResult(game_id)` は指定 ID の結果を DB から取得し、`total_score` を返す。
 セッションの有無やマシンに依存せず、保存済みの結果を取得できる。
 指定 ID が存在しない場合は `NotFound`、DB の問い合わせに失敗した場合は `Internal` を返す。
 

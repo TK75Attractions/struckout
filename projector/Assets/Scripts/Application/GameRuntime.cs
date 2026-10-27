@@ -89,10 +89,13 @@ namespace Struckout.Application
                 Debug.LogWarning($"[Game] 削除通知に対応する描画がありません: {id}");
         }
 
+        /// <summary>Clears remaining local targets when the game finishes.</summary>
         public void FinishGame()
         {
             CancelPendingOperations();
             _state.FinishGame();
+            foreach (var id in _state.Targets.Select(target => target.Id).ToList())
+                OnTargetRemoved(id);
         }
 
         /// <summary>Stops accepting hits after disconnection because the stream cannot restore a session snapshot.</summary>
@@ -111,7 +114,7 @@ namespace Struckout.Application
         }
 
         /// <summary>
-        /// Requests replacement of a hit target; target events are the only source of local state changes.
+        /// Requests replacement of a hit target; target events control local state during play.
         /// Keeps its UUID busy while awaiting the server so overlapping inputs cannot report duplicate hits.
         /// </summary>
         public async Task CollisionDetectedAsync(CollisionPoint collisionPoint)

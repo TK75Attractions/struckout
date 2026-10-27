@@ -1,7 +1,7 @@
 //! Conversion between safe domain types and proto's generated types
 
 use struckout_proto::{
-    Difficulty,
+    Difficulty, Target,
     types::{GameId, MachineId},
 };
 
@@ -24,6 +24,10 @@ pub enum SuccessfulEvent {
     GameScoreChanged { total_score: u32 },
     /// [`struckout_proto::event::GameFinished`]
     GameFinished { game_id: GameId },
+    /// [`struckout_proto::event::TargetAdded`]
+    TargetAdded { target: Target },
+    /// [`struckout_proto::event::TargetRemoved`]
+    TargetRemoved { target_id: String },
     /// [`struckout_proto::event::SessionDifficultyChanged`]
     SessionDifficultyChanged(Difficulty),
     /// [`struckout_proto::event::StartTutorialRequested`]
@@ -92,6 +96,12 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
             SuccessfulEvent::GameFinished { game_id } => EventData::GameFinished(GameFinished {
                 game_id: game_id.into(),
             }),
+            SuccessfulEvent::TargetAdded { target } => EventData::TargetAdded(TargetAdded {
+                target: Some(target),
+            }),
+            SuccessfulEvent::TargetRemoved { target_id } => {
+                EventData::TargetRemoved(TargetRemoved { target_id })
+            }
             SuccessfulEvent::SessionDifficultyChanged(difficulty) => {
                 EventData::SessionDifficultyChanged(SessionDifficultyChanged {
                     difficulty: difficulty.into(),
