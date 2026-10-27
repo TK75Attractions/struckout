@@ -208,4 +208,5 @@ mise run //api:proto:check    # ズレていないかだけ確認 (exit 1 で失
 `testTcpCLI` には game-master の生成物を渡していない。偽 ball_tracker としてしか
 使わないうえ、gRPC スタブが `Grpc.Core.Api` を参照していないぶんビルドを壊すため。
 
-CI では `.github/workflows/proto_ci.yml` が同じ確認を回している。
+CI では `.github/workflows/ci.yaml` が変更パスに応じて `proto_ci.yml` を呼び出し、
+生成コードに差分があれば自動でコミットして push する。

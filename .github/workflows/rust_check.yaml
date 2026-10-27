@@ -1,41 +1,7 @@
 name: Rust check
 
 on:
-  push:
-    branches: master
-    paths:
-      - .cargo/**
-      - mise.toml
-      - mise.lock
-      - api/proto/**
-      - api/rust/**
-      - api/spec/**
-      - ball_tracker/**
-      - game_master/**
-      - migrations/mysql/**
-      - touchpanel/**
-      - xtask/**
-      - .github/workflows/rust_check.yaml
-      - Cargo.toml
-      - Cargo.lock
-      - macros/**
-  pull_request:
-    branches: master
-    paths:
-      - .cargo/**
-      - .mise/**
-      - api/proto/**
-      - api/rust/**
-      - api/spec/**
-      - ball_tracker/**
-      - game_master/**
-      - migrations/mysql/**
-      - touchpanel/**
-      - xtask/**
-      - .github/workflows/rust_check.yaml
-      - Cargo.toml
-      - Cargo.lock
-      - macros/**
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
@@ -44,7 +10,7 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             .cargo

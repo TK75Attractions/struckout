@@ -1,22 +1,7 @@
 name: Unity CI
 
 on:
-  push:
-    branches: master
-    paths:
-      - api/proto/**
-      - mise.toml
-      - mise.lock
-      - projector/**
-      - .github/workflows/unity_ci.yaml
-  pull_request:
-    branches: master
-    paths:
-      - api/proto/**
-      - mise.toml
-      - mise.lock
-      - projector/**
-      - .github/workflows/unity_ci.yaml
+  workflow_call:
 
 jobs:
   build:

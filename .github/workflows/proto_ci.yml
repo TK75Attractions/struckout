@@ -1,27 +1,7 @@
 name: Proto CI
 
 on:
-  push:
-    branches: master
-    paths:
-      - api/proto/**
-      - projector/Assets/Scripts/ProtoBuf/Generated/**
-      - sandbox/testTcpCLI/Network/Protocol/Generated/**
-      - buf.gen.*.yaml
-      - mise.toml
-      - mise.lock
-      - .github/workflows/proto_ci.yml
-  pull_request:
-    branches: master
-    paths:
-      - api/proto/**
-      - projector/Assets/Scripts/ProtoBuf/Generated/**
-      - sandbox/testTcpCLI/Network/Protocol/Generated/**
-      - buf.gen.*.yaml
-      - mise.toml
-      - mise.lock
-      - .github/workflows/proto_ci.yml
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   proto:
@@ -30,9 +10,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: buf protoc

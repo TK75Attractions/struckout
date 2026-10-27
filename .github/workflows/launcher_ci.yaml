@@ -1,23 +1,7 @@
 name: Launcher CI
 
 on:
-  push:
-    branches: master
-    paths:
-      - launcher/**
-      - api/spec/**
-      - mise.toml
-      - mise.lock
-      - .github/workflows/launcher_ci.yaml
-  pull_request:
-    branches: master
-    paths:
-      - launcher/**
-      - api/spec/**
-      - mise.toml
-      - mise.lock
-      - .github/workflows/launcher_ci.yaml
-  workflow_dispatch:
+  workflow_call:
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"

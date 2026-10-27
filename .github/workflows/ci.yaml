@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      launcher: ${{ steps.filter.outputs.launcher }}
+      proto: ${{ steps.filter.outputs.proto }}
+      rust: ${{ steps.filter.outputs.rust }}
+      unity: ${{ steps.filter.outputs.unity }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            android:
+              - 'camera/**'
+              - 'api/proto/**'
+              - 'mise.toml'
+              - 'mise.lock'
+              - '.github/workflows/android_ci.yaml'
+              - '.github/workflows/ci.yaml'
+            launcher:
+              - 'launcher/**'
+              - 'api/spec/**'
+              - 'mise.toml'
+              - 'mise.lock'
+              - '.github/workflows/launcher_ci.yaml'
+              - '.github/workflows/ci.yaml'
+            proto:
+              - 'api/proto/**'
+              - 'projector/Assets/Scripts/ProtoBuf/Generated/**'
+              - 'sandbox/testTcpCLI/Network/Protocol/Generated/**'
+              - 'buf.gen.*.yaml'
+              - 'mise.toml'
+              - 'mise.lock'
+              - '.github/workflows/proto_ci.yml'
+              - '.github/workflows/ci.yaml'
+            rust:
+              - '.cargo/**'
+              - '.mise/**'
+              - 'api/proto/**'
+              - 'api/rust/**'
+              - 'api/spec/**'
+              - 'ball_tracker/**'
+              - 'game_master/**'
+              - 'migrations/mysql/**'
+              - 'touchpanel/**'
+              - 'xtask/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'macros/**'
+              - 'mise.toml'
+              - 'mise.lock'
+              - '.github/workflows/rust_check.yaml'
+              - '.github/workflows/ci.yaml'
+            unity:
+              - 'api/proto/**'
+              - 'projector/**'
+              - 'mise.toml'
+              - 'mise.lock'
+              - '.github/workflows/unity_ci.yaml'
+              - '.github/workflows/ci.yaml'
+
+  android:
+    needs: changes
+    if: ${{ needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/android_ci.yaml
+
+  launcher:
+    needs: changes
+    if: ${{ needs.changes.outputs.launcher == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/launcher_ci.yaml
+
+  proto:
+    needs: changes
+    if: ${{ needs.changes.outputs.proto == 'true' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/proto_ci.yml
+
+  rust:
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/rust_check.yaml
+
+  unity:
+    needs: changes
+    if: ${{ needs.changes.outputs.unity == 'true' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+      checks: write
+    secrets: inherit
+    uses: ./.github/workflows/unity_ci.yaml
+
+  result:
+    name: CI result
+    runs-on: ubuntu-24.04
+    needs: [changes, android, launcher, proto, rust, unity]
+    if: ${{ always() }}
+    env:
+      CHANGES_RESULT: ${{ needs.changes.result }}
+      ANDROID_RESULT: ${{ needs.android.result }}
+      LAUNCHER_RESULT: ${{ needs.launcher.result }}
+      PROTO_RESULT: ${{ needs.proto.result }}
+      RUST_RESULT: ${{ needs.rust.result }}
+      UNITY_RESULT: ${{ needs.unity.result }}
+    steps:
+      - name: Check CI results
+        run: |
+          if [ "$CHANGES_RESULT" != success ]; then
+            echo "変更ファイルの判定が成功しませんでした: $CHANGES_RESULT" >&2
+            exit 1
+          fi
+          for result in "$ANDROID_RESULT" "$LAUNCHER_RESULT" "$PROTO_RESULT" "$RUST_RESULT" "$UNITY_RESULT"; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "CI ジョブが成功しませんでした: $result" >&2; exit 1 ;;
+            esac
+          done
