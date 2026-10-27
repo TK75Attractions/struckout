@@ -177,6 +177,25 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public async Task Game_finished_does_not_emit_target_removals()
+        {
+            var client = new FakeGameMasterClient(TimeSpan.FromMilliseconds(250), TimeSpan.Zero);
+            var finished = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var removed = new List<Guid>();
+            client.GameFinished += _ => finished.TrySetResult(true);
+            client.TargetRemoved += removed.Add;
+            try
+            {
+                await client.ConnectAsync();
+                Assert.That(await client.AddTargetAsync(default, 200), Is.True);
+                Assert.That(await Task.WhenAny(finished.Task, Task.Delay(TimeSpan.FromSeconds(5))),
+                    Is.SameAs(finished.Task));
+                Assert.That(removed, Is.Empty);
+            }
+            finally { await client.DisconnectAsync(); }
+        }
+
+        [Test]
         public async Task Fake_publishes_the_full_screen_flow_and_retains_finished_results()
         {
             var client = new FakeGameMasterClient(TimeSpan.Zero, TimeSpan.Zero);

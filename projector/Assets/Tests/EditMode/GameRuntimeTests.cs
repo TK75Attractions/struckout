@@ -165,7 +165,7 @@ namespace Struckout.Tests.Tests.EditMode
             await hit;
             Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit" }));
             Assert.That(ui.Added, Has.Count.EqualTo(1));
-            Assert.That(ui.Targets, Has.Count.EqualTo(1));
+            Assert.That(ui.Targets, Is.Empty);
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(ui.LastCollision, Is.EqualTo(CollisionResult.Ignored));
         }
@@ -235,7 +235,7 @@ namespace Struckout.Tests.Tests.EditMode
             await runtime.CollisionDetectedAsync(Center(ui));
             Assert.That(master.Hits, Is.Empty);
             Assert.That(ui.LastCollision, Is.EqualTo(CollisionResult.Ignored));
-            Assert.That(ui.Targets, Has.Count.EqualTo(2));
+            Assert.That(ui.Targets, Has.Count.EqualTo(1));
         }
 
         [Test]
@@ -320,18 +320,25 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
-        public async Task Finish_disconnect_and_restart_do_not_remove_targets_without_events()
+        public async Task Finish_clears_all_targets_but_disconnect_keeps_them()
         {
             var (runtime, master, ui) = Create();
             await runtime.StartGameAsync(Difficulty.Normal);
             var id = ui.Targets[0].Id;
+            var another = new Target(Guid.NewGuid(), ui.Targets[0].Geometry, TargetOwnership.All);
+            master.EmitAdded(another);
             runtime.FinishGame();
+            Assert.That(ui.Targets, Is.Empty);
+            Assert.That(ui.Removed, Is.EquivalentTo(new[] { id, another.Id }));
+
+            await runtime.StartGameAsync(Difficulty.Normal);
+            var nextId = ui.Targets[0].Id;
             runtime.SuspendGame();
+            Assert.That(ui.Targets[0].Id, Is.EqualTo(nextId));
             master.PublishOnAdd = false;
             await runtime.StartGameAsync(Difficulty.Normal);
-            Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
-            Assert.That(ui.Removed, Is.Empty);
-            master.EmitRemoved(id);
+            Assert.That(ui.Targets[0].Id, Is.EqualTo(nextId));
+            master.EmitRemoved(nextId);
             Assert.That(ui.Targets, Is.Empty);
         }
 

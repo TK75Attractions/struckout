@@ -41,7 +41,9 @@ pub enum SessionError {
     NoSession(MachineId),
     #[error("on machine {0}: can't evlove to the next state: difficulty is not yet set")]
     NoDifficulty(MachineId),
-    #[error("game mode must be single-play or multi-play")]
+    #[error(
+        "GameMode must be GAME_MODE_SINGLE or GAME_MODE_MULTI, but GAME_MODE_UNSPECIFIED was given"
+    )]
     UnspecifiedGameMode,
     #[error("multi-play mode is required to do this operation: {0}")]
     NotMultiPlay(String),
@@ -252,12 +254,14 @@ impl Sessions {
         Ok(EventTarget::All)
     }
 
-    /// Registers a target in the running game so both multi-play machines can access it.
+    /// Registers a target in the running game.
+    ///
+    /// Returns added [`Target`].
     pub fn add_target(
         &mut self,
         target_data: TargetData,
         owner: Owner,
-    ) -> Result<Uuid, SessionError> {
+    ) -> Result<(Uuid, Target), SessionError> {
         let machine_id = match owner {
             Owner::Single(OwnerSingle { machine_id }) => machine_id.into(),
             // take random machine id when multi-play, since runtime state is shared between both machines
@@ -283,16 +287,18 @@ impl Sessions {
             target_data: Some(target_data),
             owner: Some(owner),
         };
-        shared.targets.insert(target_id, target);
-        Ok(target_id)
+        shared.targets.insert(target_id, target.clone());
+        Ok((target_id, target))
     }
 
-    /// Removes a target from the running game, including the other machine in multi-play.
+    /// Removes a target from the running game.
+    ///
+    /// Returns removed [`Target`].
     pub fn remove_target(
         &mut self,
         machine_id: MachineId,
         target_id: Uuid,
-    ) -> Result<(), SessionError> {
+    ) -> Result<Target, SessionError> {
         let ms = self
             .get_mut(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
@@ -304,16 +310,13 @@ impl Sessions {
                 actual_state,
                 machine_id,
             })?;
-        state
-            .shared
-            .write()
-            .targets
-            .remove(&target_id)
-            .ok_or(SessionError::TargetNotFound {
+        let target = state.shared.write().targets.remove(&target_id).ok_or(
+            SessionError::TargetNotFound {
                 machine_id,
                 target_id,
-            })?;
-        Ok(())
+            },
+        )?;
+        Ok(target)
     }
 
     /// Adds `100000 / radius`, truncated to an integer, to the shared game score.
@@ -818,8 +821,8 @@ mod tests {
         let owner = Owner::Single(OwnerSingle {
             machine_id: machine_id.into(),
         });
-        let first = sessions.add_target(target, owner).expect("running session");
-        let second = sessions.add_target(target, owner).expect("running session");
+        let (first, _) = sessions.add_target(target, owner).expect("running session");
+        let (second, _) = sessions.add_target(target, owner).expect("running session");
         assert_ne!(first, second);
         assert_eq!(first.get_version_num(), 4);
         let (state,) = sessions
@@ -916,7 +919,8 @@ mod tests {
                     machine_id: machine_id.into(),
                 }),
             )
-            .expect("running game");
+            .expect("running game")
+            .0;
         let (score, target) = sessions
             .hit_target(machine_id, target_id)
             .expect("registered target");
@@ -938,7 +942,8 @@ mod tests {
         let mut sessions = running_sessions(GameMode::Multi);
         let target_id = sessions
             .add_target(compass_target(200.0), Owner::All(Default::default()))
-            .expect("running game");
+            .expect("running game")
+            .0;
         let (score, target) = sessions
             .hit_target(MachineId::new(2), target_id)
             .expect("shared target");
@@ -971,7 +976,8 @@ mod tests {
                     machine_id: machine_id.into(),
                 }),
             )
-            .expect("running game");
+            .expect("running game")
+            .0;
         assert_matches!(
             sessions.hit_target(machine_id, target_id),
             Err(HitTargetError::InvalidRadius)
@@ -992,7 +998,8 @@ mod tests {
                     machine_id: machine_id.into(),
                 }),
             )
-            .expect("running game");
+            .expect("running game")
+            .0;
         let (state,) = sessions
             .get(machine_id)
             .expect("session")
@@ -1017,7 +1024,8 @@ mod tests {
                     machine_id: machine_id.into(),
                 }),
             )
-            .expect("running game");
+            .expect("running game")
+            .0;
         let (state,) = sessions.get(machine_id).unwrap().as_running().unwrap();
         state
             .shared
