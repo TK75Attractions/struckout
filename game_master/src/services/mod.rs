@@ -106,6 +106,19 @@ where
     }
 }
 
+/// Gets [`EventTarget`] from the given [`Target`][struckout_proto::Target].
+fn get_event_target(target: &struckout_proto::Target) -> EventTarget {
+    // Sessions::add_target always registers an owner with each target.
+    match target
+        .owner
+        .as_ref()
+        .expect("registered target has an owner")
+    {
+        Owner::Single(owner) => EventTarget::Single(owner.machine_id.into()),
+        Owner::All(_) => EventTarget::All,
+    }
+}
+
 #[tonic::async_trait]
 impl<D> GameMasterSessionService for GameMasterSessionServiceImpl<D>
 where
@@ -255,14 +268,23 @@ where
                 struckout_proto::target::TargetData::Compass(compass)
             }
         };
-        let target_id = self
-            .sessions
-            .write()
+        let mut sessions = self.sessions.write();
+        let (target_id, target) = sessions
             .add_target(
                 target_data,
                 Owner::Single(struckout_proto::target::OwnerSingle { machine_id }),
             )
             .map_err(|e| Status::failed_precondition(e.to_string()))?;
+        if self
+            .event_tx
+            .send(Event {
+                target: get_event_target(&target),
+                data: Ok(SuccessfulEvent::TargetAdded { target }),
+            })
+            .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
         Ok(Response::new(AddTargetResponse {
             target_id: target_id.to_string(),
         }))
@@ -279,13 +301,27 @@ where
         } = req.into_inner();
         let target_id =
             Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
-        self.sessions
-            .write()
-            .remove_target(machine_id.into(), target_id)
-            .map_err(|e| match e {
-                SessionError::TargetNotFound { .. } => Status::not_found(e.to_string()),
-                _ => Status::failed_precondition(e.to_string()),
-            })?;
+        let target = {
+            let mut sessions = self.sessions.write();
+            sessions
+                .remove_target(machine_id.into(), target_id)
+                .map_err(|e| match e {
+                    SessionError::TargetNotFound { .. } => Status::not_found(e.to_string()),
+                    _ => Status::failed_precondition(e.to_string()),
+                })?
+        };
+        if self
+            .event_tx
+            .send(Event {
+                target: get_event_target(&target),
+                data: Ok(SuccessfulEvent::TargetRemoved {
+                    target_id: target.target_id,
+                }),
+            })
+            .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
         Ok(Response::new(RemoveTargetResponse {}))
     }
 
@@ -492,7 +528,7 @@ async fn pass_events_through_by_machine_id(
     }
 }
 
-/// Sends event to broadcast channel every secounds until the game finishes, then sends the [`Event::GameFinished`].
+/// Sends remaining-time events every second, then signals game completion.
 #[instrument(skip(tx, complete_tx))]
 async fn game_timer(
     ev_target: EventTarget,

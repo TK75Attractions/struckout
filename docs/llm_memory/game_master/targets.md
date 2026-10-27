@@ -5,13 +5,17 @@
 `SharedRunningState` にまとめて `Arc<RwLock<SharedRunningState>>` で保持する。
 マルチプレイ開始時は両セッションが同じ共有状態を参照し、一方での変更は他方からも見える。
 シングルプレイはゲームごとに独立した状態を持つ。
-`owner` はセッションの mode に応じてサーバーが設定し、ターゲットとともに保存する。ターゲットはゲームの共有状態が破棄されるまで保持する。
+`owner` はターゲットとともに保存する。projector の `AddTarget` で作る的はモードを問わず
+`Single.machine_id = machine_id` とし、game_master が内部で作る特殊な的だけ `All` にする。
+ターゲットは削除されるか、ゲームの共有状態が破棄されるまで保持する。
 
-- `AddTarget`: `machine_id` と必須の `target_data` を受け取り、登録ごとに UUID v4 を生成して `target_id` として返す。要求に `owner` は含めない。シングルプレイは `Single.machine_id = machine_id`、マルチプレイは `All` を設定する。
+- `AddTarget`: `machine_id` と必須の `target_data` を受け取り、登録ごとに UUID v4 を生成して `target_id` として返す。要求に `owner` は含めない。`Single.machine_id = machine_id` を設定する。
 - `RemoveTarget`: UUID 形式の `target_id` を受け取り、指定マシンが参加するゲームのターゲットを削除する。マルチプレイではどちらのマシンからも同じターゲットを削除できる。削除済み、未登録、別ゲームの ID は `NotFound` を返す。
 - 必須項目の欠落や不正な UUID は `InvalidArgument`、セッションがない場合や実行中でない場合は `FailedPrecondition` を返す。
 
-登録・削除ではイベントを送信しない。
+登録成功時は UUID・owner・形状を含む `TargetAdded`、削除成功時は UUID を含む
+`TargetRemoved` を送信する。`Single` は所有マシンだけ、`All` は両マシンに配信する。
+ゲーム終了時の一括 `TargetRemoved` は送信しない。projector は `GameFinished` でローカルの的を消す。
 
 ## 命中と得点
 
@@ -26,8 +30,8 @@
 1回の得点または累計得点が `u32` の範囲を超える場合は `OutOfRange` を返す。
 エラー時は得点を変更せず、得点変更イベントも送信しない。
 
-## 検証状況（2026-10-24）
+## 検証状況（2026-10-26）
 
-`SQLX_OFFLINE=true cargo check --all-targets -p game_master`、`cargo test -p game_master`（66 件）、
-`cargo clippy --all-targets -p game_master`、`cargo fmt -p game_master --check` は成功した。
-以前のメモで失敗するとしていたイベント順序テストも成功している。
+`SQLX_OFFLINE=true cargo check --all-targets -p game_master` と `cargo test -p game_master`
+（83 件）は成功した。追加・削除の配信範囲と、
+終了時に一括削除通知を送らない契約をテストしている。

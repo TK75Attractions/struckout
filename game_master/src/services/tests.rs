@@ -470,6 +470,182 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
     );
 }
 
+#[tokio::test]
+async fn target_events_are_sent_only_to_the_owning_machine() {
+    let service = running_recorded_service(GameMode::Multi, RecordingDataSource::default());
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("first stream")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("second stream")
+        .into_inner();
+
+    let first_id = service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .expect("first target")
+        .into_inner()
+        .target_id;
+    let second_id = service
+        .add_target(Request::new(target_request(2)))
+        .await
+        .expect("second target")
+        .into_inner()
+        .target_id;
+
+    let EventData::TargetAdded(first_added) = assert_event!(first, EventData::TargetAdded(_))
+    else {
+        unreachable!()
+    };
+    let EventData::TargetAdded(second_added) = assert_event!(second, EventData::TargetAdded(_))
+    else {
+        unreachable!()
+    };
+    let first_target = first_added.target.expect("target payload");
+    let second_target = second_added.target.expect("target payload");
+    assert_eq!(first_target.target_id, first_id);
+    assert_eq!(second_target.target_id, second_id);
+    assert_matches!(first_target.owner, Some(Owner::Single(owner)) if owner.machine_id == 1);
+    assert_matches!(second_target.owner, Some(Owner::Single(owner)) if owner.machine_id == 2);
+    assert_eq!(
+        first_target.target_data,
+        target_request(1).target_data.map(|data| match data {
+            struckout_proto::add_target_request::TargetData::Compass(compass) =>
+                struckout_proto::target::TargetData::Compass(compass),
+        })
+    );
+
+    service
+        .remove_target(Request::new(RemoveTargetRequest {
+            machine_id: 2,
+            target_id: first_id.clone(),
+        }))
+        .await
+        .expect("shared target can be removed from another machine");
+    service
+        .remove_target(Request::new(RemoveTargetRequest {
+            machine_id: 1,
+            target_id: second_id.clone(),
+        }))
+        .await
+        .expect("shared target can be removed from another machine");
+
+    let EventData::TargetRemoved(first_removed) = assert_event!(first, EventData::TargetRemoved(_))
+    else {
+        unreachable!()
+    };
+    let EventData::TargetRemoved(second_removed) =
+        assert_event!(second, EventData::TargetRemoved(_))
+    else {
+        unreachable!()
+    };
+    assert_eq!(first_removed.target_id, first_id);
+    assert_eq!(second_removed.target_id, second_id);
+    assert!(
+        tokio::time::timeout(Duration::from_millis(10), first.next())
+            .await
+            .is_err()
+    );
+    assert!(
+        tokio::time::timeout(Duration::from_millis(10), second.next())
+            .await
+            .is_err()
+    );
+}
+
+#[rstest]
+#[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
+#[case::multi(GameMode::Multi, EventTarget::All)]
+#[tokio::test]
+async fn completion_does_not_emit_target_removals(
+    #[case] mode: GameMode,
+    #[case] target: EventTarget,
+) {
+    let service = running_recorded_service(mode, RecordingDataSource::default());
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("first stream")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("second stream")
+        .into_inner();
+
+    service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .expect("first target");
+    assert_event!(first, EventData::TargetAdded(_));
+    if mode.is_multi() {
+        service
+            .add_target(Request::new(target_request(2)))
+            .await
+            .expect("second target");
+        assert_event!(second, EventData::TargetAdded(_));
+    }
+
+    complete_game(&service, target).await;
+
+    assert_event!(first, EventData::GameFinished(_));
+    if mode.is_multi() {
+        assert_event!(second, EventData::GameFinished(_));
+    }
+    assert!(
+        tokio::time::timeout(Duration::from_millis(10), first.next())
+            .await
+            .is_err()
+    );
+    assert!(
+        tokio::time::timeout(Duration::from_millis(10), second.next())
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn completion_does_not_emit_shared_target_removals() {
+    let service = running_recorded_service(GameMode::Multi, RecordingDataSource::default());
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("first stream")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("second stream")
+        .into_inner();
+    service
+        .sessions
+        .write()
+        .add_target(
+            struckout_proto::target::TargetData::Compass(struckout_proto::target::Compass {
+                x: 0.0,
+                y: 0.0,
+                radius: 1.0,
+            }),
+            Owner::All(Default::default()),
+        )
+        .expect("shared target");
+
+    complete_game(&service, EventTarget::All).await;
+
+    for stream in [&mut first, &mut second] {
+        assert_event!(stream, EventData::GameFinished(_));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), stream.next())
+                .await
+                .is_err()
+        );
+    }
+}
+
 #[rstest]
 #[case::single(GameMode::Single)]
 #[case::multi(GameMode::Multi)]
