@@ -1,23 +1,7 @@
 name: Android CI
 
 on:
-  push:
-    branches: master
-    paths:
-      - camera/**
-      - api/proto/**
-      - .github/workflows/android_ci.yaml
-      - mise.toml
-      - mise.lock
-  pull_request:
-    branches: master
-    paths:
-      - camera/**
-      - api/proto/**
-      - .github/workflows/android_ci.yaml
-      - mise.toml
-      - mise.lock
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   android_ci:
@@ -27,7 +11,7 @@ jobs:
       run:
         working-directory: camera/
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             camera
