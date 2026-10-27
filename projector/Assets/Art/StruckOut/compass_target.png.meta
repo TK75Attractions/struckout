@@ -4,7 +4,7 @@ TextureImporter:
   internalIDToNameTable:
   - first:
       213: -7622051064249825281
-    second: circle_target_0
+    second: compass_target_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,7 +126,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: circle_target_0
+      name: compass_target_0
       rect:
         serializedVersion: 2
         x: 0
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      circle_target_0: -7622051064249825281
+      compass_target_0: -7622051064249825281
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

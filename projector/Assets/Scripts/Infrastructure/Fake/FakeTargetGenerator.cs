@@ -11,7 +11,7 @@ namespace Struckout.Infrastructure.Fake
             List<TargetGeometry> result = new();
             for (var i = 0; i < num; i++)
             {
-                var target = GenerateTarget(TargetType.Circle, i * 50, i * 50, 50);
+                var target = GenerateTarget(TargetType.Compass, i * 50, i * 50, 50);
 
                 result.Add(target);
             }
@@ -21,7 +21,7 @@ namespace Struckout.Infrastructure.Fake
 
         public TargetGeometry GenerateTarget(TargetType type, IReadOnlyList<TargetGeometry> targets)
         {
-            return GenerateTarget(TargetType.Circle, 50, 50, 50);
+            return GenerateTarget(TargetType.Compass, 50, 50, 50);
         }
 
         /// <summary>ダミーなので、決まった場所に置き直すだけ。</summary>

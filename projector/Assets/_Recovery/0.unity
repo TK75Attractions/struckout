@@ -285,7 +285,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bb27d1e25caa894eba1a31816c01aeb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.UIService
-  _circleUI: {fileID: 617328636959465799, guid: 2ee853fb569d20c4295550f81cfe4edf, type: 3}
+  compassUI: {fileID: 617328636959465799, guid: 2ee853fb569d20c4295550f81cfe4edf, type: 3}
 --- !u!4 &582352445
 Transform:
   m_ObjectHideFlags: 0

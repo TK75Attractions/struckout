@@ -32,7 +32,7 @@ GameRuntime ──> IUIService ──> UIService ──> TargetField (ワール�
 ```
 
 座標は **盤面ピクセル (0〜1920, 0〜1080)** のまま `IUIService` まで流れ、
-`UIService` と `CircleTargetUI` がワールド座標に直す。
+`UIService` と `CompassTargetUI` がワールド座標に直す。
 `GameRuntime` から上と `TargetGenerator` は座標系を意識しない。
 
 ```
@@ -78,22 +78,22 @@ GameRuntime ──> IUIService ──> UIService ──> TargetField (ワール�
 
 ## アセットの中身
 
-### `Assets/Prefab/CircleTarget.prefab`（唯一の Prefab）
+### `Assets/Prefab/CompassTarget.prefab`（唯一の Prefab）
 
 ```
-CircleTarget          Transform
+CompassTarget         Transform
                       SpriteRenderer
                         material: Sprite-Lit-Default (URP 2D)
-                        sprite:   未設定 → 実行時に PlaceholderSprites.Circle が入る
+                        sprite:   未設定 → 実行時に PlaceholderSprites.Compass が入る
                         color:    白, alpha 0.392
-                      CircleTargetUI
+                      CompassTargetUI
 ```
 
 - **絵を差し替える起点はここ。** SpriteRenderer に Sprite を割り当てれば、
   仮の生成は行われなくなる
 - マテリアルが `Sprite-Lit-Default` なので、**2D ライトがそのまま当たる**。
   ライトを使いたくないなら `Sprite-Unlit-Default` に変える
-- 大きさは `CircleTargetUI` が**スプライトの実寸 (bounds) を見てから**倍率を出す。
+- 大きさは `CompassTargetUI` が**スプライトの実寸 (bounds) を見てから**倍率を出す。
   どんな pixelsPerUnit の絵を割り当てても、見た目と当たり判定は一致する
 
 ### 仮のスプライト（`PlaceholderSprites`）
@@ -153,7 +153,7 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 | ファイル | 役割 | 強化時に触る可能性 |
 |---|---|---|
 | `Unity/UIService.cs` | UUID ごとの的の生成・削除、マーカーの生成 | **高**。演出の起点 |
-| `Unity/CircleTargetUI.cs` | 登録済みの的 1 個の見た目。位置・大きさ・生成と削除の波紋 | **高** |
+| `Unity/CompassTargetUI.cs` | 登録済みの的 1 個の見た目。位置・大きさ・生成と削除の波紋 | **高** |
 | `Unity/PlaceholderSprites.cs` | 仮の絵の生成 | 中。素材ができたら不要になる |
 | `Unity/ITargetUI.cs` | 的 UI の契約（`Initialize` / `Remove`） | 中。種類を増やすなら |
 | `Unity/CollisionMarker.cs` | マーカーの拡大とフェード | 中。Prefab に置き換えるなら不要になる |
@@ -169,7 +169,7 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 
 ### 押さえておくべき約束事
 
-- **`Target.Size` は直径**。`CircleTargetUI` がスプライトの実寸から倍率を出し、
+- **`Target.Size` は直径**。`CompassTargetUI` がスプライトの実寸から倍率を出し、
   `CollisionSolver` が `RadiusSquared` で判定するので、この関係が崩れると
   **見た目と当たり判定がずれる**。`TargetTests` が固定している
 - **盤面の広さは `FieldBounds` が一箇所で持つ**。`TargetGenerator`（的を置く範囲）と
@@ -214,14 +214,14 @@ Screen Space - Camera の上位互換にならず、選択肢として意味を�
 ボールを壁に投げるゲームで着弾のバーストが作れないのは致命的だった。
 
 移行コストが安いのは今だけ、という判断もある。移行対象は
-`UIService` / `CircleTargetUI` / `UIRoot` の約 285 行のみで、移行する素材は 0。
+`UIService` / `CompassTargetUI` / `UIRoot` の約 285 行のみで、移行する素材は 0。
 `IUIService` / `ITargetUI` / `GameRuntime` / `CollisionSolver` /
 `TargetGenerator` と既存テストは無傷だった。
 
 ### 2. 的の見た目をどう作るか — 未決
 
 いまは仮の単色スプライト。素材を作るのか、シェーダで描くのか。
-`TargetType` は `Circle` 1 種類しか無いので、形を増やすならここから。
+`TargetType` は `Compass` 1 種類しか無いので、形を増やすならここから。
 
 的は直径 500px 級で表示される（`TargetGenerator` が空きスペースから
 大きさを決めるため、1 個目は直径 500 固定）。ラスタ画像よりシェーダや
@@ -296,7 +296,7 @@ HDR は有効、MSAA は無効。`Assets/DefaultVolumeProfile.asset` は存在�
 ### テストについて
 
 **描画クラスそのものは EditMode テストで直接は触れない。** `UIService` と
-`CircleTargetUI` は `MonoBehaviour` で、テスト用の asmdef は
+`CompassTargetUI` は `MonoBehaviour` で、テスト用の asmdef は
 `Struckout.Unity` を参照していない（Domain / Application / Infrastructure のみ）。
 
 ただし移行にあたって、**「どこに、どの大きさで置くか」の計算は
@@ -308,7 +308,7 @@ HDR は有効、MSAA は無効。`Assets/DefaultVolumeProfile.asset` は存在�
 - `TargetGeneratorTests` — 盤面の広さを変えたとき的もついてくること
 
 見た目そのものを検証したいなら PlayMode テストを足す必要がある。
-`CircleTargetUI` は生成時のフェードと、生成・削除時の波紋を描画する。
+`CompassTargetUI` は生成時のフェードと、生成・削除時の波紋を描画する。
 命中後の同じ GameObject による移動補間は廃止した。
 
 ### このマシン固有の注意

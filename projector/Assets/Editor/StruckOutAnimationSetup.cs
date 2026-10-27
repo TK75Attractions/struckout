@@ -20,17 +20,17 @@ namespace Editor
             var background = ImportSprite("arena_background.png");
             var idle = ImportSprite("idle_screen.png");
             var finished = ImportSprite("finished_screen.png");
-            var target = ImportSprite("circle_target.png");
+            var target = ImportSprite("compass_target.png");
             var scored = ImportSprite("hit_scored.png");
             var missed = ImportSprite("hit_missed.png");
             var ignored = ImportSprite("hit_ignored.png");
 
-            const string prefabPath = "Assets/Prefab/CircleTarget.prefab";
+            const string prefabPath = "Assets/Prefab/CompassTarget.prefab";
             var prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
             try
             {
                 var renderer = prefabRoot.GetComponent<SpriteRenderer>()
-                               ?? throw new InvalidOperationException("CircleTarget prefab needs a SpriteRenderer.");
+                               ?? throw new InvalidOperationException("CompassTarget prefab needs a SpriteRenderer.");
                 renderer.sprite = target;
                 renderer.color = Color.white;
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);

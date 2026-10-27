@@ -377,7 +377,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bb27d1e25caa894eba1a31816c01aeb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.UIService
-  _circleUI: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
+  compassUI: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
   _hudCanvas: {fileID: 637544012}
   _displayFont: {fileID: 12800000, guid: 88c57f85fb174101a0fdba227a9b60b8, type: 3}
   resultFont: {fileID: 12800000, guid: aec0a93495f845d9a7d15e93532f1040, type: 3}

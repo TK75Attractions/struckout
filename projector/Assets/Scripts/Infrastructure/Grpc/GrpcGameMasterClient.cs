@@ -251,7 +251,7 @@ namespace Struckout.Infrastructure.Grpc
                         break;
                     }
                     TargetAdded?.Invoke(new DomainTarget(targetId,
-                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Circle, compass.Radius * 2f),
+                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Compass, compass.Radius * 2f),
                         data.OwnerCase == ProtoTarget.OwnerOneofCase.All ? TargetOwnership.All : TargetOwnership.Single));
                     break;
 

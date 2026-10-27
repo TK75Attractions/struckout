@@ -14,8 +14,8 @@ namespace Struckout.Tests.Tests.EditMode
     /// </summary>
     public class CollisionSolverTests
     {
-        private static Target Circle(float x, float y, float diameter) =>
-            new(Guid.NewGuid(), new TargetGeometry(new TargetCoordinate(x, y), TargetType.Circle, diameter), TargetOwnership.Single);
+        private static Target Compass(float x, float y, float diameter) =>
+            new(Guid.NewGuid(), new TargetGeometry(new TargetCoordinate(x, y), TargetType.Compass, diameter), TargetOwnership.Single);
 
         private static CollisionPoint At(double x, double y) => new() { X = x, Y = y };
 
@@ -24,7 +24,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 中心は当たる()
         {
-            var targets = new List<Target> { Circle(1000f, 500f, 400f) };
+            var targets = new List<Target> { Compass(1000f, 500f, 400f) };
 
             Assert.That(NewSolver().TryCollision(At(1000, 500), targets, out var hit), Is.True);
             Assert.That(hit.Coordinate.X, Is.EqualTo(1000f));
@@ -36,7 +36,7 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase(1201.0, false, TestName = "半径の外側は外れる")]
         public void 判定は直径の半分までで切り替わる(double x, bool expected)
         {
-            var targets = new List<Target> { Circle(1000f, 500f, 400f) };
+            var targets = new List<Target> { Compass(1000f, 500f, 400f) };
 
             Assert.That(NewSolver().TryCollision(At(x, 500), targets, out _), Is.EqualTo(expected));
         }
@@ -46,7 +46,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             // 直径 400 の的。外接する正方形の角は中心から 200*sqrt(2) = 282.8 離れており、
             // 正方形で判定していると当たってしまう。
-            var targets = new List<Target> { Circle(1000f, 500f, 400f) };
+            var targets = new List<Target> { Compass(1000f, 500f, 400f) };
 
             Assert.That(NewSolver().TryCollision(At(1200, 700), targets, out _), Is.False,
                 "外接正方形の角は円の外なので当たらない");
@@ -64,8 +64,8 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 重なっていない的のうち当たったものを返す()
         {
-            var near = Circle(200f, 200f, 100f);
-            var far = Circle(1500f, 800f, 100f);
+            var near = Compass(200f, 200f, 100f);
+            var far = Compass(1500f, 800f, 100f);
             var targets = new List<Target> { near, far };
 
             Assert.That(NewSolver().TryCollision(At(1500, 800), targets, out var hit), Is.True);

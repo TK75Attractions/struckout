@@ -174,7 +174,7 @@ namespace Struckout.Infrastructure.Fake
                 // Match protobuf's float precision before the server calculates in f64.
                 _targetRadii.Add(id, (float)radius);
                 TargetAdded?.Invoke(new Target(id,
-                    new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f), TargetOwnership.Single));
+                    new TargetGeometry(coordinate, TargetType.Compass, (float)radius * 2f), TargetOwnership.Single));
                 return UniTask.FromResult(true);
             }
         }

@@ -50,7 +50,7 @@ namespace Struckout.Tests.Tests.EditMode
                 var accepted = PendingRegistration == null || await PendingRegistration.Task;
                 if (token.IsCancellationRequested) return false;
                 if (accepted && PublishOnAdd)
-                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f), TargetOwnership.Single));
+                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Compass, (float)radius * 2f), TargetOwnership.Single));
                 return accepted;
             }
             public UniTask<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
@@ -249,7 +249,7 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(ui.Added, Is.Empty);
             var id = Guid.NewGuid();
             var geometry = master.Targets[0];
-            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Circle, (float)geometry.Radius * 2f), TargetOwnership.Single));
+            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Compass, (float)geometry.Radius * 2f), TargetOwnership.Single));
             Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
             Assert.That(start.Status, Is.EqualTo(UniTaskStatus.Pending));
             pending.TrySetResult(true);
@@ -360,7 +360,7 @@ namespace Struckout.Tests.Tests.EditMode
             master.PublishOnAdd = false;
             await runtime.StartGameAsync(Difficulty.Normal);
             var shared = new Target(Guid.NewGuid(),
-                new TargetGeometry(new TargetCoordinate(500, 500), TargetType.Circle, 100), TargetOwnership.All);
+                new TargetGeometry(new TargetCoordinate(500, 500), TargetType.Compass, 100), TargetOwnership.All);
             master.EmitAdded(shared);
             master.Calls.Clear();
             await runtime.CollisionDetectedAsync(Center(ui));

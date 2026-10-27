@@ -44,7 +44,7 @@ namespace Struckout.Application
         {
             // Geometry has no identity and cannot participate in rendering or hit detection.
             _initialGeometry = _targetGenerator.GenerateTargets(
-                _settings.initialTargetCount, TargetType.Circle, Array.Empty<TargetGeometry>());
+                _settings.initialTargetCount, TargetType.Compass, Array.Empty<TargetGeometry>());
         }
 
         /// <summary>
