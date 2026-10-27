@@ -90,7 +90,7 @@ namespace Struckout.Application
                 diameter * PocketWatchLayout.CanvasToDialRatio);
             var others = _state.Targets.Select(target => target.Geometry).ToList();
             // Watch events can arrive before the initial Compass registration events.
-            if (!_state.Targets.Any(target => target.Type == TargetType.Compass) && _initialGeometry != null)
+            if (_state.Targets.All(target => target.Type != TargetType.Compass) && _initialGeometry != null)
                 others.AddRange(_initialGeometry);
             var coordinate = _targetGenerator.PickRelocation(placement, others);
             OnTargetAdded(new Target(id, new TargetGeometry(coordinate, TargetType.PocketWatch, diameter), ownership));
