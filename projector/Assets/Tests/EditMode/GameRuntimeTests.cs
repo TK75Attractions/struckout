@@ -18,7 +18,7 @@ namespace Struckout.Tests.Tests.EditMode
     {
         private sealed class Client : IGameMasterClient
         {
-            public event Action<Difficulty, PlayerId> GameStarted { add { } remove { } }
+            public event Action<Difficulty, PlayerId, TimeSpan> GameStarted { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
@@ -29,6 +29,7 @@ namespace Struckout.Tests.Tests.EditMode
             public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<PlayerGame>>(null);
             public event Action ConnectionLost { add { } remove { } }
             public event Action<Target> TargetAdded;
+            public event Action<Guid, TargetOwnership> PocketWatchAdded { add { } remove { } }
             public event Action<Guid> TargetRemoved;
             public readonly List<string> Calls = new();
             public readonly List<Guid> Hits = new();
@@ -50,7 +51,7 @@ namespace Struckout.Tests.Tests.EditMode
                 var accepted = PendingRegistration == null || await PendingRegistration.Task;
                 if (token.IsCancellationRequested) return false;
                 if (accepted && PublishOnAdd)
-                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Circle, (float)radius * 2f), TargetOwnership.Single));
+                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Compass, (float)radius * 2f), TargetOwnership.Single));
                 return accepted;
             }
             public UniTask<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
@@ -82,6 +83,8 @@ namespace Struckout.Tests.Tests.EditMode
             public void ShowRanking(IReadOnlyList<RankingRow> rows) { }
             public void ShowScreenMessage(string message) { }
             public void SetRemainingTime(TimeSpan remaining) { }
+            public void StartGameClock(TimeSpan duration) { }
+            public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
             public void AddTarget(Target target)
             {
@@ -249,7 +252,7 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(ui.Added, Is.Empty);
             var id = Guid.NewGuid();
             var geometry = master.Targets[0];
-            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Circle, (float)geometry.Radius * 2f), TargetOwnership.Single));
+            master.EmitAdded(new Target(id, new TargetGeometry(geometry.Coordinate, TargetType.Compass, (float)geometry.Radius * 2f), TargetOwnership.Single));
             Assert.That(ui.Targets[0].Id, Is.EqualTo(id));
             Assert.That(start.Status, Is.EqualTo(UniTaskStatus.Pending));
             pending.TrySetResult(true);
@@ -360,7 +363,7 @@ namespace Struckout.Tests.Tests.EditMode
             master.PublishOnAdd = false;
             await runtime.StartGameAsync(Difficulty.Normal);
             var shared = new Target(Guid.NewGuid(),
-                new TargetGeometry(new TargetCoordinate(500, 500), TargetType.Circle, 100), TargetOwnership.All);
+                new TargetGeometry(new TargetCoordinate(500, 500), TargetType.Compass, 100), TargetOwnership.All);
             master.EmitAdded(shared);
             master.Calls.Clear();
             await runtime.CollisionDetectedAsync(Center(ui));
@@ -370,6 +373,52 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(ui.Removed, Is.Empty);
             master.EmitRemoved(shared.Id);
             Assert.That(ui.Targets, Is.Empty);
+        }
+
+        [TestCase(TargetOwnership.Single)]
+        [TestCase(TargetOwnership.All)]
+        public async Task Pocket_watch_uses_local_fixed_size_and_waits_for_server_replacement(TargetOwnership ownership)
+        {
+            var (runtime, master, ui) = Create();
+            master.PublishOnAdd = false;
+            await runtime.StartGameAsync(Difficulty.Normal);
+            var id = Guid.NewGuid();
+            runtime.OnPocketWatchAdded(id, ownership);
+            var watch = ui.Targets[0];
+            Assert.That(watch.Type, Is.EqualTo(TargetType.PocketWatch));
+            Assert.That(watch.Diameter, Is.EqualTo(ui.PocketWatchDiameter));
+            Assert.That(watch.Ownership, Is.EqualTo(ownership));
+            Assert.That(watch.Coordinate.X, Is.InRange(watch.Radius, 1920 - watch.Radius));
+            Assert.That(watch.Coordinate.Y, Is.InRange(watch.Radius, 1080 - watch.Radius));
+            runtime.OnPocketWatchAdded(id, ownership);
+            Assert.That(ui.Added, Has.Count.EqualTo(1));
+            master.Calls.Clear();
+            await runtime.CollisionDetectedAsync(Center(ui));
+            await runtime.CollisionDetectedAsync(Center(ui));
+            Assert.That(master.Calls, Is.EqualTo(new[] { "hit" }));
+            Assert.That(ui.Targets[0], Is.SameAs(watch));
+            master.EmitRemoved(id);
+            Assert.That(ui.Targets, Is.Empty);
+            var replacementId = Guid.NewGuid();
+            runtime.OnPocketWatchAdded(replacementId, ownership);
+            Assert.That(ui.Targets[0].Id, Is.EqualTo(replacementId));
+            Assert.That(ui.Targets[0].Diameter, Is.EqualTo(watch.Diameter));
+            Assert.That(ui.Targets[0].Coordinate, Is.Not.EqualTo(watch.Coordinate));
+            runtime.FinishGame();
+            Assert.That(ui.Targets, Is.Empty);
+        }
+
+        [Test]
+        public async Task Pocket_watch_placement_avoids_existing_targets()
+        {
+            var (runtime, master, ui) = Create();
+            await runtime.StartGameAsync(Difficulty.Normal);
+            var compass = ui.Targets[0];
+            runtime.OnPocketWatchAdded(Guid.NewGuid(), TargetOwnership.All);
+            var watch = ui.Targets[1];
+            var dx = watch.Coordinate.X - compass.Coordinate.X;
+            var dy = watch.Coordinate.Y - compass.Coordinate.Y;
+            Assert.That(Math.Sqrt(dx * dx + dy * dy), Is.GreaterThan(watch.Radius + compass.Radius));
         }
 
     }

@@ -6,7 +6,8 @@
 マルチプレイ開始時は両セッションが同じ共有状態を参照し、一方での変更は他方からも見える。
 シングルプレイはゲームごとに独立した状態を持つ。
 `owner` はターゲットとともに保存する。projector の `AddTarget` で作る的はモードを問わず
-`Single.machine_id = machine_id` とし、game_master が内部で作る特殊な的だけ `All` にする。
+`Single.machine_id = machine_id` とし、PocketWatch も各マシンに `Single.machine_id = machine_id` で1個ずつ作る。
+`All` は両マシンへの配信に使えるが、PocketWatch には使わない。
 ターゲットは削除されるか、ゲームの共有状態が破棄されるまで保持する。
 
 - `AddTarget`: `machine_id` と必須の `target_data` を受け取り、登録ごとに UUID v4 を生成して `target_id` として返す。要求に `owner` は含めない。`Single.machine_id = machine_id` を設定する。
@@ -19,9 +20,13 @@
 
 ## 命中と得点
 
-`HitTarget` は実行中のゲームに登録済みのターゲットを受け取り、`100000 / radius` の小数点以下を切り捨てた得点を加算する。
+`HitTarget` は実行中のゲームに登録済みのターゲットを受け取り、Compass では `100000 / radius` の小数点以下を切り捨てた得点を加算する。
 計算は `f64` で行い、累計は `RunningState.shared` の `score` (`u32`) に保存する。
-ターゲットは命中後も登録を保持し、繰り返し命中できる。
+Compass は命中後も登録を保持し、繰り返し命中できる。
+PocketWatch は固定500点を加算し、元のターゲットを削除して同じ所有者・新しい UUID で追加する。
+残り時間は変更しない。得点の加算と置き換えは同じロック内で行い、オーバーフロー時はどちらも変更しない。
+ゲーム開始時は `GameStarted` の後に各マシンの PocketWatch の `TargetAdded` を通知する。
+命中時は `GameScoreChanged`、所有マシンへの `TargetRemoved`、`TargetAdded` の順で通知する。
 成功時は累計得点を `GameScoreChanged` で通知する。シングルプレイは要求したマシンに、マルチプレイは両マシンに通知する。
 マルチプレイでは共有ターゲットへの命中をどちらのマシンからでも受け付け、同じ累計得点を更新する。
 
@@ -30,8 +35,10 @@
 1回の得点または累計得点が `u32` の範囲を超える場合は `OutOfRange` を返す。
 エラー時は得点を変更せず、得点変更イベントも送信しない。
 
-## 検証状況（2026-10-26）
+## 検証状況（2026-10-27）
 
-`SQLX_OFFLINE=true cargo check --all-targets -p game_master` と `cargo test -p game_master`
-（83 件）は成功した。追加・削除の配信範囲と、
-終了時に一括削除通知を送らない契約をテストしている。
+`SQLX_OFFLINE=true cargo check --all-targets -p game_master`、`cargo test -p game_master`
+（86件）、`cargo clippy --all-targets -p game_master -- -D warnings`、`cargo fmt --all --check` は成功した。
+開始時の PocketWatch の生成数・所有者、命中時の得点・削除・再追加・配信範囲、
+古い UUID の拒否、得点オーバーフロー時に状態を保持することをテストしている。
+C# は `mise run proto` で再生成し、再実行で生成物が変わらないことを確認した。

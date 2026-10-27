@@ -127,7 +127,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = machineId });
             PlayerId? received = null;
-            client.GameStarted += (_, player) => received = player;
+            client.GameStarted += (_, player, duration) => received = player;
             Dispatch(client, new Event
             {
                 GameStarted = new Event.Types.GameStarted
@@ -148,7 +148,7 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             PlayerId? player = null;
             GameId? game = null;
-            client.GameStarted += (_, id) => player = id;
+            client.GameStarted += (_, id, duration) => player = id;
             client.GameFinished += id => game = id;
             Dispatch(client, new Event
             {
@@ -185,7 +185,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             var starts = 0;
-            client.GameStarted += (_, __) => starts++;
+            client.GameStarted += (_, __, duration) => starts++;
             Dispatch(client, new Event { GameStarted = new Event.Types.GameStarted() });
             Dispatch(client, new Event
             {
@@ -198,6 +198,51 @@ namespace Struckout.Tests.Tests.EditMode
                 },
             });
             Assert.That(starts, Is.Zero);
+        }
+
+        [TestCase(false, 7u, 1)]
+        [TestCase(false, 8u, 0)]
+        [TestCase(true, 8u, 1)]
+        public void Pocket_watch_event_preserves_identity_and_filters_ownership(bool shared, uint machineId, int count)
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var watches = new List<Guid>();
+            var compasses = new List<Target>();
+            TargetOwnership? owner = null;
+            client.PocketWatchAdded += (id, ownership) => { watches.Add(id); owner = ownership; };
+            client.TargetAdded += compasses.Add;
+            var id = Guid.NewGuid();
+            var added = Added(id, machineId);
+            added.TargetAdded.Target.PocketWatch = new ProtoTarget.Types.PocketWatch();
+            if (shared) added.TargetAdded.Target.All = new ProtoTarget.Types.OwnerAll();
+            Dispatch(client, added);
+            Assert.That(watches, Has.Count.EqualTo(count));
+            Assert.That(compasses, Is.Empty);
+            if (count > 0)
+            {
+                Assert.That(watches[0], Is.EqualTo(id));
+                Assert.That(owner, Is.EqualTo(shared ? TargetOwnership.All : TargetOwnership.Single));
+            }
+        }
+
+        [Test]
+        public void Game_start_passes_the_server_duration_in_seconds()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            TimeSpan? duration = null;
+            client.GameStarted += (_, player, value) => duration = value;
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    GameDurSecs = 120,
+                    Single = new Event.Types.GameStarted.Types.Single
+                    {
+                        Player = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 7, PlayerId = 71 },
+                    },
+                },
+            });
+            Assert.That(duration, Is.EqualTo(TimeSpan.FromSeconds(120)));
         }
 
     }

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6769055738825217205}
   - component: {fileID: 9154084299377791092}
   m_Layer: 0
-  m_Name: CircleTarget
+  m_Name: CompassTarget
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -104,7 +104,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2de6451adf047a941ba84183dd0f268a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.CircleTargetUI
+  m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.CompassTargetUI
   _visibilityDurationSeconds: 0.3
   _rotationAmplitudeDegrees: 1.5
   _rippleDurationSeconds: 0.32

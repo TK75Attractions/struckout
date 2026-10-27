@@ -56,6 +56,10 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
                 difficulty,
                 players,
             } => EventData::GameStarted(GameStarted {
+                game_dur_secs: super::GAME_DURATION
+                    .whole_seconds()
+                    .try_into()
+                    .expect("GAME_DURATION is a positive duration within u32 seconds"),
                 difficulty: difficulty.into(),
                 game_started_player_info: Some(match players {
                     GamePlayers::Single {

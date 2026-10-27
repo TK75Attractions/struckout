@@ -18,13 +18,13 @@ namespace Struckout.Unity
         /// <summary>生成するテクスチャの一辺。pixelsPerUnit も同じ値にするので、大きさは 1 unit になる。</summary>
         private const int Resolution = 256;
 
-        private static Sprite _circle;
+        private static Sprite _compass;
         private static Sprite _diamond;
         private static Sprite _rippleRing;
 
         /// <summary>的の仮の見た目。</summary>
-        public static Sprite Circle =>
-            _circle != null ? _circle : _circle = Build("PlaceholderCircle", (u, v) => 0.5f - Mathf.Sqrt(u * u + v * v));
+        public static Sprite Compass =>
+            _compass != null ? _compass : _compass = Build("PlaceholderCompass", (u, v) => 0.5f - Mathf.Sqrt(u * u + v * v));
 
         /// <summary>着弾マーカーの仮の見た目。的が円なので、区別できるよう菱形にしている。</summary>
         public static Sprite Diamond =>
@@ -75,7 +75,7 @@ namespace Struckout.Unity
             texture.Apply(updateMipmaps: false);
 
             // pixelsPerUnit をテクスチャの一辺と同じにすると、スプライトはちょうど 1 unit 角になる。
-            // CircleTargetUI は実際の bounds を見て拡縮するので、ここが 1 でなくても壊れはしない。
+            // CompassTargetUI は実際の bounds を見て拡縮するので、ここが 1 でなくても壊れはしない。
             var sprite = Sprite.Create(
                 texture,
                 new Rect(0f, 0f, Resolution, Resolution),

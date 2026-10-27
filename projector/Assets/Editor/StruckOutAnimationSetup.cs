@@ -20,17 +20,17 @@ namespace Editor
             var background = ImportSprite("arena_background.png");
             var idle = ImportSprite("idle_screen.png");
             var finished = ImportSprite("finished_screen.png");
-            var target = ImportSprite("circle_target.png");
+            var target = ImportSprite("compass_target.png");
             var scored = ImportSprite("hit_scored.png");
             var missed = ImportSprite("hit_missed.png");
             var ignored = ImportSprite("hit_ignored.png");
 
-            const string prefabPath = "Assets/Prefab/CircleTarget.prefab";
+            const string prefabPath = "Assets/Prefab/CompassTarget.prefab";
             var prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
             try
             {
                 var renderer = prefabRoot.GetComponent<SpriteRenderer>()
-                               ?? throw new InvalidOperationException("CircleTarget prefab needs a SpriteRenderer.");
+                               ?? throw new InvalidOperationException("CompassTarget prefab needs a SpriteRenderer.");
                 renderer.sprite = target;
                 renderer.color = Color.white;
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
@@ -67,6 +67,23 @@ namespace Editor
         }
 
         public static void ApplyFromCommandLine() => Apply();
+
+        [MenuItem("Tools/STRUCK OUT/Apply Pocket Watch Art")]
+        public static void ApplyPocketWatchArt()
+        {
+            var face = ImportSprite("pocket_watch_face.png");
+            var hand = ImportSprite("pocket_watch_hand.png");
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
+            var service = UnityEngine.Object.FindAnyObjectByType<UIService>()
+                ?? throw new InvalidOperationException("SampleScene needs UIService.");
+            var serialized = new SerializedObject(service);
+            SetSprite(serialized, "pocketWatchFace", face);
+            SetSprite(serialized, "pocketWatchHand", hand);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+        }
 
         private static Sprite ImportSprite(string name)
         {

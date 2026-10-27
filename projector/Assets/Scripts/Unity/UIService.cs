@@ -20,7 +20,7 @@ namespace Struckout.Unity
     /// カメラに通している。得点表示などの HUD は引き続き Canvas 側の担当。
     ///
     /// 座標は盤面ピクセル (0〜1920, 0〜1080) のまま受け取り、ここと
-    /// <see cref="CircleTargetUI"/> でワールド座標に直す。GameRuntime から上と
+    /// <see cref="CompassTargetUI"/> でワールド座標に直す。GameRuntime から上と
     /// TargetGenerator は、この移行の影響を受けない。
     /// </summary>
     public class UIService : MonoBehaviour, IUIService
@@ -30,8 +30,18 @@ namespace Struckout.Unity
         private const int MarkerSortingOrder = 150;
 
         private Dictionary<Guid, Transform> _targetToTransform;
-        [FormerlySerializedAs("_circleUI")] [SerializeField]
-        private Transform circleUI;
+        [FormerlySerializedAs("_circleUI")]
+        [FormerlySerializedAs("circleUI")] [SerializeField]
+        private Transform compassUI;
+
+        [Header("Pocket Watch")]
+        [SerializeField] private Sprite pocketWatchFace;
+        [SerializeField] private Sprite pocketWatchHand;
+        [SerializeField, Min(1f)]
+        [Tooltip("懐中時計の文字盤の直径。描画と当たり判定で共有する盤面ピクセル値。")]
+        private float pocketWatchDiameter = 200f;
+        public float PocketWatchDiameter => pocketWatchDiameter;
+        private readonly GameClock _gameClock = new();
 
         [FormerlySerializedAs("_hudCanvas")]
         [Header("Game HUD")]
@@ -106,6 +116,9 @@ namespace Struckout.Unity
         {
             _uiRoot = uiRoot;
             _world = world;
+            if (!float.IsFinite(pocketWatchDiameter) || pocketWatchDiameter <= 0 ||
+                pocketWatchDiameter * PocketWatchLayout.CanvasToDialRatio > Math.Min(world.Field.width, world.Field.height))
+                throw new InvalidOperationException("[UI] 懐中時計の直径は盤面に収まる正の値を設定してください。");
             _targetToTransform = new();
 
             CreateFieldSprite("ArenaBackground", backgroundSprite, BackgroundSortingOrder);
@@ -212,8 +225,15 @@ namespace Struckout.Unity
             return label;
         }
 
+        public void StartGameClock(TimeSpan duration)
+        {
+            _gameClock.Start(duration, Time.realtimeSinceStartupAsDouble);
+            SetRemainingTime(duration);
+        }
+
         public void SetRemainingTime(TimeSpan remaining)
         {
+            _gameClock.Correct(remaining, Time.realtimeSinceStartupAsDouble);
             if (_remainingTimeText == null) return;
             var seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
             _remainingTimeText.text = string.Format(CultureInfo.InvariantCulture,
@@ -268,7 +288,9 @@ namespace Struckout.Unity
             var index = 0;
             foreach (var trans in _targetToTransform.Values)
             {
-                if (trans != null && trans.TryGetComponent<CircleTargetUI>(out var targetUI))
+                if (trans != null && trans.TryGetComponent<PocketWatchUI>(out var watch))
+                    watch.gameObject.SetActive(screen == ProjectorScreen.Playing);
+                if (trans != null && trans.TryGetComponent<CompassTargetUI>(out var targetUI))
                 {
                     targetUI.SetPresentationVisible(screen == ProjectorScreen.Playing, index * 0.07f);
                     index++;
@@ -289,16 +311,24 @@ namespace Struckout.Unity
             Transform instantiatedTrans;
             switch (target.Type)
             {
-                case TargetType.Circle:
-                    if (circleUI == null)
+                case TargetType.PocketWatch:
+                    if (pocketWatchFace == null || pocketWatchHand == null)
+                        throw new InvalidOperationException("[UI] 懐中時計の文字盤と針の画像を設定してください。");
+                    var watch = new GameObject("PocketWatch").AddComponent<PocketWatchUI>();
+                    watch.transform.SetParent(_uiRoot.TargetRoot, false);
+                    watch.Configure(pocketWatchFace, pocketWatchHand, _gameClock);
+                    instantiatedTrans = watch.transform;
+                    break;
+                case TargetType.Compass:
+                    if (compassUI == null)
                     {
-                        Debug.LogError("CircleUI is null");
+                        Debug.LogError("CompassUI is null");
                         return;
                     }
 
-                    if (!TryInstantiateTargetUI<CircleTargetUI>(circleUI, out var trans))
+                    if (!TryInstantiateTargetUI<CompassTargetUI>(compassUI, out var trans))
                     {
-                        Debug.LogError("CircleTargetUI is null");
+                        Debug.LogError("CompassTargetUI is null");
                         return;
                     }
                     instantiatedTrans = trans;
@@ -310,9 +340,11 @@ namespace Struckout.Unity
             var ui = instantiatedTrans.GetComponent<ITargetUI>() ?? throw new InvalidOperationException("The Prefab doesn't contain ITargetUI");
             ui.Initialize(target, _world);
             _targetToTransform[target.Id] = instantiatedTrans;
-            if (instantiatedTrans.TryGetComponent<CircleTargetUI>(out var circle))
+            if (target.Type == TargetType.PocketWatch)
+                instantiatedTrans.gameObject.SetActive(_screen == ProjectorScreen.Playing);
+            if (instantiatedTrans.TryGetComponent<CompassTargetUI>(out var compass))
             {
-                circle.SetPresentationVisible(_screen == ProjectorScreen.Playing,
+                compass.SetPresentationVisible(_screen == ProjectorScreen.Playing,
                     _screen == ProjectorScreen.Playing ? (_targetToTransform.Count - 1) * 0.07f : 0f,
                     _screen != ProjectorScreen.Playing);
             }

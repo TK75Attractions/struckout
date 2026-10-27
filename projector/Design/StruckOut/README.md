@@ -7,7 +7,7 @@ The supplied `reference_logo.jpg` defines this kit's visual language: a black fi
 | File | Size | Use |
 | --- | --- | --- |
 | `../../Assets/Art/StruckOut/arena_background.png` | 1672 × 941 | Reusable playfield backdrop. Keep the center clear for dynamically positioned targets. |
-| `../../Assets/Art/StruckOut/circle_target.png` | 1254 × 1254, transparent | Single circular target sprite. Its visible diameter almost fills its canvas so Unity's sprite width matches the collision diameter. |
+| `../../Assets/Art/StruckOut/compass_target.png` | 1254 × 1254, transparent | Single circular target sprite. Its visible diameter almost fills its canvas so Unity's sprite width matches the collision diameter. |
 | `../../Assets/Art/StruckOut/hit_scored.png` | 1254 × 1254, transparent | Bright scoring impact. |
 | `../../Assets/Art/StruckOut/hit_missed.png` | 1254 × 1254, transparent | Quiet diamond miss marker. |
 | `../../Assets/Art/StruckOut/hit_ignored.png` | 1254 × 1254, transparent | Inactive-session impact marker. |
@@ -23,9 +23,10 @@ The original logo is kept separately as `reference_logo.jpg`. Targets, impact ef
 ## Unity animation integration
 
 - The board is logically 1920 × 1080. `UIService` stretches each screen sprite to that board, with the background behind the runtime targets and the idle/finish screens above them.
-- `GameBootstrap` and `ScreenController` drive Home → Playing → Score → Ranking → Home from server events. `UIService` crossfades the screens over 0.55 seconds; registered circle targets fade in with short staggered delays and are hidden at finish. TargetRemoved events remove their GameObjects.
-- `CircleTargetUI` preserves the target diameter and adds a subtle rotation. It draws only a target whose UUID and geometry arrived in a TargetAdded event.
+- `GameBootstrap` and `ScreenController` drive Home → Playing → Score → Ranking → Home from server events. `UIService` crossfades the screens over 0.55 seconds; registered Compass targets fade in with short staggered delays and are hidden at finish. TargetRemoved events remove their GameObjects.
+- `CompassTargetUI` preserves the target diameter and adds a subtle rotation. It draws only a target whose UUID and geometry arrived in a TargetAdded event.
 - After a hit, removal and registration requests are sent to game_master. Only TargetRemoved and TargetAdded events remove the old UUID and GameObject and create a separate target and GameObject at the new position. A thin cyan ripple expands at deletion and blooms at creation; existing targets are never moved or reused.
+- `PocketWatchUI` overlays the supplied face and hand at their shared center. UIService → Pocket Watch Diameter controls the fixed dial and collision diameter (default 200 board pixels). The shared game clock advances continuously from `GameStarted.game_dur_secs` and corrects itself from remaining-time notifications, including after server-driven replacement. **Tools → STRUCK OUT → Apply Pocket Watch Art** assigns these two sprites to the scene.
 - `CollisionResult.Scored`, `Missed`, and `Ignored` select different transparent impact sprites. `CollisionMarker` expands, turns where appropriate, fades, and removes itself.
 - ScoreScreen fetches the finished result by game ID. RankingScreen merges the top ten with personal history by game ID, sorts by score, and highlights personal and current games. Japanese labels and names use Noto Sans JP; numbers use Oxanium.
 - `Assets/Editor/StruckOutAnimationSetup.cs` supplies **Tools → STRUCK OUT → Apply Projector Animation Art** to reimport the seven live sprites and assign them to the scene and target prefab after artwork changes.

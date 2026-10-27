@@ -22,8 +22,8 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 初期配置は毎回同じになる()
         {
-            var first = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
-            var second = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var first = new TargetGenerator().GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
+            var second = new TargetGenerator().GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
 
             Assert.That(second.Count, Is.EqualTo(first.Count));
             for (var i = 0; i < first.Count; i++)
@@ -40,7 +40,7 @@ namespace Struckout.Tests.Tests.EditMode
         public void 移動先は画面内に収まる()
         {
             var generator = new TargetGenerator();
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = generator.GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
             var moved = targets[0];
             var others = new List<TargetGeometry> { targets[1], targets[2], targets[3] };
 
@@ -57,7 +57,7 @@ namespace Struckout.Tests.Tests.EditMode
         public void 移動先は他の的と重ならない()
         {
             var generator = new TargetGenerator();
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = generator.GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
             var moved = targets[0];
             var others = new List<TargetGeometry> { targets[1], targets[2], targets[3] };
 
@@ -83,7 +83,7 @@ namespace Struckout.Tests.Tests.EditMode
             // 決定的に選ぶと、空いた場所が必ず最も条件のよい点になり、
             // 撃った的が同じところへ戻ってきてしまう。
             var generator = new TargetGenerator();
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = generator.GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
             var moved = targets[0];
             var others = new List<TargetGeometry> { targets[1], targets[2], targets[3] };
 
@@ -103,7 +103,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 初期配置は既知の座標になる()
         {
-            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
 
             Assert.That(targets.Count, Is.EqualTo(4));
 
@@ -118,7 +118,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 的どうしは重ならない()
         {
-            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
 
             for (var i = 0; i < targets.Count; i++)
             {
@@ -137,7 +137,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void 的は画面内に収まる()
         {
-            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = new TargetGenerator().GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
 
             foreach (var target in targets)
             {
@@ -164,7 +164,7 @@ namespace Struckout.Tests.Tests.EditMode
             var field = new FieldBounds(1280f, 800f);
             var generator = new TargetGenerator(field);
 
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = generator.GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
 
             foreach (var target in targets)
             {
@@ -179,7 +179,7 @@ namespace Struckout.Tests.Tests.EditMode
             var field = new FieldBounds(1280f, 800f);
             var generator = new TargetGenerator(field);
 
-            var targets = generator.GenerateTargets(4, TargetType.Circle, new List<TargetGeometry>());
+            var targets = generator.GenerateTargets(4, TargetType.Compass, new List<TargetGeometry>());
             var moved = targets[0];
 
             for (var i = 0; i < 32; i++)

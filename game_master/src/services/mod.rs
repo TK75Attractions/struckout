@@ -336,9 +336,8 @@ where
         } = req.into_inner();
         let target_id =
             Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
-        let (total_score, ev_target) = self
-            .sessions
-            .write()
+        let mut sessions = self.sessions.write();
+        let outcome = sessions
             .hit_target(machine_id.into(), target_id)
             .map_err(|e| match e {
                 HitTargetError::Session(SessionError::TargetNotFound { .. }) => {
@@ -350,12 +349,32 @@ where
         if self
             .event_tx
             .send(Event {
-                target: ev_target,
-                data: Ok(SuccessfulEvent::GameScoreChanged { total_score }),
+                target: outcome.event_target,
+                data: Ok(SuccessfulEvent::GameScoreChanged {
+                    total_score: outcome.total_score,
+                }),
             })
             .is_err()
         {
             warn!("all event receiver has been dropped");
+        }
+        if let Some((removed, added)) = outcome.replacement {
+            for event in [
+                Event {
+                    target: get_event_target(&removed),
+                    data: Ok(SuccessfulEvent::TargetRemoved {
+                        target_id: removed.target_id,
+                    }),
+                },
+                Event {
+                    target: get_event_target(&added),
+                    data: Ok(SuccessfulEvent::TargetAdded { target: added }),
+                },
+            ] {
+                if self.event_tx.send(event).is_err() {
+                    warn!("all event receivers have been dropped");
+                }
+            }
         }
         Ok(Response::new(HitTargetResponse {}))
     }
@@ -385,12 +404,11 @@ where
         let SetSessionReadyRequest { machine_id } = req.into_inner();
         let machine_id = machine_id.into();
         {
-            let action = {
-                let mut sessions = self.sessions.write();
-                sessions.set_ready(machine_id)
-            };
+            let mut sessions = self.sessions.write();
+            let action = sessions.set_ready(machine_id);
             match action {
                 Ok(SetReadyAction::RunSingle {
+                    initial_targets,
                     difficulty,
                     player_id,
                 }) => {
@@ -411,6 +429,19 @@ where
                         warn!("all receiver has been dropped");
                     };
 
+                    for target in initial_targets {
+                        if self
+                            .event_tx
+                            .send(Event {
+                                target: get_event_target(&target),
+                                data: Ok(SuccessfulEvent::TargetAdded { target }),
+                            })
+                            .is_err()
+                        {
+                            warn!("all event receivers have been dropped");
+                        }
+                    }
+
                     let (complete_tx, complete_rx) = mpsc::channel(16);
 
                     tokio::spawn(game_timer(
@@ -427,6 +458,7 @@ where
                     Ok(Response::new(SetSessionReadyResponse {}))
                 }
                 Ok(SetReadyAction::RunMulti {
+                    initial_targets,
                     difficulty,
                     player_1,
                     player_2,
@@ -447,6 +479,19 @@ where
                     {
                         warn!("all receiver has been dropped");
                     };
+
+                    for target in initial_targets {
+                        if self
+                            .event_tx
+                            .send(Event {
+                                target: get_event_target(&target),
+                                data: Ok(SuccessfulEvent::TargetAdded { target }),
+                            })
+                            .is_err()
+                        {
+                            warn!("all event receivers have been dropped");
+                        }
+                    }
 
                     let (complete_tx, complete_rx) = mpsc::channel(16);
 

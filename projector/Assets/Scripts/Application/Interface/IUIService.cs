@@ -16,6 +16,12 @@ namespace Struckout.Application.Interface
         /// <summary>game_master から受信した残り時間を表示する。</summary>
         void SetRemainingTime(TimeSpan remaining);
 
+        /// <summary>Starts the shared watch clock before targets can appear.</summary>
+        void StartGameClock(TimeSpan duration);
+
+        /// <summary>Watch dial diameter in board pixels, shared by placement and rendering.</summary>
+        float PocketWatchDiameter { get; }
+
         /// <summary>game_master が確定した累計得点を表示する。</summary>
         void SetScore(uint totalScore);
 

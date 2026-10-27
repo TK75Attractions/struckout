@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 namespace Struckout.Unity
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public class CircleTargetUI : MonoBehaviour, ITargetUI
+    public class CompassTargetUI : MonoBehaviour, ITargetUI
     {
         [FormerlySerializedAs("_visibilityDurationSeconds")]
         [SerializeField]
@@ -56,7 +56,7 @@ namespace Struckout.Unity
             // 素材ができたら Prefab 側で差し替えれば、ここは通らなくなる。
             if (_renderer != null && _renderer.sprite == null)
             {
-                _renderer.sprite = PlaceholderSprites.Circle;
+                _renderer.sprite = PlaceholderSprites.Compass;
             }
         }
 
