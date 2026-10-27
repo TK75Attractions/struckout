@@ -1006,6 +1006,10 @@ async fn multi_game_started_reaches_both_machines_once(#[case] ready_order: [u32
         })
     };
     let expected = GameStarted {
+        game_dur_secs: GAME_DURATION
+            .whole_seconds()
+            .try_into()
+            .expect("GAME_DURATION fits in u32 seconds"),
         difficulty: Difficulty::Normal.into(),
         game_started_player_info: Some(game_started::GameStartedPlayerInfo::Multi(
             game_started::Multi {
@@ -1052,6 +1056,10 @@ async fn single_game_started_reaches_only_its_machine(
     assert_eq!(
         collect_game_started(&mut streams[0]).await,
         vec![GameStarted {
+            game_dur_secs: GAME_DURATION
+                .whole_seconds()
+                .try_into()
+                .expect("GAME_DURATION fits in u32 seconds"),
             difficulty: Difficulty::Normal.into(),
             game_started_player_info: Some(game_started::GameStartedPlayerInfo::Single(
                 game_started::Single {

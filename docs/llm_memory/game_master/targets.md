@@ -38,7 +38,11 @@ PocketWatch は固定500点を加算し、元のターゲットを削除して�
 ## 検証状況（2026-10-27）
 
 `SQLX_OFFLINE=true cargo check --all-targets -p game_master`、`cargo test -p game_master`
-（86件）、`cargo clippy --all-targets -p game_master -- -D warnings`、`cargo fmt --all --check` は成功した。
+（90件）、`cargo clippy --all-targets -p game_master -- -D warnings`、`cargo fmt --all --check` は成功した。
 開始時の PocketWatch の生成数・所有者、命中時の得点・削除・再追加・配信範囲、
 古い UUID の拒否、得点オーバーフロー時に状態を保持することをテストしている。
 C# は `mise run proto` で再生成し、再実行で生成物が変わらないことを確認した。
+
+PR #342 のマージでは、`GameStarted.game_dur_secs` の追加と別ブランチの配信テスト追加が重なり、
+シングル・マルチプレイの期待値2か所でフィールドが不足してテストのコンパイルが失敗した。
+期待値にも `GAME_DURATION` から変換した秒数を設定し、配信先とともにゲーム時間を検証する。
