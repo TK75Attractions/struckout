@@ -3,17 +3,21 @@ syntax = "proto3";
 package tk75attractions.struckout.game_master.v1;
 
 message Target {
+  // UUID
+  string target_id = 1;
+
   message Compass {
     float x = 1;
     float y = 2;
     float radius = 3;
   }
 
-  // UUID
-  string target_id = 1;
+  message PocketWatch {}
 
   oneof target_data {
     Compass compass = 2;
+    // PocketWatch's owner is always OwnerAll in multi-play mode.
+    PocketWatch pocket_watch = 5;
   }
 
   message OwnerSingle {

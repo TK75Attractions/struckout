@@ -12,6 +12,8 @@ message Event {
   }
 
   message GameStarted {
+    Difficulty difficulty = 1;
+
     message PlayerInfo {
       uint32 machine_id = 1;
       uint32 player_id = 2;
@@ -25,11 +27,12 @@ message Event {
       PlayerInfo player_2 = 2;
     }
 
-    Difficulty difficulty = 1;
     oneof game_started_player_info {
       Single single = 2;
       Multi multi = 3;
     }
+
+    uint32 game_dur_secs = 4;
   }
 
   message GameTimeLimitNotify {
