@@ -2,6 +2,7 @@
     "name": "Struckout.Tests.EditMode",
     "rootNamespace": "Struckout.Tests",
     "references": [
+        "GUID:6726640549d964d4b8a744687f229b34",
         "GUID:460e46054705c7f49a140c08e36982c2",
         "GUID:b9dfb3c5711c7744ebf3a95ef227b67b",
         "GUID:2d46d53e135c3e448bf1d8b695dfa901",

@@ -49,14 +49,14 @@ namespace Struckout.Infrastructure.Fake
         /// <see cref="ConnectAsync"/> の中で即座に発火するため、
         /// 後から購読した相手にも追いつかせる。
         /// </summary>
-        public event Action<Difficulty, PlayerId> GameStarted
+        public event Action<Difficulty, PlayerId, TimeSpan> GameStarted
         {
             add
             {
                 lock (_stateLock)
                 {
                     _gameStarted += value;
-                    if (_started) value?.Invoke(_startedDifficulty, FakePlayer);
+                    if (_started) value?.Invoke(_startedDifficulty, FakePlayer, _gameDuration);
                 }
             }
             remove
@@ -65,7 +65,7 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        private Action<Difficulty, PlayerId> _gameStarted;
+        private Action<Difficulty, PlayerId, TimeSpan> _gameStarted;
         private bool _started;
         private Difficulty _startedDifficulty;
 
@@ -75,6 +75,7 @@ namespace Struckout.Infrastructure.Fake
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
         public event Action<Target> TargetAdded;
+        public event Action<Guid, TargetOwnership> PocketWatchAdded;
         public event Action<Guid> TargetRemoved;
 
         // ダミーは自分から切る以外に切れないので、この経路は発火しない。
@@ -86,6 +87,7 @@ namespace Struckout.Infrastructure.Fake
         private uint _totalScore;
         private readonly Dictionary<Guid, double> _targetRadii = new();
         private bool _connected;
+        private Guid? _pocketWatchId;
 
         public UniTask<bool> ConnectAsync()
         {
@@ -103,7 +105,8 @@ namespace Struckout.Infrastructure.Fake
                 _startedDifficulty = Difficulty.Normal;
                 _gameCancellation = new CancellationTokenSource();
                 var elapsed = Stopwatch.StartNew();
-                _gameStarted?.Invoke(_startedDifficulty, FakePlayer);
+                _gameStarted?.Invoke(_startedDifficulty, FakePlayer, _gameDuration);
+                AddPocketWatch();
                 RemainingTimeChanged?.Invoke(_gameDuration);
                 ScoreChanged?.Invoke(_totalScore);
 
@@ -135,6 +138,7 @@ namespace Struckout.Infrastructure.Fake
                         {
                             _started = false;
                             _targetRadii.Clear();
+                            _pocketWatchId = null;
                             RemainingTimeChanged?.Invoke(TimeSpan.Zero);
                             Debug.Log("[Fake] game_master -> GameFinished");
                             _results[_currentGameId] = _totalScore;
@@ -193,15 +197,31 @@ namespace Struckout.Infrastructure.Fake
         private void RemoveAllTargets()
         {
             var ids = new List<Guid>(_targetRadii.Keys);
+            if (_pocketWatchId.HasValue) ids.Add(_pocketWatchId.Value);
+            _pocketWatchId = null;
             _targetRadii.Clear();
             foreach (var id in ids) TargetRemoved?.Invoke(id);
+        }
+
+        private void AddPocketWatch()
+        {
+            _pocketWatchId = Guid.NewGuid();
+            PocketWatchAdded?.Invoke(_pocketWatchId.Value, TargetOwnership.Single);
         }
 
         public UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || !_started || token.IsCancellationRequested || !_targetRadii.TryGetValue(targetId, out var radius) ||
+                if (!_connected || !_started || token.IsCancellationRequested) return UniTask.FromResult(false);
+                if (_pocketWatchId == targetId)
+                {
+                    _pocketWatchId = null;
+                    TargetRemoved?.Invoke(targetId);
+                    AddPocketWatch();
+                    return UniTask.FromResult(true);
+                }
+                if (!_targetRadii.TryGetValue(targetId, out var radius) ||
                     double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0)
                     return UniTask.FromResult(false);
                 var points = Math.Truncate(100000.0 / radius);

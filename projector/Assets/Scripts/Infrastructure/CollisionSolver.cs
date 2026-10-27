@@ -44,6 +44,7 @@ namespace Struckout.Infrastructure
             switch (target.Type)
             {
                 case TargetType.Compass:
+                case TargetType.PocketWatch:
                     {
                         var targetPoint = target.Coordinate;
                         var distance = Math.Pow(collisionPoint.X - targetPoint.X, 2) + Math.Pow(collisionPoint.Y - targetPoint.Y, 2);

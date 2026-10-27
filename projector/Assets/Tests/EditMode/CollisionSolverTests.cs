@@ -71,5 +71,16 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(NewSolver().TryCollision(At(1500, 800), targets, out var hit), Is.True);
             Assert.That(hit.Coordinate.X, Is.EqualTo(far.Coordinate.X));
         }
+        [TestCase(1099, 500, true)]
+        [TestCase(1100, 500, true)]
+        [TestCase(1101, 500, false)]
+        [TestCase(1100, 600, false)]
+        public void Pocket_watch_hit_area_matches_the_dial(double x, double y, bool expected)
+        {
+            var watch = new Target(Guid.NewGuid(),
+                new TargetGeometry(new TargetCoordinate(1000, 500), TargetType.PocketWatch, 200), TargetOwnership.All);
+            Assert.That(NewSolver().TryCollision(At(x, y), new[] { watch }, out _), Is.EqualTo(expected));
+        }
+
     }
 }

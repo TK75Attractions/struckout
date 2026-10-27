@@ -80,6 +80,22 @@ namespace Struckout.Application
             _uiService.AddTarget(target);
         }
 
+        /// <summary>Places a server-created watch locally because its event carries no geometry.</summary>
+        public void OnPocketWatchAdded(Guid id, TargetOwnership ownership)
+        {
+            if (_state.Targets.Any(target => target.Id == id)) return;
+            var diameter = _uiService.PocketWatchDiameter;
+            // Reserve the whole artwork canvas, including the crown above the collision circle.
+            var placement = new TargetGeometry(default, TargetType.PocketWatch,
+                diameter * PocketWatchLayout.CanvasToDialRatio);
+            var others = _state.Targets.Select(target => target.Geometry).ToList();
+            // Watch events can arrive before the initial Compass registration events.
+            if (!_state.Targets.Any(target => target.Type == TargetType.Compass) && _initialGeometry != null)
+                others.AddRange(_initialGeometry);
+            var coordinate = _targetGenerator.PickRelocation(placement, others);
+            OnTargetAdded(new Target(id, new TargetGeometry(coordinate, TargetType.PocketWatch, diameter), ownership));
+        }
+
         /// <summary>Applies an authoritative TargetRemoved event; RPC results never remove local targets.</summary>
         public void OnTargetRemoved(Guid id)
         {
@@ -150,6 +166,12 @@ namespace Struckout.Application
                     return;
                 }
 
+                if (target.Type == TargetType.PocketWatch)
+                {
+                    // The server replaces watches even in single play. Keep this UUID busy until its event.
+                    removalRequested = true;
+                    return;
+                }
                 if (target.Ownership == TargetOwnership.All) return;
 
                 removalRequested = true;

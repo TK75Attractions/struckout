@@ -378,6 +378,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Struckout.Unity::Struckout.Unity.UIService
   compassUI: {fileID: 3544847115103037246, guid: 323ec4845fd08c640a231ef7a1b709ea, type: 3}
+  pocketWatchFace: {fileID: 21300000, guid: f472fc2adff6f558db31e2e24b98e991, type: 3}
+  pocketWatchHand: {fileID: 21300000, guid: f2cbd89fe7a9f02afd45cc8d48318dba, type: 3}
+  pocketWatchDiameter: 200
   _hudCanvas: {fileID: 637544012}
   _displayFont: {fileID: 12800000, guid: 88c57f85fb174101a0fdba227a9b60b8, type: 3}
   resultFont: {fileID: 12800000, guid: aec0a93495f845d9a7d15e93532f1040, type: 3}

@@ -17,13 +17,14 @@ namespace Struckout.Tests.Tests.EditMode
     {
         private sealed class Client : IGameMasterClient
         {
-            public event Action<Difficulty, PlayerId> GameStarted { add { } remove { } }
+            public event Action<Difficulty, PlayerId, TimeSpan> GameStarted { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
             public event Action<Target> TargetAdded { add { } remove { } }
+            public event Action<Guid, TargetOwnership> PocketWatchAdded { add { } remove { } }
             public event Action<Guid> TargetRemoved { add { } remove { } }
             public event Action ConnectionLost { add { } remove { } }
             public uint? Score = 888;
@@ -72,6 +73,8 @@ namespace Struckout.Tests.Tests.EditMode
             public void ShowRanking(IReadOnlyList<RankingRow> rows) { Rows = rows; Message = null; }
             public void ShowScreenMessage(string message) => Message = message;
             public void SetRemainingTime(TimeSpan remaining) { }
+            public void StartGameClock(TimeSpan duration) { }
+            public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
             public void AddTarget(Target target) { }
             public bool RemoveTarget(Guid id) => true;

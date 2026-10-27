@@ -1,6 +1,7 @@
 using Cysharp.Threading.Tasks;
 using Struckout.Application;
 using Struckout.Domain;
+using Struckout.Domain.TargetDefinition;
 using System;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
@@ -60,15 +61,17 @@ namespace Struckout.Bootstrap
             _master.GameFinished += OnGameFinished;
             _master.ConnectionLost += OnConnectionLost;
             _master.TargetAdded += OnTargetAdded;
+            _master.PocketWatchAdded += OnPocketWatchAdded;
             _master.TargetRemoved += OnTargetRemoved;
             _master.RankingScreenRequested += OnRankingScreenRequested;
             _master.HomeScreenRequested += OnHomeScreenRequested;
         }
 
-        private void OnGameStarted(Difficulty difficulty, PlayerId playerId) =>
+        private void OnGameStarted(Difficulty difficulty, PlayerId playerId, TimeSpan duration) =>
             _dispatcher.Enqueue(() =>
             {
                 _screens.ShowPlaying(playerId);
+                _service.StartGameClock(duration);
                 ObserveAsync(_runtime.StartGameAsync(difficulty)).Forget();
             });
 
@@ -77,6 +80,9 @@ namespace Struckout.Bootstrap
 
         private void OnTargetAdded(Target target) =>
             _dispatcher.Enqueue(() => _runtime.OnTargetAdded(target));
+
+        private void OnPocketWatchAdded(Guid id, TargetOwnership ownership) =>
+            _dispatcher.Enqueue(() => _runtime.OnPocketWatchAdded(id, ownership));
 
         private void OnTargetRemoved(Guid id) =>
             _dispatcher.Enqueue(() => _runtime.OnTargetRemoved(id));
@@ -122,6 +128,7 @@ namespace Struckout.Bootstrap
             _master.GameFinished -= OnGameFinished;
             _master.ConnectionLost -= OnConnectionLost;
             _master.TargetAdded -= OnTargetAdded;
+            _master.PocketWatchAdded -= OnPocketWatchAdded;
             _master.TargetRemoved -= OnTargetRemoved;
             _master.RankingScreenRequested -= OnRankingScreenRequested;
             _master.HomeScreenRequested -= OnHomeScreenRequested;

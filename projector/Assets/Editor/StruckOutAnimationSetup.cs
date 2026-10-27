@@ -68,6 +68,23 @@ namespace Editor
 
         public static void ApplyFromCommandLine() => Apply();
 
+        [MenuItem("Tools/STRUCK OUT/Apply Pocket Watch Art")]
+        public static void ApplyPocketWatchArt()
+        {
+            var face = ImportSprite("pocket_watch_face.png");
+            var hand = ImportSprite("pocket_watch_hand.png");
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
+            var service = UnityEngine.Object.FindAnyObjectByType<UIService>()
+                ?? throw new InvalidOperationException("SampleScene needs UIService.");
+            var serialized = new SerializedObject(service);
+            SetSprite(serialized, "pocketWatchFace", face);
+            SetSprite(serialized, "pocketWatchHand", hand);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+        }
+
         private static Sprite ImportSprite(string name)
         {
             var path = ArtRoot + name;

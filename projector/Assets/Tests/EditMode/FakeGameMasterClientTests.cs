@@ -28,7 +28,7 @@ namespace Struckout.Tests.Tests.EditMode
             try
             {
                 await client.ConnectAsync();
-                client.GameStarted += (difficulty, _) => received.Add(difficulty);
+                client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
 
                 Assert.That(received, Has.Count.EqualTo(1));
                 Assert.That(received[0], Is.EqualTo(Difficulty.Normal));
@@ -44,7 +44,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             try
             {
-                client.GameStarted += (difficulty, _) => received.Add(difficulty);
+                client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
                 await client.ConnectAsync();
 
                 Assert.That(received, Has.Count.EqualTo(1));
@@ -60,7 +60,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             try
             {
-                client.GameStarted += (difficulty, _) => received.Add(difficulty);
+                client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
                 await client.ConnectAsync();
                 await client.ConnectAsync();
 
@@ -77,7 +77,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             await client.ConnectAsync();
             await client.DisconnectAsync();
-            client.GameStarted += (difficulty, _) => received.Add(difficulty);
+            client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
 
             Assert.That(received, Is.Empty);
         }
@@ -87,7 +87,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new FakeGameMasterClient();
             var received = new List<Difficulty>();
-            void Handler(Difficulty d, PlayerId _) => received.Add(d);
+            void Handler(Difficulty d, PlayerId _, TimeSpan duration) => received.Add(d);
 
             try
             {
@@ -162,7 +162,7 @@ namespace Struckout.Tests.Tests.EditMode
             var events = new List<string>();
             client.TargetAdded += _ => events.Add("added");
             client.TargetRemoved += _ => events.Add("removed");
-            client.GameStarted += (_, __) => events.Add("started");
+            client.GameStarted += (_, __, duration) => events.Add("started");
             try
             {
                 await client.ConnectAsync();
@@ -171,7 +171,7 @@ namespace Struckout.Tests.Tests.EditMode
                 await client.DisconnectAsync();
                 Assert.That(events, Is.Empty);
                 await client.ConnectAsync();
-                Assert.That(events, Is.EqualTo(new[] { "removed", "started" }));
+                Assert.That(events, Is.EqualTo(new[] { "removed", "removed", "started" }));
             }
             finally { await client.DisconnectAsync(); }
         }
@@ -202,7 +202,7 @@ namespace Struckout.Tests.Tests.EditMode
             var events = new List<string>();
             var playerId = default(PlayerId);
             var gameId = default(GameId);
-            client.GameStarted += (_, player) => { playerId = player; events.Add("started"); };
+            client.GameStarted += (_, player, duration) => { playerId = player; events.Add("started"); };
             client.GameFinished += game => { gameId = game; events.Add("finished"); };
             client.RankingScreenRequested += () => events.Add("ranking");
             client.HomeScreenRequested += () => events.Add("home");
@@ -217,6 +217,28 @@ namespace Struckout.Tests.Tests.EditMode
                 Assert.That(ranking.Count, Is.EqualTo(10));
                 Assert.That(history, Has.Some.Matches<PlayerGame>(game => game.GameId.Equals(gameId)));
                 Assert.That(await client.GetGameResultAsync(new GameId(9999)), Is.Null);
+            }
+            finally { await client.DisconnectAsync(); }
+        }
+
+        [Test]
+        public async Task Pocket_watch_is_created_and_replaced_by_server_events()
+        {
+            var client = new FakeGameMasterClient();
+            var watches = new List<Guid>();
+            var removed = new List<Guid>();
+            client.PocketWatchAdded += (id, owner) => watches.Add(id);
+            client.TargetRemoved += removed.Add;
+            try
+            {
+                await client.ConnectAsync();
+                Assert.That(watches, Has.Count.EqualTo(1));
+                var original = watches[0];
+                Assert.That(await client.HitTargetAsync(original), Is.True);
+                Assert.That(removed, Is.EqualTo(new[] { original }));
+                Assert.That(watches, Has.Count.EqualTo(2));
+                Assert.That(watches[1], Is.Not.EqualTo(original));
+                Assert.That(await client.HitTargetAsync(original), Is.False);
             }
             finally { await client.DisconnectAsync(); }
         }

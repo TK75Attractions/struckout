@@ -25,30 +25,30 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChhnYW1lX21hc3Rlci90YXJnZXQucHJvdG8SKHRrNzVhdHRyYWN0aW9ucy5z",
-            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEiswMKBlRhcmdldBIbCgl0YXJnZXRf",
-            "aWQYASABKAlSCHRhcmdldElkElQKB2NvbXBhc3MYAiABKAsyOC50azc1YXR0",
-            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Db21w",
-            "YXNzSABSB2NvbXBhc3MSVgoGc2luZ2xlGAMgASgLMjwudGs3NWF0dHJhY3Rp",
-            "b25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5UYXJnZXQuT3duZXJTaW5n",
-            "bGVIAVIGc2luZ2xlEk0KA2FsbBgEIAEoCzI5LnRrNzVhdHRyYWN0aW9ucy5z",
-            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0Lk93bmVyQWxsSAFSA2Fs",
-            "bBo9CgdDb21wYXNzEgwKAXgYASABKAJSAXgSDAoBeRgCIAEoAlIBeRIWCgZy",
-            "YWRpdXMYAyABKAJSBnJhZGl1cxosCgtPd25lclNpbmdsZRIdCgptYWNoaW5l",
-            "X2lkGAEgASgNUgltYWNoaW5lSWQaCgoIT3duZXJBbGxCDQoLdGFyZ2V0X2Rh",
-            "dGFCBwoFb3duZXIilgEKEEFkZFRhcmdldFJlcXVlc3QSHQoKbWFjaGluZV9p",
-            "ZBgBIAEoDVIJbWFjaGluZUlkElQKB2NvbXBhc3MYAiABKAsyOC50azc1YXR0",
-            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Db21w",
-            "YXNzSABSB2NvbXBhc3NCDQoLdGFyZ2V0X2RhdGEiMAoRQWRkVGFyZ2V0UmVz",
-            "cG9uc2USGwoJdGFyZ2V0X2lkGAEgASgJUgh0YXJnZXRJZCJRChNSZW1vdmVU",
-            "YXJnZXRSZXF1ZXN0Eh0KCm1hY2hpbmVfaWQYASABKA1SCW1hY2hpbmVJZBIb",
-            "Cgl0YXJnZXRfaWQYAiABKAlSCHRhcmdldElkIhYKFFJlbW92ZVRhcmdldFJl",
-            "c3BvbnNlIk4KEEhpdFRhcmdldFJlcXVlc3QSHQoKbWFjaGluZV9pZBgBIAEo",
-            "DVIJbWFjaGluZUlkEhsKCXRhcmdldF9pZBgCIAEoCVIIdGFyZ2V0SWQiEwoR",
-            "SGl0VGFyZ2V0UmVzcG9uc2ViBnByb3RvMw=="));
+            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEi3wMKBlRhcmdldBIRCgl0YXJnZXRf",
+            "aWQYASABKAkSSwoHY29tcGFzcxgCIAEoCzI4LnRrNzVhdHRyYWN0aW9ucy5z",
+            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0LkNvbXBhc3NIABJUCgxw",
+            "b2NrZXRfd2F0Y2gYBSABKAsyPC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0",
+            "LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Qb2NrZXRXYXRjaEgAEk4KBnNpbmds",
+            "ZRgDIAEoCzI8LnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0",
+            "ZXIudjEuVGFyZ2V0Lk93bmVyU2luZ2xlSAESSAoDYWxsGAQgASgLMjkudGs3",
+            "NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5UYXJnZXQu",
+            "T3duZXJBbGxIARovCgdDb21wYXNzEgkKAXgYASABKAISCQoBeRgCIAEoAhIO",
+            "CgZyYWRpdXMYAyABKAIaDQoLUG9ja2V0V2F0Y2gaIQoLT3duZXJTaW5nbGUS",
+            "EgoKbWFjaGluZV9pZBgBIAEoDRoKCghPd25lckFsbEINCgt0YXJnZXRfZGF0",
+            "YUIHCgVvd25lciKCAQoQQWRkVGFyZ2V0UmVxdWVzdBISCgptYWNoaW5lX2lk",
+            "GAEgASgNEksKB2NvbXBhc3MYAiABKAsyOC50azc1YXR0cmFjdGlvbnMuc3Ry",
+            "dWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Db21wYXNzSABCDQoLdGFy",
+            "Z2V0X2RhdGEiJgoRQWRkVGFyZ2V0UmVzcG9uc2USEQoJdGFyZ2V0X2lkGAEg",
+            "ASgJIjwKE1JlbW92ZVRhcmdldFJlcXVlc3QSEgoKbWFjaGluZV9pZBgBIAEo",
+            "DRIRCgl0YXJnZXRfaWQYAiABKAkiFgoUUmVtb3ZlVGFyZ2V0UmVzcG9uc2Ui",
+            "OQoQSGl0VGFyZ2V0UmVxdWVzdBISCgptYWNoaW5lX2lkGAEgASgNEhEKCXRh",
+            "cmdldF9pZBgCIAEoCSITChFIaXRUYXJnZXRSZXNwb25zZWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Parser, new[]{ "TargetId", "Compass", "Single", "All" }, new[]{ "TargetData", "Owner" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass.Parser, new[]{ "X", "Y", "Radius" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Parser, new[]{ "TargetId", "Compass", "PocketWatch", "Single", "All" }, new[]{ "TargetData", "Owner" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass.Parser, new[]{ "X", "Y", "Radius" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerSingle), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerSingle.Parser, new[]{ "MachineId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerAll), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerAll.Parser, null, null, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetRequest), global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetRequest.Parser, new[]{ "MachineId", "Compass" }, new[]{ "TargetData" }, null, null, null),
@@ -103,6 +103,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         case TargetDataOneofCase.Compass:
           Compass = other.Compass.Clone();
           break;
+        case TargetDataOneofCase.PocketWatch:
+          PocketWatch = other.PocketWatch.Clone();
+          break;
       }
 
       switch (other.OwnerCase) {
@@ -150,6 +153,21 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
     }
 
+    /// <summary>Field number for the "pocket_watch" field.</summary>
+    public const int PocketWatchFieldNumber = 5;
+    /// <summary>
+    /// PocketWatch's owner is always OwnerAll in multi-play mode.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch PocketWatch {
+      get { return targetDataCase_ == TargetDataOneofCase.PocketWatch ? (global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch) targetData_ : null; }
+      set {
+        targetData_ = value;
+        targetDataCase_ = value == null ? TargetDataOneofCase.None : TargetDataOneofCase.PocketWatch;
+      }
+    }
+
     /// <summary>Field number for the "single" field.</summary>
     public const int SingleFieldNumber = 3;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -179,6 +197,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     public enum TargetDataOneofCase {
       None = 0,
       Compass = 2,
+      PocketWatch = 5,
     }
     private TargetDataOneofCase targetDataCase_ = TargetDataOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -232,6 +251,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
       if (TargetId != other.TargetId) return false;
       if (!object.Equals(Compass, other.Compass)) return false;
+      if (!object.Equals(PocketWatch, other.PocketWatch)) return false;
       if (!object.Equals(Single, other.Single)) return false;
       if (!object.Equals(All, other.All)) return false;
       if (TargetDataCase != other.TargetDataCase) return false;
@@ -245,6 +265,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       int hash = 1;
       if (TargetId.Length != 0) hash ^= TargetId.GetHashCode();
       if (targetDataCase_ == TargetDataOneofCase.Compass) hash ^= Compass.GetHashCode();
+      if (targetDataCase_ == TargetDataOneofCase.PocketWatch) hash ^= PocketWatch.GetHashCode();
       if (ownerCase_ == OwnerOneofCase.Single) hash ^= Single.GetHashCode();
       if (ownerCase_ == OwnerOneofCase.All) hash ^= All.GetHashCode();
       hash ^= (int) targetDataCase_;
@@ -283,6 +304,10 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         output.WriteRawTag(34);
         output.WriteMessage(All);
       }
+      if (targetDataCase_ == TargetDataOneofCase.PocketWatch) {
+        output.WriteRawTag(42);
+        output.WriteMessage(PocketWatch);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -309,6 +334,10 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         output.WriteRawTag(34);
         output.WriteMessage(All);
       }
+      if (targetDataCase_ == TargetDataOneofCase.PocketWatch) {
+        output.WriteRawTag(42);
+        output.WriteMessage(PocketWatch);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -324,6 +353,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
       if (targetDataCase_ == TargetDataOneofCase.Compass) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Compass);
+      }
+      if (targetDataCase_ == TargetDataOneofCase.PocketWatch) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(PocketWatch);
       }
       if (ownerCase_ == OwnerOneofCase.Single) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Single);
@@ -352,6 +384,12 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             Compass = new global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass();
           }
           Compass.MergeFrom(other.Compass);
+          break;
+        case TargetDataOneofCase.PocketWatch:
+          if (PocketWatch == null) {
+            PocketWatch = new global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch();
+          }
+          PocketWatch.MergeFrom(other.PocketWatch);
           break;
       }
 
@@ -420,6 +458,15 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             All = subBuilder;
             break;
           }
+          case 42: {
+            global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch subBuilder = new global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch();
+            if (targetDataCase_ == TargetDataOneofCase.PocketWatch) {
+              subBuilder.MergeFrom(PocketWatch);
+            }
+            input.ReadMessage(subBuilder);
+            PocketWatch = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -468,6 +515,15 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             }
             input.ReadMessage(subBuilder);
             All = subBuilder;
+            break;
+          }
+          case 42: {
+            global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch subBuilder = new global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch();
+            if (targetDataCase_ == TargetDataOneofCase.PocketWatch) {
+              subBuilder.MergeFrom(PocketWatch);
+            }
+            input.ReadMessage(subBuilder);
+            PocketWatch = subBuilder;
             break;
           }
         }
@@ -753,6 +809,167 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
 
       [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class PocketWatch : pb::IMessage<PocketWatch>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<PocketWatch> _parser = new pb::MessageParser<PocketWatch>(() => new PocketWatch());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<PocketWatch> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Target.Descriptor.NestedTypes[1]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public PocketWatch() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public PocketWatch(PocketWatch other) : this() {
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public PocketWatch Clone() {
+          return new PocketWatch(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as PocketWatch);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(PocketWatch other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(PocketWatch other) {
+          if (other == null) {
+            return;
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+            }
+          }
+        }
+        #endif
+
+      }
+
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
       public sealed partial class OwnerSingle : pb::IMessage<OwnerSingle>
       #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           , pb::IBufferMessage
@@ -767,7 +984,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Target.Descriptor.NestedTypes[1]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Target.Descriptor.NestedTypes[2]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -968,7 +1185,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Target.Descriptor.NestedTypes[2]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Target.Descriptor.NestedTypes[3]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

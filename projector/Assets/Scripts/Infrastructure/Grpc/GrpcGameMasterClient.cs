@@ -43,7 +43,7 @@ namespace Struckout.Infrastructure.Grpc
         /// <summary>game_master と切れたとき、購読をやり直す間隔。</summary>
         private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
 
-        public event Action<Difficulty, PlayerId> GameStarted;
+        public event Action<Difficulty, PlayerId, TimeSpan> GameStarted;
         public event Action<GameId> GameFinished;
         public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
@@ -51,6 +51,7 @@ namespace Struckout.Infrastructure.Grpc
         public event Action<uint> ScoreChanged;
         public event Action ConnectionLost;
         public event Action<DomainTarget> TargetAdded;
+        public event Action<Guid, TargetOwnership> PocketWatchAdded;
         public event Action<Guid> TargetRemoved;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
@@ -191,7 +192,8 @@ namespace Struckout.Infrastructure.Grpc
                         break;
                     }
                     _running = true;
-                    GameStarted?.Invoke(received.GameStarted.Difficulty, playerId.Value);
+                    GameStarted?.Invoke(received.GameStarted.Difficulty, playerId.Value,
+                        TimeSpan.FromSeconds(received.GameStarted.GameDurSecs));
                     break;
 
                 case Event.EventDataOneofCase.GameFinished:
@@ -242,6 +244,12 @@ namespace Struckout.Infrastructure.Grpc
                     }
 
                     if (!data.IsOwnedBy(_settings.machineId)) break;
+                    if (data.TargetDataCase == ProtoTarget.TargetDataOneofCase.PocketWatch)
+                    {
+                        PocketWatchAdded?.Invoke(targetId,
+                            data.OwnerCase == ProtoTarget.OwnerOneofCase.All ? TargetOwnership.All : TargetOwnership.Single);
+                        break;
+                    }
                     var compass = data.Compass;
                     if (compass == null || float.IsNaN(compass.X) || float.IsInfinity(compass.X) ||
                         float.IsNaN(compass.Y) || float.IsInfinity(compass.Y) ||

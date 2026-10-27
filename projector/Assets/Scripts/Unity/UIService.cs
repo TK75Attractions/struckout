@@ -34,6 +34,15 @@ namespace Struckout.Unity
         [FormerlySerializedAs("circleUI")] [SerializeField]
         private Transform compassUI;
 
+        [Header("Pocket Watch")]
+        [SerializeField] private Sprite pocketWatchFace;
+        [SerializeField] private Sprite pocketWatchHand;
+        [SerializeField, Min(1f)]
+        [Tooltip("懐中時計の文字盤の直径。描画と当たり判定で共有する盤面ピクセル値。")]
+        private float pocketWatchDiameter = 200f;
+        public float PocketWatchDiameter => pocketWatchDiameter;
+        private readonly GameClock _gameClock = new();
+
         [FormerlySerializedAs("_hudCanvas")]
         [Header("Game HUD")]
         [SerializeField] private Canvas hudCanvas;
@@ -107,6 +116,9 @@ namespace Struckout.Unity
         {
             _uiRoot = uiRoot;
             _world = world;
+            if (!float.IsFinite(pocketWatchDiameter) || pocketWatchDiameter <= 0 ||
+                pocketWatchDiameter * PocketWatchLayout.CanvasToDialRatio > Math.Min(world.Field.width, world.Field.height))
+                throw new InvalidOperationException("[UI] 懐中時計の直径は盤面に収まる正の値を設定してください。");
             _targetToTransform = new();
 
             CreateFieldSprite("ArenaBackground", backgroundSprite, BackgroundSortingOrder);
@@ -213,8 +225,15 @@ namespace Struckout.Unity
             return label;
         }
 
+        public void StartGameClock(TimeSpan duration)
+        {
+            _gameClock.Start(duration, Time.realtimeSinceStartupAsDouble);
+            SetRemainingTime(duration);
+        }
+
         public void SetRemainingTime(TimeSpan remaining)
         {
+            _gameClock.Correct(remaining, Time.realtimeSinceStartupAsDouble);
             if (_remainingTimeText == null) return;
             var seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
             _remainingTimeText.text = string.Format(CultureInfo.InvariantCulture,
@@ -269,6 +288,8 @@ namespace Struckout.Unity
             var index = 0;
             foreach (var trans in _targetToTransform.Values)
             {
+                if (trans != null && trans.TryGetComponent<PocketWatchUI>(out var watch))
+                    watch.gameObject.SetActive(screen == ProjectorScreen.Playing);
                 if (trans != null && trans.TryGetComponent<CompassTargetUI>(out var targetUI))
                 {
                     targetUI.SetPresentationVisible(screen == ProjectorScreen.Playing, index * 0.07f);
@@ -290,6 +311,14 @@ namespace Struckout.Unity
             Transform instantiatedTrans;
             switch (target.Type)
             {
+                case TargetType.PocketWatch:
+                    if (pocketWatchFace == null || pocketWatchHand == null)
+                        throw new InvalidOperationException("[UI] 懐中時計の文字盤と針の画像を設定してください。");
+                    var watch = new GameObject("PocketWatch").AddComponent<PocketWatchUI>();
+                    watch.transform.SetParent(_uiRoot.TargetRoot, false);
+                    watch.Configure(pocketWatchFace, pocketWatchHand, _gameClock);
+                    instantiatedTrans = watch.transform;
+                    break;
                 case TargetType.Compass:
                     if (compassUI == null)
                     {
@@ -311,6 +340,8 @@ namespace Struckout.Unity
             var ui = instantiatedTrans.GetComponent<ITargetUI>() ?? throw new InvalidOperationException("The Prefab doesn't contain ITargetUI");
             ui.Initialize(target, _world);
             _targetToTransform[target.Id] = instantiatedTrans;
+            if (target.Type == TargetType.PocketWatch)
+                instantiatedTrans.gameObject.SetActive(_screen == ProjectorScreen.Playing);
             if (instantiatedTrans.TryGetComponent<CompassTargetUI>(out var compass))
             {
                 compass.SetPresentationVisible(_screen == ProjectorScreen.Playing,

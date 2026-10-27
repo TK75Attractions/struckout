@@ -18,10 +18,10 @@ namespace Struckout.Application.Interface
     public interface IGameMasterClient
     {
         /// <summary>
-        /// ゲームが始まった。この後で的を登録し、命中を通知できる。
+        /// ゲームが始まった。難易度・プレイヤー・制限時間を受け取り、的を登録して命中を通知できる。
         /// 受信スレッドから飛ぶので、UI に触る購読側はマーシャリングすること。
         /// </summary>
-        event Action<Difficulty, PlayerId> GameStarted;
+        event Action<Difficulty, PlayerId, TimeSpan> GameStarted;
 
         /// <summary>
         /// 制限時間が尽きてゲームが終わった。これ以降、的の操作は受け付けられない。
@@ -40,6 +40,9 @@ namespace Struckout.Application.Interface
 
         /// <summary>登録された的。受信スレッドから通知されるため、状態・描画の更新はマーシャリングする。</summary>
         event Action<Target> TargetAdded;
+
+        /// <summary>座標を持たない懐中時計の追加通知。配置はメインスレッドで決定する。</summary>
+        event Action<Guid, TargetOwnership> PocketWatchAdded;
 
         /// <summary>削除された的の UUID。受信スレッドから通知される。</summary>
         event Action<Guid> TargetRemoved;
