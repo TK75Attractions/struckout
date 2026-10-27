@@ -290,6 +290,8 @@ async fn event_stream_notifies_in_correct_order() {
     assert_event!(stream, EventData::SessionDifficultyChanged(_));
     assert_event!(stream, EventData::GameStarted(_));
 
+    assert_event!(stream, EventData::TargetAdded(_));
+
     // Assert: TimeLimitNotify
     let finished = loop {
         let resp = stream.next().await.unwrap();
@@ -1172,4 +1174,116 @@ async fn get_game_result_reports_database_errors() {
         .expect_err("database query fails");
 
     assert_eq!(error.code(), tonic::Code::Internal);
+}
+
+#[rstest]
+#[case::single(GameMode::Single)]
+#[case::multi(GameMode::Multi)]
+#[tokio::test(start_paused = true)]
+async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameMode) {
+    let service = configured_recorded_service(mode, RecordingDataSource::default());
+    let mut events = service.event_tx.subscribe();
+    let count = if mode.is_multi() { 2 } else { 1 };
+    for machine_id in 1..=count {
+        service
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id }))
+            .await
+            .expect("ready");
+        if mode.is_multi() && machine_id == 1 {
+            assert_matches!(
+                events.try_recv(),
+                Err(broadcast::error::TryRecvError::Empty)
+            );
+        }
+    }
+    let started = events.try_recv().expect("game started");
+    match started.target {
+        EventTarget::All => assert!(mode.is_multi()),
+        EventTarget::Single(id) => assert_eq!(id, MachineId::new(1)),
+    }
+    assert_matches!(started.data, Ok(SuccessfulEvent::GameStarted { .. }));
+    let mut watches = Vec::new();
+    for _ in 0..count {
+        let event = events.try_recv().expect("initial pocket watch");
+        let EventTarget::Single(machine_id) = event.target else {
+            panic!("single owner")
+        };
+        let Ok(SuccessfulEvent::TargetAdded { target }) = event.data else {
+            panic!("target added")
+        };
+        assert_eq!(
+            target.owner,
+            Some(Owner::Single(struckout_proto::target::OwnerSingle {
+                machine_id: machine_id.into(),
+            }))
+        );
+        assert_matches!(
+            target.target_data,
+            Some(struckout_proto::target::TargetData::PocketWatch(_))
+        );
+        watches.push((machine_id, target.target_id));
+    }
+    assert_eq!(
+        watches
+            .iter()
+            .map(|(id, _)| *id)
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        count as usize
+    );
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+    for (index, (machine_id, mut target_id)) in watches.into_iter().enumerate() {
+        for hit in 0..2 {
+            service
+                .hit_target(Request::new(HitTargetRequest {
+                    machine_id: machine_id.into(),
+                    target_id: target_id.clone(),
+                }))
+                .await
+                .expect("hit watch");
+            let score = events.try_recv().expect("score event");
+            assert_matches!(score.data, Ok(SuccessfulEvent::GameScoreChanged { total_score })
+                if total_score == (index as u32 * 2 + hit + 1) * 500);
+            match score.target {
+                EventTarget::All => assert!(mode.is_multi()),
+                EventTarget::Single(id) => assert_eq!(id, machine_id),
+            }
+            let removed = events.try_recv().expect("remove event");
+            assert_matches!(removed.target, EventTarget::Single(id) if id == machine_id);
+            assert_matches!(removed.data, Ok(SuccessfulEvent::TargetRemoved { target_id: id }) if id == target_id);
+            let added = events.try_recv().expect("replacement event");
+            assert_matches!(added.target, EventTarget::Single(id) if id == machine_id);
+            let Ok(SuccessfulEvent::TargetAdded { target }) = added.data else {
+                panic!("target added")
+            };
+            assert_ne!(target.target_id, target_id);
+            assert_matches!(
+                target.target_data,
+                Some(struckout_proto::target::TargetData::PocketWatch(_))
+            );
+            let error = service
+                .hit_target(Request::new(HitTargetRequest {
+                    machine_id: machine_id.into(),
+                    target_id,
+                }))
+                .await
+                .expect_err("old watch removed");
+            assert_eq!(error.code(), tonic::Code::NotFound);
+            target_id = target.target_id;
+            assert_matches!(
+                events.try_recv(),
+                Err(broadcast::error::TryRecvError::Empty)
+            );
+            let sessions = service.sessions.read();
+            let (state,) = sessions
+                .get(machine_id)
+                .expect("session")
+                .as_running()
+                .expect("running");
+            assert_eq!(state.shared.read().targets.len(), count as usize);
+        }
+    }
 }

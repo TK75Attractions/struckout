@@ -112,7 +112,9 @@ projector が受信時に既存の的を避ける場所を選ぶ。初期の Com
 `RemoveTarget` / `AddTarget` は要求せず、game_master の `TargetRemoved` と
 次の `TargetAdded` に従って別の UUID・位置・GameObject に置き換える。
 得点や制限時間の変更は projector で計算しない。
-game_master の懐中時計の生成・命中処理と開始時の制限時間通知の実装は別途必要。
+game_master はゲーム開始通知の後、各マシンに `OwnerSingle` の懐中時計を1個ずつ追加する。
+命中時は共有得点に固定500点を加算し、所有マシンへ削除・新しい UUID での追加を順に通知する。
+残り時間は変更しない。`GameStarted.game_dur_secs` はサーバーのゲーム時間（90秒）を通知する。
 
 ## Fake モード
 

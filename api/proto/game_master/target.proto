@@ -16,12 +16,12 @@ message Target {
 
   oneof target_data {
     Compass compass = 2;
-    // PocketWatch's owner is always OwnerAll in multi-play mode.
+    // One PocketWatch per machine, owned by OwnerSingle in every game mode.
     PocketWatch pocket_watch = 5;
   }
 
   message OwnerSingle {
-    // machine_id of the owning single-play session.
+    // machine_id of the owning machine session.
     uint32 machine_id = 1;
   }
   message OwnerAll {}

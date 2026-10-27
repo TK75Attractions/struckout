@@ -160,7 +160,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     /// <summary>Field number for the "pocket_watch" field.</summary>
     public const int PocketWatchFieldNumber = 5;
     /// <summary>
-    /// PocketWatch's owner is always OwnerAll in multi-play mode.
+    /// One PocketWatch per machine, owned by OwnerSingle in every game mode.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -1022,7 +1022,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         public const int MachineIdFieldNumber = 1;
         private uint machineId_;
         /// <summary>
-        /// machine_id of the owning single-play session.
+        /// machine_id of the owning machine session.
         /// </summary>
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

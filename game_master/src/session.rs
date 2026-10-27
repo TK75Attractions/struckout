@@ -67,6 +67,34 @@ pub enum HitTargetError {
     ScoreOverflow,
 }
 
+/// The score update and optional target replacement produced by a hit.
+#[derive(Debug)]
+pub struct HitTargetOutcome {
+    pub total_score: u32,
+    pub event_target: EventTarget,
+    pub replacement: Option<(Target, Target)>,
+}
+
+/// Creates one pocket watch for each participating machine.
+fn pocket_watches(machine_ids: impl IntoIterator<Item = MachineId>) -> HashMap<Uuid, Target> {
+    machine_ids
+        .into_iter()
+        .map(|machine_id| {
+            let target_id = Uuid::new_v4();
+            (
+                target_id,
+                Target {
+                    target_id: target_id.to_string(),
+                    target_data: Some(TargetData::PocketWatch(Default::default())),
+                    owner: Some(Owner::Single(OwnerSingle {
+                        machine_id: machine_id.into(),
+                    })),
+                },
+            )
+        })
+        .collect()
+}
+
 impl Sessions {
     /// Constructs new [`Sessions`].
     pub fn new() -> Self {
@@ -319,16 +347,15 @@ impl Sessions {
         Ok(target)
     }
 
-    /// Adds `100000 / radius`, truncated to an integer, to the shared game score.
+    /// Adds points to the shared game score and replaces a hit pocket watch.
     ///
-    /// Keeps the target registered for subsequent hits and returns the new total and
-    /// event recipients. Validation and checked addition precede mutation so errors
-    /// leave the game unchanged.
+    /// Compass hits add `100000 / radius`, truncated to an integer; pocket watch
+    /// hits add 500 points. Errors leave the score and targets unchanged.
     pub fn hit_target(
         &mut self,
         machine_id: MachineId,
         target_id: Uuid,
-    ) -> Result<(u32, EventTarget), HitTargetError> {
+    ) -> Result<HitTargetOutcome, HitTargetError> {
         // TODO: スコアの算出を別のモジュールに切り出す
         let ms = self
             .get(machine_id)
@@ -349,17 +376,20 @@ impl Sessions {
                 machine_id,
                 target_id,
             })?;
-        let radius = match target
+        let points = match target
             .target_data
             .as_ref()
             .ok_or(HitTargetError::MissingTargetData)?
         {
-            TargetData::Compass(compass) => f64::from(compass.radius),
+            TargetData::Compass(compass) => {
+                let radius = f64::from(compass.radius);
+                if !radius.is_finite() || radius <= 0.0 {
+                    return Err(HitTargetError::InvalidRadius);
+                }
+                (100_000.0 / radius).trunc()
+            }
+            TargetData::PocketWatch(_) => 500.0,
         };
-        if !radius.is_finite() || radius <= 0.0 {
-            return Err(HitTargetError::InvalidRadius);
-        }
-        let points = (100_000.0 / radius).trunc();
         if points > f64::from(u32::MAX) {
             return Err(HitTargetError::ScoreOverflow);
         }
@@ -367,13 +397,30 @@ impl Sessions {
             .score
             .checked_add(points as u32)
             .ok_or(HitTargetError::ScoreOverflow)?;
+        let replacement = if matches!(target.target_data, Some(TargetData::PocketWatch(_))) {
+            let removed = target.clone();
+            let new_id = Uuid::new_v4();
+            let added = Target {
+                target_id: new_id.to_string(),
+                ..removed.clone()
+            };
+            shared.targets.remove(&target_id);
+            shared.targets.insert(new_id, added.clone());
+            Some((removed, added))
+        } else {
+            None
+        };
         shared.score = total_score;
-        let target = if shared.mode.is_multi() {
+        let event_target = if shared.mode.is_multi() {
             EventTarget::All
         } else {
             EventTarget::Single(machine_id)
         };
-        Ok((total_score, target))
+        Ok(HitTargetOutcome {
+            total_score,
+            event_target,
+            replacement,
+        })
     }
 
     /// Returns the score of the session on `machine_id`.
@@ -555,6 +602,8 @@ impl Sessions {
                 let ms = self
                     .get_mut(machine_id)
                     .expect("session existence was checked above");
+                let targets = pocket_watches([machine_id]);
+                let initial_targets = targets.values().cloned().collect();
                 *ms = MachineSession::Running(RunningState {
                     machine_id,
                     player_id,
@@ -563,10 +612,11 @@ impl Sessions {
                         mode,
                         difficulty,
                         score: 0,
-                        targets: HashMap::new(),
+                        targets,
                     })),
                 });
                 Ok(SetReadyAction::RunSingle {
+                    initial_targets,
                     difficulty,
                     player_id,
                 })
@@ -605,12 +655,14 @@ impl Sessions {
                 let another_player_id = another_state.player_id;
                 assert!(another_state.mode.is_multi());
                 assert_eq!(difficulty, another_state.difficulty);
+                let targets = pocket_watches([machine_id, another_machine_id]);
+                let initial_targets = targets.values().cloned().collect();
                 let shared = Arc::new(RwLock::new(SharedRunningState {
                     started_at: UtcDateTime::now(),
                     mode: GameMode::Multi,
                     difficulty,
                     score: 0,
-                    targets: HashMap::new(),
+                    targets,
                 }));
                 {
                     let ms = self
@@ -631,6 +683,7 @@ impl Sessions {
                     });
                 }
                 let action = SetReadyAction::RunMulti {
+                    initial_targets,
                     difficulty,
                     player_1: (machine_id, player_id),
                     player_2: (another_machine_id, another_player_id),
@@ -683,10 +736,12 @@ impl Default for Sessions {
 /// Returned from [`Sessions::set_ready()`].
 pub enum SetReadyAction {
     RunSingle {
+        initial_targets: Vec<Target>,
         difficulty: Difficulty,
         player_id: PlayerId,
     },
     RunMulti {
+        initial_targets: Vec<Target>,
         difficulty: Difficulty,
         player_1: (MachineId, PlayerId),
         player_2: (MachineId, PlayerId),
@@ -921,12 +976,18 @@ mod tests {
             )
             .expect("running game")
             .0;
-        let (score, target) = sessions
+        let HitTargetOutcome {
+            total_score: score,
+            event_target: target,
+            ..
+        } = sessions
             .hit_target(machine_id, target_id)
             .expect("registered target");
         assert_eq!(score, points);
         assert_matches!(target, EventTarget::Single(id) if id == machine_id);
-        let (score, _) = sessions
+        let HitTargetOutcome {
+            total_score: score, ..
+        } = sessions
             .hit_target(machine_id, target_id)
             .expect("target remains registered");
         assert_eq!(score, 2 * points);
@@ -944,7 +1005,11 @@ mod tests {
             .add_target(compass_target(200.0), Owner::All(Default::default()))
             .expect("running game")
             .0;
-        let (score, target) = sessions
+        let HitTargetOutcome {
+            total_score: score,
+            event_target: target,
+            ..
+        } = sessions
             .hit_target(MachineId::new(2), target_id)
             .expect("shared target");
         assert_eq!(score, 500);
@@ -1011,6 +1076,36 @@ mod tests {
             Err(HitTargetError::ScoreOverflow)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), score);
+    }
+
+    #[test]
+    fn pocket_watch_score_overflow_preserves_the_target_and_start_time() {
+        let mut sessions = running_sessions(GameMode::Multi);
+        let machine_id = MachineId::new(1);
+        let (target_id, targets, started_at) = {
+            let (state,) = sessions
+                .get(machine_id)
+                .expect("session")
+                .as_running()
+                .expect("running");
+            let mut shared = state.shared.write();
+            shared.score = u32::MAX - 499;
+            let target_id = *shared.targets.keys().next().expect("initial pocket watch");
+            (target_id, shared.targets.clone(), shared.started_at)
+        };
+        assert_matches!(
+            sessions.hit_target(machine_id, target_id),
+            Err(HitTargetError::ScoreOverflow)
+        );
+        let (state,) = sessions
+            .get(machine_id)
+            .expect("session")
+            .as_running()
+            .expect("running");
+        let shared = state.shared.read();
+        assert_eq!(shared.score, u32::MAX - 499);
+        assert_eq!(shared.targets, targets);
+        assert_eq!(shared.started_at, started_at);
     }
 
     #[test]
