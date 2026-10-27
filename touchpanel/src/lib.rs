@@ -57,14 +57,18 @@ struct Cli {
     machine_id: u32,
 }
 
-fn version() -> String {
+pub fn version() -> String {
+    version_option().unwrap_or("no version".to_string())
+}
+
+pub fn version_option() -> Option<String> {
     if let Some(version) = option_env!("ST_VERSION") {
         let Some(short_hash) = option_env!("ST_COMMIT_SHORT_HASH") else {
-            unreachable!("ST_COMMIT_SHORT_HASH should always exist when ST_VERSOPM is provided")
+            unreachable!("ST_COMMIT_SHORT_HASH should always exist when ST_VERSION is provided")
         };
-        format!("{} ({})", version, short_hash)
+        Some(format!("{} ({})", version, short_hash))
     } else {
-        "no version".to_string()
+        None
     }
 }
 

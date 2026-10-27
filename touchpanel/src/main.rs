@@ -22,7 +22,7 @@ fn main() -> std::process::ExitCode {
     let _sentry_guard = sentry::init(
         sentry::ClientOptions::new()
             .dsn(SENTRY_DSN)
-            .maybe_release(sentry::release_name!()),
+            .maybe_release(version_option()),
     );
 
     let reg = tracing_subscriber::registry().with(fmt_layer);
