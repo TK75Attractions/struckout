@@ -434,7 +434,7 @@ where
                     if self
                         .event_tx
                         .send(Event {
-                            target: EventTarget::Single(machine_id),
+                            target: EventTarget::All,
                             data: Ok(SuccessfulEvent::GameStarted {
                                 difficulty,
                                 players: GamePlayers::Multi(
