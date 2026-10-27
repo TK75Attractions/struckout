@@ -941,6 +941,129 @@ async fn complete_game(
     service.clone().handle_game_completion(target, rx).await;
 }
 
+/// Collects start notifications until the stream has no events for 10 milliseconds.
+async fn collect_game_started(
+    stream: &mut <GameMasterSessionServiceImpl<RecordingDataSource> as GameMasterSessionService>::ListenEventsStream,
+) -> Vec<struckout_proto::event::GameStarted> {
+    let mut started = Vec::new();
+    while let Ok(event) = tokio::time::timeout(Duration::from_millis(10), stream.next()).await {
+        let event = event
+            .expect("event stream remains open")
+            .expect("event delivery succeeds")
+            .event
+            .expect("event is present")
+            .event_data
+            .expect("event data is present");
+        if let EventData::GameStarted(event) = event {
+            started.push(event);
+        }
+    }
+    started
+}
+
+#[rstest]
+#[case::machine_1_first([1, 2])]
+#[case::machine_2_first([2, 1])]
+#[tokio::test(start_paused = true)]
+async fn multi_game_started_reaches_both_machines_once(#[case] ready_order: [u32; 2]) {
+    use struckout_proto::event::{GameStarted, game_started};
+
+    let service = configured_recorded_service(GameMode::Multi, RecordingDataSource::default());
+    let mut streams = Vec::new();
+    for machine_id in [1, 2] {
+        streams.push(
+            service
+                .listen_events(Request::new(ListenEventsRequest { machine_id }))
+                .await
+                .expect("subscribe before either machine is ready")
+                .into_inner(),
+        );
+    }
+
+    service
+        .set_session_ready(Request::new(SetSessionReadyRequest {
+            machine_id: ready_order[0],
+        }))
+        .await
+        .expect("first machine waits for its partner");
+    for stream in &mut streams {
+        assert!(collect_game_started(stream).await.is_empty());
+    }
+
+    service
+        .set_session_ready(Request::new(SetSessionReadyRequest {
+            machine_id: ready_order[1],
+        }))
+        .await
+        .expect("second machine starts the shared game");
+
+    let player_info = |machine_id| {
+        Some(game_started::PlayerInfo {
+            machine_id,
+            player_id: machine_id + 10,
+        })
+    };
+    let expected = GameStarted {
+        difficulty: Difficulty::Normal.into(),
+        game_started_player_info: Some(game_started::GameStartedPlayerInfo::Multi(
+            game_started::Multi {
+                player_1: player_info(ready_order[1]),
+                player_2: player_info(ready_order[0]),
+            },
+        )),
+    };
+    for stream in &mut streams {
+        assert_eq!(collect_game_started(stream).await, vec![expected]);
+    }
+}
+
+#[rstest]
+#[case::machine_1(1, 2)]
+#[case::machine_2(2, 1)]
+#[tokio::test(start_paused = true)]
+async fn single_game_started_reaches_only_its_machine(
+    #[case] machine_id: u32,
+    #[case] other_machine_id: u32,
+) {
+    use struckout_proto::event::{GameStarted, game_started};
+
+    let service = GameMasterSessionServiceImpl::new(RecordingDataSource::default());
+    let mut streams = Vec::new();
+    for machine_id in [machine_id, other_machine_id] {
+        streams.push(
+            service
+                .listen_events(Request::new(ListenEventsRequest { machine_id }))
+                .await
+                .expect("subscribe before starting the game")
+                .into_inner(),
+        );
+    }
+
+    start_game_single(
+        &service,
+        MachineId::new(machine_id),
+        Difficulty::Normal,
+        PlayerId::new(11),
+    )
+    .await;
+
+    assert_eq!(
+        collect_game_started(&mut streams[0]).await,
+        vec![GameStarted {
+            difficulty: Difficulty::Normal.into(),
+            game_started_player_info: Some(game_started::GameStartedPlayerInfo::Single(
+                game_started::Single {
+                    player: Some(game_started::PlayerInfo {
+                        machine_id,
+                        player_id: 11,
+                    }),
+                },
+            )),
+        }]
+    );
+    assert!(collect_game_started(&mut streams[1]).await.is_empty());
+}
+
 #[rstest]
 #[case::single(GameMode::Single)]
 #[case::multi(GameMode::Multi)]

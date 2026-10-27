@@ -2,6 +2,8 @@
 
 `api/proto/game_master/` の `GameMasterSessionService` を gRPC で呼び出す。
 projector は `ListenEvents(machine_id)` のストリームで開始・残り時間・累計得点・終了と画面遷移通知を受け取る。
+シングルプレイの `GameStarted` は準備完了した筐体にだけ通知する。
+協力プレイでは両筐体の準備完了後、準備完了の順番にかかわらず、両筐体へ同じ難易度と両参加者の情報を一度ずつ通知する。
 開始通知のプレイヤー情報を筐体ごとに選び、終了通知のゲーム ID で `GetGameResult` を呼ぶ。
 ランキング画面では `GetRanking` と `GetGamesByPlayer` の結果を統合する。
 各 projector は自分の盤面の的を `AddTarget(machine_id, target_data)` で登録し、
