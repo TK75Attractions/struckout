@@ -45,7 +45,7 @@ MonoBehaviour:
   <MemoryMetricsIntervalSeconds>k__BackingField: 60
   <GcMetricsIntervalSeconds>k__BackingField: 60
   <NetworkMetricsIntervalSeconds>k__BackingField: 10
-  <EnableStructuredLogging>k__BackingField: 0
+  <EnableStructuredLogging>k__BackingField: 1
   <StructuredLogOnDebugLog>k__BackingField: 0
   <StructuredLogOnDebugLogWarning>k__BackingField: 1
   <StructuredLogOnDebugLogAssertion>k__BackingField: 1
