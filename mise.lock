@@ -55,6 +55,11 @@ url = "https://github.com/bufbuild/buf/releases/download/v1.72.0/buf-Windows-x86
 url_api = "https://api.github.com/repos/bufbuild/buf/releases/assets/480772631"
 provenance = "minisign"
 
+[[tools."cargo:cargo-chef"]]
+version = "0.1.78"
+backend = "cargo:cargo-chef"
+specifiers = ["0.1.78"]
+
 [[tools."cargo:slint-lsp"]]
 version = "1.18.1"
 backend = "cargo:slint-lsp"
