@@ -1,11 +1,27 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?",
+  "query": "SELECT machine_id_1, machine_id_2, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "machine_id",
+        "name": "machine_id_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.games",
+            "name": "machine_id_1"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "machine_id_2",
         "type_info": {
           "type": "Long",
           "flags": "UNSIGNED",
@@ -14,13 +30,13 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
-            "name": "machine_id"
+            "table": "struckout_334_proto.games",
+            "name": "machine_id_2"
           }
         }
       },
       {
-        "ordinal": 1,
+        "ordinal": 2,
         "name": "player_id_1",
         "type_info": {
           "type": "Long",
@@ -30,13 +46,13 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "player_id_1"
           }
         }
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "player_id_2",
         "type_info": {
           "type": "Long",
@@ -46,13 +62,13 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "player_id_2"
           }
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "started_at",
         "type_info": {
           "type": "Datetime",
@@ -62,13 +78,13 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "started_at"
           }
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "difficulty",
         "type_info": {
           "type": "Blob",
@@ -78,13 +94,13 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "difficulty"
           }
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "score",
         "type_info": {
           "type": "Long",
@@ -94,13 +110,13 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "score"
           }
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "mode",
         "type_info": {
           "type": "String",
@@ -110,7 +126,7 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "mode"
           }
         }
@@ -120,6 +136,7 @@
       "Right": 1
     },
     "nullable": [
+      false,
       true,
       false,
       true,
@@ -129,5 +146,5 @@
       false
     ]
   },
-  "hash": "1e6586594ba6355ff10888460d4d7d3c42e9693aa1e696a25a1631018792d8fb"
+  "hash": "4df6027a8fb76cc6d07cf487402b90cc1a0e0ae0bb5f142937c463c9934c6170"
 }

@@ -6,7 +6,7 @@ use struckout_proto::{event::EventData, types::GameId};
 
 use super::*;
 use crate::{
-    AddPlayerError, GetPlayerError, PlayerId, ValidatePlayerNameError,
+    AddPlayerError, GamePlayerInfo, GetPlayerError, PlayerId, PlayerInfo, ValidatePlayerNameError,
     data::Player,
     session::{ConfiguringDifficultyState, ConfiguringGameModeState},
 };
@@ -23,6 +23,34 @@ impl DataSource for StubDataSource {
 
     async fn get_game_result(&self, game_id: GameId) -> Result<u32, crate::GetGameResultError> {
         Err(crate::GetGameResultError::NotFound(game_id))
+    }
+
+    async fn get_ranking(
+        &self,
+        _: u32,
+        _: GameMode,
+        _: Difficulty,
+    ) -> Result<Vec<crate::RankingItem>, crate::GetRankingError> {
+        Ok(Vec::new())
+    }
+
+    async fn get_games_by_player(
+        &self,
+        _: PlayerId,
+        _: GameMode,
+        _: Difficulty,
+    ) -> Result<Vec<crate::GameResult>, crate::GetGamesByPlayerError> {
+        Ok(Vec::new())
+    }
+
+    async fn get_player_by_id(
+        &self,
+        player_id: PlayerId,
+    ) -> Result<Player, crate::GetPlayerByIdError> {
+        Ok(Player {
+            player_id,
+            name: format!("Player {}", player_id.into_inner()),
+        })
     }
 
     async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
@@ -837,6 +865,13 @@ struct RecordingDataSource {
     saved: Arc<parking_lot::Mutex<Vec<crate::GameRecord>>>,
     fail_save: bool,
     fail_get_result: bool,
+    fail_get_player: bool,
+    player_lookup_started: Arc<tokio::sync::Notify>,
+    player_lookup_gate: Option<Arc<tokio::sync::Semaphore>>,
+    ranking: Vec<crate::RankingItem>,
+    history: Vec<crate::GameResult>,
+    ranking_limits: Arc<parking_lot::Mutex<Vec<(u32, GameMode, Difficulty)>>>,
+    history_players: Arc<parking_lot::Mutex<Vec<(PlayerId, GameMode, Difficulty)>>>,
     save_started: Arc<tokio::sync::Notify>,
     save_gate: Option<Arc<tokio::sync::Semaphore>>,
 }
@@ -871,6 +906,56 @@ impl DataSource for RecordingDataSource {
         } else {
             Err(crate::GetGameResultError::NotFound(game_id))
         }
+    }
+
+    async fn get_ranking(
+        &self,
+        max_item_num: u32,
+        mode: GameMode,
+        difficulty: Difficulty,
+    ) -> Result<Vec<crate::RankingItem>, crate::GetRankingError> {
+        self.ranking_limits
+            .lock()
+            .push((max_item_num, mode, difficulty));
+        if self.fail_get_result {
+            return Err(sqlx::Error::PoolClosed.into());
+        }
+        Ok(self.ranking.clone())
+    }
+
+    async fn get_games_by_player(
+        &self,
+        player_id: PlayerId,
+        mode: GameMode,
+        difficulty: Difficulty,
+    ) -> Result<Vec<crate::GameResult>, crate::GetGamesByPlayerError> {
+        self.history_players
+            .lock()
+            .push((player_id, mode, difficulty));
+        if self.fail_get_result {
+            return Err(sqlx::Error::PoolClosed.into());
+        }
+        Ok(self.history.clone())
+    }
+
+    async fn get_player_by_id(
+        &self,
+        player_id: PlayerId,
+    ) -> Result<Player, crate::GetPlayerByIdError> {
+        self.player_lookup_started.notify_one();
+        if let Some(gate) = &self.player_lookup_gate {
+            gate.acquire()
+                .await
+                .expect("lookup gate remains open")
+                .forget();
+        }
+        if self.fail_get_player {
+            return Err(sqlx::Error::PoolClosed.into());
+        }
+        Ok(Player {
+            player_id,
+            name: format!("Player {}", player_id.into_inner()),
+        })
     }
 
     async fn add_player(&self, _: impl Into<String> + Send) -> Result<PlayerId, AddPlayerError> {
@@ -968,7 +1053,7 @@ async fn collect_game_started(
 #[case::machine_2_first([2, 1])]
 #[tokio::test(start_paused = true)]
 async fn multi_game_started_reaches_both_machines_once(#[case] ready_order: [u32; 2]) {
-    use struckout_proto::event::{GameStarted, game_started};
+    use struckout_proto::{event::GameStarted, player_info};
 
     let service = configured_recorded_service(GameMode::Multi, RecordingDataSource::default());
     let mut streams = Vec::new();
@@ -1000,9 +1085,10 @@ async fn multi_game_started_reaches_both_machines_once(#[case] ready_order: [u32
         .expect("second machine starts the shared game");
 
     let player_info = |machine_id| {
-        Some(game_started::PlayerInfo {
+        Some(player_info::PlayerItem {
             machine_id,
             player_id: machine_id + 10,
+            player_name: format!("Player {}", machine_id + 10),
         })
     };
     let expected = GameStarted {
@@ -1011,15 +1097,15 @@ async fn multi_game_started_reaches_both_machines_once(#[case] ready_order: [u32
             .try_into()
             .expect("GAME_DURATION fits in u32 seconds"),
         difficulty: Difficulty::Normal.into(),
-        game_started_player_info: Some(game_started::GameStartedPlayerInfo::Multi(
-            game_started::Multi {
+        player_info: Some(struckout_proto::PlayerInfo {
+            player_info_data: Some(player_info::PlayerInfoData::Multi(player_info::Multi {
                 player_1: player_info(ready_order[1]),
                 player_2: player_info(ready_order[0]),
-            },
-        )),
+            })),
+        }),
     };
     for stream in &mut streams {
-        assert_eq!(collect_game_started(stream).await, vec![expected]);
+        assert_eq!(collect_game_started(stream).await, vec![expected.clone()]);
     }
 }
 
@@ -1031,7 +1117,7 @@ async fn single_game_started_reaches_only_its_machine(
     #[case] machine_id: u32,
     #[case] other_machine_id: u32,
 ) {
-    use struckout_proto::event::{GameStarted, game_started};
+    use struckout_proto::{event::GameStarted, player_info};
 
     let service = GameMasterSessionServiceImpl::new(RecordingDataSource::default());
     let mut streams = Vec::new();
@@ -1061,14 +1147,15 @@ async fn single_game_started_reaches_only_its_machine(
                 .try_into()
                 .expect("GAME_DURATION fits in u32 seconds"),
             difficulty: Difficulty::Normal.into(),
-            game_started_player_info: Some(game_started::GameStartedPlayerInfo::Single(
-                game_started::Single {
-                    player: Some(game_started::PlayerInfo {
+            player_info: Some(struckout_proto::PlayerInfo {
+                player_info_data: Some(player_info::PlayerInfoData::Single(player_info::Single {
+                    player: Some(player_info::PlayerItem {
                         machine_id,
                         player_id: 11,
+                        player_name: "Player 11".to_owned(),
                     }),
-                },
-            )),
+                },))
+            }),
         }]
     );
     assert!(collect_game_started(&mut streams[1]).await.is_empty());
@@ -1417,4 +1504,212 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
             assert_eq!(state.shared.read().targets.len(), count as usize);
         }
     }
+}
+
+#[rstest]
+#[case::empty(false)]
+#[case::populated(true)]
+#[tokio::test]
+async fn ranking_and_history_read_persisted_data_without_a_session(#[case] populated: bool) {
+    let result = crate::GameResult {
+        game_id: GameId::new(42),
+        total_score: 987,
+    };
+    let ds = RecordingDataSource {
+        ranking: if populated {
+            vec![crate::RankingItem {
+                result: result.clone(),
+                players: GamePlayerInfo::Single(PlayerInfo {
+                    machine_id: MachineId::new(3),
+                    player_id: PlayerId::new(7),
+                    player_name: "太郎".to_owned(),
+                }),
+            }]
+        } else {
+            Vec::new()
+        },
+        history: if populated { vec![result] } else { Vec::new() },
+        ..Default::default()
+    };
+    let service = GameMasterSessionServiceImpl::new(ds.clone());
+    let ranking = service
+        .get_ranking(Request::new(GetRankingRequest {
+            max_item_num: 10,
+            mode: GameMode::Single.into(),
+            difficulty: Difficulty::Normal.into(),
+        }))
+        .await
+        .expect("ranking should succeed")
+        .into_inner()
+        .top_n;
+    let history = service
+        .get_games_by_player(Request::new(GetGamesByPlayerRequest {
+            player_id: 7,
+            mode: GameMode::Single.into(),
+            difficulty: Difficulty::Normal.into(),
+        }))
+        .await
+        .expect("history should succeed")
+        .into_inner()
+        .items;
+    assert_eq!(
+        *ds.ranking_limits.lock(),
+        vec![(10, GameMode::Single, Difficulty::Normal)]
+    );
+    assert_eq!(
+        *ds.history_players.lock(),
+        vec![(PlayerId::new(7), GameMode::Single, Difficulty::Normal)]
+    );
+    assert_eq!(ranking.len(), usize::from(populated));
+    assert_eq!(history.len(), usize::from(populated));
+    if populated {
+        assert_eq!(
+            ranking[0],
+            struckout_proto::get_ranking_response::RankingItem {
+                game_id: 42,
+                total_score: 987,
+                player_info: Some(
+                    GamePlayerInfo::Single(PlayerInfo {
+                        machine_id: MachineId::new(3),
+                        player_id: PlayerId::new(7),
+                        player_name: "太郎".to_owned(),
+                    })
+                    .into()
+                ),
+            }
+        );
+        assert_eq!(
+            history[0],
+            struckout_proto::get_games_by_player_response::GamesByPlayerItem {
+                game_id: 42,
+                total_score: 987,
+            }
+        );
+    }
+}
+
+#[tokio::test]
+async fn ranking_and_history_report_database_errors() {
+    let service = GameMasterSessionServiceImpl::new(RecordingDataSource {
+        fail_get_result: true,
+        ..Default::default()
+    });
+    let error = service
+        .get_ranking(Request::new(GetRankingRequest {
+            max_item_num: 10,
+            mode: GameMode::Single.into(),
+            difficulty: Difficulty::Normal.into(),
+        }))
+        .await
+        .expect_err("database is closed");
+    assert_eq!(error.code(), tonic::Code::Internal);
+    let error = service
+        .get_games_by_player(Request::new(GetGamesByPlayerRequest {
+            player_id: 7,
+            mode: GameMode::Single.into(),
+            difficulty: Difficulty::Normal.into(),
+        }))
+        .await
+        .expect_err("database is closed");
+    assert_eq!(error.code(), tonic::Code::Internal);
+}
+
+#[rstest]
+#[case(0, 1)]
+#[case(1, 0)]
+#[case(-1, 1)]
+#[case(1, -1)]
+#[case(i32::MAX, 1)]
+#[case(1, i32::MAX)]
+#[tokio::test]
+async fn result_queries_reject_invalid_filters(#[case] mode: i32, #[case] difficulty: i32) {
+    let ds = RecordingDataSource::default();
+    let service = GameMasterSessionServiceImpl::new(ds.clone());
+    let error = service
+        .get_ranking(Request::new(GetRankingRequest {
+            max_item_num: 0,
+            mode,
+            difficulty,
+        }))
+        .await
+        .expect_err("filter must be valid even for an empty ranking");
+    assert_eq!(error.code(), tonic::Code::InvalidArgument);
+    let error = service
+        .get_games_by_player(Request::new(GetGamesByPlayerRequest {
+            player_id: 1,
+            mode,
+            difficulty,
+        }))
+        .await
+        .expect_err("filter must be valid");
+    assert_eq!(error.code(), tonic::Code::InvalidArgument);
+    assert!(ds.ranking_limits.lock().is_empty());
+    assert!(ds.history_players.lock().is_empty());
+}
+
+#[tokio::test]
+async fn player_lookup_failure_leaves_session_configuration_unchanged() {
+    let service = configured_recorded_service(
+        GameMode::Single,
+        RecordingDataSource {
+            fail_get_player: true,
+            ..Default::default()
+        },
+    );
+    let mut events = service.event_tx.subscribe();
+    let error = service
+        .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 }))
+        .await
+        .expect_err("database lookup failed");
+    assert_eq!(error.code(), tonic::Code::Internal);
+    assert!(
+        service
+            .sessions
+            .read()
+            .get(MachineId::new(1))
+            .expect("session exists")
+            .as_configuring_difficulty()
+            .is_ok()
+    );
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+}
+
+#[tokio::test]
+async fn ready_rejects_configuration_changes_during_player_lookup() {
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
+    let ds = RecordingDataSource {
+        player_lookup_gate: Some(gate.clone()),
+        ..Default::default()
+    };
+    let service = configured_recorded_service(GameMode::Single, ds.clone());
+    let task = tokio::spawn({
+        let service = service.clone();
+        async move {
+            service
+                .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 }))
+                .await
+        }
+    });
+    ds.player_lookup_started.notified().await;
+    service
+        .sessions
+        .write()
+        .update_difficulty(MachineId::new(1), Difficulty::Hard)
+        .expect("configuration can change during lookup");
+    gate.add_permits(1);
+    let error = task
+        .await
+        .expect("ready task completes")
+        .expect_err("configuration has changed");
+    assert_eq!(error.code(), tonic::Code::Aborted);
+    let sessions = service.sessions.read();
+    let (state,) = sessions
+        .get(MachineId::new(1))
+        .expect("session exists")
+        .as_configuring_difficulty()
+        .expect("game was not started");
+    assert_eq!(state.difficulty, Some(Difficulty::Hard));
 }

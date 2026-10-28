@@ -15,3 +15,25 @@ enum GameMode {
   GAME_MODE_SINGLE = 1;
   GAME_MODE_MULTI = 2;
 }
+
+message PlayerInfo {
+  message PlayerItem {
+    uint32 machine_id = 1;
+    uint32 player_id = 2;
+    string player_name = 3;
+  }
+
+  message Single {
+    PlayerItem player = 1;
+  }
+
+  message Multi {
+    PlayerItem player_1 = 1;
+    PlayerItem player_2 = 2;
+  }
+
+  oneof player_info_data {
+    Single single = 2;
+    Multi multi = 3;
+  }
+}

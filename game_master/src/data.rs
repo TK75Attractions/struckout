@@ -8,8 +8,9 @@ use struckout_proto::{
 use time::PlainDateTime;
 
 use crate::{
-    AddPlayerError, DataSource, GamePlayers, GameRecord, GetGameResultError, GetPlayerError,
-    SaveGameError, ValidatePlayerNameError,
+    AddPlayerError, DataSource, GamePlayerInfo, GamePlayers, GameRecord, GameResult,
+    GetGameResultError, GetGamesByPlayerError, GetPlayerByIdError, GetPlayerError, GetRankingError,
+    PlayerInfo, RankingItem, SaveGameError, ValidatePlayerNameError,
 };
 
 const MODE_SINGLE: &str = "single";
@@ -70,21 +71,30 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
     /// UTC is converted to PlainDateTime because MySQL's DATETIME has no time zone.
     async fn save_game(&self, game: GameRecord) -> Result<GameId, SaveGameError> {
         let mut conn = self.db.acquire().await?;
-        let (machine_id, player_id_1, player_id_2, mode): (Option<u32>, u32, Option<u32>, &str) =
-            match game.players {
-                GamePlayers::Single {
-                    machine_id,
-                    player_id,
-                } => (Some(machine_id.into()), player_id.into(), None, MODE_SINGLE),
-                GamePlayers::Multi((_, first), (_, second)) => {
-                    (None, first.into(), Some(second.into()), MODE_MULTI)
-                }
-            };
+        let (machine_id_1, player_id_1, machine_id_2, player_id_2, mode): (
+            u32,
+            u32,
+            Option<u32>,
+            Option<u32>,
+            &str,
+        ) = match game.players {
+            GamePlayers::Single {
+                machine_id,
+                player_id,
+            } => (machine_id.into(), player_id.into(), None, None, MODE_SINGLE),
+            GamePlayers::Multi((machine_1, first), (machine_2, second)) => (
+                machine_1.into(),
+                first.into(),
+                Some(machine_2.into()),
+                Some(second.into()),
+                MODE_MULTI,
+            ),
+        };
         let started_at = PlainDateTime::new(game.started_at.date(), game.started_at.time());
         let res = sqlx::query!(
-            "INSERT INTO games (machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-            machine_id, player_id_1, player_id_2, started_at,
+            "INSERT INTO games (machine_id_1, player_id_1, machine_id_2, player_id_2, started_at, difficulty, score, mode)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            machine_id_1, player_id_1, machine_id_2, player_id_2, started_at,
             game.difficulty.to_mysql_enum(), game.score, mode
         ).execute(&mut *conn).await?;
         let last_inserted: u32 = res.last_insert_id().try_into().expect("game_id overflowed");
@@ -102,6 +112,109 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         .await?
         .ok_or(GetGameResultError::NotFound(game_id))?;
         Ok(row.score)
+    }
+
+    async fn get_ranking(
+        &self,
+        max_item_num: u32,
+        mode: GameMode,
+        difficulty: Difficulty,
+    ) -> Result<Vec<RankingItem>, GetRankingError> {
+        let mut conn = self.db.acquire().await?;
+        let rows = sqlx::query!(
+            "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,
+                    p1.id AS player_id_1, p1.name AS player_name_1,
+                    p2.id AS player_id_2, p2.name AS player_name_2
+             FROM games g
+             JOIN players p1 ON p1.id = g.player_id_1
+             LEFT JOIN players p2 ON p2.id = g.player_id_2
+             WHERE g.mode = ? AND g.difficulty = ?
+             ORDER BY g.score DESC, g.game_id ASC
+             LIMIT ?",
+            mode.to_mysql_enum(),
+            difficulty.to_mysql_enum(),
+            max_item_num
+        )
+        .fetch_all(&mut *conn)
+        .await?;
+        let ret = rows
+            .into_iter()
+            .map(|row| {
+                let first = PlayerInfo {
+                    machine_id: row.machine_id_1.into(),
+                    player_id: row.player_id_1.into(),
+                    player_name: row.player_name_1,
+                };
+                // The CHECK constraint pairs both second-participant IDs; the foreign key guarantees the player exists.
+                let players = match (row.machine_id_2, row.player_id_2, row.player_name_2) {
+                    (Some(machine_id), Some(player_id), Some(player_name)) => {
+                        GamePlayerInfo::Multi(
+                            first,
+                            PlayerInfo {
+                                machine_id: machine_id.into(),
+                                player_id: player_id.into(),
+                                player_name,
+                            },
+                        )
+                    }
+                    (None, None, None) => GamePlayerInfo::Single(first),
+                    _ => unreachable!(
+                        "second participant is guaranteed by CHECK and foreign key constraints"
+                    ),
+                };
+                RankingItem {
+                    result: GameResult {
+                        game_id: row.game_id.into(),
+                        total_score: row.score,
+                    },
+                    players,
+                }
+            })
+            .collect();
+        Ok(ret)
+    }
+
+    async fn get_games_by_player(
+        &self,
+        player_id: PlayerId,
+        mode: GameMode,
+        difficulty: Difficulty,
+    ) -> Result<Vec<GameResult>, GetGamesByPlayerError> {
+        let mut conn = self.db.acquire().await?;
+        let rows = sqlx::query!(
+            "SELECT game_id, score FROM games
+             WHERE (player_id_1 = ? OR player_id_2 = ?) AND mode = ? AND difficulty = ?
+             ORDER BY score DESC, game_id ASC",
+            player_id.into_inner(),
+            player_id.into_inner(),
+            mode.to_mysql_enum(),
+            difficulty.to_mysql_enum()
+        )
+        .fetch_all(&mut *conn)
+        .await?;
+        let ret = rows
+            .into_iter()
+            .map(|row| GameResult {
+                game_id: row.game_id.into(),
+                total_score: row.score,
+            })
+            .collect();
+        Ok(ret)
+    }
+
+    async fn get_player_by_id(&self, player_id: PlayerId) -> Result<Player, GetPlayerByIdError> {
+        let mut conn = self.db.acquire().await?;
+        let row = sqlx::query!(
+            "SELECT name FROM players WHERE id = ?",
+            player_id.into_inner()
+        )
+        .fetch_optional(&mut *conn)
+        .await?
+        .ok_or(GetPlayerByIdError::NotFound(player_id))?;
+        Ok(Player {
+            player_id,
+            name: row.name,
+        })
     }
 
     async fn validate_player_name(
@@ -215,6 +328,7 @@ mod tests {
     use parking_lot::Mutex;
     use sqlx::mysql::MySqlPoolOptions;
     use struckout_proto::types::MachineId;
+
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
     use time::{Date, Month, Time, UtcDateTime};
     use tokio::{runtime::Runtime, sync::Mutex as TokioMutex};
@@ -308,6 +422,181 @@ mod tests {
             .await
             .expect("failed to run migrations");
         TestDatabase { container, pool }
+    }
+
+    #[test]
+    fn ranking_and_history_return_empty_for_an_empty_database() {
+        with_test_transaction(|transaction| async move {
+            let ds = DataSourceImpl::new(transaction);
+            assert!(
+                ds.get_ranking(10, GameMode::Single, Difficulty::Normal)
+                    .await
+                    .expect("ranking")
+                    .is_empty()
+            );
+            assert!(
+                ds.get_games_by_player(PlayerId::new(u32::MAX), GameMode::Multi, Difficulty::Hard)
+                    .await
+                    .expect("unknown player history")
+                    .is_empty()
+            );
+        });
+    }
+
+    #[rstest::rstest]
+    #[case(0)]
+    #[case(1)]
+    #[case(2)]
+    #[case(3)]
+    #[case(u32::MAX)]
+    fn ranking_limits_games_and_filters_mode_and_difficulty(#[case] limit: u32) {
+        with_test_transaction(|transaction| async move {
+            let ds = DataSourceImpl::new(transaction);
+            let first = ds.add_player("太郎").await.expect("first player");
+            let second = ds.add_player("花子").await.expect("second player");
+            let multi = GamePlayers::Multi((MachineId::new(8), first), (MachineId::new(3), second));
+            let single = GamePlayers::Single {
+                machine_id: MachineId::new(4),
+                player_id: first,
+            };
+            let mut games = Vec::new();
+            for (players, difficulty, score) in [
+                (multi.clone(), Difficulty::Hard, 100),
+                (multi.clone(), Difficulty::Hard, 500),
+                (multi.clone(), Difficulty::Hard, 500),
+                (multi, Difficulty::Normal, 999),
+                (single, Difficulty::Hard, 999),
+            ] {
+                let game_id = ds
+                    .save_game(GameRecord {
+                        players,
+                        started_at: UtcDateTime::now(),
+                        difficulty,
+                        score,
+                    })
+                    .await
+                    .expect("save game");
+                games.push(GameResult {
+                    game_id,
+                    total_score: score,
+                });
+            }
+            let players = GamePlayerInfo::Multi(
+                PlayerInfo {
+                    machine_id: MachineId::new(8),
+                    player_id: first,
+                    player_name: "太郎".to_owned(),
+                },
+                PlayerInfo {
+                    machine_id: MachineId::new(3),
+                    player_id: second,
+                    player_name: "花子".to_owned(),
+                },
+            );
+            let expected = [
+                RankingItem {
+                    result: games[1].clone(),
+                    players: players.clone(),
+                },
+                RankingItem {
+                    result: games[2].clone(),
+                    players: players.clone(),
+                },
+                RankingItem {
+                    result: games[0].clone(),
+                    players,
+                },
+            ];
+            assert_eq!(
+                ds.get_ranking(limit, GameMode::Multi, Difficulty::Hard)
+                    .await
+                    .expect("ranking"),
+                expected[..(limit as usize).min(expected.len())]
+            );
+            for player in [first, second] {
+                assert_eq!(
+                    ds.get_games_by_player(player, GameMode::Multi, Difficulty::Hard)
+                        .await
+                        .expect("history"),
+                    vec![games[1].clone(), games[2].clone(), games[0].clone()]
+                );
+            }
+            assert_eq!(
+                ds.get_games_by_player(first, GameMode::Multi, Difficulty::Normal)
+                    .await
+                    .expect("normal history"),
+                vec![games[3].clone()]
+            );
+            assert_eq!(
+                ds.get_games_by_player(first, GameMode::Single, Difficulty::Hard)
+                    .await
+                    .expect("single history"),
+                vec![games[4].clone()]
+            );
+            assert_eq!(
+                ds.get_ranking(10, GameMode::Single, Difficulty::Hard)
+                    .await
+                    .expect("single ranking"),
+                vec![RankingItem {
+                    result: games[4].clone(),
+                    players: GamePlayerInfo::Single(PlayerInfo {
+                        machine_id: MachineId::new(4),
+                        player_id: first,
+                        player_name: "太郎".to_owned(),
+                    }),
+                }]
+            );
+        });
+    }
+
+    #[test]
+    fn history_returns_a_shared_game_once_when_both_participants_are_the_same_player() {
+        with_test_transaction(|transaction| async move {
+            let ds = DataSourceImpl::new(transaction);
+            let player_id = ds.add_player("Same player").await.expect("insert player");
+            let game_id = ds
+                .save_game(GameRecord {
+                    players: GamePlayers::Multi(
+                        (MachineId::new(1), player_id),
+                        (MachineId::new(2), player_id),
+                    ),
+                    started_at: UtcDateTime::now(),
+                    difficulty: Difficulty::Veryhard,
+                    score: 0,
+                })
+                .await
+                .expect("save game");
+            assert_eq!(
+                ds.get_games_by_player(player_id, GameMode::Multi, Difficulty::Veryhard)
+                    .await
+                    .expect("history"),
+                vec![GameResult {
+                    game_id,
+                    total_score: 0
+                }]
+            );
+            let ranking = ds
+                .get_ranking(1, GameMode::Multi, Difficulty::Veryhard)
+                .await
+                .expect("ranking");
+            assert_eq!(ranking.len(), 1);
+            assert_matches!(&ranking[0].players, GamePlayerInfo::Multi(first, second)
+                if first.player_id == player_id && second.player_id == player_id
+                    && first.machine_id == MachineId::new(1) && second.machine_id == MachineId::new(2));
+        });
+    }
+
+    #[test]
+    fn get_player_by_id_returns_name_or_not_found() {
+        with_test_transaction(|transaction| async move {
+            let ds = DataSourceImpl::new(transaction);
+            let player_id = ds.add_player("太郎").await.expect("insert player");
+            let player = ds.get_player_by_id(player_id).await.expect("lookup player");
+            assert_eq!(player.player_id, player_id);
+            assert_eq!(player.name, "太郎");
+            assert_matches!(ds.get_player_by_id(PlayerId::new(u32::MAX)).await,
+                Err(GetPlayerByIdError::NotFound(id)) if id == PlayerId::new(u32::MAX));
+        });
     }
 
     #[test]
@@ -431,9 +720,10 @@ mod tests {
                 })
                 .await
                 .expect("should save final result");
-            let row = sqlx::query!("SELECT machine_id, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?", game_id.into_inner())
+            let row = sqlx::query!("SELECT machine_id_1, machine_id_2, player_id_1, player_id_2, started_at, difficulty, score, mode FROM games WHERE game_id = ?", game_id.into_inner())
                 .fetch_one(&mut **txn.lock().await).await.expect("should fetch saved game");
-            assert_eq!(row.machine_id, if multi { None } else { Some(7) });
+            assert_eq!(row.machine_id_1, if multi { 1 } else { 7 });
+            assert_eq!(row.machine_id_2, if multi { Some(2) } else { None });
             assert_eq!(row.player_id_1, first.into_inner());
             assert_eq!(
                 row.player_id_2,

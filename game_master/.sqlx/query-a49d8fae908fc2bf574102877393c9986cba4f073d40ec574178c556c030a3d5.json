@@ -1,0 +1,31 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT name FROM players WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | UNIQUE_KEY | NO_DEFAULT_VALUE",
+          "collation": 255,
+          "max_size": 128
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.players",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a49d8fae908fc2bf574102877393c9986cba4f073d40ec574178c556c030a3d5"
+}
