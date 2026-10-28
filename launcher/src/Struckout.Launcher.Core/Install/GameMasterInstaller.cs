@@ -15,8 +15,8 @@ internal sealed class GameMasterInstaller(
         Directory.CreateDirectory(directory);
         foreach (var file in GameMasterCompose.Files)
         {
-            context.Log.Report($"{slug}: game_master/{file} を取得します");
-            var content = await github.GetRawFileAsync(context.Release.Tag, $"game_master/{file}", context.CancellationToken);
+            context.Log.Report($"{slug}: game_master/docker/{file} を取得します");
+            var content = await github.GetRawFileAsync(context.Release.Tag, $"game_master/docker/{file}", context.CancellationToken);
             await File.WriteAllTextAsync(Path.Combine(directory, file), content, context.CancellationToken);
         }
 
