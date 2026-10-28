@@ -1,7 +1,7 @@
 using System;
 using Tk75Attractions.Struckout.GameMaster.V1;
 
-namespace Struckout.Domain
+namespace Struckout.Domain.Targets
 {
     /// <summary>
     /// Extension methods for <see cref="Target"/>>.

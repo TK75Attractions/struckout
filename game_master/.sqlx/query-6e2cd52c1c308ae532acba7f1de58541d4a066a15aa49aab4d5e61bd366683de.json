@@ -14,7 +14,7 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.games",
+            "table": "struckout_334_proto.games",
             "name": "score"
           }
         }

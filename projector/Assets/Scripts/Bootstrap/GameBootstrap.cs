@@ -67,10 +67,10 @@ namespace Struckout.Bootstrap
             _master.HomeScreenRequested += OnHomeScreenRequested;
         }
 
-        private void OnGameStarted(Difficulty difficulty, PlayerId playerId, TimeSpan duration) =>
+        private void OnGameStarted(Difficulty difficulty, GameMode mode, PlayerId playerId, TimeSpan duration) =>
             _dispatcher.Enqueue(() =>
             {
-                _screens.ShowPlaying(playerId);
+                _screens.ShowPlaying(playerId, mode, difficulty);
                 _service.StartGameClock(duration);
                 ObserveAsync(_runtime.StartGameAsync(difficulty)).Forget();
             });

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using NUnit.Framework;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -18,8 +19,8 @@ namespace Struckout.Tests.Tests.EditMode
             };
             var history = new[]
             {
-                new PlayerGame(new GameId(1), 100), new PlayerGame(new GameId(3), 150),
-                new PlayerGame(new GameId(4), 90), new PlayerGame(new GameId(3), 150),
+                new RankingEntry(new GameId(1), 100, new PlayerId(7), "本人"), new RankingEntry(new GameId(3), 150, new PlayerId(7), "本人"),
+                new RankingEntry(new GameId(4), 90, new PlayerId(7), "本人"), new RankingEntry(new GameId(3), 150, new PlayerId(7), "本人"),
             };
             var rows = RankingResults.Merge(ranking, history, player, new GameId(3));
             Assert.That(rows.Select(row => row.GameId.Value), Is.EqualTo(new uint[] { 3, 1, 2, 4 }));
@@ -28,30 +29,26 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(rows[1].PlayerName, Is.EqualTo("本人"));
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public void A_shared_game_keeps_the_current_players_name_regardless_of_ranking_row_order(bool reverse)
+        [TestCase(7u)]
+        [TestCase(8u)]
+        public void Multi_play_ranking_and_history_show_both_names_and_highlight_either_participant(uint playerId)
         {
-            var ranking = new[]
+            var participants = new[]
             {
-                new RankingEntry(new GameId(1), 100, new PlayerId(8), "別の人"),
-                new RankingEntry(new GameId(1), 100, new PlayerId(7), "本人"),
+                new RankingParticipant(1, new PlayerId(7), "player1"),
+                new RankingParticipant(2, new PlayerId(8), "player2"),
             };
-            if (reverse) Array.Reverse(ranking);
-            var rows = RankingResults.Merge(ranking, Array.Empty<PlayerGame>(), new PlayerId(7), null);
-            Assert.That(rows.Count, Is.EqualTo(1));
-            Assert.That(rows[0].IsPersonal, Is.True);
-            Assert.That(rows[0].PlayerName, Is.EqualTo("本人"));
-        }
-
-        [Test]
-        public void Personal_history_does_not_present_a_different_players_name_as_the_current_player()
-        {
-            var rows = RankingResults.Merge(new[] { new RankingEntry(new GameId(1), 100, new PlayerId(8), "別の人") },
-                new[] { new PlayerGame(new GameId(1), 100) }, new PlayerId(7), null);
-            Assert.That(rows.Count, Is.EqualTo(1));
-            Assert.That(rows[0].IsPersonal, Is.True);
-            Assert.That(rows[0].PlayerName, Is.Null.Or.Empty);
+            var ranking = new[] { new RankingEntry(new GameId(1), 100, participants) };
+            var history = new[]
+            {
+                new RankingEntry(new GameId(1), 100, participants),
+                new RankingEntry(new GameId(2), 50, participants),
+            };
+            var rows = RankingResults.Merge(ranking, history, new PlayerId(playerId), new GameId(2));
+            Assert.That(rows.Count, Is.EqualTo(2));
+            Assert.That(rows.All(row => row.IsPersonal), Is.True);
+            Assert.That(rows.Select(row => row.PlayerName), Is.EqualTo(new[] { "player1 / player2", "player1 / player2" }));
+            Assert.That(rows[1].IsCurrentGame, Is.True);
         }
 
         [Test]
@@ -62,9 +59,9 @@ namespace Struckout.Tests.Tests.EditMode
                 new RankingEntry(new GameId((uint)i), (uint)(2000 - i * 100), new PlayerId(8), "別の人")).ToArray();
             var history = new[]
             {
-                new PlayerGame(new GameId(1), 1900), new PlayerGame(new GameId(11), 1500),
-                new PlayerGame(new GameId(12), 500), new PlayerGame(new GameId(13), 400),
-                new PlayerGame(new GameId(14), 300),
+                new RankingEntry(new GameId(1), 1900, new PlayerId(7), "本人"), new RankingEntry(new GameId(11), 1500, new PlayerId(7), "本人"),
+                new RankingEntry(new GameId(12), 500, new PlayerId(7), "本人"), new RankingEntry(new GameId(13), 400, new PlayerId(7), "本人"),
+                new RankingEntry(new GameId(14), 300, new PlayerId(7), "本人"),
             };
             var rows = RankingResults.Merge(ranking, history, player, new GameId(13));
             Assert.That(rows.Count, Is.EqualTo(12));
@@ -75,7 +72,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Empty_results_remain_empty()
         {
-            Assert.That(RankingResults.Merge(Array.Empty<RankingEntry>(), Array.Empty<PlayerGame>(), new PlayerId(7), null), Is.Empty);
+            Assert.That(RankingResults.Merge(Array.Empty<RankingEntry>(), Array.Empty<RankingEntry>(), new PlayerId(7), null), Is.Empty);
         }
     }
 }

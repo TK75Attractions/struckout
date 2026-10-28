@@ -33,7 +33,7 @@ use tracing::{instrument, trace, warn};
 use uuid::Uuid;
 
 use crate::{
-    DataSource, DataSourceImpl, GamePlayers, GetGameResultError,
+    DataSource, DataSourceImpl, GamePlayerInfo, GetGameResultError, PlayerInfo,
     session::{HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
@@ -403,8 +403,64 @@ where
     ) -> Result<Response<SetSessionReadyResponse>, Status> {
         let SetSessionReadyRequest { machine_id } = req.into_inner();
         let machine_id = machine_id.into();
+        // Resolve names before changing state so a database failure cannot leave a game running without notifications.
+        let (configuration, partner) = {
+            let sessions = self.sessions.read();
+            let session = sessions
+                .get(machine_id)
+                .ok_or_else(|| Status::failed_precondition("session does not exist"))?;
+            let (state,) = session.as_configuring_difficulty().map_err(|_| {
+                Status::failed_precondition("session is not configuring difficulty")
+            })?;
+            if state.difficulty.is_none() {
+                return Err(Status::failed_precondition("difficulty is required"));
+            }
+            let partner = if state.mode == GameMode::Multi {
+                sessions
+                    .get_another(machine_id)
+                    .and_then(|other| other.as_waiting_for_another_machine().ok())
+                    .map(|(state,)| state.clone())
+            } else {
+                None
+            };
+            (state.clone(), partner)
+        };
+        let first = self
+            .data_source
+            .get_player_by_id(configuration.player_id)
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        let second = if let Some(partner) = &partner {
+            Some(
+                self.data_source
+                    .get_player_by_id(partner.player_id)
+                    .await
+                    .map_err(|error| Status::internal(error.to_string()))?,
+            )
+        } else {
+            None
+        };
+
         {
             let mut sessions = self.sessions.write();
+            let current_configuration = sessions
+                .get(machine_id)
+                .and_then(|session| session.as_configuring_difficulty().ok())
+                .map(|(state,)| state);
+            let current_partner = if configuration.mode == GameMode::Multi {
+                sessions
+                    .get_another(machine_id)
+                    .and_then(|other| other.as_waiting_for_another_machine().ok())
+                    .map(|(state,)| state)
+            } else {
+                None
+            };
+            if current_configuration != Some(&configuration) || current_partner != partner.as_ref()
+            {
+                return Err(Status::aborted(
+                    "session configuration changed while loading players",
+                ));
+            }
             let action = sessions.set_ready(machine_id);
             match action {
                 Ok(SetReadyAction::RunSingle {
@@ -418,10 +474,11 @@ where
                             target: EventTarget::Single(machine_id),
                             data: Ok(SuccessfulEvent::GameStarted {
                                 difficulty,
-                                players: GamePlayers::Single {
+                                players: GamePlayerInfo::Single(PlayerInfo {
                                     machine_id,
                                     player_id,
-                                },
+                                    player_name: first.name,
+                                }),
                             }),
                         })
                         .is_err()
@@ -469,9 +526,21 @@ where
                             target: EventTarget::All,
                             data: Ok(SuccessfulEvent::GameStarted {
                                 difficulty,
-                                players: GamePlayers::Multi(
-                                    (player_1.0, player_1.1),
-                                    (player_2.0, player_2.1),
+                                players: GamePlayerInfo::Multi(
+                                    PlayerInfo {
+                                        machine_id: player_1.0,
+                                        player_id: player_1.1,
+                                        player_name: first.name,
+                                    },
+                                    PlayerInfo {
+                                        machine_id: player_2.0,
+                                        player_id: player_2.1,
+                                        player_name: second
+                                            .expect(
+                                                "partner was resolved before starting multi-play",
+                                            )
+                                            .name,
+                                    },
                                 ),
                             }),
                         })
@@ -519,17 +588,52 @@ where
     #[instrument]
     async fn get_ranking(
         &self,
-        _req: Request<GetRankingRequest>,
+        req: Request<GetRankingRequest>,
     ) -> Result<Response<GetRankingResponse>, Status> {
-        todo!()
+        use struckout_proto::get_ranking_response;
+        let req = req.into_inner();
+        let (mode, difficulty) = validate_result_filter(req.mode, req.difficulty)?;
+        let items = self
+            .data_source
+            .get_ranking(req.max_item_num, mode, difficulty)
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        Ok(Response::new(GetRankingResponse {
+            top_n: items
+                .into_iter()
+                .map(|item| get_ranking_response::RankingItem {
+                    game_id: item.result.game_id.into(),
+                    total_score: item.result.total_score,
+                    player_info: Some(item.players.into()),
+                })
+                .collect(),
+        }))
     }
 
     #[instrument]
     async fn get_games_by_player(
         &self,
-        _req: Request<GetGamesByPlayerRequest>,
+        req: Request<GetGamesByPlayerRequest>,
     ) -> Result<Response<GetGamesByPlayerResponse>, Status> {
-        todo!()
+        let req = req.into_inner();
+        let (mode, difficulty) = validate_result_filter(req.mode, req.difficulty)?;
+        let items = self
+            .data_source
+            .get_games_by_player(req.player_id.into(), mode, difficulty)
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        Ok(Response::new(GetGamesByPlayerResponse {
+            items: items
+                .into_iter()
+                .map(
+                    |item| struckout_proto::get_games_by_player_response::GamesByPlayerItem {
+                        game_id: item.result.game_id.into(),
+                        total_score: item.result.total_score,
+                        player_info: Some(item.players.into()),
+                    },
+                )
+                .collect(),
+        }))
     }
 
     #[instrument]
@@ -610,4 +714,18 @@ pub struct Event {
 pub enum EventTarget {
     Single(MachineId),
     All,
+}
+
+/// Validates the required mode and difficulty of result queries.
+fn validate_result_filter(mode: i32, difficulty: i32) -> Result<(GameMode, Difficulty), Status> {
+    let mode =
+        GameMode::try_from(mode).map_err(|error| Status::invalid_argument(error.to_string()))?;
+    let difficulty = Difficulty::try_from(difficulty)
+        .map_err(|error| Status::invalid_argument(error.to_string()))?;
+    if mode == GameMode::Unspecified || difficulty == Difficulty::Unspecified {
+        return Err(Status::invalid_argument(
+            "mode and difficulty must be specified",
+        ));
+    }
+    Ok((mode, difficulty))
 }

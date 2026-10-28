@@ -5,7 +5,7 @@ use struckout_proto::{
     types::{GameId, MachineId},
 };
 
-use crate::GamePlayers;
+use crate::{GamePlayerInfo, PlayerInfo};
 
 /// Events which occur in the service. This can be converted to [`struckout_proto::Event`].
 ///
@@ -16,7 +16,7 @@ pub enum SuccessfulEvent {
     /// [`struckout_proto::event::GameStarted`]
     GameStarted {
         difficulty: Difficulty,
-        players: GamePlayers,
+        players: GamePlayerInfo,
     },
     /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
@@ -61,30 +61,7 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
                     .try_into()
                     .expect("GAME_DURATION is a positive duration within u32 seconds"),
                 difficulty: difficulty.into(),
-                game_started_player_info: Some(match players {
-                    GamePlayers::Single {
-                        machine_id,
-                        player_id,
-                    } => game_started::GameStartedPlayerInfo::Single(game_started::Single {
-                        player: Some(game_started::PlayerInfo {
-                            machine_id: machine_id.into(),
-                            player_id: player_id.into(),
-                        }),
-                    }),
-                    GamePlayers::Multi(
-                        (machine_id_1, player_id_1),
-                        (machine_id_2, player_id_2),
-                    ) => game_started::GameStartedPlayerInfo::Multi(game_started::Multi {
-                        player_1: Some(game_started::PlayerInfo {
-                            machine_id: machine_id_1.into(),
-                            player_id: player_id_1.into(),
-                        }),
-                        player_2: Some(game_started::PlayerInfo {
-                            machine_id: machine_id_2.into(),
-                            player_id: player_id_2.into(),
-                        }),
-                    }),
-                }),
+                player_info: Some(players.into()),
             }),
             SuccessfulEvent::GameScoreChanged { total_score } => {
                 EventData::GameScoreChanged(GameScoreChanged { total_score })
@@ -128,6 +105,33 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
                     machine_id: machine_id.into(),
                 })
             }
+        }
+    }
+}
+
+impl From<PlayerInfo> for struckout_proto::player_info::PlayerItem {
+    fn from(player: PlayerInfo) -> Self {
+        Self {
+            machine_id: player.machine_id.into(),
+            player_id: player.player_id.into(),
+            player_name: player.player_name,
+        }
+    }
+}
+
+impl From<GamePlayerInfo> for struckout_proto::PlayerInfo {
+    fn from(players: GamePlayerInfo) -> Self {
+        use struckout_proto::player_info::{Multi, PlayerInfoData, Single};
+        Self {
+            player_info_data: Some(match players {
+                GamePlayerInfo::Single(player) => PlayerInfoData::Single(Single {
+                    player: Some(player.into()),
+                }),
+                GamePlayerInfo::Multi(first, second) => PlayerInfoData::Multi(Multi {
+                    player_1: Some(first.into()),
+                    player_2: Some(second.into()),
+                }),
+            }),
         }
     }
 }

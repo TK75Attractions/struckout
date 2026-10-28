@@ -1,4 +1,4 @@
-use touchpanel::{run_main, version_option};
+use touchpanel::run_main;
 use tracing::Level;
 use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -22,7 +22,7 @@ fn main() -> std::process::ExitCode {
     let _sentry_guard = sentry::init(
         sentry::ClientOptions::new()
             .dsn(SENTRY_DSN)
-            .maybe_release(version_option()),
+            .maybe_release(touchpanel::version_option()),
     );
 
     let reg = tracing_subscriber::registry().with(fmt_layer);

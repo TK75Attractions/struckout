@@ -7,6 +7,7 @@ using Struckout.Domain.TargetDefinition;
 using VContainer;
 using UnityEngine.UI;
 using System.Globalization;
+using Struckout.Domain.Ranking;
 using UnityEngine.Serialization;
 
 namespace Struckout.Unity

@@ -14,7 +14,7 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.players",
+            "table": "struckout_334_proto.players",
             "name": "id"
           }
         }
@@ -30,7 +30,7 @@
         },
         "origin": {
           "Table": {
-            "table": "main_dev.players",
+            "table": "struckout_334_proto.players",
             "name": "name"
           }
         }

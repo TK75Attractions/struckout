@@ -1,4 +1,4 @@
-namespace Struckout.Domain
+namespace Struckout.Domain.Ranking
 {
     public readonly struct RankingRow
     {

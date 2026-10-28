@@ -1,3 +1,4 @@
+using GameMode = Tk75Attractions.Struckout.GameMaster.V1.GameMode;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -7,7 +8,9 @@ using NUnit.Framework;
 using Struckout.Application;
 using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 using Struckout.Domain.TargetDefinition;
+using Struckout.Domain.Targets;
 using Struckout.Infrastructure;
 using Tk75Attractions.Struckout.V1;
 using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
@@ -18,15 +21,15 @@ namespace Struckout.Tests.Tests.EditMode
     {
         private sealed class Client : IGameMasterClient
         {
-            public event Action<Difficulty, PlayerId, TimeSpan> GameStarted { add { } remove { } }
+            public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
             public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
             public UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default) => UniTask.FromResult<uint?>(null);
-            public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
-            public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<PlayerGame>>(null);
+            public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, GameMode mode, Difficulty difficulty, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
+            public UniTask<IReadOnlyList<RankingEntry>> GetGamesByPlayerAsync(PlayerId playerId, GameMode mode, Difficulty difficulty, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
             public event Action ConnectionLost { add { } remove { } }
             public event Action<Target> TargetAdded;
             public event Action<Guid, TargetOwnership> PocketWatchAdded { add { } remove { } }

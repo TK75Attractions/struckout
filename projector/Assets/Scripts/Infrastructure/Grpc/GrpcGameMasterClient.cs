@@ -9,8 +9,10 @@ using Grpc.Net.Client;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Struckout.Domain.TargetDefinition;
+using Struckout.Domain.Targets;
 using UnityEngine;
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
 using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;
@@ -43,7 +45,7 @@ namespace Struckout.Infrastructure.Grpc
         /// <summary>game_master と切れたとき、購読をやり直す間隔。</summary>
         private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
 
-        public event Action<Difficulty, PlayerId, TimeSpan> GameStarted;
+        public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted;
         public event Action<GameId> GameFinished;
         public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
@@ -192,7 +194,8 @@ namespace Struckout.Infrastructure.Grpc
                         break;
                     }
                     _running = true;
-                    GameStarted?.Invoke(received.GameStarted.Difficulty, playerId.Value,
+                    GameStarted?.Invoke(received.GameStarted.Difficulty,
+                        received.GameStarted.PlayerInfo.Single != null ? GameMode.Single : GameMode.Multi, playerId.Value,
                         TimeSpan.FromSeconds(received.GameStarted.GameDurSecs));
                     break;
 
@@ -280,15 +283,21 @@ namespace Struckout.Infrastructure.Grpc
 
         private PlayerId? LocalPlayer(Event.Types.GameStarted started)
         {
-            var players = started.GameStartedPlayerInfoCase switch
-            {
-                Event.Types.GameStarted.GameStartedPlayerInfoOneofCase.Single => new[] { started.Single.Player },
-                Event.Types.GameStarted.GameStartedPlayerInfoOneofCase.Multi => new[] { started.Multi.Player1, started.Multi.Player2 },
-                _ => Array.Empty<Event.Types.GameStarted.Types.PlayerInfo>(),
-            };
+            var players = PlayerItems(started.PlayerInfo);
             var local = players.Where(player => player != null && player.MachineId == _settings.machineId).ToArray();
             return local.Length == 1 ? new PlayerId(local[0].PlayerId) : null;
         }
+
+        private static PlayerInfo.Types.PlayerItem[] PlayerItems(PlayerInfo info) => info?.PlayerInfoDataCase switch
+        {
+            PlayerInfo.PlayerInfoDataOneofCase.Single => new[] { info.Single.Player },
+            PlayerInfo.PlayerInfoDataOneofCase.Multi => new[] { info.Multi.Player1, info.Multi.Player2 },
+            _ => Array.Empty<PlayerInfo.Types.PlayerItem>(),
+        };
+
+        private static RankingEntry RankingGame(uint gameId, uint score, PlayerInfo info) =>
+            new(new GameId(gameId), score, PlayerItems(info).Where(player => player != null)
+                .Select(player => new RankingParticipant(player.MachineId, new PlayerId(player.PlayerId), player.PlayerName)).ToArray());
 
         public async UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
         {
@@ -305,14 +314,13 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
+        public async UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, GameMode mode, Difficulty difficulty, CancellationToken token = default)
         {
             if (_client == null || token.IsCancellationRequested) return null;
             try
             {
-                var response = await _client.GetRankingAsync(new GetRankingRequest { MaxItemNum = maxItemCount }, cancellationToken: token);
-                return response.TopN.Select(item => new RankingEntry(new GameId(item.GameId), item.TotalScore,
-                    new PlayerId(item.PlayerId), item.PlayerName)).ToArray();
+                var response = await _client.GetRankingAsync(new GetRankingRequest { MaxItemNum = maxItemCount, Mode = mode, Difficulty = difficulty }, cancellationToken: token);
+                return response.TopN.Select(item => RankingGame(item.GameId, item.TotalScore, item.PlayerInfo)).ToArray();
             }
             catch (RpcException error)
             {
@@ -321,13 +329,13 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
+        public async UniTask<IReadOnlyList<RankingEntry>> GetGamesByPlayerAsync(PlayerId playerId, GameMode mode, Difficulty difficulty, CancellationToken token = default)
         {
             if (_client == null || token.IsCancellationRequested) return null;
             try
             {
-                var response = await _client.GetGamesByPlayerAsync(new GetGamesByPlayerRequest { PlayerId = playerId.Value }, cancellationToken: token);
-                return response.Items.Select(item => new PlayerGame(new GameId(item.GameId), item.TotalScore)).ToArray();
+                var response = await _client.GetGamesByPlayerAsync(new GetGamesByPlayerRequest { PlayerId = playerId.Value, Mode = mode, Difficulty = difficulty }, cancellationToken: token);
+                return response.Items.Select(item => RankingGame(item.GameId, item.TotalScore, item.PlayerInfo)).ToArray();
             }
             catch (RpcException error)
             {

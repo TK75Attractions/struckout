@@ -1,0 +1,150 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,\n                    p1.id AS player_id_1, p1.name AS player_name_1,\n                    p2.id AS player_id_2, p2.name AS player_name_2\n             FROM games g\n             JOIN players p1 ON p1.id = g.player_id_1\n             LEFT JOIN players p2 ON p2.id = g.player_id_2\n             WHERE g.mode = ? AND g.difficulty = ?\n             ORDER BY g.score DESC, g.game_id ASC\n             LIMIT ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "game_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED | AUTO_INCREMENT",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.games",
+            "name": "game_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "score",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.games",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "machine_id_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.games",
+            "name": "machine_id_1"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "machine_id_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "UNSIGNED",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.games",
+            "name": "machine_id_2"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "player_id_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED | AUTO_INCREMENT",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.players",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "player_name_1",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | UNIQUE_KEY | NO_DEFAULT_VALUE",
+          "collation": 255,
+          "max_size": 128
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.players",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "player_id_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "PRIMARY_KEY | UNSIGNED | AUTO_INCREMENT",
+          "collation": 63,
+          "max_size": 10
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.players",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "player_name_2",
+        "type_info": {
+          "type": "VarString",
+          "flags": "UNIQUE_KEY | NO_DEFAULT_VALUE",
+          "collation": 255,
+          "max_size": 128
+        },
+        "origin": {
+          "Table": {
+            "table": "struckout_334_proto.players",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "da81d5f878f5c538b156017599e21d774b48074e74ea07d65eab82322faeaa1a"
+}

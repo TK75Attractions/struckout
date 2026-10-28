@@ -1,9 +1,11 @@
+using Tk75Attractions.Struckout.GameMaster.V1;
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 
 namespace Struckout.Application
 {
@@ -13,6 +15,8 @@ namespace Struckout.Application
         private readonly IUIService _ui;
         private PlayerId? _playerId;
         private GameId? _gameId;
+        private GameMode _mode;
+        private Difficulty _difficulty;
         private CancellationTokenSource _request;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
@@ -22,10 +26,12 @@ namespace Struckout.Application
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
         }
 
-        public void ShowPlaying(PlayerId playerId)
+        public void ShowPlaying(PlayerId playerId, GameMode mode, Difficulty difficulty)
         {
             CancelRequest();
             _playerId = playerId;
+            _mode = mode;
+            _difficulty = difficulty;
             _gameId = null;
             _ui.SetScreen(ProjectorScreen.Playing);
         }
@@ -58,8 +64,8 @@ namespace Struckout.Application
             _ui.ShowScreenMessage("ランキングを取得しています…");
             try
             {
-                var rankingTask = _master.GetRankingAsync(RankingResults.TopItemCount, token);
-                var historyTask = _master.GetGamesByPlayerAsync(playerId, token);
+                var rankingTask = _master.GetRankingAsync(RankingResults.TopItemCount, _mode, _difficulty, token);
+                var historyTask = _master.GetGamesByPlayerAsync(playerId, _mode, _difficulty, token);
                 var (ranking, history) = await UniTask.WhenAll(rankingTask, historyTask);
                 if (token.IsCancellationRequested) return;
                 if (ranking == null || history == null)

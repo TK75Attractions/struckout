@@ -10,13 +10,13 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 
 ## 結果とランキングの画面遷移
 
-1. `GameStarted` の Single / Multi に含まれる `PlayerInfo` から、自分の `machine_id` に
-   対応する `player_id` を選んで保持し、PlayingScreen を表示する。
+1. `GameStarted.player_info` の Single / Multi に含まれるプレイヤーから、自分の `machine_id` に
+   対応する `player_id` を選び、Single / Multi から求めたモードと開始時の難易度とともに保持し、PlayingScreen を表示する。
 2. `GameFinished(game_id)` を受信すると命中送信を止めて ScoreScreen に切り替え、
    `GetGameResult(game_id)` で DB 保存済みの確定得点を取得して表示する。
    プレイ中の HUD の値を確定結果として流用しない。
 3. 自分のマシンの `NavigateToRankingScreenRequested` を受信すると RankingScreen に切り替える。
-   `GetRanking(max_item_num = 10)` と `GetGamesByPlayer(player_id)` を並行して取得し、
+   `GetRanking(max_item_num = 10, mode, difficulty)` と `GetGamesByPlayer(player_id, mode, difficulty)` を並行して取得し、
    `game_id` で重複を除いて得点の降順に統合する。同点の場合は `game_id` の昇順とする。
 4. 自分のマシンの `NavigateToHomeScreenRequested` を受信すると HomeScreen に切り替え、
    結果表示用のゲーム ID とプレイヤー ID を破棄する。
@@ -26,8 +26,13 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 12 行の固定レイアウトで一画面に収め、得点順に上から下へ並べる。
 スクロールやページ切り替えは行わない。
 API は履歴の全体順位を返さないため、統合後の行番号を全体順位として表示しない。
-マルチプレイの同一ゲームが複数のランキング行に含まれる場合もゲーム ID 単位でまとめ、
-本人の名前がランキング内にある場合はその行を優先する。
+サーバーのランキングは multi-play も1ゲーム1行とし、両プレイヤーの情報を含む。
+ランキング・本人履歴とも参加者情報を使い、single-play は名前1人分、multi-play は
+`player1 / player2` の形式で両名を表示する。どちらかの参加者が本人なら行を強調する。
+同じプレイヤーが両マシンで参加した場合も両方の名前を表示する。
+本人履歴の参加者情報は `GetGamesByPlayerResponse.GamesByPlayerItem.player_info` から取得する。
+現時点の game_master の履歴取得処理はこの新フィールドを設定していないため、
+実サーバーでの名前表示にはサーバー側でも参加者情報を返す対応が必要。
 
 画面切り替え時に取得処理をキャンセルする。遅れて返った結果が HomeScreen や
 次のゲームの画面を上書きしないよう、応答を適用する前にもキャンセルを確認する。
@@ -137,9 +142,9 @@ UUID を通知する。`Single` の的は所有マシンに、`All` の的は両
 ゲーム終了時には残存する的の `TargetRemoved` を一括配信せず、projector が
 `GameFinished` に合わせてローカルの的を消す。
 
-現時点の game_master では `GetRanking` / `GetGamesByPlayer` / 画面遷移 RPC も未実装。
-projector 側の取得・通知処理と Fake は対応済みだが、実サーバーでの一連の画面遷移には
-配信側と取得 RPC の実装が必要。
+game_master は `GetRanking` / `GetGamesByPlayer` に対応している。取得順と協力プレイの扱いは
+[ランキングとプレイヤー別履歴](../llm_memory/game_master/ranking.md) を参照。
+画面遷移 RPC は未実装のため、実サーバーでの一連の画面遷移には配信側の実装が必要。
 
 現在の API には、再接続後に現在のターゲット一覧やプレイヤー情報を取得する機能がない。
 切断中に取り逃したイベントの復元と状態の再同期は、今回の対象外とする。

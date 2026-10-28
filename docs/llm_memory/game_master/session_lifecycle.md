@@ -6,6 +6,8 @@
 
 `StartSession` → `SetGameMode` → `SetSessionDifficulty` → `SetSessionReady` の順に設定する。
 シングルプレイは準備完了時、マルチプレイは両マシンの準備完了時にゲームを開始する。
+`GameStarted.player_info` はプレイヤー ID・名前と対応するマシン ID を含む。
+名前は DB から状態遷移前に取得し、失敗時は `Internal`、取得中に設定が変わった場合は `Aborted` を返して開始しない。
 ゲーム開始時刻は UTC で保持する。この段階では `games` テーブルに書き込まない。
 
 ゲーム終了時は `MachineSession::Running` から `Finished` に遷移し、得点を確定する。
@@ -27,7 +29,8 @@ DB 保存後、通知前にセッションを破棄する。マルチプレイ�
 ## DB
 
 `games` テーブルは終了済みゲームのみ保持する。`score` は必須で、`status` カラムは持たない。
-マイグレーション `0002_save_completed_games.sql` は既存の `running` 行を削除し、終了済みの履歴を保持する。
-今回の変更では DB スキーマの追加変更は不要。
+初期スキーマは `0001_init.sql` に統合済みで、旧スキーマからの移行は行わない。
+各プレイヤーに対応するマシン ID も保存する。詳細は
+[ランキングとプレイヤー別履歴](ranking.md) を参照。
 SQLx のオフライン用メタデータは、マイグレーション適用済みの DB に対して
 `mise run //game_master:prepare` で更新する。

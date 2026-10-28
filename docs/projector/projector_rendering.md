@@ -161,7 +161,7 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 | `Unity/UIRoot.cs` | 的を置く親 Transform を保持 | 低 |
 | `Domain/WorldCoordinateTransform.cs` | 盤面 px → ワールド unit | 低。ただし全部の前提 |
 | `Domain/FieldBounds.cs` | 盤面の広さ | 低。比率を変えるなら |
-| `Infrastructure/TargetGenerator.cs` | 的の**位置と大きさ**を決める | 中。見た目の前提を決めている |
+| `Domain/Targets/TargetGenerator.cs` | 的の**位置と大きさ**を決める | 中。見た目の前提を決めている |
 | `Domain/TargetDefinition/Target.cs` | サーバー UUID を持つ不変の的。`Size` は直径 | 低 |
 | `Application/GameRuntime.cs` | 的の登録・命中通知・削除と再生成。UI を呼ぶ側 | 低 |
 | `Application/ScreenController.cs` | 結果取得・ランキング統合と画面遷移。遅延応答のキャンセル | 中 |

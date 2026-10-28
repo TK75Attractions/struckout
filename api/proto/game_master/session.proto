@@ -95,14 +95,15 @@ message GetGameResultResponse {
 message GetRankingRequest {
   // トップN位まで取得する
   uint32 max_item_num = 1;
+  GameMode mode = 2;
+  Difficulty difficulty = 3;
 }
 
 message GetRankingResponse {
   message RankingItem {
     uint32 game_id = 1;
     uint32 total_score = 2;
-    uint32 player_id = 3;
-    string player_name = 4;
+    PlayerInfo player_info = 3;
   }
 
   repeated RankingItem top_n = 1;
@@ -110,12 +111,15 @@ message GetRankingResponse {
 
 message GetGamesByPlayerRequest {
   uint32 player_id = 1;
+  GameMode mode = 2;
+  Difficulty difficulty = 3;
 }
 
 message GetGamesByPlayerResponse {
   message GamesByPlayerItem {
     uint32 game_id = 1;
     uint32 total_score = 2;
+    PlayerInfo player_info = 3;
   }
 
   repeated GamesByPlayerItem items = 1;

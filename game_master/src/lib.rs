@@ -1,7 +1,7 @@
 use std::future::Future;
 
 use struckout_proto::{
-    Difficulty,
+    Difficulty, GameMode,
     types::{GameId, MachineId, PlayerId},
 };
 use thiserror::Error;
@@ -26,6 +26,25 @@ pub trait DataSource: Clone + Send + Sync + 'static {
         &self,
         game_id: GameId,
     ) -> impl Future<Output = Result<u32, GetGameResultError>> + Send;
+
+    fn get_ranking(
+        &self,
+        max_item_num: u32,
+        mode: GameMode,
+        difficulty: Difficulty,
+    ) -> impl Future<Output = Result<Vec<GameResultItem>, GetRankingError>> + Send;
+
+    fn get_games_by_player(
+        &self,
+        player_id: PlayerId,
+        mode: GameMode,
+        difficulty: Difficulty,
+    ) -> impl Future<Output = Result<Vec<GameResultItem>, GetGamesByPlayerError>> + Send;
+
+    fn get_player_by_id(
+        &self,
+        player_id: PlayerId,
+    ) -> impl Future<Output = Result<Player, GetPlayerByIdError>> + Send;
 
     fn add_player(
         &self,
@@ -101,6 +120,58 @@ pub enum ValidatePlayerNameError {
 pub enum GetPlayerError {
     #[error("Player with name '{0}' does not exist")]
     NotExist(String),
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// A saved game's score.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GameResult {
+    pub game_id: GameId,
+    pub total_score: u32,
+}
+
+/// A saved game's score and participants.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GameResultItem {
+    pub result: GameResult,
+    pub players: GamePlayerInfo,
+}
+
+/// Error returned from [`DataSource::get_ranking()`].
+#[derive(Debug, Error)]
+pub enum GetRankingError {
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// Error returned from [`DataSource::get_games_by_player()`].
+#[derive(Debug, Error)]
+pub enum GetGamesByPlayerError {
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+}
+
+/// A participant with their machine and display name.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerInfo {
+    pub machine_id: MachineId,
+    pub player_id: PlayerId,
+    pub player_name: String,
+}
+
+/// The participants in a single-play or multi-play result.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GamePlayerInfo {
+    Single(PlayerInfo),
+    Multi(PlayerInfo, PlayerInfo),
+}
+
+/// Error returned from [`DataSource::get_player_by_id()`].
+#[derive(Debug, Error)]
+pub enum GetPlayerByIdError {
+    #[error("player {0} not found in the database")]
+    NotFound(PlayerId),
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }

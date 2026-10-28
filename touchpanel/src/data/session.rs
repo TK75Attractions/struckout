@@ -1,6 +1,7 @@
 use struckout_proto::{
     Difficulty, Event,
-    event::{EventData, game_started::GameStartedPlayerInfo},
+    event::EventData,
+    player_info::PlayerInfoData,
     types::{GameId, MachineId, PlayerId},
 };
 
@@ -44,25 +45,27 @@ impl Session {
                     SessionPhase::ConfiguringDifficulty | SessionPhase::Ready
                 ) =>
             {
-                let players = started.game_started_player_info.ok_or_else(|| {
-                    RequestError::missing_field("GameStarted", "game_started_player_info")
-                })?;
+                let players = started
+                    .player_info
+                    .ok_or_else(|| RequestError::missing_field("GameStarted", "player_info"))?
+                    .player_info_data
+                    .ok_or_else(|| RequestError::missing_field("PlayerInfo", "player_info_data"))?;
                 let players = match players {
-                    GameStartedPlayerInfo::Single(single) => {
+                    PlayerInfoData::Single(single) => {
                         vec![single.player.ok_or_else(|| {
-                            RequestError::missing_field("GameStarted.Single", "player")
+                            RequestError::missing_field("PlayerInfo.Single", "player")
                         })?]
                     }
-                    GameStartedPlayerInfo::Multi(multi) => vec![
+                    PlayerInfoData::Multi(multi) => vec![
                         multi.player_1.ok_or_else(|| {
-                            RequestError::missing_field("GameStarted.Multi", "player_1")
+                            RequestError::missing_field("PlayerInfo.Multi", "player_1")
                         })?,
                         multi.player_2.ok_or_else(|| {
-                            RequestError::missing_field("GameStarted.Multi", "player_2")
+                            RequestError::missing_field("PlayerInfo.Multi", "player_2")
                         })?,
                     ],
                 };
-                // All-machine events can also describe another machine's game.
+                // Only start the session for its registered player on this machine.
                 if !players.iter().any(|player| {
                     player.machine_id == machine_id.into_inner()
                         && Some(PlayerId::new(player.player_id)) == self.player_id
@@ -73,7 +76,12 @@ impl Session {
                 self.difficulty = Some(difficulty);
                 self.phase = SessionPhase::Running;
                 self.score = 0;
-                self.remaining_time = DisplayableRemainingTime::ZERO;
+                self.remaining_time = prost_types::Duration {
+                    seconds: started.game_dur_secs.into(),
+                    nanos: 0,
+                }
+                .try_into()
+                .expect("game_dur_secs is unsigned, so the duration is nonnegative");
             }
             EventData::SessionDifficultyChanged(changed)
                 if matches!(
@@ -124,9 +132,13 @@ fn parse_difficulty(value: i32) -> Result<Difficulty, RequestError> {
 
 #[cfg(test)]
 mod tests {
-    use struckout_proto::event::{
-        GameFinished, GameScoreChanged, GameStarted, GameTimeLimitNotify, SessionDifficultyChanged,
-        game_started::{GameStartedPlayerInfo, Multi, PlayerInfo},
+    use struckout_proto::{
+        PlayerInfo,
+        event::{
+            GameFinished, GameScoreChanged, GameStarted, GameTimeLimitNotify,
+            SessionDifficultyChanged,
+        },
+        player_info::{Multi, PlayerInfoData, PlayerItem, Single},
     };
 
     use super::*;
@@ -139,32 +151,102 @@ mod tests {
 
     const GAME_DUR_SECS: u32 = 90;
 
-    #[test]
-    fn multi_game_uses_the_player_on_this_machine() {
+    fn player(machine_id: u32, player_id: u32) -> PlayerItem {
+        PlayerItem {
+            machine_id,
+            player_id,
+            player_name: format!("Player {player_id}"),
+        }
+    }
+
+    fn started(players: Option<PlayerInfo>) -> Event {
+        event(EventData::GameStarted(GameStarted {
+            difficulty: Difficulty::Hard.into(),
+            game_dur_secs: GAME_DUR_SECS,
+            player_info: players,
+        }))
+    }
+
+    #[rstest::rstest]
+    #[case::single(PlayerInfoData::Single(Single { player: Some(player(1, 12)) }))]
+    #[case::multi_first(PlayerInfoData::Multi(Multi {
+        player_1: Some(player(1, 12)), player_2: Some(player(2, 34)),
+    }))]
+    #[case::multi_second(PlayerInfoData::Multi(Multi {
+        player_1: Some(player(2, 34)), player_2: Some(player(1, 12)),
+    }))]
+    fn game_uses_the_player_on_this_machine(#[case] players: PlayerInfoData) {
+        let mut session = Session {
+            phase: SessionPhase::Ready,
+            player_id: Some(PlayerId::new(12)),
+            score: 100,
+            ..Session::default()
+        };
+        session
+            .apply_event(
+                MachineId::new(1),
+                started(Some(PlayerInfo {
+                    player_info_data: Some(players),
+                })),
+            )
+            .expect("valid event");
+        assert_eq!(session.phase, SessionPhase::Running);
+        assert_eq!(session.difficulty, Some(Difficulty::Hard));
+        assert_eq!(session.score, 0);
+        assert_eq!(session.remaining_time.to_string(), "01:30");
+    }
+
+    #[rstest::rstest]
+    #[case::other_machine(2, 12)]
+    #[case::other_player(1, 34)]
+    fn unrelated_game_does_not_start_the_session(#[case] machine_id: u32, #[case] player_id: u32) {
         let mut session = Session {
             phase: SessionPhase::Ready,
             player_id: Some(PlayerId::new(12)),
             ..Session::default()
         };
-        let started = EventData::GameStarted(GameStarted {
-            difficulty: Difficulty::Hard.into(),
-            game_dur_secs: GAME_DUR_SECS,
-            game_started_player_info: Some(GameStartedPlayerInfo::Multi(Multi {
-                player_1: Some(PlayerInfo {
-                    machine_id: 2,
-                    player_id: 34,
-                }),
-                player_2: Some(PlayerInfo {
-                    machine_id: 1,
-                    player_id: 12,
-                }),
-            })),
-        });
         session
-            .apply_event(MachineId::new(1), event(started))
-            .expect("valid event");
-        assert_eq!(session.phase, SessionPhase::Running);
-        assert_eq!(session.difficulty, Some(Difficulty::Hard));
+            .apply_event(
+                MachineId::new(1),
+                started(Some(PlayerInfo {
+                    player_info_data: Some(PlayerInfoData::Single(Single {
+                        player: Some(player(machine_id, player_id)),
+                    })),
+                })),
+            )
+            .expect("unrelated event is valid");
+        assert_eq!(session.phase, SessionPhase::Ready);
+        assert_eq!(session.difficulty, None);
+        assert_eq!(session.remaining_time, DisplayableRemainingTime::ZERO);
+    }
+
+    #[rstest::rstest]
+    #[case::missing_player_info(None)]
+    #[case::missing_data(Some(PlayerInfo { player_info_data: None }))]
+    #[case::missing_single_player(Some(PlayerInfo {
+        player_info_data: Some(PlayerInfoData::Single(Single { player: None })),
+    }))]
+    #[case::missing_multi_first(Some(PlayerInfo {
+        player_info_data: Some(PlayerInfoData::Multi(Multi {
+            player_1: None, player_2: Some(player(1, 12)),
+        })),
+    }))]
+    #[case::missing_multi_second(Some(PlayerInfo {
+        player_info_data: Some(PlayerInfoData::Multi(Multi {
+            player_1: Some(player(1, 12)), player_2: None,
+        })),
+    }))]
+    fn missing_players_are_rejected(#[case] players: Option<PlayerInfo>) {
+        let mut session = Session {
+            phase: SessionPhase::Ready,
+            player_id: Some(PlayerId::new(12)),
+            ..Session::default()
+        };
+        assert!(matches!(
+            session.apply_event(MachineId::new(1), started(players)),
+            Err(RequestError::InvalidPacket { .. })
+        ));
+        assert_eq!(session.phase, SessionPhase::Ready);
     }
 
     #[test]

@@ -276,16 +276,14 @@ mod tests {
 
     use struckout_proto::{
         self as proto,
-        event::{
-            EventData, GameFinished, GameStarted,
-            game_started::{GameStartedPlayerInfo, Multi, PlayerInfo, Single},
-        },
+        event::{EventData, GameFinished, GameStarted},
         game_master_player_service_server::{
             GameMasterPlayerService, GameMasterPlayerServiceServer,
         },
         game_master_session_service_server::{
             GameMasterSessionService, GameMasterSessionServiceServer,
         },
+        player_info::{Multi, PlayerInfoData, PlayerItem, Single},
     };
     use tokio::sync::{Notify, broadcast, mpsc};
     use tonic::{Request, Response, transport::Server};
@@ -511,27 +509,31 @@ mod tests {
     }
 
     fn started(multi: bool) -> EventData {
-        let player = PlayerInfo {
+        let player = PlayerItem {
             machine_id: 1,
             player_id: 12,
+            player_name: "Alice".into(),
         };
         let players = if multi {
-            GameStartedPlayerInfo::Multi(Multi {
-                player_1: Some(PlayerInfo {
+            PlayerInfoData::Multi(Multi {
+                player_1: Some(PlayerItem {
                     machine_id: 2,
                     player_id: 34,
+                    player_name: "Bob".into(),
                 }),
                 player_2: Some(player),
             })
         } else {
-            GameStartedPlayerInfo::Single(Single {
+            PlayerInfoData::Single(Single {
                 player: Some(player),
             })
         };
         EventData::GameStarted(GameStarted {
             difficulty: Difficulty::Hard.into(),
             game_dur_secs: 90,
-            game_started_player_info: Some(players),
+            player_info: Some(proto::PlayerInfo {
+                player_info_data: Some(players),
+            }),
         })
     }
 
@@ -718,6 +720,7 @@ mod tests {
         let mut session = fixture.client.session();
         wait_for(&mut session, |s| s.phase == SessionPhase::Running).await;
         assert_eq!(session.borrow().difficulty, Some(Difficulty::Hard));
+        assert_eq!(session.borrow().remaining_time.to_string(), "01:30");
         fixture
             .events
             .send(response(EventData::GameFinished(GameFinished {
