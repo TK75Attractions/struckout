@@ -312,6 +312,7 @@ jobs:
           build-args: |
             ST_VERSION=${{ needs.get-version.outputs.version }}
             ST_COMMIT_SHORT_HASH=${{ needs.get-version.outputs.short-hash }}
+            RELEASE_MODE=true
 
   publish-release:
     runs-on: ubuntu-latest
