@@ -12,7 +12,7 @@ namespace Struckout.Launcher.Core.Modules;
 public sealed class GameMasterCompose(
     HostPlatform platform, string docker, string directory, string version, string password, ICommandRunner runner)
 {
-    /// <summary>The files under <c>game_master/</c> of the repository, in the order compose merges them.</summary>
+    /// <summary>The files under <c>game_master/docker/</c> of the repository, in the order compose merges them.</summary>
     public static IReadOnlyList<string> Files { get; } = ["compose.yaml", "compose.prod.yaml"];
 
     /// <summary>
