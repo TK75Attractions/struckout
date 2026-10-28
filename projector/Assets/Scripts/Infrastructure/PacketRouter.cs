@@ -28,21 +28,17 @@ namespace Struckout.Infrastructure
             switch (packet.PayloadCase)
             {
                 case ProjectorPacket.PayloadOneofCase.Message:
-                    {
-                        if (packet.Message == null) break;
-                        var message = packet.Message;
-                        _mainThreadDispatcher.Enqueue(() => OnStringMessageReceived?.Invoke(message));
-                        break;
-                    }
+                    if (packet.Message == null) break;
+                    var message = packet.Message;
+                    _mainThreadDispatcher.Enqueue(() => OnStringMessageReceived?.Invoke(message));
+                    break;
                 case ProjectorPacket.PayloadOneofCase.Point:
-                    {
-                        if (packet.Point == null) break;
-                        var point = packet.Point;
-                        // 購読は GameBootstrap が接続完了後に行うので、それより前に届くことがある。
-                        // 購読者がいない間は捨てる (無条件に呼ぶと NullReferenceException になる)。
-                        _mainThreadDispatcher.Enqueue(() => OnCollisionReceived?.Invoke(point));
-                        break;
-                    }
+                    if (packet.Point == null) break;
+                    var point = packet.Point;
+                    // 購読は GameBootstrap が接続完了後に行うので、それより前に届くことがある。
+                    // 購読者がいない間は捨てる (無条件に呼ぶと NullReferenceException になる)。
+                    _mainThreadDispatcher.Enqueue(() => OnCollisionReceived?.Invoke(point));
+                    break;
                 default:
                     Debug.Log("Unknown packet type received.");
                     break;
