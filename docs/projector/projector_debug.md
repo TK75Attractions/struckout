@@ -210,3 +210,21 @@ mise run //api:proto:check    # ズレていないかだけ確認 (exit 1 で失
 
 CI では `.github/workflows/ci.yaml` が変更パスに応じて `proto_ci.yml` を呼び出し、
 生成コードに差分があれば自動でコミットして push する。
+
+## 7. ログの出力
+
+Application・Infrastructure・Bootstrap のログは、コンストラクターで受け取る
+`Microsoft.Extensions.Logging.ILogger<T>` を使う。Domain にロギングの依存は置かない。
+値は文字列補間ではなく、`logger.LogWarning("的がありません: {TargetId}", id)` のように
+メッセージテンプレートで渡す。例外は `LogError(exception, "処理に失敗しました。")` のように
+例外引数へ渡し、メッセージとスタックトレースを残す。
+
+`GameLifetimeScope` が VContainer に `ILogger<T>` → `UnityLogger<T>` を singleton として
+登録する。DI 構築前に使う `NetworkSettingsResolver` も、同じアダプターをコンストラクターで受け取る。
+Unity 側のアダプターはカテゴリ（型の完全修飾名）を先頭に付け、Unity Console と `Player.log` に出力する。
+Trace / Debug / Information は通常ログ、Warning は警告、Error / Critical はエラーとして出力し、
+None は出力しない。スコープは保持しない。既存の `logConversions` による診断ログの切り替えは維持する。
+Unity の画面コンポーネントは引き続き `Debug.Log*` を使う。
+
+出力を必要としないテストでは `NullLogger<T>.Instance` を明示的に渡す。
+ログ自体を検証するときは、記録用の `ILogger<T>` または Unity の `LogAssert` を使う。

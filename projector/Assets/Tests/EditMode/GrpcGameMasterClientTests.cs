@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using GameMode = Tk75Attractions.Struckout.GameMaster.V1.GameMode;
 using PlayerInfo = Tk75Attractions.Struckout.GameMaster.V1.PlayerInfo;
 using System;
@@ -38,7 +39,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Target_events_supply_server_identity_and_geometry_independently_of_rpc_responses()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var targets = new List<Target>();
             var removed = new List<Guid>();
             client.TargetAdded += targets.Add;
@@ -57,7 +58,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Another_machines_target_is_not_rendered_on_this_machine()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var targets = new List<Target>();
             client.TargetAdded += targets.Add;
             Dispatch(client, Added(Guid.NewGuid(), 8));
@@ -69,7 +70,7 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase("00000000-0000-0000-0000-000000000000")]
         public void Invalid_target_uuids_are_ignored(string id)
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var targets = new List<Target>();
             var removed = new List<Guid>();
             client.TargetAdded += targets.Add;
@@ -89,7 +90,7 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase(float.MaxValue)]
         public void Invalid_target_geometry_does_not_create_an_entity(float radius)
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var targets = new List<Target>();
             client.TargetAdded += targets.Add;
             var added = Added(Guid.NewGuid());
@@ -101,7 +102,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Missing_target_or_shape_is_ignored()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var targets = new List<Target>();
             client.TargetAdded += targets.Add;
             Dispatch(client, new Event { TargetAdded = new Event.Types.TargetAdded() });
@@ -113,7 +114,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void All_target_retains_shared_ownership()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var targets = new List<Target>();
             client.TargetAdded += targets.Add;
             var added = Added(Guid.NewGuid(), 8);
@@ -127,7 +128,7 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase(8u, 81u)]
         public void Multi_play_selects_the_player_for_this_machine(uint machineId, uint expectedPlayer)
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = machineId });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = machineId }, NullLogger<GrpcGameMasterClient>.Instance);
             PlayerId? received = null;
             GameMode? receivedMode = null;
             client.GameStarted += (_, mode, player, duration) => { received = player; receivedMode = mode; };
@@ -152,7 +153,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Single_play_and_finished_events_keep_player_and_game_identity_separate()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             PlayerId? player = null;
             GameId? game = null;
             client.GameStarted += (_, mode, id, duration) => player = id;
@@ -178,7 +179,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Navigation_events_are_filtered_by_machine_id()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var events = new List<string>();
             client.RankingScreenRequested += () => events.Add("ranking");
             client.HomeScreenRequested += () => events.Add("home");
@@ -193,7 +194,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Missing_or_unrelated_player_information_does_not_start_a_game()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var starts = 0;
             client.GameStarted += (_, mode, __, duration) => starts++;
             Dispatch(client, new Event { GameStarted = new Event.Types.GameStarted() });
@@ -218,7 +219,7 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase(true, 8u, 1)]
         public void Pocket_watch_event_preserves_identity_and_filters_ownership(bool shared, uint machineId, int count)
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var watches = new List<Guid>();
             var compasses = new List<Target>();
             TargetOwnership? owner = null;
@@ -241,7 +242,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Game_start_passes_the_server_duration_in_seconds()
         {
-            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             TimeSpan? duration = null;
             client.GameStarted += (_, mode, player, value) => duration = value;
             Dispatch(client, new Event

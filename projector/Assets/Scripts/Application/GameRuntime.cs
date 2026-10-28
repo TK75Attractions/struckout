@@ -9,13 +9,15 @@ using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
 using Struckout.Domain.Targets;
 using Tk75Attractions.Struckout.V1;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Application
 {
     public class GameRuntime
     {
+        private readonly ILogger<GameRuntime> _logger;
+
         private readonly ICollisionSolver _collisionSolver;
         private readonly TargetGenerator _targetGenerator;
         private readonly IUIService _uiService;
@@ -32,8 +34,10 @@ namespace Struckout.Application
             TargetGenerator targetGenerator,
             IUIService uiService,
             IGameMasterClient master,
-            GameSettings settings)
+            GameSettings settings,
+            ILogger<GameRuntime> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _collisionSolver = collisionSolver;
             _targetGenerator = targetGenerator;
             _uiService = uiService;
@@ -71,13 +75,13 @@ namespace Struckout.Application
         {
             var accepted = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
             if (!accepted && !token.IsCancellationRequested)
-                Debug.LogWarning("[Game] 的の登録を要求できませんでした。");
+                _logger.LogWarning("的の登録を要求できませんでした。");
         }
 
         /// <summary>Applies an authoritative TargetAdded event, independently of the registration RPC response.</summary>
         public void OnTargetAdded(Target target)
         {
-            if (!_state.AddTarget(target)) Debug.LogWarning($"[Game] Notified target {target.Id} already exists in the GameRuntimeState");
+            if (!_state.AddTarget(target)) _logger.LogWarning("Notified target {TargetId} already exists in the GameRuntimeState", target.Id);
             _uiService.AddTarget(target);
         }
 
@@ -101,9 +105,9 @@ namespace Struckout.Application
         public void OnTargetRemoved(Guid id)
         {
             _pendingTargets.Remove(id);
-            if (!_state.RemoveTarget(id)) Debug.LogWarning($"[Game] There's no target with the notified id: {id}");
+            if (!_state.RemoveTarget(id)) _logger.LogWarning("[Game] There's no target with the notified id: {Id}", id);
             if (!_uiService.RemoveTarget(id))
-                Debug.LogWarning($"[Game] 削除通知に対応する描画がありません: {id}");
+                _logger.LogWarning("削除通知に対応する描画がありません: {Id}", id);
         }
 
         /// <summary>Clears remaining local targets when the game finishes.</summary>
@@ -163,7 +167,7 @@ namespace Struckout.Application
                 _uiService.ShowCollisionMarker(x, y, hit ? CollisionResult.Scored : CollisionResult.Ignored);
                 if (!hit)
                 {
-                    Debug.LogWarning($"[Game] 命中を通知できませんでした: {target}");
+                    _logger.LogWarning("命中を通知できませんでした: {Target}", target);
                     return;
                 }
 
@@ -180,7 +184,7 @@ namespace Struckout.Application
                 if (token.IsCancellationRequested) return;
                 if (!removed)
                 {
-                    Debug.LogWarning($"[Game] 的の削除を確認できないため、再生成を停止します: {target}");
+                    _logger.LogWarning("的の削除を確認できないため、再生成を停止します: {Target}", target);
                     return;
                 }
                 var others = _state.Targets.Where(other => other.Id != target.Id).Select(other => other.Geometry).ToList();

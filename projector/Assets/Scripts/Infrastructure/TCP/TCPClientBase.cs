@@ -8,12 +8,14 @@ using Google.Protobuf;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 
 namespace Struckout.Infrastructure.TCP
 {
     public class TcpClientBase<T> : IClientService<T>
     {
+        private readonly ILogger<TcpClientBase<T>> _logger;
+
         ConnectionState _state = ConnectionState.Disconnected;
         private string _host;
         private int _port;
@@ -35,8 +37,9 @@ namespace Struckout.Infrastructure.TCP
         }
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public TcpClientBase(IMessageParser<T> parser)
+        public TcpClientBase(IMessageParser<T> parser, ILogger<TcpClientBase<T>> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _parser = parser;
         }
 
@@ -66,11 +69,11 @@ namespace Struckout.Infrastructure.TCP
                     await _tcpClient.ConnectAsync(_host, _port);
                     _networkStream = _tcpClient.GetStream();
                     Transit(ConnectionState.Connected);
-                    Debug.Log("Connected to TCP server.");
+                    _logger.LogInformation("Connected to TCP server.");
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log($"Error connecting to TCP server: {ex.Message}");
+                    _logger.LogInformation(ex, "Error connecting to TCP server: {ErrorMessage}", ex.Message);
                     // 再試行で毎回 TcpClient を捨てないように、失敗した分はここで解放する。
                     _tcpClient.Dispose();
                     _tcpClient = null;
@@ -103,7 +106,7 @@ namespace Struckout.Infrastructure.TCP
                 if (_state != ConnectionState.Connected
                     && _state != ConnectionState.Connecting
                     && _state != ConnectionState.Failed) return;
-                if (_tcpClient == null) Debug.Log("Failed To Disconnect");
+                if (_tcpClient == null) _logger.LogInformation("Failed To Disconnect");
 
                 Transit(ConnectionState.Disconnecting);
 
@@ -114,7 +117,7 @@ namespace Struckout.Infrastructure.TCP
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log($"Error closing connection to TCP server: {ex.Message}");
+                    _logger.LogInformation(ex, "Error closing connection to TCP server: {ErrorMessage}", ex.Message);
                 }
                 finally
                 {
@@ -124,7 +127,7 @@ namespace Struckout.Infrastructure.TCP
                     Transit(ConnectionState.Disconnected);
                 }
 
-                Debug.Log("Done");
+                _logger.LogInformation("Done");
 
             }
             finally
@@ -146,7 +149,7 @@ namespace Struckout.Infrastructure.TCP
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"Connect attempt failed because of {ex}");
+                    _logger.LogWarning(ex, "Connect attempt failed because of {ErrorMessage}", ex.Message);
                 }
 
                 // 指数バックオフ。ただし相手 (ball_tracker) が後から起動したときにすぐつながるよう、間隔は 5 秒までにする
@@ -162,7 +165,7 @@ namespace Struckout.Infrastructure.TCP
             var stream = _networkStream;
             if (_state != ConnectionState.Connected || stream == null)
             {
-                Debug.LogWarning("Tried to send a packet while not connected.");
+                _logger.LogWarning("Tried to send a packet while not connected.");
                 return false;
             }
 
@@ -181,7 +184,7 @@ namespace Struckout.Infrastructure.TCP
             }
             catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is SocketException)
             {
-                Debug.LogWarning($"Failed to send a packet: {ex.Message}");
+                _logger.LogWarning(ex, "Failed to send a packet: {ErrorMessage}", ex.Message);
                 return false;
             }
             finally
@@ -215,25 +218,25 @@ namespace Struckout.Infrastructure.TCP
                 }
                 catch (EndOfStreamException ex)
                 {
-                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    _logger.LogWarning(ex, "Connection lost while receiving: {ErrorMessage}", ex.Message);
                     lostUnexpectedly = true;
                     break;
                 }
                 catch (IOException ex)
                 {
-                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    _logger.LogWarning(ex, "Connection lost while receiving: {ErrorMessage}", ex.Message);
                     lostUnexpectedly = true;
                     break;
                 }
                 catch (ObjectDisposedException ex)
                 {
-                    Debug.LogWarning($"Connection lost while receiving: {ex.Message}");
+                    _logger.LogWarning(ex, "Connection lost while receiving: {ErrorMessage}", ex.Message);
                     lostUnexpectedly = true;
                     break;
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogException(ex);
+                    _logger.LogError(ex, "処理中に例外が発生しました。");
                     lostUnexpectedly = true;
                     break;
                 }
@@ -245,12 +248,12 @@ namespace Struckout.Infrastructure.TCP
                 }
                 catch (InvalidProtocolBufferException ex)
                 {
-                    Debug.Log(ex);
+                    _logger.LogInformation(ex, "パケットを解析できませんでした。");
                     continue;
                 }
                 catch
                 {
-                    Debug.Log("Failed to Parse");
+                    _logger.LogInformation("Failed to Parse");
                     continue;
                 }
 
@@ -265,7 +268,7 @@ namespace Struckout.Infrastructure.TCP
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogException(ex);
+                        _logger.LogError(ex, "処理中に例外が発生しました。");
                     }
                 }
             }
@@ -295,7 +298,7 @@ namespace Struckout.Infrastructure.TCP
             }
             catch (Exception ex)
             {
-                Debug.LogException(ex);
+                _logger.LogError(ex, "処理中に例外が発生しました。");
             }
         }
 

@@ -8,7 +8,7 @@ using Cysharp.Threading.Tasks;
 using Struckout.Application.Interface;
 using Struckout.Domain.Ranking;
 using Tk75Attractions.Struckout.GameMaster.V1;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 using Target = Struckout.Domain.TargetDefinition.Target;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
@@ -20,6 +20,8 @@ namespace Struckout.Infrastructure.Fake
     /// </summary>
     public class FakeGameMasterClient : IGameMasterClient
     {
+        private readonly ILogger<FakeGameMasterClient> _logger;
+
         /// <summary>game_master の GAME_DURATION (services/mod.rs) に合わせてある。</summary>
         private readonly TimeSpan _gameDuration;
         private readonly TimeSpan _screenDuration;
@@ -33,10 +35,12 @@ namespace Struckout.Infrastructure.Fake
             [new GameId(13)] = 800,
         };
 
-        public FakeGameMasterClient() : this(TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(5)) { }
+        public FakeGameMasterClient(ILogger<FakeGameMasterClient> logger)
+            : this(TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(5), logger) { }
 
-        internal FakeGameMasterClient(TimeSpan gameDuration, TimeSpan screenDuration)
+        internal FakeGameMasterClient(TimeSpan gameDuration, TimeSpan screenDuration, ILogger<FakeGameMasterClient> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             if (gameDuration < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(gameDuration));
             if (screenDuration < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(screenDuration));
             _gameDuration = gameDuration;
@@ -97,7 +101,7 @@ namespace Struckout.Infrastructure.Fake
                 if (_connected) return UniTask.FromResult(true);
                 _connected = true;
 
-                Debug.Log("[Fake] game_master connected");
+                _logger.LogInformation("[Fake] game_master connected");
 
                 RemoveAllTargets();
                 _currentGameId = new GameId(++_nextGameId);
@@ -141,7 +145,7 @@ namespace Struckout.Infrastructure.Fake
                             _targetRadii.Clear();
                             _pocketWatchId = null;
                             RemainingTimeChanged?.Invoke(TimeSpan.Zero);
-                            Debug.Log("[Fake] game_master -> GameFinished");
+                            _logger.LogInformation("[Fake] game_master -> GameFinished");
                             _results[_currentGameId] = _totalScore;
                             GameFinished?.Invoke(_currentGameId);
                             break;
@@ -284,7 +288,7 @@ namespace Struckout.Infrastructure.Fake
             if (gameTask.HasValue) await gameTask.Value;
             cancellation?.Dispose();
 
-            Debug.Log("[Fake] game_master disconnected");
+            _logger.LogInformation("[Fake] game_master disconnected");
         }
     }
 }

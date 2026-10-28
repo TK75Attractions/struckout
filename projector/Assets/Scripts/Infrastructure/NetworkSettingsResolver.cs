@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security;
 using Struckout.Domain;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 
 namespace Struckout.Infrastructure
 {
@@ -24,9 +24,16 @@ namespace Struckout.Infrastructure
     ///   STRUCKOUT_MASTER_HOST / STRUCKOUT_MASTER_PORT / STRUCKOUT_MACHINE_ID
     ///   STRUCKOUT_CONNECT_ATTEMPTS
     /// </summary>
-    public static class NetworkSettingsResolver
+    public sealed class NetworkSettingsResolver
     {
-        public static NetworkSettings Resolve(NetworkSettings inspectorSettings)
+        private readonly ILogger<NetworkSettingsResolver> _logger;
+
+        public NetworkSettingsResolver(ILogger<NetworkSettingsResolver> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        public NetworkSettings Resolve(NetworkSettings inspectorSettings)
             => Resolve(inspectorSettings, ParseCommandLine(), ReadEnvironmentVariable);
 
         /// <summary>
@@ -35,7 +42,7 @@ namespace Struckout.Infrastructure
         /// <param name="inspectorSettings">Inspectorで設定されているNetworkSettings。</param>
         /// <param name="commandLine">"-key value" を辞書にしたもの。</param>
         /// <param name="environment">環境変数を引く関数。無ければ null を返す。</param>
-        public static NetworkSettings Resolve(
+        public NetworkSettings Resolve(
             NetworkSettings inspectorSettings,
             IReadOnlyDictionary<string, string> commandLine,
             Func<string, string> environment)
@@ -113,7 +120,7 @@ namespace Struckout.Infrastructure
             return result;
         }
 
-        private static NetworkMode ResolveMode(
+        private NetworkMode ResolveMode(
             IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment, NetworkMode fallback)
         {
             var raw = Lookup(commandLine, environment, "networkMode", "STRUCKOUT_NETWORK_MODE");
@@ -121,7 +128,7 @@ namespace Struckout.Infrastructure
 
             if (Enum.TryParse<NetworkMode>(raw, ignoreCase: true, out var mode)) return mode;
 
-            Debug.LogWarning($"[NetworkSettings] '{raw}' is not a valid network mode; falling back to {fallback}");
+            _logger.LogWarning("'{Value}' is not a valid network mode; falling back to {Fallback}", raw, fallback);
             return fallback;
         }
 
@@ -131,7 +138,7 @@ namespace Struckout.Infrastructure
             => Lookup(commandLine, environment, argName, envName) ?? fallback;
 
 
-        private static ushort ResolveUShort(IReadOnlyDictionary<string, string> commandLine,
+        private ushort ResolveUShort(IReadOnlyDictionary<string, string> commandLine,
             Func<string, string> environment, string argName, string envName, ushort fallback)
         {
             var raw = Lookup(commandLine, environment, argName, envName);
@@ -139,11 +146,11 @@ namespace Struckout.Infrastructure
 
             if (ushort.TryParse(raw, out var value)) return value;
             
-            Debug.LogWarning($"[NetworkSettings] '{raw}' is not a valid value for {argName}; falling back to {fallback}");
+            _logger.LogWarning("'{Value}' is not a valid value for {Argument}; falling back to {Fallback}", raw, argName, fallback);
             return fallback;
         }
 
-        private static uint ResolveUInt(IReadOnlyDictionary<string, string> commandLine,
+        private uint ResolveUInt(IReadOnlyDictionary<string, string> commandLine,
             Func<string, string> environment, string argName, string envName, uint fallback)
         {
             var raw = Lookup(commandLine, environment, argName, envName);
@@ -151,7 +158,7 @@ namespace Struckout.Infrastructure
 
             if (uint.TryParse(raw, out var value)) return value;
             
-            Debug.LogWarning($"[NetworkSettings] '{raw}' is not a valid value for {argName}; falling back to {fallback}");
+            _logger.LogWarning("'{Value}' is not a valid value for {Argument}; falling back to {Fallback}", raw, argName, fallback);
             return fallback;
         }
 

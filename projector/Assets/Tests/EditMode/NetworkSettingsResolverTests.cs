@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -29,7 +30,7 @@ namespace Struckout.Tests.Tests.EditMode
             NetworkSettings inspector = null,
             Dictionary<string, string> args = null,
             Func<string, string> env = null)
-            => NetworkSettingsResolver.Resolve(inspector, args, env);
+            => new NetworkSettingsResolver(NullLogger<NetworkSettingsResolver>.Instance).Resolve(inspector, args, env);
 
         [Test]
         public void 上書きが無ければ_Inspector_の値が使われる()

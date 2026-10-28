@@ -5,7 +5,7 @@ using Google.Protobuf;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.V1;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 
 namespace Struckout.Infrastructure.Fake
 {
@@ -15,6 +15,8 @@ namespace Struckout.Infrastructure.Fake
     /// </summary>
     public class FakeClientService : IClientService<ProjectorPacket>
     {
+        private readonly ILogger<FakeClientService> _logger;
+
         // CollisionPoint は物理座標 (m)。ball_tracker は三角測量の結果をそのまま送る
         // (ball_tracker/src/collision_output/network.rs: x = coll.y, y = coll.z)。
         // 盤面の実寸が決まったら直すこと。
@@ -26,7 +28,9 @@ namespace Struckout.Infrastructure.Fake
         private const int IntervalMilliseconds = 1000;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public FakeClientService() { }
+        public FakeClientService(ILogger<FakeClientService> logger) {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
         public event Action<ProjectorPacket> OnReceived;
 
@@ -47,7 +51,7 @@ namespace Struckout.Infrastructure.Fake
             _receiveCancellationToken = new CancellationTokenSource();
             _task = ReceiveCollisionAsync(_receiveCancellationToken.Token);
 
-            Debug.Log("[Fake] tracker connected");
+            _logger.LogInformation("[Fake] tracker connected");
             return UniTask.FromResult(true);
         }
 
@@ -56,7 +60,7 @@ namespace Struckout.Infrastructure.Fake
         public UniTask<bool> SendAsync(IMessage packet)
         {
             // 対向がいないので送りっぱなしにできない。届いた内容だけ残す。
-            Debug.Log($"[Fake] tracker <- {packet.Descriptor.Name} {packet}");
+            _logger.LogInformation("[Fake] tracker <- {PacketType} {Packet}", packet.Descriptor.Name, packet);
             return UniTask.FromResult(_isConnected);
         }
 
@@ -64,7 +68,7 @@ namespace Struckout.Infrastructure.Fake
         {
             if (!_isConnected) return;
 
-            Debug.Log("[Fake] tracker disconnected");
+            _logger.LogInformation("[Fake] tracker disconnected");
             _isConnected = false;
             _receiveCancellationToken.Cancel();
 
@@ -100,7 +104,7 @@ namespace Struckout.Infrastructure.Fake
                     }
                 };
 
-                Debug.Log($"[Fake] collision at ({x:F3}, {y:F3}) m");
+                _logger.LogInformation("[Fake] collision at ({X:F3}, {Y:F3}) m", x, y);
                 OnReceived?.Invoke(packet);
 
                 try

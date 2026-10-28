@@ -1,13 +1,15 @@
 using Tk75Attractions.Struckout.V1;
 using System;
 using Struckout.Application.Interface;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 
 
 namespace Struckout.Infrastructure
 {
     public class PacketRouter : IPacketRouter
     {
+        private readonly ILogger<PacketRouter> _logger;
+
         public event Action<TestMessage> OnStringMessageReceived;
         public event Action<CollisionPoint> OnCollisionReceived;
 
@@ -15,9 +17,11 @@ namespace Struckout.Infrastructure
         private readonly IMainThreadDispatcher _mainThreadDispatcher;
 
         public PacketRouter(
-            IMainThreadDispatcher dispatcher
+            IMainThreadDispatcher dispatcher,
+            ILogger<PacketRouter> logger
         )
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _mainThreadDispatcher = dispatcher;
         }
 
@@ -40,7 +44,7 @@ namespace Struckout.Infrastructure
                     _mainThreadDispatcher.Enqueue(() => OnCollisionReceived?.Invoke(point));
                     break;
                 default:
-                    Debug.Log("Unknown packet type received.");
+                    _logger.LogWarning("Received unknown packet type: {Type}", packet.PayloadCase);
                     break;
             }
         }

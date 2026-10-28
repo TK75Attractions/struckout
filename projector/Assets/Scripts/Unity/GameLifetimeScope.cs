@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Struckout.Application;
 using Struckout.Application.Interface;
 using Struckout.Domain;
@@ -59,7 +60,10 @@ namespace Struckout.Unity
 
         protected override void Configure(IContainerBuilder builder)
         {
-            var networkSettings = NetworkSettingsResolver.Resolve(this.networkSettings);
+            builder.Register(typeof(UnityLogger<>), Lifetime.Singleton)
+                .As(typeof(ILogger<>));
+            var resolver = new NetworkSettingsResolver(new UnityLogger<NetworkSettingsResolver>());
+            var networkSettings = resolver.Resolve(this.networkSettings);
             builder.RegisterInstance(networkSettings);
 
             // 物理座標 -> 描画座標 の係数。SensorProvider が使う。
@@ -108,7 +112,9 @@ namespace Struckout.Unity
             if (networkSettings.mode == NetworkMode.Fake)
             {
                 builder.Register<IClientService<ProjectorPacket>, FakeClientService>(Lifetime.Singleton);
-                builder.Register<IGameMasterClient>(_ => new FakeGameMasterClient(), Lifetime.Singleton);
+                // Select the runtime constructor; the other constructor accepts test durations.
+                builder.Register<IGameMasterClient>(container => new FakeGameMasterClient(
+                    container.Resolve<ILogger<FakeGameMasterClient>>()), Lifetime.Singleton);
             }
             else
             {

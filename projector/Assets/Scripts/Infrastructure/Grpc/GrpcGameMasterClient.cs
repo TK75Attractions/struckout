@@ -13,8 +13,7 @@ using Struckout.Domain.Ranking;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Struckout.Domain.TargetDefinition;
 using Struckout.Domain.Targets;
-using UnityEngine;
-// UnityEngine.Event と名前が衝突するので、proto 側を明示する。
+using Microsoft.Extensions.Logging;
 using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;
 using DomainTarget = Struckout.Domain.TargetDefinition.Target;
 using ProtoTarget = Tk75Attractions.Struckout.GameMaster.V1.Target;
@@ -30,6 +29,8 @@ namespace Struckout.Infrastructure.Grpc
     /// </summary>
     public class GrpcGameMasterClient : IGameMasterClient
     {
+        private readonly ILogger<GrpcGameMasterClient> _logger;
+
         private readonly NetworkSettings _settings;
 
         private YetAnotherHttpHandler _handler;
@@ -57,8 +58,9 @@ namespace Struckout.Infrastructure.Grpc
         public event Action<Guid> TargetRemoved;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public GrpcGameMasterClient(NetworkSettings settings)
+        public GrpcGameMasterClient(NetworkSettings settings, ILogger<GrpcGameMasterClient> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
@@ -80,7 +82,7 @@ namespace Struckout.Infrastructure.Grpc
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[GameMaster] failed to open a channel to {address}: {ex.Message}");
+                _logger.LogError(ex, "[GameMaster] failed to open a channel to {Address}: {ErrorMessage}", address, ex.Message);
                 Cleanup();
                 return UniTask.FromResult(false);
             }
@@ -88,7 +90,7 @@ namespace Struckout.Infrastructure.Grpc
             _listenCancellation = new CancellationTokenSource();
             _listenTask = ListenEventsAsync(_listenCancellation.Token);
 
-            Debug.Log($"[GameMaster] listening for events on {address} as machine {_settings.machineId}");
+            _logger.LogInformation("[GameMaster] listening for events on {Address} as machine {MachineId}", address, _settings.machineId);
             return UniTask.FromResult(true);
         }
 
@@ -121,7 +123,7 @@ namespace Struckout.Infrastructure.Grpc
                     await call.ResponseHeadersAsync;
                     if (lost)
                     {
-                        Debug.Log("[GameMaster] reconnected; listening for events again.");
+                        _logger.LogInformation("[GameMaster] reconnected; listening for events again.");
                         lost = false;
                     }
 
@@ -130,14 +132,14 @@ namespace Struckout.Infrastructure.Grpc
                         var received = call.ResponseStream.Current?.Event;
                         if (received == null)
                         {
-                            Debug.LogWarning("[GameMaster] received a response without an event; ignored.");
+                            _logger.LogWarning("[GameMaster] received a response without an event; ignored.");
                             continue;
                         }
 
                         HandleEvent(received);
                     }
 
-                    Debug.LogWarning("[GameMaster] the event stream ended.");
+                    _logger.LogWarning("[GameMaster] the event stream ended.");
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
@@ -150,11 +152,11 @@ namespace Struckout.Infrastructure.Grpc
                 }
                 catch (RpcException ex)
                 {
-                    if (!lost) Debug.LogWarning($"[GameMaster] the event stream failed: {ex.Status.StatusCode} {ex.Status.Detail}");
+                    if (!lost) _logger.LogWarning(ex, "[GameMaster] the event stream failed: {StatusCode} {StatusDetail}", ex.Status.StatusCode, ex.Status.Detail);
                 }
                 catch (Exception ex)
                 {
-                    if (!lost) Debug.LogException(ex);
+                    if (!lost) _logger.LogError(ex, "処理中に例外が発生しました。");
                 }
 
                 if (!lost)
@@ -167,7 +169,7 @@ namespace Struckout.Infrastructure.Grpc
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogException(ex);
+                        _logger.LogError(ex, "処理中に例外が発生しました。");
                     }
                 }
 
@@ -190,7 +192,7 @@ namespace Struckout.Infrastructure.Grpc
                     var playerId = LocalPlayer(received.GameStarted);
                     if (!playerId.HasValue)
                     {
-                        Debug.LogWarning("[GameMaster] 開始通知に自分の筐体のプレイヤー情報がありません。");
+                        _logger.LogWarning("[GameMaster] 開始通知に自分の筐体のプレイヤー情報がありません。");
                         break;
                     }
                     _running = true;
@@ -216,7 +218,7 @@ namespace Struckout.Infrastructure.Grpc
                     }
                     catch (InvalidOperationException)
                     {
-                        Debug.LogWarning("[GameMaster] received an invalid remaining duration; ignored.");
+                        _logger.LogWarning("[GameMaster] received an invalid remaining duration; ignored.");
                         break;
                     }
                     RemainingTimeChanged?.Invoke(remainingTime);
@@ -242,7 +244,7 @@ namespace Struckout.Infrastructure.Grpc
                     var data = added.Target;
                     if (data == null || !Guid.TryParse(data.TargetId, out var targetId) || targetId == Guid.Empty)
                     {
-                        Debug.LogWarning("[GameMaster] 的の追加通知に有効な UUID または的データがありません。");
+                        _logger.LogWarning("[GameMaster] 的の追加通知に有効な UUID または的データがありません。");
                         break;
                     }
 
@@ -258,7 +260,7 @@ namespace Struckout.Infrastructure.Grpc
                         float.IsNaN(compass.Y) || float.IsInfinity(compass.Y) ||
                         float.IsNaN(compass.Radius) || compass.Radius <= 0 || float.IsInfinity(compass.Radius * 2f))
                     {
-                        Debug.LogWarning("[GameMaster] 的の追加通知に有効な円の形状がありません。");
+                        _logger.LogWarning("[GameMaster] 的の追加通知に有効な円の形状がありません。");
                         break;
                     }
                     TargetAdded?.Invoke(new DomainTarget(targetId,
@@ -269,14 +271,14 @@ namespace Struckout.Infrastructure.Grpc
                 case Event.EventDataOneofCase.TargetRemoved:
                     if (!Guid.TryParse(received.TargetRemoved.TargetId, out var removedId) || removedId == Guid.Empty)
                     {
-                        Debug.LogWarning("[GameMaster] 的の削除通知に有効な UUID がありません。");
+                        _logger.LogWarning("[GameMaster] 的の削除通知に有効な UUID がありません。");
                         break;
                     }
                     TargetRemoved?.Invoke(removedId);
                     break;
 
                 default:
-                    Debug.Log($"[GameMaster] unhandled event: {received.EventDataCase}");
+                    _logger.LogInformation("[GameMaster] unhandled event: {EventKind}", received.EventDataCase);
                     break;
             }
         }
@@ -309,7 +311,7 @@ namespace Struckout.Infrastructure.Grpc
             }
             catch (RpcException error)
             {
-                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] 結果の取得に失敗しました: {error.StatusCode} {error.Status.Detail}");
+                if (!token.IsCancellationRequested) _logger.LogWarning(error, "[GameMaster] 結果の取得に失敗しました: {StatusCode} {StatusDetail}", error.StatusCode, error.Status.Detail);
                 return null;
             }
         }
@@ -324,7 +326,7 @@ namespace Struckout.Infrastructure.Grpc
             }
             catch (RpcException error)
             {
-                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] ランキングの取得に失敗しました: {error.StatusCode} {error.Status.Detail}");
+                if (!token.IsCancellationRequested) _logger.LogWarning(error, "[GameMaster] ランキングの取得に失敗しました: {StatusCode} {StatusDetail}", error.StatusCode, error.Status.Detail);
                 return null;
             }
         }
@@ -339,7 +341,7 @@ namespace Struckout.Infrastructure.Grpc
             }
             catch (RpcException error)
             {
-                if (!token.IsCancellationRequested) Debug.LogWarning($"[GameMaster] プレイヤーの履歴を取得できませんでした: {error.StatusCode} {error.Status.Detail}");
+                if (!token.IsCancellationRequested) _logger.LogWarning(error, "[GameMaster] プレイヤーの履歴を取得できませんでした: {StatusCode} {StatusDetail}", error.StatusCode, error.Status.Detail);
                 return null;
             }
         }
@@ -364,7 +366,7 @@ namespace Struckout.Infrastructure.Grpc
             catch (RpcException ex)
             {
                 if (!token.IsCancellationRequested)
-                    Debug.LogWarning($"[GameMaster] 的の登録に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
+                    _logger.LogWarning(ex, "[GameMaster] 的の登録に失敗しました: {StatusCode} {StatusDetail}", ex.StatusCode, ex.Status.Detail);
                 return false;
             }
         }
@@ -384,7 +386,7 @@ namespace Struckout.Infrastructure.Grpc
             catch (RpcException ex)
             {
                 if (!token.IsCancellationRequested)
-                    Debug.LogWarning($"[GameMaster] 的の削除に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
+                    _logger.LogWarning(ex, "[GameMaster] 的の削除に失敗しました: {StatusCode} {StatusDetail}", ex.StatusCode, ex.Status.Detail);
                 return false;
             }
         }
@@ -404,7 +406,7 @@ namespace Struckout.Infrastructure.Grpc
             catch (RpcException ex)
             {
                 if (!token.IsCancellationRequested)
-                    Debug.LogWarning($"[GameMaster] 命中の通知に失敗しました: {ex.StatusCode} {ex.Status.Detail}");
+                    _logger.LogWarning(ex, "[GameMaster] 命中の通知に失敗しました: {StatusCode} {StatusDetail}", ex.StatusCode, ex.Status.Detail);
                 return false;
             }
         }
@@ -423,12 +425,12 @@ namespace Struckout.Infrastructure.Grpc
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[GameMaster] the event stream ended with {ex.GetType().Name}");
+                    _logger.LogWarning(ex, "[GameMaster] the event stream ended with {ExceptionType}", ex.GetType().Name);
                 }
             }
 
             Cleanup();
-            Debug.Log("[GameMaster] disconnected");
+            _logger.LogInformation("[GameMaster] disconnected");
         }
 
         private void Cleanup()

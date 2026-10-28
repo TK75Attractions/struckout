@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -22,7 +23,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task 接続してから購読しても開始を受け取れる()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var received = new List<Difficulty>();
 
             // 実際の起動順。NetworkBootstrap が接続し、そのあと GameBootstrap が購読する。
@@ -40,7 +41,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task 購読してから接続しても開始は一度だけ()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var received = new List<Difficulty>();
 
             try
@@ -56,7 +57,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task 二回接続しても開始は増えない()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var received = new List<Difficulty>();
 
             try
@@ -73,7 +74,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task 切断したあとに購読しても開始は流れない()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var received = new List<Difficulty>();
 
             await client.ConnectAsync();
@@ -86,7 +87,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task 購読を外すと届かなくなる()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var received = new List<Difficulty>();
             void Handler(Difficulty d, GameMode mode, PlayerId _, TimeSpan duration) => received.Add(d);
 
@@ -103,7 +104,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task Registered_targets_score_repeatedly_until_removed()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var scores = new List<uint>();
             client.ScoreChanged += scores.Add;
             var added = new List<Guid>();
@@ -141,7 +142,7 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase(1e-30)]
         public async Task Invalid_scores_do_not_emit_events(double radius)
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             try
             {
                 await client.ConnectAsync();
@@ -159,7 +160,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task Disconnect_does_not_emit_removals_and_reconnect_cleans_up_by_events_before_start()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var events = new List<string>();
             client.TargetAdded += _ => events.Add("added");
             client.TargetRemoved += _ => events.Add("removed");
@@ -180,7 +181,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task Game_finished_does_not_emit_target_removals()
         {
-            var client = new FakeGameMasterClient(TimeSpan.FromMilliseconds(250), TimeSpan.Zero);
+            var client = new FakeGameMasterClient(TimeSpan.FromMilliseconds(250), TimeSpan.Zero, NullLogger<FakeGameMasterClient>.Instance);
             var finished = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var removed = new List<Guid>();
             client.GameFinished += _ => finished.TrySetResult(true);
@@ -199,7 +200,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task Fake_publishes_the_full_screen_flow_and_retains_finished_results()
         {
-            var client = new FakeGameMasterClient(TimeSpan.Zero, TimeSpan.Zero);
+            var client = new FakeGameMasterClient(TimeSpan.Zero, TimeSpan.Zero, NullLogger<FakeGameMasterClient>.Instance);
             var events = new List<string>();
             var playerId = default(PlayerId);
             var gameId = default(GameId);
@@ -225,7 +226,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public async Task Pocket_watch_is_created_and_replaced_by_server_events()
         {
-            var client = new FakeGameMasterClient();
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var watches = new List<Guid>();
             var removed = new List<Guid>();
             client.PocketWatchAdded += (id, owner) => watches.Add(id);

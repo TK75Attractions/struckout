@@ -1,4 +1,4 @@
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 using Cysharp.Threading.Tasks;
 using System;
 using JetBrains.Annotations;
@@ -9,7 +9,7 @@ namespace Struckout.Bootstrap
 {
     public class RootBootstrap : IStartable, IDisposable
     {
-        private RuntimeContext _runtimeContext;
+        private readonly ILogger<RootBootstrap> _logger;
 
         private readonly RuntimeContext _runtimeContext;
 
@@ -20,9 +20,11 @@ namespace Struckout.Bootstrap
         public RootBootstrap(
             NetworkBootstrap networkBootstrap,
             GameBootstrap gameBootstrap,
-            RuntimeContext runtimeContext
+            RuntimeContext runtimeContext,
+            ILogger<RootBootstrap> logger
         )
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _networkBootstrap = networkBootstrap;
             _gameBootstrap = gameBootstrap;
             _runtimeContext = runtimeContext;
@@ -30,7 +32,7 @@ namespace Struckout.Bootstrap
 
         public void Start()
         {
-            Initialize().Forget(Debug.LogException);
+            Initialize().Forget(ex => _logger.LogError(ex, "初期化に失敗しました。"));
         }
 
         private async UniTask Initialize()
@@ -61,21 +63,18 @@ namespace Struckout.Bootstrap
 
         public void Dispose()
         {
-            Debug.Log("DisposeAsync");
             if (_runtimeContext == null) return;
-            Debug.Log("DisposeAsync2");
 
             var destroyList = _runtimeContext.DestroyEvents;
 
             if (destroyList == null)
             {
-                Debug.Log("The DestroyList is null");
+                _logger.LogInformation("The DestroyList was null");
                 return;
             }
 
             foreach (var destroy in destroyList)
             {
-                Debug.Log("Dispose");
                 destroy.DisposeAsync();
             }
         }

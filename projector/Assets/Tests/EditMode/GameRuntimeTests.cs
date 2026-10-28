@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using GameMode = Tk75Attractions.Struckout.GameMaster.V1.GameMode;
 using System;
 using System.Collections.Generic;
@@ -108,8 +109,8 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client();
             var ui = new UI();
-            var runtime = new GameRuntime(new CollisionSolver(new CollisionCoordinateTransform()), new TargetGenerator(), ui, client,
-                new GameSettings { initialTargetCount = 1 });
+            var runtime = new GameRuntime(new CollisionSolver(new CollisionCoordinateTransform(), NullLogger<CollisionSolver>.Instance), new TargetGenerator(), ui, client,
+                new GameSettings { initialTargetCount = 1 }, NullLogger<GameRuntime>.Instance);
             runtime.GameSetup();
             client.TargetAdded += runtime.OnTargetAdded;
             client.TargetRemoved += runtime.OnTargetRemoved;
