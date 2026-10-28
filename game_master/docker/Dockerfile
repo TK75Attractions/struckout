@@ -18,11 +18,12 @@ WORKDIR /build/
 COPY mise.toml mise.toml
 COPY mise.lock mise.lock
 COPY game_master/mise.toml game_master/mise.toml
-RUN mise install --locked protoc mold github:LukeMathWalker/cargo-chef
+RUN mise install --locked protoc mold \
+    && mise -C game_master/ install --locked github:LukeMathWalker/cargo-chef
 
 FROM base AS planner
 COPY ./ ./
-RUN mise exec cargo:cargo-chef -- cargo chef prepare --recipe-path recipe.json
+RUN mise exec github:LukeMathWalker/cargo-chef -- cargo chef prepare --recipe-path recipe.json
 
 FROM base AS builder
 COPY --from=planner /build/recipe.json recipe.json
@@ -35,7 +36,7 @@ RUN if [ "$RELEASE_MODE" = "true" ]; then \
     else \
     FLAGS=""; \
     fi && \
-    SQLX_OFFLINE=true mise exec protoc mold cargo:cargo-chef -- \
+    SQLX_OFFLINE=true mise exec protoc mold github:LukeMathWalker/cargo-chef -- \
     cargo chef cook --recipe-path recipe.json ${FLAGS} -p game_master
 
 COPY ./ ./
