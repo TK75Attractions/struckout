@@ -9,8 +9,8 @@ use time::PlainDateTime;
 
 use crate::{
     AddPlayerError, DataSource, GamePlayerInfo, GamePlayers, GameRecord, GameResult,
-    GetGameResultError, GetGamesByPlayerError, GetPlayerByIdError, GetPlayerError, GetRankingError,
-    PlayerInfo, RankingItem, SaveGameError, ValidatePlayerNameError,
+    GameResultItem, GetGameResultError, GetGamesByPlayerError, GetPlayerByIdError, GetPlayerError,
+    GetRankingError, PlayerInfo, SaveGameError, ValidatePlayerNameError,
 };
 
 const MODE_SINGLE: &str = "single";
@@ -37,6 +37,50 @@ trait MySqlConnectionSource: Clone + Send + Sync + 'static {
 impl MySqlConnectionSource for Pool<MySql> {
     async fn acquire(&self) -> Result<impl DerefMut<Target = MySqlConnection> + Send, sqlx::Error> {
         self.acquire().await
+    }
+}
+
+/// A saved game joined with both participants.
+struct GameResultRow {
+    game_id: u32,
+    score: u32,
+    machine_id_1: u32,
+    machine_id_2: Option<u32>,
+    player_id_1: u32,
+    player_name_1: String,
+    player_id_2: Option<u32>,
+    player_name_2: Option<String>,
+}
+
+impl From<GameResultRow> for GameResultItem {
+    fn from(row: GameResultRow) -> Self {
+        let first = PlayerInfo {
+            machine_id: row.machine_id_1.into(),
+            player_id: row.player_id_1.into(),
+            player_name: row.player_name_1,
+        };
+        // The CHECK constraint pairs both second-participant IDs; the foreign key guarantees the player exists.
+        let players = match (row.machine_id_2, row.player_id_2, row.player_name_2) {
+            (Some(machine_id), Some(player_id), Some(player_name)) => GamePlayerInfo::Multi(
+                first,
+                PlayerInfo {
+                    machine_id: machine_id.into(),
+                    player_id: player_id.into(),
+                    player_name,
+                },
+            ),
+            (None, None, None) => GamePlayerInfo::Single(first),
+            _ => unreachable!(
+                "second participant is guaranteed by CHECK and foreign key constraints"
+            ),
+        };
+        GameResultItem {
+            result: GameResult {
+                game_id: row.game_id.into(),
+                total_score: row.score,
+            },
+            players,
+        }
     }
 }
 
@@ -119,9 +163,10 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         max_item_num: u32,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<RankingItem>, GetRankingError> {
+    ) -> Result<Vec<GameResultItem>, GetRankingError> {
         let mut conn = self.db.acquire().await?;
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            GameResultRow,
             "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,
                     p1.id AS player_id_1, p1.name AS player_name_1,
                     p2.id AS player_id_2, p2.name AS player_name_2
@@ -137,40 +182,7 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         )
         .fetch_all(&mut *conn)
         .await?;
-        let ret = rows
-            .into_iter()
-            .map(|row| {
-                let first = PlayerInfo {
-                    machine_id: row.machine_id_1.into(),
-                    player_id: row.player_id_1.into(),
-                    player_name: row.player_name_1,
-                };
-                // The CHECK constraint pairs both second-participant IDs; the foreign key guarantees the player exists.
-                let players = match (row.machine_id_2, row.player_id_2, row.player_name_2) {
-                    (Some(machine_id), Some(player_id), Some(player_name)) => {
-                        GamePlayerInfo::Multi(
-                            first,
-                            PlayerInfo {
-                                machine_id: machine_id.into(),
-                                player_id: player_id.into(),
-                                player_name,
-                            },
-                        )
-                    }
-                    (None, None, None) => GamePlayerInfo::Single(first),
-                    _ => unreachable!(
-                        "second participant is guaranteed by CHECK and foreign key constraints"
-                    ),
-                };
-                RankingItem {
-                    result: GameResult {
-                        game_id: row.game_id.into(),
-                        total_score: row.score,
-                    },
-                    players,
-                }
-            })
-            .collect();
+        let ret = rows.into_iter().map(Into::into).collect();
         Ok(ret)
     }
 
@@ -179,12 +191,18 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<GameResult>, GetGamesByPlayerError> {
+    ) -> Result<Vec<GameResultItem>, GetGamesByPlayerError> {
         let mut conn = self.db.acquire().await?;
-        let rows = sqlx::query!(
-            "SELECT game_id, score FROM games
-             WHERE (player_id_1 = ? OR player_id_2 = ?) AND mode = ? AND difficulty = ?
-             ORDER BY score DESC, game_id ASC",
+        let rows = sqlx::query_as!(
+            GameResultRow,
+            "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,
+                    p1.id AS player_id_1, p1.name AS player_name_1,
+                    p2.id AS player_id_2, p2.name AS player_name_2
+             FROM games g
+             JOIN players p1 ON p1.id = g.player_id_1
+             LEFT JOIN players p2 ON p2.id = g.player_id_2
+             WHERE (g.player_id_1 = ? OR g.player_id_2 = ?) AND g.mode = ? AND g.difficulty = ?
+             ORDER BY g.score DESC, g.game_id ASC",
             player_id.into_inner(),
             player_id.into_inner(),
             mode.to_mysql_enum(),
@@ -192,13 +210,7 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         )
         .fetch_all(&mut *conn)
         .await?;
-        let ret = rows
-            .into_iter()
-            .map(|row| GameResult {
-                game_id: row.game_id.into(),
-                total_score: row.score,
-            })
-            .collect();
+        let ret = rows.into_iter().map(Into::into).collect();
         Ok(ret)
     }
 
@@ -494,15 +506,15 @@ mod tests {
                 },
             );
             let expected = [
-                RankingItem {
+                GameResultItem {
                     result: games[1].clone(),
                     players: players.clone(),
                 },
-                RankingItem {
+                GameResultItem {
                     result: games[2].clone(),
                     players: players.clone(),
                 },
-                RankingItem {
+                GameResultItem {
                     result: games[0].clone(),
                     players,
                 },
@@ -518,26 +530,36 @@ mod tests {
                     ds.get_games_by_player(player, GameMode::Multi, Difficulty::Hard)
                         .await
                         .expect("history"),
-                    vec![games[1].clone(), games[2].clone(), games[0].clone()]
+                    expected.to_vec()
                 );
             }
             assert_eq!(
                 ds.get_games_by_player(first, GameMode::Multi, Difficulty::Normal)
                     .await
                     .expect("normal history"),
-                vec![games[3].clone()]
+                vec![GameResultItem {
+                    result: games[3].clone(),
+                    players: expected[0].players.clone()
+                }]
             );
             assert_eq!(
                 ds.get_games_by_player(first, GameMode::Single, Difficulty::Hard)
                     .await
                     .expect("single history"),
-                vec![games[4].clone()]
+                vec![GameResultItem {
+                    result: games[4].clone(),
+                    players: GamePlayerInfo::Single(PlayerInfo {
+                        machine_id: MachineId::new(4),
+                        player_id: first,
+                        player_name: "太郎".to_owned(),
+                    }),
+                }]
             );
             assert_eq!(
                 ds.get_ranking(10, GameMode::Single, Difficulty::Hard)
                     .await
                     .expect("single ranking"),
-                vec![RankingItem {
+                vec![GameResultItem {
                     result: games[4].clone(),
                     players: GamePlayerInfo::Single(PlayerInfo {
                         machine_id: MachineId::new(4),
@@ -570,9 +592,23 @@ mod tests {
                 ds.get_games_by_player(player_id, GameMode::Multi, Difficulty::Veryhard)
                     .await
                     .expect("history"),
-                vec![GameResult {
-                    game_id,
-                    total_score: 0
+                vec![GameResultItem {
+                    result: GameResult {
+                        game_id,
+                        total_score: 0
+                    },
+                    players: GamePlayerInfo::Multi(
+                        PlayerInfo {
+                            machine_id: MachineId::new(1),
+                            player_id,
+                            player_name: "Same player".to_owned()
+                        },
+                        PlayerInfo {
+                            machine_id: MachineId::new(2),
+                            player_id,
+                            player_name: "Same player".to_owned()
+                        },
+                    ),
                 }]
             );
             let ranking = ds

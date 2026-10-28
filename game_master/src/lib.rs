@@ -32,14 +32,14 @@ pub trait DataSource: Clone + Send + Sync + 'static {
         max_item_num: u32,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> impl Future<Output = Result<Vec<RankingItem>, GetRankingError>> + Send;
+    ) -> impl Future<Output = Result<Vec<GameResultItem>, GetRankingError>> + Send;
 
     fn get_games_by_player(
         &self,
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> impl Future<Output = Result<Vec<GameResult>, GetGamesByPlayerError>> + Send;
+    ) -> impl Future<Output = Result<Vec<GameResultItem>, GetGamesByPlayerError>> + Send;
 
     fn get_player_by_id(
         &self,
@@ -131,9 +131,9 @@ pub struct GameResult {
     pub total_score: u32,
 }
 
-/// A ranking entry for one saved game.
+/// A saved game's score and participants.
 #[derive(Debug, Clone, PartialEq)]
-pub struct RankingItem {
+pub struct GameResultItem {
     pub result: GameResult,
     pub players: GamePlayerInfo,
 }

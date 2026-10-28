@@ -30,7 +30,7 @@ impl DataSource for StubDataSource {
         _: u32,
         _: GameMode,
         _: Difficulty,
-    ) -> Result<Vec<crate::RankingItem>, crate::GetRankingError> {
+    ) -> Result<Vec<crate::GameResultItem>, crate::GetRankingError> {
         Ok(Vec::new())
     }
 
@@ -39,7 +39,7 @@ impl DataSource for StubDataSource {
         _: PlayerId,
         _: GameMode,
         _: Difficulty,
-    ) -> Result<Vec<crate::GameResult>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
         Ok(Vec::new())
     }
 
@@ -868,8 +868,8 @@ struct RecordingDataSource {
     fail_get_player: bool,
     player_lookup_started: Arc<tokio::sync::Notify>,
     player_lookup_gate: Option<Arc<tokio::sync::Semaphore>>,
-    ranking: Vec<crate::RankingItem>,
-    history: Vec<crate::GameResult>,
+    ranking: Vec<crate::GameResultItem>,
+    history: Vec<crate::GameResultItem>,
     ranking_limits: Arc<parking_lot::Mutex<Vec<(u32, GameMode, Difficulty)>>>,
     history_players: Arc<parking_lot::Mutex<Vec<(PlayerId, GameMode, Difficulty)>>>,
     save_started: Arc<tokio::sync::Notify>,
@@ -913,7 +913,7 @@ impl DataSource for RecordingDataSource {
         max_item_num: u32,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<crate::RankingItem>, crate::GetRankingError> {
+    ) -> Result<Vec<crate::GameResultItem>, crate::GetRankingError> {
         self.ranking_limits
             .lock()
             .push((max_item_num, mode, difficulty));
@@ -928,7 +928,7 @@ impl DataSource for RecordingDataSource {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<crate::GameResult>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
         self.history_players
             .lock()
             .push((player_id, mode, difficulty));
@@ -1507,35 +1507,64 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
 }
 
 #[rstest]
-#[case::empty(false)]
-#[case::populated(true)]
+#[case::empty(false, false)]
+#[case::single(true, false)]
+#[case::multi(true, true)]
 #[tokio::test]
-async fn ranking_and_history_read_persisted_data_without_a_session(#[case] populated: bool) {
+async fn ranking_and_history_read_persisted_data_without_a_session(
+    #[case] populated: bool,
+    #[case] multi: bool,
+) {
+    let first = PlayerInfo {
+        machine_id: MachineId::new(3),
+        player_id: PlayerId::new(7),
+        player_name: "太郎".to_owned(),
+    };
+    let players = if multi {
+        GamePlayerInfo::Multi(
+            first,
+            PlayerInfo {
+                machine_id: MachineId::new(8),
+                player_id: PlayerId::new(9),
+                player_name: "花子".to_owned(),
+            },
+        )
+    } else {
+        GamePlayerInfo::Single(first)
+    };
+    let mode = if multi {
+        GameMode::Multi
+    } else {
+        GameMode::Single
+    };
     let result = crate::GameResult {
         game_id: GameId::new(42),
         total_score: 987,
     };
     let ds = RecordingDataSource {
         ranking: if populated {
-            vec![crate::RankingItem {
+            vec![crate::GameResultItem {
                 result: result.clone(),
-                players: GamePlayerInfo::Single(PlayerInfo {
-                    machine_id: MachineId::new(3),
-                    player_id: PlayerId::new(7),
-                    player_name: "太郎".to_owned(),
-                }),
+                players: players.clone(),
             }]
         } else {
             Vec::new()
         },
-        history: if populated { vec![result] } else { Vec::new() },
+        history: if populated {
+            vec![crate::GameResultItem {
+                result,
+                players: players.clone(),
+            }]
+        } else {
+            Vec::new()
+        },
         ..Default::default()
     };
     let service = GameMasterSessionServiceImpl::new(ds.clone());
     let ranking = service
         .get_ranking(Request::new(GetRankingRequest {
             max_item_num: 10,
-            mode: GameMode::Single.into(),
+            mode: mode.into(),
             difficulty: Difficulty::Normal.into(),
         }))
         .await
@@ -1545,7 +1574,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(#[case] popul
     let history = service
         .get_games_by_player(Request::new(GetGamesByPlayerRequest {
             player_id: 7,
-            mode: GameMode::Single.into(),
+            mode: mode.into(),
             difficulty: Difficulty::Normal.into(),
         }))
         .await
@@ -1554,11 +1583,11 @@ async fn ranking_and_history_read_persisted_data_without_a_session(#[case] popul
         .items;
     assert_eq!(
         *ds.ranking_limits.lock(),
-        vec![(10, GameMode::Single, Difficulty::Normal)]
+        vec![(10, mode, Difficulty::Normal)]
     );
     assert_eq!(
         *ds.history_players.lock(),
-        vec![(PlayerId::new(7), GameMode::Single, Difficulty::Normal)]
+        vec![(PlayerId::new(7), mode, Difficulty::Normal)]
     );
     assert_eq!(ranking.len(), usize::from(populated));
     assert_eq!(history.len(), usize::from(populated));
@@ -1568,14 +1597,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(#[case] popul
             struckout_proto::get_ranking_response::RankingItem {
                 game_id: 42,
                 total_score: 987,
-                player_info: Some(
-                    GamePlayerInfo::Single(PlayerInfo {
-                        machine_id: MachineId::new(3),
-                        player_id: PlayerId::new(7),
-                        player_name: "太郎".to_owned(),
-                    })
-                    .into()
-                ),
+                player_info: Some(players.clone().into()),
             }
         );
         assert_eq!(
@@ -1583,6 +1605,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(#[case] popul
             struckout_proto::get_games_by_player_response::GamesByPlayerItem {
                 game_id: 42,
                 total_score: 987,
+                player_info: Some(players.into()),
             }
         );
     }
