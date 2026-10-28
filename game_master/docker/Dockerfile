@@ -18,7 +18,7 @@ WORKDIR /build/
 COPY mise.toml mise.toml
 COPY mise.lock mise.lock
 COPY game_master/mise.toml game_master/mise.toml
-RUN mise install --locked protoc mold cargo-chef
+RUN mise install --locked protoc mold github:LukeMathWalker/cargo-chef
 
 FROM base AS planner
 COPY ./ ./

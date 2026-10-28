@@ -24,7 +24,7 @@ protoc = "35.1"
 buf = "latest"
 
 # faster than default linker on Linux
-"github:rui314/mold" = { version = "latest", os = ["linux"] }
+mold = { version = "latest", os = ["linux"] }
 
 [tasks."proto"]
 dir = "{{ config_root }}"
