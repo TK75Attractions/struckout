@@ -137,6 +137,8 @@ mod tests {
         }
     }
 
+    const GAME_DUR_SECS: u32 = 90;
+
     #[test]
     fn multi_game_uses_the_player_on_this_machine() {
         let mut session = Session {
@@ -146,6 +148,7 @@ mod tests {
         };
         let started = EventData::GameStarted(GameStarted {
             difficulty: Difficulty::Hard.into(),
+            game_dur_secs: GAME_DUR_SECS,
             game_started_player_info: Some(GameStartedPlayerInfo::Multi(Multi {
                 player_1: Some(PlayerInfo {
                     machine_id: 2,

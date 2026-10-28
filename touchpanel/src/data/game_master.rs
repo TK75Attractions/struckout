@@ -530,6 +530,7 @@ mod tests {
         };
         EventData::GameStarted(GameStarted {
             difficulty: Difficulty::Hard.into(),
+            game_dur_secs: 90,
             game_started_player_info: Some(players),
         })
     }
