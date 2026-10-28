@@ -1,6 +1,6 @@
 [tools]
 "cargo:sqlx-cli" = "latest"
-"cargo:cargo-chef" = "0.1.78"
+"github:LukeMathWalker/cargo-chef" = "0.1.78"
 
 [env]
 DATABASE_URL = { default = "", redact = true }
