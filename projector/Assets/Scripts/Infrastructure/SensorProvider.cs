@@ -27,7 +27,7 @@ namespace Struckout.Infrastructure
 
         public void GetSensorData(CollisionPoint point)
         {
-            if (point == null) return;
+            if (point == null) throw new ArgumentNullException(nameof(point));
 
             var (x, y) = _transform.ToRenderSpace(point.X, point.Y);
 

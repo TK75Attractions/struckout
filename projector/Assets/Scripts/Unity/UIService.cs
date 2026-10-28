@@ -305,7 +305,7 @@ namespace Struckout.Unity
 
         public void AddTarget(Target target)
         {
-            if (target == null) return;
+            if (target == null) throw new ArgumentNullException(nameof(target));
             if (_targetToTransform == null) throw new InvalidOperationException("UIService is not initialized.");
             if (_targetToTransform.ContainsKey(target.Id)) return;
 

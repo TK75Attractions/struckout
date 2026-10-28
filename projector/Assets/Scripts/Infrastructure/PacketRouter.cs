@@ -23,7 +23,7 @@ namespace Struckout.Infrastructure
 
         public void RoutePacket(ProjectorPacket packet)
         {
-            if (packet == null) return;
+            if (packet == null) throw new ArgumentNullException(nameof(packet));
 
             switch (packet.PayloadCase)
             {
