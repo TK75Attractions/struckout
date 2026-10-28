@@ -11,8 +11,10 @@ namespace Struckout.Bootstrap
     {
         private RuntimeContext _runtimeContext;
 
-        private NetworkBootstrap _networkBootstrap;
-        private GameBootstrap _gameBootstrap;
+        private readonly RuntimeContext _runtimeContext;
+
+        private readonly NetworkBootstrap _networkBootstrap;
+        private readonly GameBootstrap _gameBootstrap;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public RootBootstrap(

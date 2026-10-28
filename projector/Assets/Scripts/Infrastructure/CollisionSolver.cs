@@ -20,18 +20,9 @@ namespace Struckout.Infrastructure
 
         public bool TryCollision(CollisionPoint collisionPoint, IReadOnlyList<Target> targets, out Target target)
         {
-            target = null;
-            foreach (var tar in targets)
-            {
-                // ReSharper disable once InvertIf
-                if (IsWithinTarget(collisionPoint, tar))
-                {
-                    target = tar;
-                    break;
-                }
-            }
+            target = targets.FirstOrDefault(tar => IsWithinTarget(collisionPoint, tar));
 
-            if (_transform != null && _transform.logConversions)
+            if (_transform is { logConversions: true })
             {
                 LogDecision(collisionPoint, targets, target);
             }
