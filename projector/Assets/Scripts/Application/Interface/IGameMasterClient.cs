@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Struckout.Domain;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Struckout.Domain.Ranking;
 using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Target = Struckout.Domain.TargetDefinition.Target;
@@ -21,7 +22,7 @@ namespace Struckout.Application.Interface
         /// ゲームが始まった。難易度・プレイヤー・制限時間を受け取り、的を登録して命中を通知できる。
         /// 受信スレッドから飛ぶので、UI に触る購読側はマーシャリングすること。
         /// </summary>
-        event Action<Difficulty, PlayerId, TimeSpan> GameStarted;
+        event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted;
 
         /// <summary>
         /// 制限時間が尽きてゲームが終わった。これ以降、的の操作は受け付けられない。
@@ -63,8 +64,8 @@ namespace Struckout.Application.Interface
         UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default);
 
         UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default);
-        UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default);
-        UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default);
+        UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, GameMode mode, Difficulty difficulty, CancellationToken token = default);
+        UniTask<IReadOnlyList<RankingEntry>> GetGamesByPlayerAsync(PlayerId playerId, GameMode mode, Difficulty difficulty, CancellationToken token = default);
 
         UniTask DisconnectAsync();
     }

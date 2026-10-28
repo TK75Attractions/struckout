@@ -11,7 +11,7 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 ## 結果とランキングの画面遷移
 
 1. `GameStarted.player_info` の Single / Multi に含まれるプレイヤーから、自分の `machine_id` に
-   対応する `player_id` を選んで保持し、PlayingScreen を表示する。
+   対応する `player_id` を選び、Single / Multi から求めたモードと開始時の難易度とともに保持し、PlayingScreen を表示する。
 2. `GameFinished(game_id)` を受信すると命中送信を止めて ScoreScreen に切り替え、
    `GetGameResult(game_id)` で DB 保存済みの確定得点を取得して表示する。
    プレイ中の HUD の値を確定結果として流用しない。
@@ -27,7 +27,12 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 スクロールやページ切り替えは行わない。
 API は履歴の全体順位を返さないため、統合後の行番号を全体順位として表示しない。
 サーバーのランキングは multi-play も1ゲーム1行とし、両プレイヤーの情報を含む。
-projector の取得リクエストと表示処理は、この新しい契約への追従が必要。
+ランキング・本人履歴とも参加者情報を使い、single-play は名前1人分、multi-play は
+`player1 / player2` の形式で両名を表示する。どちらかの参加者が本人なら行を強調する。
+同じプレイヤーが両マシンで参加した場合も両方の名前を表示する。
+本人履歴の参加者情報は `GetGamesByPlayerResponse.GamesByPlayerItem.player_info` から取得する。
+現時点の game_master の履歴取得処理はこの新フィールドを設定していないため、
+実サーバーでの名前表示にはサーバー側でも参加者情報を返す対応が必要。
 
 画面切り替え時に取得処理をキャンセルする。遅れて返った結果が HomeScreen や
 次のゲームの画面を上書きしないよう、応答を適用する前にもキャンセルを確認する。

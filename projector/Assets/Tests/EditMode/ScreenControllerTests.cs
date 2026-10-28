@@ -1,3 +1,4 @@
+using GameMode = Tk75Attractions.Struckout.GameMaster.V1.GameMode;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,7 @@ using NUnit.Framework;
 using Struckout.Application;
 using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 using Struckout.Domain.TargetDefinition;
 using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
@@ -17,7 +19,7 @@ namespace Struckout.Tests.Tests.EditMode
     {
         private sealed class Client : IGameMasterClient
         {
-            public event Action<Difficulty, PlayerId, TimeSpan> GameStarted { add { } remove { } }
+            public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
@@ -29,13 +31,15 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action ConnectionLost { add { } remove { } }
             public uint? Score = 888;
             public IReadOnlyList<RankingEntry> Ranking = Array.Empty<RankingEntry>();
-            public IReadOnlyList<PlayerGame> History = Array.Empty<PlayerGame>();
+            public IReadOnlyList<RankingEntry> History = Array.Empty<RankingEntry>();
             public UniTaskCompletionSource<uint?> PendingScore;
             public UniTaskCompletionSource<IReadOnlyList<RankingEntry>> PendingRanking;
-            public UniTaskCompletionSource<IReadOnlyList<PlayerGame>> PendingHistory;
+            public UniTaskCompletionSource<IReadOnlyList<RankingEntry>> PendingHistory;
             public GameId? RequestedGame;
             public PlayerId? RequestedPlayer;
             public uint? RequestedCount;
+            public GameMode RankingMode, HistoryMode;
+            public Difficulty RankingDifficulty, HistoryDifficulty;
             public CancellationToken ScoreToken;
             public CancellationToken RankingToken;
             public UniTask<bool> ConnectAsync() => UniTask.FromResult(true);
@@ -49,15 +53,19 @@ namespace Struckout.Tests.Tests.EditMode
                 ScoreToken = token;
                 return PendingScore?.Task ?? UniTask.FromResult(Score);
             }
-            public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, CancellationToken token = default)
+            public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, GameMode mode, Difficulty difficulty, CancellationToken token = default)
             {
                 RequestedCount = count;
+                RankingMode = mode;
+                RankingDifficulty = difficulty;
                 RankingToken = token;
                 return PendingRanking?.Task ?? UniTask.FromResult(Ranking);
             }
-            public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId id, CancellationToken token = default)
+            public UniTask<IReadOnlyList<RankingEntry>> GetGamesByPlayerAsync(PlayerId id, GameMode mode, Difficulty difficulty, CancellationToken token = default)
             {
                 RequestedPlayer = id;
+                HistoryMode = mode;
+                HistoryDifficulty = difficulty;
                 return PendingHistory?.Task ?? UniTask.FromResult(History);
             }
         }
@@ -87,11 +95,11 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new Client
             {
                 Ranking = new[] { new RankingEntry(new GameId(1), 900, new PlayerId(2), "別の人") },
-                History = new[] { new PlayerGame(new GameId(42), 888) },
+                History = new[] { new RankingEntry(new GameId(42), 888, new PlayerId(7), "本人") },
             };
             var ui = new UI();
             using var screens = new ScreenController(client, ui);
-            screens.ShowPlaying(new PlayerId(7));
+            screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Playing));
             await screens.ShowScoreAsync(new GameId(42));
             Assert.That(client.RequestedGame, Is.EqualTo(new GameId(42)));
@@ -99,6 +107,10 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(ui.Score, Is.EqualTo(888));
             await screens.ShowRankingAsync();
             Assert.That(client.RequestedCount, Is.EqualTo(10));
+            Assert.That(client.RankingMode, Is.EqualTo(GameMode.Multi));
+            Assert.That(client.HistoryMode, Is.EqualTo(GameMode.Multi));
+            Assert.That(client.RankingDifficulty, Is.EqualTo(Difficulty.Hard));
+            Assert.That(client.HistoryDifficulty, Is.EqualTo(Difficulty.Hard));
             Assert.That(client.RequestedPlayer, Is.EqualTo(new PlayerId(7)));
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Ranking));
             Assert.That(ui.Rows.Select(row => row.GameId.Value), Is.EqualTo(new uint[] { 1, 42 }));
@@ -113,7 +125,7 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new Client { PendingScore = new UniTaskCompletionSource<uint?>() };
             var ui = new UI();
             using var screens = new ScreenController(client, ui);
-            screens.ShowPlaying(new PlayerId(7));
+            screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             var pending = screens.ShowScoreAsync(new GameId(42));
             screens.ShowHome();
             Assert.That(client.ScoreToken.IsCancellationRequested, Is.True);
@@ -129,18 +141,22 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new Client
             {
                 PendingRanking = new UniTaskCompletionSource<IReadOnlyList<RankingEntry>>(),
-                PendingHistory = new UniTaskCompletionSource<IReadOnlyList<PlayerGame>>(),
+                PendingHistory = new UniTaskCompletionSource<IReadOnlyList<RankingEntry>>(),
             };
             var ui = new UI();
             using var screens = new ScreenController(client, ui);
-            screens.ShowPlaying(new PlayerId(7));
+            screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             var pending = screens.ShowRankingAsync();
             Assert.That(client.RequestedCount, Is.EqualTo(10));
+            Assert.That(client.RankingMode, Is.EqualTo(GameMode.Multi));
+            Assert.That(client.HistoryMode, Is.EqualTo(GameMode.Multi));
+            Assert.That(client.RankingDifficulty, Is.EqualTo(Difficulty.Hard));
+            Assert.That(client.HistoryDifficulty, Is.EqualTo(Difficulty.Hard));
             Assert.That(client.RequestedPlayer, Is.EqualTo(new PlayerId(7)));
-            screens.ShowPlaying(new PlayerId(9));
+            screens.ShowPlaying(new PlayerId(9), GameMode.Multi, Difficulty.Hard);
             Assert.That(client.RankingToken.IsCancellationRequested, Is.True);
             client.PendingRanking.TrySetResult(Array.Empty<RankingEntry>());
-            client.PendingHistory.TrySetResult(Array.Empty<PlayerGame>());
+            client.PendingHistory.TrySetResult(Array.Empty<RankingEntry>());
             await pending;
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Playing));
             Assert.That(ui.Rows, Is.Null);
@@ -156,7 +172,7 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new Client { History = null };
             var ui = new UI();
             using var screens = new ScreenController(client, ui);
-            screens.ShowPlaying(new PlayerId(7));
+            screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             await screens.ShowRankingAsync();
             Assert.That(ui.Rows, Is.Null);
             Assert.That(ui.Message, Does.Contain("失敗"));

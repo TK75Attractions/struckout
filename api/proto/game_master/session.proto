@@ -119,6 +119,7 @@ message GetGamesByPlayerResponse {
   message GamesByPlayerItem {
     uint32 game_id = 1;
     uint32 total_score = 2;
+    PlayerInfo player_info = 3;
   }
 
   repeated GamesByPlayerItem items = 1;

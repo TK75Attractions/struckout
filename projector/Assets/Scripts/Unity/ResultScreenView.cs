@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 using UnityEngine;
 using UnityEngine.UI;
 

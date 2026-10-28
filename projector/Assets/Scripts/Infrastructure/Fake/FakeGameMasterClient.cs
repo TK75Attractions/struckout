@@ -6,6 +6,7 @@ using Struckout.Domain.TargetDefinition;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Struckout.Application.Interface;
+using Struckout.Domain.Ranking;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
 using Target = Struckout.Domain.TargetDefinition.Target;
@@ -49,14 +50,14 @@ namespace Struckout.Infrastructure.Fake
         /// <see cref="ConnectAsync"/> の中で即座に発火するため、
         /// 後から購読した相手にも追いつかせる。
         /// </summary>
-        public event Action<Difficulty, PlayerId, TimeSpan> GameStarted
+        public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted
         {
             add
             {
                 lock (_stateLock)
                 {
                     _gameStarted += value;
-                    if (_started) value?.Invoke(_startedDifficulty, FakePlayer, _gameDuration);
+                    if (_started) value?.Invoke(_startedDifficulty, GameMode.Single, FakePlayer, _gameDuration);
                 }
             }
             remove
@@ -65,7 +66,7 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        private Action<Difficulty, PlayerId, TimeSpan> _gameStarted;
+        private Action<Difficulty, GameMode, PlayerId, TimeSpan> _gameStarted;
         private bool _started;
         private Difficulty _startedDifficulty;
 
@@ -105,7 +106,7 @@ namespace Struckout.Infrastructure.Fake
                 _startedDifficulty = Difficulty.Normal;
                 _gameCancellation = new CancellationTokenSource();
                 var elapsed = Stopwatch.StartNew();
-                _gameStarted?.Invoke(_startedDifficulty, FakePlayer, _gameDuration);
+                _gameStarted?.Invoke(_startedDifficulty, GameMode.Single, FakePlayer, _gameDuration);
                 AddPocketWatch();
                 RemainingTimeChanged?.Invoke(_gameDuration);
                 ScoreChanged?.Invoke(_totalScore);
@@ -238,11 +239,12 @@ namespace Struckout.Infrastructure.Fake
                 return UniTask.FromResult<uint?>(_connected && !token.IsCancellationRequested && _results.TryGetValue(gameId, out var score) ? score : null);
         }
 
-        public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, CancellationToken token = default)
+        public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint maxItemCount, GameMode mode, Difficulty difficulty, CancellationToken token = default)
         {
             lock (_stateLock)
             {
                 if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
+                if (mode != GameMode.Single || difficulty != _startedDifficulty) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(Array.Empty<RankingEntry>());
                 var entries = Enumerable.Range(1, 10).Select(i => new RankingEntry(new GameId((uint)i),
                     (uint)(2000 - i * 100), i == 5 ? FakePlayer : new PlayerId((uint)i + 1),
                     i == 5 ? "サンプル" : "プレイヤー" + i)).ToList();
@@ -253,13 +255,13 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        public UniTask<IReadOnlyList<PlayerGame>> GetGamesByPlayerAsync(PlayerId playerId, CancellationToken token = default)
+        public UniTask<IReadOnlyList<RankingEntry>> GetGamesByPlayerAsync(PlayerId playerId, GameMode mode, Difficulty difficulty, CancellationToken token = default)
         {
             lock (_stateLock)
             {
-                if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<PlayerGame>>(null);
-                return UniTask.FromResult<IReadOnlyList<PlayerGame>>(playerId.Equals(FakePlayer)
-                    ? _results.Select(game => new PlayerGame(game.Key, game.Value)).ToArray() : Array.Empty<PlayerGame>());
+                if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
+                return UniTask.FromResult<IReadOnlyList<RankingEntry>>(playerId.Equals(FakePlayer) && mode == GameMode.Single && difficulty == _startedDifficulty
+                    ? _results.Select(game => new RankingEntry(game.Key, game.Value, FakePlayer, "サンプル")).ToArray() : Array.Empty<RankingEntry>());
             }
         }
 

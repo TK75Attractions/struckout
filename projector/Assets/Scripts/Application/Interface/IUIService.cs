@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 using Struckout.Domain.TargetDefinition;
 
 namespace Struckout.Application.Interface

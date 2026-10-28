@@ -1,3 +1,5 @@
+using GameMode = Tk75Attractions.Struckout.GameMaster.V1.GameMode;
+using PlayerInfo = Tk75Attractions.Struckout.GameMaster.V1.PlayerInfo;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -127,19 +129,24 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = machineId });
             PlayerId? received = null;
-            client.GameStarted += (_, player, duration) => received = player;
+            GameMode? receivedMode = null;
+            client.GameStarted += (_, mode, player, duration) => { received = player; receivedMode = mode; };
             Dispatch(client, new Event
             {
                 GameStarted = new Event.Types.GameStarted
                 {
-                    Multi = new Event.Types.GameStarted.Types.Multi
+                    PlayerInfo = new PlayerInfo
                     {
-                        Player1 = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 7, PlayerId = 71 },
-                        Player2 = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 8, PlayerId = 81 },
+                        Multi = new PlayerInfo.Types.Multi
+                        {
+                            Player1 = new PlayerInfo.Types.PlayerItem { MachineId = 7, PlayerId = 71 },
+                            Player2 = new PlayerInfo.Types.PlayerItem { MachineId = 8, PlayerId = 81 },
+                        },
                     },
                 },
             });
             Assert.That(received, Is.EqualTo(new PlayerId(expectedPlayer)));
+            Assert.That(receivedMode, Is.EqualTo(GameMode.Multi));
         }
 
         [Test]
@@ -148,15 +155,18 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             PlayerId? player = null;
             GameId? game = null;
-            client.GameStarted += (_, id, duration) => player = id;
+            client.GameStarted += (_, mode, id, duration) => player = id;
             client.GameFinished += id => game = id;
             Dispatch(client, new Event
             {
                 GameStarted = new Event.Types.GameStarted
                 {
-                    Single = new Event.Types.GameStarted.Types.Single
+                    PlayerInfo = new PlayerInfo
                     {
-                        Player = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 7, PlayerId = 71 },
+                        Single = new PlayerInfo.Types.Single
+                        {
+                            Player = new PlayerInfo.Types.PlayerItem { MachineId = 7, PlayerId = 71 },
+                        },
                     },
                 },
             });
@@ -185,15 +195,18 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             var starts = 0;
-            client.GameStarted += (_, __, duration) => starts++;
+            client.GameStarted += (_, mode, __, duration) => starts++;
             Dispatch(client, new Event { GameStarted = new Event.Types.GameStarted() });
             Dispatch(client, new Event
             {
                 GameStarted = new Event.Types.GameStarted
                 {
-                    Single = new Event.Types.GameStarted.Types.Single
+                    PlayerInfo = new PlayerInfo
                     {
-                        Player = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 8, PlayerId = 71 },
+                        Single = new PlayerInfo.Types.Single
+                        {
+                            Player = new PlayerInfo.Types.PlayerItem { MachineId = 8, PlayerId = 71 },
+                        },
                     },
                 },
             });
@@ -230,15 +243,18 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 });
             TimeSpan? duration = null;
-            client.GameStarted += (_, player, value) => duration = value;
+            client.GameStarted += (_, mode, player, value) => duration = value;
             Dispatch(client, new Event
             {
                 GameStarted = new Event.Types.GameStarted
                 {
                     GameDurSecs = 120,
-                    Single = new Event.Types.GameStarted.Types.Single
+                    PlayerInfo = new PlayerInfo
                     {
-                        Player = new Event.Types.GameStarted.Types.PlayerInfo { MachineId = 7, PlayerId = 71 },
+                        Single = new PlayerInfo.Types.Single
+                        {
+                            Player = new PlayerInfo.Types.PlayerItem { MachineId = 7, PlayerId = 71 },
+                        },
                     },
                 },
             });

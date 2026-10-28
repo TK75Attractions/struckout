@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Struckout.Domain.TargetDefinition;
 using NUnit.Framework;
 using Struckout.Domain;
+using Struckout.Domain.Ranking;
 using Struckout.Infrastructure.Fake;
 using Tk75Attractions.Struckout.GameMaster.V1;
 
@@ -28,7 +29,7 @@ namespace Struckout.Tests.Tests.EditMode
             try
             {
                 await client.ConnectAsync();
-                client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
+                client.GameStarted += (difficulty, mode, _, duration) => received.Add(difficulty);
 
                 Assert.That(received, Has.Count.EqualTo(1));
                 Assert.That(received[0], Is.EqualTo(Difficulty.Normal));
@@ -44,7 +45,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             try
             {
-                client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
+                client.GameStarted += (difficulty, mode, _, duration) => received.Add(difficulty);
                 await client.ConnectAsync();
 
                 Assert.That(received, Has.Count.EqualTo(1));
@@ -60,7 +61,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             try
             {
-                client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
+                client.GameStarted += (difficulty, mode, _, duration) => received.Add(difficulty);
                 await client.ConnectAsync();
                 await client.ConnectAsync();
 
@@ -77,7 +78,7 @@ namespace Struckout.Tests.Tests.EditMode
 
             await client.ConnectAsync();
             await client.DisconnectAsync();
-            client.GameStarted += (difficulty, _, duration) => received.Add(difficulty);
+            client.GameStarted += (difficulty, mode, _, duration) => received.Add(difficulty);
 
             Assert.That(received, Is.Empty);
         }
@@ -87,7 +88,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new FakeGameMasterClient();
             var received = new List<Difficulty>();
-            void Handler(Difficulty d, PlayerId _, TimeSpan duration) => received.Add(d);
+            void Handler(Difficulty d, GameMode mode, PlayerId _, TimeSpan duration) => received.Add(d);
 
             try
             {
@@ -162,7 +163,7 @@ namespace Struckout.Tests.Tests.EditMode
             var events = new List<string>();
             client.TargetAdded += _ => events.Add("added");
             client.TargetRemoved += _ => events.Add("removed");
-            client.GameStarted += (_, __, duration) => events.Add("started");
+            client.GameStarted += (_, mode, __, duration) => events.Add("started");
             try
             {
                 await client.ConnectAsync();
@@ -202,7 +203,7 @@ namespace Struckout.Tests.Tests.EditMode
             var events = new List<string>();
             var playerId = default(PlayerId);
             var gameId = default(GameId);
-            client.GameStarted += (_, player, duration) => { playerId = player; events.Add("started"); };
+            client.GameStarted += (_, mode, player, duration) => { playerId = player; events.Add("started"); };
             client.GameFinished += game => { gameId = game; events.Add("finished"); };
             client.RankingScreenRequested += () => events.Add("ranking");
             client.HomeScreenRequested += () => events.Add("home");
@@ -212,10 +213,10 @@ namespace Struckout.Tests.Tests.EditMode
                 Assert.That(events, Is.EqualTo(new[] { "started", "finished", "ranking", "home" }));
                 Assert.That(gameId.Value, Is.GreaterThan(0));
                 Assert.That(await client.GetGameResultAsync(gameId), Is.EqualTo(0));
-                var ranking = await client.GetRankingAsync(10);
-                var history = await client.GetGamesByPlayerAsync(playerId);
+                var ranking = await client.GetRankingAsync(10, GameMode.Single, Difficulty.Normal);
+                var history = await client.GetGamesByPlayerAsync(playerId, GameMode.Single, Difficulty.Normal);
                 Assert.That(ranking.Count, Is.EqualTo(10));
-                Assert.That(history, Has.Some.Matches<PlayerGame>(game => game.GameId.Equals(gameId)));
+                Assert.That(history, Has.Some.Matches<RankingEntry>(game => game.GameId.Equals(gameId)));
                 Assert.That(await client.GetGameResultAsync(new GameId(9999)), Is.Null);
             }
             finally { await client.DisconnectAsync(); }
