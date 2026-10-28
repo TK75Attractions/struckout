@@ -1,4 +1,4 @@
-use touchpanel::run_main;
+use touchpanel::{run_main, version_option};
 use tracing::Level;
 use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
