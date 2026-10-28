@@ -1,6 +1,7 @@
 using Struckout.Application;
 using Struckout.Application.Interface;
 using Struckout.Domain;
+using Struckout.Domain.Targets;
 using Struckout.Infrastructure;
 using Struckout.Bootstrap;
 using Struckout.Infrastructure.Fake;
@@ -126,7 +127,7 @@ namespace Struckout.Unity
 
             builder.Register<ICollisionSolver, CollisionSolver>(Lifetime.Singleton);
             builder.Register<ISensorProvider, SensorProvider>(Lifetime.Singleton);
-            builder.Register<ITargetGenerator, TargetGenerator>(Lifetime.Singleton);
+            builder.Register<TargetGenerator>(Lifetime.Singleton);
 
             builder.Register<NetworkBootstrap>(Lifetime.Singleton);
             builder.Register<GameBootstrap>(Lifetime.Singleton);

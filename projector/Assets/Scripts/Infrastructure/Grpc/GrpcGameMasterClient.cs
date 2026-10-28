@@ -12,6 +12,7 @@ using Struckout.Domain;
 using Struckout.Domain.Ranking;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Struckout.Domain.TargetDefinition;
+using Struckout.Domain.Targets;
 using UnityEngine;
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
 using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;

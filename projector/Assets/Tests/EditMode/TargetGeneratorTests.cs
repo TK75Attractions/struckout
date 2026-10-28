@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
-using Struckout.Infrastructure;
+using Struckout.Domain.Targets;
 
 namespace Struckout.Tests.Tests.EditMode
 {

@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
+using Struckout.Domain.Targets;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine;
 using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
@@ -16,7 +17,7 @@ namespace Struckout.Application
     public class GameRuntime
     {
         private readonly ICollisionSolver _collisionSolver;
-        private readonly ITargetGenerator _targetGenerator;
+        private readonly TargetGenerator _targetGenerator;
         private readonly IUIService _uiService;
         private readonly IGameMasterClient _master;
         private readonly GameSettings _settings;
@@ -28,7 +29,7 @@ namespace Struckout.Application
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public GameRuntime(
             ICollisionSolver collisionSolver,
-            ITargetGenerator targetGenerator,
+            TargetGenerator targetGenerator,
             IUIService uiService,
             IGameMasterClient master,
             GameSettings settings)

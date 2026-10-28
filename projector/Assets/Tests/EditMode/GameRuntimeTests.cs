@@ -10,6 +10,7 @@ using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Domain.Ranking;
 using Struckout.Domain.TargetDefinition;
+using Struckout.Domain.Targets;
 using Struckout.Infrastructure;
 using Tk75Attractions.Struckout.V1;
 using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
