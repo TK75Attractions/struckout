@@ -91,3 +91,12 @@ GitHub Actions とローカル Docker の完成ビルドは実行していない
 
 各アーキテクチャのビルドジョブも digest で GHCR に push するため、
 `build-game-master-image` の `GITHUB_TOKEN` に `packages: write` を付与する。
+
+## Release #30 の権限エラー
+
+[Release #30](https://github.com/TK75Attractions/struckout/actions/runs/40817338719) は
+`cargo chef cook` が `/build/game_master/Cargo.toml` を作成できず失敗した。
+`COPY --chown` はコピー対象の所有者を変更するが、コピー先の親ディレクトリは
+root 所有で作られる。`base` ステージで `game_master/mise.toml` をコピーした時点で
+`/build/game_master` が root 所有になり、前回の修正だけでは不足していた。
+`cook` の直前に `/build` 以下を builder 所有に揃える。

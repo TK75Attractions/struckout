@@ -30,6 +30,10 @@ COPY --from=planner --chown=builder:builder /build/recipe.json recipe.json
 COPY --chown=builder:builder .cargo/config.toml .cargo/config.toml
 COPY --chown=builder:builder api/proto api/proto
 COPY --chown=builder:builder api/spec api/spec
+# COPY may create parent directories as root, even when its contents use --chown.
+USER root
+RUN chown -R builder:builder /build
+USER builder
 ARG RELEASE_MODE=false
 RUN if [ "$RELEASE_MODE" = "true" ]; then \
     FLAGS="--release --features=sentry"; \
