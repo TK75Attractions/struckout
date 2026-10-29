@@ -11,7 +11,9 @@ use struckout_proto::{
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::mpsc,
+    task::JoinSet,
 };
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 use super::{VideoOptions, analysis::AnalysisSettings, pipeline::Pipeline, recorder::Recorder};
@@ -37,18 +39,36 @@ impl VideoTransport {
 
     /// 接続を受け付け続ける。解析した検出は、受け取った時刻と一緒に `packet_tx` に送る
     /// (アプリから検出を受け取ったときと同じ経路)。
-    pub async fn listen(self, packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>) {
+    pub async fn listen(
+        self,
+        packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+        shutdown: CancellationToken,
+    ) {
+        let mut connections = JoinSet::new();
         loop {
-            match self.listener.accept().await {
+            let accepted = tokio::select! {
+                _ = shutdown.cancelled() => break,
+                _ = connections.join_next(), if !connections.is_empty() => continue,
+                result = self.listener.accept() => result,
+            };
+            match accepted {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection in VideoTransport");
-                    tokio::spawn(handle_connection(
+                    connections.spawn(handle_connection(
                         stream,
                         self.options.clone(),
                         packet_tx.clone(),
+                        shutdown.clone(),
                     ));
                 }
                 Err(e) => warn!(error = ?e, "failed to accept a connection in VideoTransport"),
+            }
+        }
+        while let Some(result) = connections.join_next().await {
+            if let Err(error) = result
+                && !error.is_cancelled()
+            {
+                warn!(?error, "a video connection failed while shutting down");
             }
         }
     }
@@ -58,6 +78,7 @@ async fn handle_connection(
     stream: TcpStream,
     options: VideoOptions,
     packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+    shutdown: CancellationToken,
 ) {
     if let Err(e) = stream.set_nodelay(true) {
         warn!(error = ?e, "failed to set TCP_NODELAY");
@@ -71,7 +92,10 @@ async fn handle_connection(
     let mut pipeline: Option<Pipeline> = None;
     let mut recorder: Option<Recorder> = None;
     loop {
-        let packet = match read_packet::<VideoStreamPacket, _>(&mut reader).await {
+        let packet = match tokio::select! {
+            _ = shutdown.cancelled() => break,
+            packet = read_packet::<VideoStreamPacket, _>(&mut reader) => packet,
+        } {
             Ok(packet) => packet,
             Err(ReadPacketError::ReadFailed(e)) => {
                 info!(error = ?e, "video stream disconnected");

@@ -133,9 +133,9 @@ where
         loop {
             let (collisions, events) = tokio::select! {
                 frame = frame_rx.recv() => {
-                    let frame = frame
-                        .with_context(|| "frame channel has been unexpectedly closed")
-                        .unwrap();
+                    let Some(frame) = frame else {
+                        return Ok(());
+                    };
                     self.update_frame(frame, Utc::now())
                 }
                 _ = poll.tick() => self.poll_collisions(Utc::now()),

@@ -11,7 +11,9 @@ use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
     sync::{broadcast, mpsc},
+    task::JoinSet,
 };
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::{collision_output::CollisionOutput, types::CollisionPoint3D};
@@ -46,26 +48,39 @@ impl CollisionOutput for NetworkCollisionOutput {
         let (packet_tx, _) = broadcast::channel::<ProjectorPacket>(PROJECTOR_BUF);
         let accept_tx = packet_tx.clone();
         let listener = self.listener;
-        tokio::spawn(async move {
+        let shutdown = CancellationToken::new();
+        let accept_shutdown = shutdown.clone();
+        let accept_task = tokio::spawn(async move {
+            let mut connections = JoinSet::new();
             loop {
-                match listener.accept().await {
+                let accepted = tokio::select! {
+                    _ = accept_shutdown.cancelled() => break,
+                    _ = connections.join_next(), if !connections.is_empty() => continue,
+                    result = listener.accept() => result,
+                };
+                match accepted {
                     Ok((stream, addr)) => {
                         info!(?addr, "accepted TCP connection from projector");
-                        tokio::spawn(serve_projector(stream, addr, accept_tx.subscribe()));
+                        connections.spawn(serve_projector(
+                            stream,
+                            addr,
+                            accept_tx.subscribe(),
+                            accept_shutdown.clone(),
+                        ));
                     }
                     Err(e) => warn!(error = ?e, "failed to accept a connection from projector"),
                 }
             }
+            while let Some(result) = connections.join_next().await {
+                if let Err(error) = result
+                    && !error.is_cancelled()
+                {
+                    warn!(?error, "a projector connection failed while shutting down");
+                }
+            }
         });
 
-        loop {
-            let coll = match collision_rx.recv().await {
-                Some(c) => c,
-                None => {
-                    error!("collision channel has been unexpectedly closed");
-                    std::process::exit(1);
-                }
-            };
+        while let Some(coll) = collision_rx.recv().await {
             let packet = ProjectorPacket {
                 // projector には的の面の上での位置を送る。的の面は世界座標の x = 0 なので、
                 // 面に沿った横方向が y、高さが z になる。
@@ -82,6 +97,11 @@ impl CollisionOutput for NetworkCollisionOutput {
                 );
             }
         }
+
+        shutdown.cancel();
+        if let Err(error) = accept_task.await {
+            error!(?error, "projector listener failed while shutting down");
+        }
     }
 }
 
@@ -90,6 +110,7 @@ async fn serve_projector(
     stream: TcpStream,
     addr: SocketAddr,
     mut packet_rx: broadcast::Receiver<ProjectorPacket>,
+    shutdown: CancellationToken,
 ) {
     if let Err(e) = stream.set_nodelay(true) {
         warn!(error = ?e, "failed to set TCP_NODELAY");
@@ -99,6 +120,7 @@ async fn serve_projector(
     let mut discard = [0u8; 256];
     loop {
         tokio::select! {
+            _ = shutdown.cancelled() => return,
             packet = packet_rx.recv() => match packet {
                 Ok(packet) => {
                     if let Err(e) = write_packet(packet, &mut writer).await {
@@ -153,7 +175,7 @@ mod tests {
             .unwrap();
         let addr = output.local_addr().unwrap();
         let (tx, rx) = mpsc::channel(4);
-        tokio::spawn(output.start(rx));
+        let output = tokio::spawn(output.start(rx));
 
         // projector がつないでいないあいだの着弾は捨てる (落ちない)
         tx.send(collision(9.0, 9.0)).await.unwrap();
@@ -176,5 +198,11 @@ mod tests {
         tx.send(collision(0.7, 1.7)).await.unwrap();
         assert_eq!(next_point(&mut again).await, (0.7, 1.7));
         assert_eq!(next_point(&mut second).await, (0.7, 1.7));
+
+        drop(tx);
+        tokio::time::timeout(Duration::from_secs(2), output)
+            .await
+            .expect("output stops when the collision channel closes")
+            .expect("output task completes successfully");
     }
 }
