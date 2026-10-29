@@ -198,7 +198,7 @@ python scripts/recording_analysis/simulate_layouts.py
 ## replay_to_tracker.py
 
 ```bash
-./target/release/ball_tracker.exe --input network --output csv -c recordings/2026-10-10/collisions.csv -j
+./target/release-tracker/ball_tracker.exe --input network --output csv -c recordings/2026-10-10/collisions.csv -j
 ```
 
 ```bash

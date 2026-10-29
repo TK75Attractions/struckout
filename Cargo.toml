@@ -90,3 +90,9 @@ opt-level = 3
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
+
+# Optimize the tracker and its dependencies without changing other release builds.
+[profile.release-tracker]
+inherits = "release"
+lto = "thin"
+codegen-units = 1

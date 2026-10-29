@@ -76,12 +76,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev
-      - name: Build
-        run: |
-            SQLX_OFFLINE=true \
-            ST_COMMIT_SHORT_HASH=${{ needs.get-version.outputs.short-hash }} \
-            ST_VERSION=${{ needs.get-version.outputs.version }} \
-            mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --release -p ball_tracker -p touchpanel --features sentry
+      - name: Build ball_tracker
+        run: mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --profile release-tracker -p ball_tracker --features sentry
+        env:
+          SQLX_OFFLINE: "true"
+          ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
+          ST_VERSION: ${{ needs.get-version.outputs.version }}
+      - name: Build touchpanel
+        run: mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --release -p touchpanel --features sentry
+        env:
+          SQLX_OFFLINE: "true"
+          ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
+          ST_VERSION: ${{ needs.get-version.outputs.version }}
 
       - name: Rename binaries
         id: triple
@@ -90,22 +96,22 @@ jobs:
           case ${{ matrix.os }} in
             "windows-2022")
               echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT"
-              mv target/release/ball_tracker.exe upload/ball-tracker-x86_64-windows
+              mv target/release-tracker/ball_tracker.exe upload/ball-tracker-x86_64-windows
               mv target/release/touchpanel.exe upload/touchpanel-x86_64-windows
               ;;
             "windows-11-arm")
               echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
-              mv target/release/ball_tracker.exe upload/ball-tracker-arm64-windows
+              mv target/release-tracker/ball_tracker.exe upload/ball-tracker-arm64-windows
               mv target/release/touchpanel.exe upload/touchpanel-arm64-windows
               ;;
             "macos-14")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
-              mv target/release/ball_tracker upload/ball-tracker-arm64-macos
+              mv target/release-tracker/ball_tracker upload/ball-tracker-arm64-macos
               mv target/release/touchpanel upload/touchpanel-arm64-macos
               ;;
             "ubuntu-22.04")
               echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
-              mv target/release/ball_tracker upload/ball-tracker-x86_64-linux
+              mv target/release-tracker/ball_tracker upload/ball-tracker-x86_64-linux
               mv target/release/touchpanel upload/touchpanel-x86_64-linux
               ;;
             *)

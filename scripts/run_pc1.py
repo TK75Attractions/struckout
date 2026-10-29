@@ -110,7 +110,7 @@ class TrackerLog:
 
 def precheck(record_video: bool):
     step("前提を確かめる")
-    tracker = ROOT / "target" / "release" / exe("ball_tracker")
+    tracker = ROOT / "target" / "release-tracker" / exe("ball_tracker")
     if not tracker.exists():
         fail(f"ball_tracker がビルドされていません: {tracker} (docs/setup_pc1.md の 3 章)")
     ok(f"ball_tracker: {tracker}")
