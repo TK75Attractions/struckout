@@ -272,7 +272,11 @@ async fn listen_events<S>(
 
 #[cfg(test)]
 mod tests {
-    use std::{pin::Pin, time::Duration};
+    use std::{
+        pin::Pin,
+        sync::atomic::{AtomicBool, Ordering},
+        time::Duration,
+    };
 
     use struckout_proto::{
         self as proto,
@@ -363,6 +367,7 @@ mod tests {
         commands: mpsc::UnboundedSender<Command>,
         events: broadcast::Sender<ListenEventsResponse>,
         ready_response: Arc<Notify>,
+        fail_next_navigation: Arc<AtomicBool>,
     }
 
     #[tonic::async_trait]
@@ -433,6 +438,9 @@ mod tests {
             self.commands
                 .send(Command::Ranking(request.into_inner().machine_id))
                 .expect("test receiver is alive");
+            if self.fail_next_navigation.swap(false, Ordering::SeqCst) {
+                return Err(Status::unavailable("event subscribers disconnected"));
+            }
             Ok(Response::new(proto::GoRankingScreenResponse {}))
         }
         async fn go_home_screen(
@@ -442,6 +450,9 @@ mod tests {
             self.commands
                 .send(Command::Home(request.into_inner().machine_id))
                 .expect("test receiver is alive");
+            if self.fail_next_navigation.swap(false, Ordering::SeqCst) {
+                return Err(Status::unavailable("event subscribers disconnected"));
+            }
             Ok(Response::new(proto::GoHomeScreenResponse {}))
         }
         async fn get_game_result(
@@ -558,6 +569,7 @@ mod tests {
         commands: mpsc::UnboundedReceiver<Command>,
         events: broadcast::Sender<ListenEventsResponse>,
         ready_response: Arc<Notify>,
+        fail_next_navigation: Arc<AtomicBool>,
         shutdown: CancellationToken,
     }
     impl Drop for Fixture {
@@ -574,11 +586,13 @@ mod tests {
             let (commands_tx, commands) = mpsc::unbounded_channel();
             let (events, _) = broadcast::channel(32);
             let ready_response = Arc::new(Notify::new());
+            let fail_next_navigation = Arc::new(AtomicBool::new(false));
             let shutdown = CancellationToken::new();
             let service = FakeSessionService {
                 commands: commands_tx.clone(),
                 events: events.clone(),
                 ready_response: ready_response.clone(),
+                fail_next_navigation: fail_next_navigation.clone(),
             };
             let player_service = FakePlayerService {
                 commands: commands_tx,
@@ -613,6 +627,7 @@ mod tests {
                 commands,
                 events,
                 ready_response,
+                fail_next_navigation,
                 shutdown,
             }
         }
@@ -785,6 +800,58 @@ mod tests {
             .send(response(started(false)))
             .expect("still subscribed");
         wait_for(&mut session, |s| s.phase == SessionPhase::Running).await;
+    }
+
+    #[tokio::test]
+    async fn failed_screen_navigation_preserves_finished_state_for_retry() {
+        let mut fixture = Fixture::new().await;
+        fixture.configure(GameMode::Single).await;
+        fixture.ready_response.notify_one();
+        fixture.client.set_session_ready().await.expect("ready");
+        assert_eq!(fixture.commands.recv().await, Some(Command::Ready(1)));
+        fixture
+            .events
+            .send(response(started(false)))
+            .expect("subscribed");
+        let mut session = fixture.client.session();
+        wait_for(&mut session, |s| s.phase == SessionPhase::Running).await;
+        fixture
+            .events
+            .send(response(EventData::GameFinished(GameFinished {
+                game_id: 42,
+            })))
+            .expect("subscribed");
+        wait_for(&mut session, |s| {
+            s.phase == SessionPhase::Finished(struckout_proto::types::GameId::new(42))
+        })
+        .await;
+
+        fixture.fail_next_navigation.store(true, Ordering::SeqCst);
+        let error = fixture.client.go_ranking_screen().await.expect_err("fails");
+        assert_eq!(error.code(), tonic::Code::Unavailable);
+        assert_eq!(fixture.commands.recv().await, Some(Command::Ranking(1)));
+        assert_eq!(
+            session.borrow().phase,
+            SessionPhase::Finished(struckout_proto::types::GameId::new(42))
+        );
+        fixture
+            .client
+            .go_ranking_screen()
+            .await
+            .expect("retry ranking");
+        assert_eq!(fixture.commands.recv().await, Some(Command::Ranking(1)));
+
+        fixture.fail_next_navigation.store(true, Ordering::SeqCst);
+        let error = fixture.client.go_home_screen().await.expect_err("fails");
+        assert_eq!(error.code(), tonic::Code::Unavailable);
+        assert_eq!(fixture.commands.recv().await, Some(Command::Home(1)));
+        assert_eq!(
+            session.borrow().phase,
+            SessionPhase::Finished(struckout_proto::types::GameId::new(42))
+        );
+        fixture.client.go_home_screen().await.expect("retry home");
+        assert_eq!(fixture.commands.recv().await, Some(Command::Home(1)));
+        assert_eq!(session.borrow().phase, SessionPhase::Idle);
     }
 
     #[tokio::test]

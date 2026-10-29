@@ -639,17 +639,33 @@ where
     #[instrument]
     async fn go_ranking_screen(
         &self,
-        _req: Request<GoRankingScreenRequest>,
+        req: Request<GoRankingScreenRequest>,
     ) -> Result<Response<GoRankingScreenResponse>, Status> {
-        todo!()
+        let machine_id = MachineId::new(req.into_inner().machine_id);
+        self.event_tx
+            .send(Event {
+                target: EventTarget::Single(machine_id),
+                data: Ok(SuccessfulEvent::NavigateToRankingScreenRequested(
+                    machine_id,
+                )),
+            })
+            .map_err(|_| Status::unavailable("no event subscribers"))?;
+        Ok(Response::new(GoRankingScreenResponse {}))
     }
 
     #[instrument]
     async fn go_home_screen(
         &self,
-        _req: Request<GoHomeScreenRequest>,
+        req: Request<GoHomeScreenRequest>,
     ) -> Result<Response<GoHomeScreenResponse>, Status> {
-        todo!()
+        let machine_id = MachineId::new(req.into_inner().machine_id);
+        self.event_tx
+            .send(Event {
+                target: EventTarget::Single(machine_id),
+                data: Ok(SuccessfulEvent::NavigateToHomeScreenRequested(machine_id)),
+            })
+            .map_err(|_| Status::unavailable("no event subscribers"))?;
+        Ok(Response::new(GoHomeScreenResponse {}))
     }
 }
 

@@ -1736,3 +1736,108 @@ async fn ready_rejects_configuration_changes_during_player_lookup() {
         .expect("game was not started");
     assert_eq!(state.difficulty, Some(Difficulty::Hard));
 }
+
+#[rstest]
+#[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
+#[case::multi(GameMode::Multi, EventTarget::All)]
+#[tokio::test]
+async fn screen_navigation_after_completion_only_notifies_the_requested_machine(
+    #[case] mode: GameMode,
+    #[case] target: EventTarget,
+) {
+    let service = running_recorded_service(mode, RecordingDataSource::default());
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("subscribe first machine")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("subscribe second machine")
+        .into_inner();
+    complete_game(&service, target).await;
+    assert_event!(first, EventData::GameFinished(_));
+    if mode.is_multi() {
+        assert_event!(second, EventData::GameFinished(_));
+    }
+    for machine_id in [1, 2] {
+        assert!(service.sessions.read().get(machine_id.into()).is_none());
+    }
+
+    for machine_id in [1, 2] {
+        service
+            .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id }))
+            .await
+            .expect("request ranking after session disposal");
+        service
+            .go_home_screen(Request::new(GoHomeScreenRequest { machine_id }))
+            .await
+            .expect("request home after session disposal");
+    }
+    for (machine_id, mut stream) in [(1, first), (2, second)] {
+        let EventData::NavigateToRankingScreenRequested(event) =
+            assert_event!(stream, EventData::NavigateToRankingScreenRequested(_))
+        else {
+            unreachable!("event pattern was checked above")
+        };
+        assert_eq!(event.machine_id, machine_id);
+        let EventData::NavigateToHomeScreenRequsted(event) =
+            assert_event!(stream, EventData::NavigateToHomeScreenRequsted(_))
+        else {
+            unreachable!("event pattern was checked above")
+        };
+        assert_eq!(event.machine_id, machine_id);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), stream.next())
+                .await
+                .is_err()
+        );
+    }
+}
+
+#[tokio::test]
+async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        player_id: PlayerId::new(2),
+    });
+    let error = service
+        .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id: 1 }))
+        .await
+        .expect_err("no event subscribers");
+    assert_eq!(error.code(), tonic::Code::Unavailable);
+    let error = service
+        .go_home_screen(Request::new(GoHomeScreenRequest { machine_id: 1 }))
+        .await
+        .expect_err("no event subscribers");
+    assert_eq!(error.code(), tonic::Code::Unavailable);
+
+    let mut stream = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("subscribe before retrying")
+        .into_inner();
+    for _ in 0..2 {
+        service
+            .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id: 1 }))
+            .await
+            .expect("retry ranking without a session");
+        assert_event!(
+            stream,
+            EventData::NavigateToRankingScreenRequested(
+                struckout_proto::event::NavigateToRankingScreenRequested { machine_id: 1 }
+            )
+        );
+        service
+            .go_home_screen(Request::new(GoHomeScreenRequest { machine_id: 1 }))
+            .await
+            .expect("retry home without a session");
+        assert_event!(
+            stream,
+            EventData::NavigateToHomeScreenRequsted(
+                struckout_proto::event::NavigateToHomeScreenRequested { machine_id: 1 }
+            )
+        );
+    }
+    assert!(service.sessions.read().get(MachineId::new(1)).is_none());
+}
