@@ -339,7 +339,7 @@
 ### この計画で扱わないもの (別に対応)
 
 - カメラの接続が切れたときの panic (`detection_input/network.rs:207` の `res.unwrap()`)。計画 ③ の R-3 が `network.rs` を直すときに扱う。
-- `collision_output/csv.rs:44` が改行を書かないので、`collisions_*.csv` が 1 行につながっている。再生の確認は JSON で行う。
+- `collision_output/csv.rs` の改行欠落は #336 で修正した。着弾ごとに `x,y,z` の一行を書き、複数件の行数・列数・座標値を回帰テストで確認する。過去に記録した改行のない CSV は自動では復元しないため、その再生結果の確認には JSON を使う。
 - `detection_input/sqlite.rs` がビルドできないこと。
 - 使わなくなる `tracktor` への依存と `tracking/triangulate.rs` の整理。
 - 撮影から PC に届くまでの遅れの計測 (`REPORT_LEAD` の決め直し)。
