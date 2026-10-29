@@ -29,6 +29,8 @@ use struckout_proto::{DetectionsPacket, VideoFrame};
 use tokio::sync::mpsc;
 use tracing::{info, trace, warn};
 
+use crate::{camera_status::CameraStatusStore, types::CameraId};
+
 use super::{
     VideoOptions,
     analysis::{AnalysisSettings, Analyzer},
@@ -209,6 +211,7 @@ impl Pipeline {
         options: &VideoOptions,
         settings: AnalysisSettings,
         out: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+        camera_status: Arc<CameraStatusStore>,
     ) -> std::io::Result<Self> {
         let (width, height) = (settings.width, settings.height);
         let camera_id = settings.camera_id;
@@ -251,6 +254,7 @@ impl Pipeline {
                         snapshot_dir,
                         detection,
                         &out,
+                        &camera_status,
                     );
                 })?;
         }
@@ -427,6 +431,7 @@ fn analyze_loop(
     mut snapshot_dir: Option<PathBuf>,
     detection: super::analysis::DetectionOptions,
     out: &mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+    camera_status: &CameraStatusStore,
 ) {
     let mut analyzer = Analyzer::new(settings.lock().clone()).with_options(detection);
     let mut image = vec![0u8; width * height * 3];
@@ -457,7 +462,7 @@ fn analyze_loop(
             // 知らせて、デコードしても捨てるだけのフレームを書かないようにする
             queue.report_stale(generation);
             stats.dropped_after_ffmpeg += 1;
-            stats.log_if_due(camera_id, queue);
+            stats.log_if_due(camera_id, queue, camera_status);
             continue;
         }
         let convert_begin = Instant::now();
@@ -491,6 +496,7 @@ fn analyze_loop(
             analyzed.packet.is_some(),
             analyzed.ignored,
         );
+        camera_status.processed(CameraId::new(camera_id));
         if let Some(packet) = analyzed.packet {
             let send_begin = Instant::now();
             if out.blocking_send((meta.received_at, packet)).is_err() {
@@ -498,7 +504,7 @@ fn analyze_loop(
             }
             stats.sending += send_begin.elapsed();
         }
-        stats.log_if_due(camera_id, queue);
+        stats.log_if_due(camera_id, queue, camera_status);
     }
 }
 
@@ -535,7 +541,6 @@ fn save_bmp(path: &Path, rgb: &[u8], width: usize, height: usize) -> std::io::Re
 
 struct Stats {
     started: Instant,
-    frames: u32,
     dropped_before_ffmpeg: usize,
     dropped_after_ffmpeg: usize,
     with_detections: u32,
@@ -559,7 +564,6 @@ impl Stats {
     fn new() -> Self {
         Self {
             started: Instant::now(),
-            frames: 0,
             dropped_before_ffmpeg: 0,
             dropped_after_ffmpeg: 0,
             with_detections: 0,
@@ -574,13 +578,19 @@ impl Stats {
         }
     }
 
-    fn log_if_due(&mut self, camera_id: u32, queue: &FrameQueue) {
+    fn log_if_due(
+        &mut self,
+        camera_id: u32,
+        queue: &FrameQueue,
+        camera_status: &CameraStatusStore,
+    ) {
         if self.started.elapsed() >= STATS_INTERVAL {
             self.dropped_before_ffmpeg = queue.dropped_before_ffmpeg.swap(0, Ordering::Relaxed);
             self.log(
                 camera_id,
                 queue.waiting.load(Ordering::Relaxed),
                 queue.written.lock().len(),
+                camera_status.fps(CameraId::new(camera_id)),
             );
             *self = Self::new();
         }
@@ -600,7 +610,6 @@ impl Stats {
         detected: bool,
         ignored: usize,
     ) {
-        self.frames += 1;
         self.with_detections += u32::from(detected);
         self.ignored += ignored;
         self.analysis += analysis;
@@ -609,9 +618,8 @@ impl Stats {
 
     /// `waiting` は ffmpeg への書き込みを待っているフレームの数、`written` は ffmpeg に書いてまだ出てきていない
     /// フレームの数。
-    fn log(&mut self, camera_id: u32, waiting: usize, written: usize) {
-        let seconds = self.started.elapsed().as_secs_f64();
-        let frames = f64::from(self.frames.max(1));
+    fn log(&mut self, camera_id: u32, waiting: usize, written: usize, fps: f64) {
+        let frames = self.delays_ms.len().max(1) as f64;
         let mean_ms = |total: Duration| format!("{:.2}", total.as_secs_f64() * 1000.0 / frames);
         let ms = |duration: Duration| format!("{:.1}", duration.as_secs_f64() * 1000.0);
         self.delays_ms.sort_unstable();
@@ -619,7 +627,7 @@ impl Stats {
         self.decodes.sort_unstable();
         trace!(
             camera_id,
-            fps = format!("{:.1}", f64::from(self.frames) / seconds),
+            fps = format!("{fps:.1}"),
             dropped_before_ffmpeg = self.dropped_before_ffmpeg,
             dropped_after_ffmpeg = self.dropped_after_ffmpeg,
             frames_with_detections = self.with_detections,

@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package tk75attractions.struckout.ball_tracker.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// 起動時に、設定したカメラの接続と受信を確かめる。
+service CameraStatusService {
+  rpc ListCameraStatus(ListCameraStatusRequest) returns (ListCameraStatusResponse);
+}
+
+message ListCameraStatusRequest {}
+
+message ListCameraStatusResponse {
+  // 設定順のカメラと、設定にない接続済みのカメラを含む。
+  repeated CameraStatus cameras = 1;
+}
+
+message CameraStatus {
+  // --cameras の記載順。設定にない端末には、その後の番号を割り当てる。
+  uint32 camera_id = 1;
+  // 設定にない端末では空。
+  string name = 2;
+  string device_id = 3;
+  // 制御・検出・動画のいずれかの接続が残っている。
+  bool connected = 4;
+  // 直近の集計区間で処理したフレーム/秒。未受信・切断後は 0。
+  double fps = 5;
+  // 映像フレームまたは検出パケットの最終受信時刻。未受信なら未設定。
+  google.protobuf.Timestamp last_frame_at = 6;
+  // 最後の接続を切断した時刻。一度も切断していなければ未設定。
+  google.protobuf.Timestamp disconnected_at = 7;
+}
