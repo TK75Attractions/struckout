@@ -8,7 +8,13 @@ use std::{
 
 use touchpanel::run_main;
 use tracing::Level;
-use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{
+    Layer,
+    filter::{self, LevelFilter},
+    fmt,
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+};
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
