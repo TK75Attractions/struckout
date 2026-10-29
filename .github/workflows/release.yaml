@@ -42,7 +42,7 @@ jobs:
           name: unity-build-info
           path: projector/Assets/Scripts/Unity/BuildInfo.Generated.cs
 
-  rust-build:
+  ball-tracker-build:
     strategy:
       matrix:
         os: ["windows-2022", "windows-11-arm", "macos-14", "ubuntu-22.04"]
@@ -83,14 +83,7 @@ jobs:
           SQLX_OFFLINE: "true"
           ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
           ST_VERSION: ${{ needs.get-version.outputs.version }}
-      - name: Build touchpanel
-        run: mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --release -p touchpanel --features sentry
-        env:
-          SQLX_OFFLINE: "true"
-          ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
-          ST_VERSION: ${{ needs.get-version.outputs.version }}
-
-      - name: Rename binaries
+      - name: Rename binary
         id: triple
         run: |
           mkdir upload
@@ -98,30 +91,97 @@ jobs:
             "windows-2022")
               echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker.exe upload/ball-tracker-x86_64-windows
-              mv target/release/touchpanel.exe upload/touchpanel-x86_64-windows
               ;;
             "windows-11-arm")
               echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker.exe upload/ball-tracker-arm64-windows
-              mv target/release/touchpanel.exe upload/touchpanel-arm64-windows
               ;;
             "macos-14")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker upload/ball-tracker-arm64-macos
-              mv target/release/touchpanel upload/touchpanel-arm64-macos
               ;;
             "ubuntu-22.04")
               echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker upload/ball-tracker-x86_64-linux
+              ;;
+            *)
+              exit 1;;
+          esac
+      - name: Upload ball_tracker binary
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ball-tracker-${{ steps.triple.outputs.triple }}
+          path: ./upload/
+
+  touchpanel-build:
+    strategy:
+      matrix:
+        os: ["windows-2022", "windows-11-arm", "macos-14", "ubuntu-22.04"]
+    runs-on: ${{ matrix.os }}
+    needs: [get-version]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-deps: 0
+          sparse-checkout: |
+            .cargo
+            mise.toml
+            mise.lock
+            api/proto
+            api/rust
+            api/spec
+            ball_tracker
+            game_master
+            migrations/mysql
+            touchpanel
+            xtask
+            macros
+      - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e
+        with:
+          install_args: protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }}
+      - name: Install fontconfig for Linux
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev
+      - name: Build touchpanel
+        run: mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --release -p touchpanel --features sentry
+        env:
+          SQLX_OFFLINE: "true"
+          ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
+          ST_VERSION: ${{ needs.get-version.outputs.version }}
+      - name: Rename binary
+        id: triple
+        run: |
+          mkdir upload
+          case ${{ matrix.os }} in
+            "windows-2022")
+              echo "triple=x86_64-windows" >> "$GITHUB_OUTPUT"
+              mv target/release/touchpanel.exe upload/touchpanel-x86_64-windows
+              ;;
+            "windows-11-arm")
+              echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
+              mv target/release/touchpanel.exe upload/touchpanel-arm64-windows
+              ;;
+            "macos-14")
+              echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
+              mv target/release/touchpanel upload/touchpanel-arm64-macos
+              ;;
+            "ubuntu-22.04")
+              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
               mv target/release/touchpanel upload/touchpanel-x86_64-linux
               ;;
             *)
               exit 1;;
           esac
-      - name: Upload binaries
+      - name: Upload touchpanel binary
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: rust-${{ steps.triple.outputs.triple }}
+          name: touchpanel-${{ steps.triple.outputs.triple }}
           path: ./upload/
 
   unity-build:
@@ -382,7 +442,7 @@ jobs:
   publish-release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name == 'master' }}
-    needs: [get-version, rust-build, unity-build, launcher-build, camera-build, publish-game-master-image]
+    needs: [get-version, ball-tracker-build, touchpanel-build, unity-build, launcher-build, camera-build, publish-game-master-image]
     permissions:
       contents: write
     steps:
@@ -394,10 +454,14 @@ jobs:
         with:
           pattern: projector-*
           skip-decompress: true # zipファイルのまま
-      - name: Download rust artifacts
+      - name: Download ball_tracker artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: rust-*
+          pattern: ball-tracker-*
+      - name: Download touchpanel artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: touchpanel-*
       - name: Download launcher artifacts
         uses: actions/download-artifact@v8
         with:
@@ -410,7 +474,7 @@ jobs:
       - name: Create release
         run: |
           gh release create ${{ needs.get-version.outputs.version }} --generate-notes \
-            rust-x86_64-windows/* rust-arm64-windows/* rust-x86_64-linux/* rust-arm64-macos/* \
+            ball-tracker-*/* touchpanel-*/* \
             launcher-*/* camera/camera.apk \
             projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \
