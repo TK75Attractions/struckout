@@ -151,10 +151,6 @@ projector をセッション開始前に接続すること。途中から購読�
 mise run //game_master:dev   # docker compose (app + MySQL)
 ```
 
-> **既知の問題**: `game_master/compose.yaml` が公開しているのは `8080:8080` だが、
-> バイナリが listen するのは `api/spec/servers.yaml` 由来の **8020**。
-> このままではホストから届かない。
-
 ## 5. 別マシンの ball_tracker につなぐ
 
 `docs/machine_separation.md` のとおり Unity と Android Studio は別マシンで動かすので、

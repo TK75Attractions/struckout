@@ -5,7 +5,7 @@ namespace Struckout.Launcher.Core.Modules;
 
 /// <summary>Runs <c>docker compose</c> for the game_master that the installer set up.</summary>
 /// <remarks>
-/// The compose files are the ones in <c>game_master/</c> of the release. <c>compose.prod.yaml</c> replaces the
+/// The compose files are the ones in <c>game_master/docker/</c> of the release. <c>compose.prod.yaml</c> replaces the
 /// build with the image published to ghcr.io, so the PC doesn't need the source.
 /// </remarks>
 /// <param name="version">The release tag, which is also the tag of the image.</param>
