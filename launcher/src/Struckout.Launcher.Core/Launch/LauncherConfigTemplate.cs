@@ -35,6 +35,11 @@ public static class LauncherConfigTemplate
             # ball_tracker にそのまま渡す引数。例: ["--time-trim-ms", "3"]
             extra-args = []
 
+            [touchpanel]
+            # 受付画面のディスプレイ。省略するとメインの画面に全画面表示する。
+            # winit の列挙順で 1 から。Unity (projector.monitor) や Windows の番号と一致するとは限らない。
+            # monitor = 1
+
             [projector]
             # 的を映す画面の番号 (1 から)。PC の画面が 1 なら、プロジェクターはふつう 2
             monitor = 2

@@ -25,6 +25,9 @@ public sealed record BallTrackerSettings(CollisionOutput Output, string? CsvPath
 /// <param name="CollisionTransform">The file saved on the F2 screen of projector. Null for projector's default.</param>
 public sealed record ProjectorSettings(int Monitor, bool Fullscreen, string? CollisionTransform);
 
+/// <param name="Monitor">The display in winit enumeration order, from 1. Null for the primary display.</param>
+public sealed record TouchpanelSettings(int? Monitor);
+
 /// <summary>What to start on this PC and how, read from <c>launcher.toml</c>.</summary>
 /// <remarks>
 /// The launcher takes no options on the command line: a PC at a booth is set up once and started many times,
@@ -37,7 +40,8 @@ public sealed record LauncherConfig(
     IReadOnlySet<ModuleId> Modules,
     IReadOnlyDictionary<ModuleId, string> RemoteHosts,
     BallTrackerSettings BallTracker,
-    ProjectorSettings Projector)
+    ProjectorSettings Projector,
+    TouchpanelSettings Touchpanel)
 {
     /// <summary>The host to connect to <paramref name="target"/> at.</summary>
     public string HostOf(ModuleId target) =>
@@ -86,6 +90,7 @@ public sealed record LauncherConfig(
         Unknown(document.Hosts.Unknown, "hosts.");
         Unknown(document.BallTracker.Unknown, "ball-tracker.");
         Unknown(document.Projector.Unknown, "projector.");
+        Unknown(document.Touchpanel.Unknown, "touchpanel.");
 
         var modules = new HashSet<ModuleId>();
         foreach (var slug in document.Modules)
@@ -133,6 +138,11 @@ public sealed record LauncherConfig(
             errors.Add("projector.monitor は 1 以上にしてください");
         }
 
+        if (document.Touchpanel.Monitor is < 1)
+        {
+            errors.Add("touchpanel.monitor は 1 以上にしてください");
+        }
+
         if (errors.Count > 0)
         {
             throw new LauncherException($"{path} の設定が正しくありません:\n" + string.Join('\n', errors.Select(e => "・" + e)));
@@ -147,7 +157,8 @@ public sealed record LauncherConfig(
                 [ModuleId.GameMaster] = document.Hosts.GameMaster,
             },
             new BallTrackerSettings(output!.Value, csvPath, document.BallTracker.ExtraArgs),
-            new ProjectorSettings(document.Projector.Monitor, document.Projector.Fullscreen, Resolve(document.Projector.CollisionTransform)));
+            new ProjectorSettings(document.Projector.Monitor, document.Projector.Fullscreen, Resolve(document.Projector.CollisionTransform)),
+            new TouchpanelSettings(document.Touchpanel.Monitor));
 
         void Unknown(Dictionary<string, object?> keys, string prefix) =>
             errors.AddRange(keys.Keys.Select(key => $"{prefix}{key} という設定はありません"));
@@ -168,6 +179,8 @@ public sealed record LauncherConfig(
         public BallTrackerTable BallTracker { get; set; } = new();
 
         public ProjectorTable Projector { get; set; } = new();
+
+        public TouchpanelTable Touchpanel { get; set; } = new();
 
         [TomlExtensionData]
         public Dictionary<string, object?> Unknown { get; set; } = [];
@@ -190,6 +203,14 @@ public sealed record LauncherConfig(
         public string? CsvPath { get; set; }
 
         public List<string> ExtraArgs { get; set; } = [];
+
+        [TomlExtensionData]
+        public Dictionary<string, object?> Unknown { get; set; } = [];
+    }
+
+    private sealed class TouchpanelTable
+    {
+        public int? Monitor { get; set; }
 
         [TomlExtensionData]
         public Dictionary<string, object?> Unknown { get; set; } = [];

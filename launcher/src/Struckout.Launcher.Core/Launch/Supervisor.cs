@@ -388,9 +388,16 @@ public sealed class Supervisor : IDisposable
                     ModuleGraph.HealthPortOf(id, ports),
                     logFile);
             case (ModuleId.Touchpanel, ExecutableInstallation executable):
+                List<string> touchpanelArguments =
+                    ["--address", config.HostOf(ModuleId.GameMaster), "--machine-id", machineId];
+                if (config.Touchpanel.Monitor is { } monitor)
+                {
+                    touchpanelArguments.AddRange(["--monitor", monitor.ToString(CultureInfo.InvariantCulture)]);
+                }
+
                 return new ProcessModuleRunner(
                     id, platform, runner, executable.Executable,
-                    ["--address", config.HostOf(ModuleId.GameMaster), "--machine-id", machineId],
+                    touchpanelArguments,
                     [],
                     ModuleGraph.HealthPortOf(id, ports),
                     logFile);

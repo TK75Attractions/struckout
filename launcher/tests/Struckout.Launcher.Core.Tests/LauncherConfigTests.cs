@@ -20,6 +20,19 @@ public class LauncherConfigTests
         Assert.Null(config.BallTracker.CsvPath);
         Assert.Empty(config.BallTracker.ExtraArguments);
         Assert.Equal(new ProjectorSettings(2, true, null), config.Projector);
+        Assert.Null(config.Touchpanel.Monitor);
+    }
+
+    [Theory]
+    [InlineData("", null)]
+    [InlineData("[touchpanel]", null)]
+    [InlineData("[touchpanel]\nmonitor = 1", 1)]
+    [InlineData("[touchpanel]\nmonitor = 3", 3)]
+    public void TouchpanelMonitorIsOptional(string text, int? expected)
+    {
+        var config = LauncherConfig.Parse(text, ConfigPath);
+
+        Assert.Equal(expected, config.Touchpanel.Monitor);
     }
 
     [Fact]
@@ -64,6 +77,10 @@ public class LauncherConfigTests
     [InlineData("[ball-tracker]\noutput = \"file\"", "\"network\" か \"csv\"")]
     [InlineData("[ball-tracker]\noutput = \"csv\"", "csv-path も書いてください")]
     [InlineData("[projector]\nmonitor = 0", "projector.monitor は 1 以上")]
+    [InlineData("[touchpanel]\nmonitor = 0", "touchpanel.monitor は 1 以上")]
+    [InlineData("[touchpanel]\nmonitor = -1", "touchpanel.monitor は 1 以上")]
+    [InlineData("[touchpanel]\nscreen = 2", "touchpanel.screen という設定はありません")]
+    [InlineData("[touchpanel]\nmonitor = \"1\"", "を読めません")]
     [InlineData("machine_id = 1", "machine_id という設定はありません")]
     [InlineData("[projector]\nscreen = 2", "projector.screen という設定はありません")]
     [InlineData("modules = [", "を読めません")]
