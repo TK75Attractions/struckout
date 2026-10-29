@@ -73,7 +73,9 @@ fn main() -> std::process::ExitCode {
     let reg = tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().with_filter(transport_logs));
     #[cfg(feature = "sentry")]
-    let reg = reg.with(sentry::integrations::tracing::layer());
+    let reg = reg
+        .with(sentry::integrations::tracing::SpanLayer::new().with_filter(LevelFilter::TRACE))
+        .with(sentry::integrations::tracing::LogLayer::new().with_filter(LevelFilter::TRACE));
     reg.init();
 
     #[cfg(feature = "sentry")]
