@@ -329,7 +329,7 @@ class TcpSessionImpl(
 
         const val TCP_REMOTE_ADDRESS = "127.0.0.1"
 
-        const val TCP_REMOTE_PORT = 6060
+        const val TCP_REMOTE_PORT = ServerPorts.BALL_TRACKER_CAMERA_CTRL
 
         const val APP_VARIANT = "highspeed"
     }

@@ -32,6 +32,8 @@ jobs:
             android:
               - 'camera/**'
               - 'api/proto/**'
+              - 'api/spec/**'
+              - 'scripts/generate_server_ports.py'
               - 'mise.toml'
               - 'mise.lock'
               - '.github/workflows/android_ci.yaml'
@@ -72,6 +74,9 @@ jobs:
               - '.github/workflows/ci.yaml'
             unity:
               - 'api/proto/**'
+              - 'api/spec/**'
+              - 'game_master/docker/compose.yaml'
+              - 'scripts/generate_server_ports.py'
               - 'projector/**'
               - 'mise.toml'
               - 'mise.lock'
