@@ -36,8 +36,8 @@ from struckout_common import (IS_MACOS, IS_WINDOWS, ROOT, SCRIPTS, Failure, deta
                               kill_process, load_json, note, ok, per_platform, platform_key, process_running,
                               read_shared, report_failure, run, setup_console, step, tcp_ready, warn)
 
-COMPOSE = ["compose", "-f", str(ROOT / "game_master" / "compose.yaml"),
-           "-f", str(ROOT / "game_master" / "compose.dev.yaml")]
+COMPOSE = ["compose", "-f", str(ROOT / "game_master" / "docker" / "compose.yaml"),
+           "-f", str(ROOT / "game_master" / "docker" / "compose.dev.yaml")]
 
 # Unity のコマンドラインでの書き出し先の指定 (OS ごと)
 BUILD_TARGETS = {

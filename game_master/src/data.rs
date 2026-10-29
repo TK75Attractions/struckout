@@ -10,7 +10,7 @@ use time::PlainDateTime;
 use crate::{
     AddPlayerError, DataSource, GamePlayerInfo, GamePlayers, GameRecord, GameResult,
     GameResultItem, GetGameResultError, GetGamesByPlayerError, GetPlayerByIdError, GetPlayerError,
-    GetRankingError, PlayerInfo, SaveGameError, ValidatePlayerNameError,
+    GetRankingError, PlayerInfo, RankedGameResultItem, SaveGameError, ValidatePlayerNameError,
 };
 
 const MODE_SINGLE: &str = "single";
@@ -80,6 +80,40 @@ impl From<GameResultRow> for GameResultItem {
                 total_score: row.score,
             },
             players,
+        }
+    }
+}
+
+struct RankedGameResultRow {
+    game_id: u32,
+    score: u32,
+    machine_id_1: u32,
+    machine_id_2: Option<u32>,
+    player_id_1: u32,
+    player_name_1: String,
+    player_id_2: Option<u32>,
+    player_name_2: Option<String>,
+    rank: u64,
+}
+
+impl From<RankedGameResultRow> for RankedGameResultItem {
+    fn from(row: RankedGameResultRow) -> Self {
+        Self {
+            item: GameResultRow {
+                game_id: row.game_id,
+                score: row.score,
+                machine_id_1: row.machine_id_1,
+                machine_id_2: row.machine_id_2,
+                player_id_1: row.player_id_1,
+                player_name_1: row.player_name_1,
+                player_id_2: row.player_id_2,
+                player_name_2: row.player_name_2,
+            }
+            .into(),
+            rank: row
+                .rank
+                .try_into()
+                .expect("rank cannot exceed the u32 game ID range"),
         }
     }
 }
@@ -191,27 +225,32 @@ impl<C: MySqlConnectionSource> DataSource for DataSourceImpl<C> {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<GameResultItem>, GetGamesByPlayerError> {
+    ) -> Result<Vec<RankedGameResultItem>, GetGamesByPlayerError> {
         let mut conn = self.db.acquire().await?;
         let rows = sqlx::query_as!(
-            GameResultRow,
+            RankedGameResultRow,
             "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,
                     p1.id AS player_id_1, p1.name AS player_name_1,
-                    p2.id AS player_id_2, p2.name AS player_name_2
+                    p2.id AS player_id_2, p2.name AS player_name_2,
+                    ranked.rank AS `rank!: u64`
              FROM games g
+             JOIN (
+                 SELECT game_id, CAST(RANK() OVER (ORDER BY score DESC) AS UNSIGNED) AS `rank`
+                 FROM games
+                 WHERE mode = ? AND difficulty = ?
+             ) ranked ON ranked.game_id = g.game_id
              JOIN players p1 ON p1.id = g.player_id_1
              LEFT JOIN players p2 ON p2.id = g.player_id_2
-             WHERE (g.player_id_1 = ? OR g.player_id_2 = ?) AND g.mode = ? AND g.difficulty = ?
+             WHERE g.player_id_1 = ? OR g.player_id_2 = ?
              ORDER BY g.score DESC, g.game_id ASC",
-            player_id.into_inner(),
-            player_id.into_inner(),
             mode.to_mysql_enum(),
-            difficulty.to_mysql_enum()
+            difficulty.to_mysql_enum(),
+            player_id.into_inner(),
+            player_id.into_inner()
         )
         .fetch_all(&mut *conn)
         .await?;
-        let ret = rows.into_iter().map(Into::into).collect();
-        Ok(ret)
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn get_player_by_id(&self, player_id: PlayerId) -> Result<Player, GetPlayerByIdError> {
@@ -530,29 +569,40 @@ mod tests {
                     ds.get_games_by_player(player, GameMode::Multi, Difficulty::Hard)
                         .await
                         .expect("history"),
-                    expected.to_vec()
+                    expected
+                        .iter()
+                        .cloned()
+                        .zip([1, 1, 3])
+                        .map(|(item, rank)| RankedGameResultItem { item, rank })
+                        .collect::<Vec<_>>()
                 );
             }
             assert_eq!(
                 ds.get_games_by_player(first, GameMode::Multi, Difficulty::Normal)
                     .await
                     .expect("normal history"),
-                vec![GameResultItem {
-                    result: games[3].clone(),
-                    players: expected[0].players.clone()
+                vec![RankedGameResultItem {
+                    rank: 1,
+                    item: GameResultItem {
+                        result: games[3].clone(),
+                        players: expected[0].players.clone()
+                    }
                 }]
             );
             assert_eq!(
                 ds.get_games_by_player(first, GameMode::Single, Difficulty::Hard)
                     .await
                     .expect("single history"),
-                vec![GameResultItem {
-                    result: games[4].clone(),
-                    players: GamePlayerInfo::Single(PlayerInfo {
-                        machine_id: MachineId::new(4),
-                        player_id: first,
-                        player_name: "太郎".to_owned(),
-                    }),
+                vec![RankedGameResultItem {
+                    rank: 1,
+                    item: GameResultItem {
+                        result: games[4].clone(),
+                        players: GamePlayerInfo::Single(PlayerInfo {
+                            machine_id: MachineId::new(4),
+                            player_id: first,
+                            player_name: "太郎".to_owned(),
+                        }),
+                    }
                 }]
             );
             assert_eq!(
@@ -567,6 +617,36 @@ mod tests {
                         player_name: "太郎".to_owned(),
                     }),
                 }]
+            );
+        });
+    }
+
+    #[test]
+    fn history_rank_counts_other_players_and_shares_places_for_equal_scores() {
+        with_test_transaction(|transaction| async move {
+            let ds = DataSourceImpl::new(transaction);
+            let player = ds.add_player("Player").await.expect("player");
+            let other = ds.add_player("Other").await.expect("other player");
+            for (owner, score) in [(other, 100), (player, 90), (other, 90), (player, 80)] {
+                ds.save_game(GameRecord {
+                    players: GamePlayers::Single {
+                        machine_id: MachineId::new(1),
+                        player_id: owner,
+                    },
+                    started_at: UtcDateTime::now(),
+                    difficulty: Difficulty::Normal,
+                    score,
+                })
+                .await
+                .expect("save game");
+            }
+            let history = ds
+                .get_games_by_player(player, GameMode::Single, Difficulty::Normal)
+                .await
+                .expect("history");
+            assert_eq!(
+                history.iter().map(|item| item.rank).collect::<Vec<_>>(),
+                [2, 4]
             );
         });
     }
@@ -592,23 +672,26 @@ mod tests {
                 ds.get_games_by_player(player_id, GameMode::Multi, Difficulty::Veryhard)
                     .await
                     .expect("history"),
-                vec![GameResultItem {
-                    result: GameResult {
-                        game_id,
-                        total_score: 0
-                    },
-                    players: GamePlayerInfo::Multi(
-                        PlayerInfo {
-                            machine_id: MachineId::new(1),
-                            player_id,
-                            player_name: "Same player".to_owned()
+                vec![RankedGameResultItem {
+                    rank: 1,
+                    item: GameResultItem {
+                        result: GameResult {
+                            game_id,
+                            total_score: 0
                         },
-                        PlayerInfo {
-                            machine_id: MachineId::new(2),
-                            player_id,
-                            player_name: "Same player".to_owned()
-                        },
-                    ),
+                        players: GamePlayerInfo::Multi(
+                            PlayerInfo {
+                                machine_id: MachineId::new(1),
+                                player_id,
+                                player_name: "Same player".to_owned()
+                            },
+                            PlayerInfo {
+                                machine_id: MachineId::new(2),
+                                player_id,
+                                player_name: "Same player".to_owned()
+                            },
+                        ),
+                    }
                 }]
             );
             let ranking = ds

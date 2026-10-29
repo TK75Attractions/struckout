@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import argparse
 import collections
+import dataclasses
+import enum
 import os
 import re
 import shutil
@@ -50,6 +52,79 @@ VIDEO_GB_PER_HOUR = 45
 STATS = re.compile(r'video analysis camera_id=(\d+) fps="([\d.]+)".*delay_ms_p50=(\d+) delay_ms_p95=(\d+) '
                    r'max_delay_ms=(\d+)')
 LATENCY = re.compile(r"camera clock camera_id=(\d+).*min_latency_ms=([\d.]+)")
+
+class PhoneState(enum.Enum):
+    """dumpsys から読んだスマホの画面の状態。"""
+    LOCKED = enum.auto()
+    ASLEEP = enum.auto()
+    UNLOCKED = enum.auto()
+    # Android の版によって出力が違い、読めなかったとき。ロックとは扱わない
+    UNKNOWN = enum.auto()
+    # adb に出ない
+    DISCONNECTED = enum.auto()
+
+
+def parse_device_state(window: str, power: str) -> PhoneState:
+    """既知の dumpsys の項目だけを読む。版の違いで読めなければ UNKNOWN を返す。"""
+    lock_states = [value.lower() for value in
+                   re.findall(r"(?:mShowingLockscreen|mIsShowing)=(true|false)", window, re.IGNORECASE)]
+    wakefulness = re.search(r"mWakefulness=(Awake|Asleep|Dozing|Dreaming)", power, re.IGNORECASE)
+    awake = wakefulness.group(1).lower() if wakefulness else None
+    if "true" in lock_states:
+        return PhoneState.LOCKED
+    if awake in {"asleep", "dozing"}:
+        return PhoneState.ASLEEP
+    if "false" in lock_states or awake in {"awake", "dreaming"}:
+        return PhoneState.UNLOCKED
+    return PhoneState.UNKNOWN
+
+
+def camera_status_line(name: str, serial: str, state: PhoneState) -> str | None:
+    if state in {PhoneState.LOCKED, PhoneState.ASLEEP}:
+        return f"{name} の画面のロックを解除してください"
+    if state == PhoneState.DISCONNECTED:
+        return (f"{name} ({serial}) が USB でつながっていません。ケーブルとハブを確かめ、スマホの"
+                "『USB デバッグを許可』を確認してください (スリープで USB が切れることもあります)")
+    return None
+
+
+@dataclasses.dataclass
+class CameraLink:
+    """ball_tracker のログから読んだ、カメラ 1 台の接続と最終受信時刻。"""
+    connected: bool = True
+    # ログの先頭の時刻は UTC なので使わず、行を読んだときのこの PC の時刻を持つ
+    last_received: datetime | None = None
+
+
+def camera_log_state(line: str, links: dict[int, CameraLink], read_at: datetime) -> None:
+    """接続・切断のログと統計の行から、接続状態と最終受信時刻を更新する。"""
+    connected = re.search(r"camera connected camera_id=(\d+)", line)
+    disconnected = re.search(r"camera disconnected camera_id=(\d+)", line)
+    stats = STATS.search(line)
+    match = connected or disconnected or stats
+    if not match:
+        return
+    link = links.setdefault(int(match.group(1)), CameraLink())
+    if disconnected:
+        link.connected = False
+        return
+    link.connected = True
+    if stats:
+        link.last_received = read_at
+
+
+def camera_status_text(camera_id: int, stats: tuple[str, ...], link: CameraLink) -> str:
+    last_received = link.last_received.strftime("%H:%M:%S") if link.last_received else "不明"
+    if not link.connected:
+        return f"camera_id {camera_id} 切断中 (最終受信 {last_received})"
+    return f"camera_id {camera_id} {stats[1]} fps (遅れ 95% {stats[3]} ms、最終受信 {last_received})"
+
+
+def phone_state(remote: CameraRemote, camera) -> PhoneState:
+    remote.adb_shell(camera, "input", "keyevent", "KEYCODE_WAKEUP")
+    window = remote.adb_shell(camera, "dumpsys", "window")
+    power = remote.adb_shell(camera, "dumpsys", "power")
+    return parse_device_state(window, power)
 
 
 def short(line: str) -> str:
@@ -123,7 +198,7 @@ def precheck(record_video: bool):
         if camera["serial"] in remote.connected:
             ok(f"スマホ {camera['name']}: {camera['serial']}")
         else:
-            warn(f"スマホ {camera['name']} ({camera['serial']}) がつながっていません")
+            warn(camera_status_line(camera["name"], camera["serial"], PhoneState.DISCONNECTED))
     if not remote.cameras:
         fail("cameras.json の端末が 1 台もつながっていません")
 
@@ -189,13 +264,16 @@ def open_phones(log: TrackerLog, remote: CameraRemote) -> dict[int, str]:
         id_pattern = rf"{index}\b" if camera.get("device_id") else r"\d+"
         camera_id = None
         for _ in range(2):
+            state = phone_state(remote, camera)
             remote.open_one(camera)
             line = log.wait(rf"received video stream config camera_id={id_pattern}", 40, f"{camera['name']} を待っています")
             match = re.search(r"camera_id=(\d+)", line or "")
             if match:
                 camera_id = int(match.group(1))
                 break
-            warn(f"{camera['name']} から動画が届きません。アプリを開き直します")
+            diagnosis = camera_status_line(camera["name"], camera["serial"], state)
+            detail = f" ({diagnosis})" if diagnosis else ""
+            warn(f"{camera['name']} から動画が届きません{detail}。アプリを開き直します")
             remote.stop_one(camera)
             time.sleep(2)
         if camera_id is None:
@@ -205,12 +283,14 @@ def open_phones(log: TrackerLog, remote: CameraRemote) -> dict[int, str]:
     return ids
 
 
-def check_streams(log: TrackerLog, ids: dict[int, str], stats: dict) -> None:
+def check_streams(log: TrackerLog, ids: dict[int, str], stats: dict,
+                  links: dict[int, CameraLink]) -> None:
     step("届いている動画を確かめる (約 12 秒)")
     latency: dict[int, float] = {}
     until = time.monotonic() + 25
     while time.monotonic() < until and len(stats) < len(ids):
         for line in log.new_lines():
+            camera_log_state(line, links, datetime.now())
             match = STATS.search(line)
             if match:
                 stats[int(match.group(1))] = match.groups()
@@ -233,13 +313,15 @@ def check_streams(log: TrackerLog, ids: dict[int, str], stats: dict) -> None:
         (warn if fps < 110 or int(s[3]) > 100 else ok)(text)
 
 
-def watch(log: TrackerLog, process: subprocess.Popen, stats: dict, record_video: bool) -> None:
+def watch(log: TrackerLog, process: subprocess.Popen, stats: dict, record_video: bool,
+          links: dict[int, CameraLink]) -> None:
     step("準備完了。投げてください (止めるときは Ctrl+C)")
     collisions = 0
     last_status = time.monotonic()
     while process.poll() is None:
         now = datetime.now().strftime("%H:%M:%S")
         for line in log.new_lines():
+            camera_log_state(line, links, datetime.now())
             if "detected collision" in line:
                 collisions += 1
                 print(f"  {now}  着弾 {collisions} 件目", flush=True)
@@ -261,7 +343,7 @@ def watch(log: TrackerLog, process: subprocess.Popen, stats: dict, record_video:
                     stats[int(match.group(1))] = match.groups()
         if time.monotonic() - last_status >= 60:
             last_status = time.monotonic()
-            parts = [f"camera_id {i} {stats[i][1]} fps (遅れ 95% {stats[i][3]} ms)" for i in sorted(stats)]
+            parts = [camera_status_text(i, stats[i], links.get(i, CameraLink())) for i in sorted(stats)]
             note(f"{now}  着弾 {collisions} 件、{'、'.join(parts)}")
             free = free_gb(ROOT)
             if record_video and free < 20:
@@ -330,7 +412,8 @@ def main() -> int:
 
         ids = open_phones(log, remote)
         stats: dict = {}
-        check_streams(log, ids, stats)
+        links: dict[int, CameraLink] = {}
+        check_streams(log, ids, stats, links)
         for line in remote.status():
             (ok if "tcp=connected camera_screen=true" in line else warn)(line)
         if settings.get("save_frame") and not args.no_save_frame:
@@ -338,7 +421,7 @@ def main() -> int:
             for line in remote.save_frame(run_dir / "calibration"):
                 print(f"  {line}")
 
-        watch(log, process, stats, record_video)
+        watch(log, process, stats, record_video, links)
         return 0
     except Failure as e:
         return report_failure(e)

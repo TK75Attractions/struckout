@@ -302,8 +302,8 @@ namespace Struckout.Infrastructure.Grpc
             _ => Array.Empty<PlayerInfo.Types.PlayerItem>(),
         };
 
-        private static RankingEntry RankingGame(uint gameId, uint score, PlayerInfo info) =>
-            new(new GameId(gameId), score, PlayerItems(info).Where(player => player != null)
+        private static RankingEntry RankingGame(uint gameId, uint score, PlayerInfo info, uint? rank = null) =>
+            new(new GameId(gameId), score, rank, PlayerItems(info).Where(player => player != null)
                 .Select(player => new RankingParticipant(player.MachineId, new PlayerId(player.PlayerId), player.PlayerName)).ToArray());
 
         public async UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default)
@@ -342,7 +342,7 @@ namespace Struckout.Infrastructure.Grpc
             try
             {
                 var response = await _client.GetGamesByPlayerAsync(new GetGamesByPlayerRequest { PlayerId = playerId.Value, Mode = mode, Difficulty = difficulty }, cancellationToken: token);
-                return response.Items.Select(item => RankingGame(item.GameId, item.TotalScore, item.PlayerInfo)).ToArray();
+                return response.Items.Select(item => RankingGame(item.GameId, item.TotalScore, item.PlayerInfo, item.Rank == 0 ? (uint?)null : item.Rank)).ToArray();
             }
             catch (RpcException error)
             {

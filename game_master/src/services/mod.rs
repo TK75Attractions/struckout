@@ -663,9 +663,10 @@ where
                 .into_iter()
                 .map(
                     |item| struckout_proto::get_games_by_player_response::GamesByPlayerItem {
-                        game_id: item.result.game_id.into(),
-                        total_score: item.result.total_score,
-                        player_info: Some(item.players.into()),
+                        game_id: item.item.result.game_id.into(),
+                        total_score: item.item.result.total_score,
+                        player_info: Some(item.item.players.into()),
+                        rank: item.rank,
                     },
                 )
                 .collect(),
@@ -737,6 +738,7 @@ async fn game_timer(
     complete_tx: mpsc::Sender<()>,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(1));
+    interval.tick().await;
     let duration_secs = GAME_DURATION.whole_seconds();
     for i in 0..duration_secs {
         trace!(secs_elapsed = i, "timer tick");

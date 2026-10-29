@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,\n                    p1.id AS player_id_1, p1.name AS player_name_1,\n                    p2.id AS player_id_2, p2.name AS player_name_2\n             FROM games g\n             JOIN players p1 ON p1.id = g.player_id_1\n             LEFT JOIN players p2 ON p2.id = g.player_id_2\n             WHERE (g.player_id_1 = ? OR g.player_id_2 = ?) AND g.mode = ? AND g.difficulty = ?\n             ORDER BY g.score DESC, g.game_id ASC",
+  "query": "SELECT g.game_id, g.score, g.machine_id_1, g.machine_id_2,\n                    p1.id AS player_id_1, p1.name AS player_name_1,\n                    p2.id AS player_id_2, p2.name AS player_name_2,\n                    ranked.rank AS `rank!: u64`\n             FROM games g\n             JOIN (\n                 SELECT game_id, CAST(RANK() OVER (ORDER BY score DESC) AS UNSIGNED) AS `rank`\n                 FROM games\n                 WHERE mode = ? AND difficulty = ?\n             ) ranked ON ranked.game_id = g.game_id\n             JOIN players p1 ON p1.id = g.player_id_1\n             LEFT JOIN players p2 ON p2.id = g.player_id_2\n             WHERE g.player_id_1 = ? OR g.player_id_2 = ?\n             ORDER BY g.score DESC, g.game_id ASC",
   "describe": {
     "columns": [
       {
@@ -130,6 +130,17 @@
             "name": "name"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "rank!: u64",
+        "type_info": {
+          "type": "LongLong",
+          "flags": "NOT_NULL | UNSIGNED",
+          "collation": 63,
+          "max_size": 21
+        },
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -143,8 +154,9 @@
       false,
       false,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "7f6ae6f34b9da1c565f94ebe96025e3c0a2433a12cec1171420c5653c7c7bf91"
+  "hash": "93bf52a88d49da14bae9bfdd85591e8719255944225d9ab6e8cf8d19afba9167"
 }

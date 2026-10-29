@@ -15,6 +15,10 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 2. `GameFinished(game_id)` を受信すると命中送信を止めて ScoreScreen に切り替え、
    `GetGameResult(game_id)` で DB 保存済みの確定得点を取得して表示する。
    プレイ中の HUD の値を確定結果として流用しない。
+   モード・難易度と SCORE ラベルを表示し、確定得点を約1秒で0から数え上げる。
+   得点の表示後、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
+   今回のゲームが上位に含まれるときは「ランキング N 位！」を表示する。
+   ランキングを取得できなくても得点表示は維持する。
 3. 自分のマシンの `NavigateToRankingScreenRequested` を受信すると RankingScreen に切り替える。
    `GetRanking(max_item_num = 10, mode, difficulty)` と `GetGamesByPlayer(player_id, mode, difficulty)` を並行して取得し、
    `game_id` で重複を除いて得点の降順に統合する。同点の場合は `game_id` の昇順とする。
@@ -25,14 +29,16 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 「あなた」の記録と今回の `game_id` を強調する。
 12 行の固定レイアウトで一画面に収め、得点順に上から下へ並べる。
 スクロールやページ切り替えは行わない。
-API は履歴の全体順位を返さないため、統合後の行番号を全体順位として表示しない。
+順位は本人履歴の各行で `GetGamesByPlayer` が返す全体順位を使う。
+上位10件の行は Domain で同点を同順位（1、2、2、4）として計算する。
+順位・プレイヤー・スコアの見出しと、モード・難易度を表示する。
+1〜3位の順位と得点は金・銀・銅で強調する。
 サーバーのランキングは multi-play も1ゲーム1行とし、両プレイヤーの情報を含む。
 ランキング・本人履歴とも参加者情報を使い、single-play は名前1人分、multi-play は
 `player1 / player2` の形式で両名を表示する。どちらかの参加者が本人なら行を強調する。
 同じプレイヤーが両マシンで参加した場合も両方の名前を表示する。
 本人履歴の参加者情報は `GetGamesByPlayerResponse.GamesByPlayerItem.player_info` から取得する。
-現時点の game_master の履歴取得処理はこの新フィールドを設定していないため、
-実サーバーでの名前表示にはサーバー側でも参加者情報を返す対応が必要。
+本人履歴の順位は `GetGamesByPlayerResponse.GamesByPlayerItem.rank` から取得する。
 
 画面切り替え時に取得処理をキャンセルする。遅れて返った結果が HomeScreen や
 次のゲームの画面を上書きしないよう、応答を適用する前にもキャンセルを確認する。

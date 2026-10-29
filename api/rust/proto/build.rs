@@ -1,5 +1,6 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_files = [
+        "../../proto/ball_tracker/camera_status.proto",
         "../../proto/ball-tracker__projector.proto",
         "../../proto/camera__ball-tracker.proto",
         "../../proto/xtask_sync.proto",

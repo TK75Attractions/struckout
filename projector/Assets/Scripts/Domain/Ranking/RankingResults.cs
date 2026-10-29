@@ -13,14 +13,30 @@ namespace Struckout.Domain.Ranking
             IReadOnlyList<RankingEntry> ranking, IReadOnlyList<RankingEntry> history,
             PlayerId playerId, GameId? currentGame)
         {
-            var rows = new Dictionary<GameId, RankingRow>();
+            var entries = new Dictionary<GameId, RankingEntry>();
             foreach (var entry in ranking.Concat(history))
+                entries[entry.GameId] = entry;
+            var sorted = entries.Values.OrderByDescending(entry => entry.Score)
+                .ThenBy(entry => entry.GameId.Value).Take(DisplayItemCount).ToArray();
+            var rows = new RankingRow[sorted.Length];
+            uint rank = 0;
+            for (var i = 0; i < sorted.Length; i++)
             {
-                rows[entry.GameId] = new RankingRow(entry.GameId, entry.Score, entry.PlayerName,
+                if (i == 0 || sorted[i].Score != sorted[i - 1].Score) rank = (uint)i + 1;
+                var entry = sorted[i];
+                rows[i] = new RankingRow(entry.GameId, entry.Score, entry.PlayerName,
                     entry.Participants.Any(player => player.PlayerId.Equals(playerId)),
-                    currentGame.HasValue && entry.GameId.Equals(currentGame.Value));
+                    currentGame.HasValue && entry.GameId.Equals(currentGame.Value),
+                    entry.Rank ?? (i < TopItemCount ? rank : (uint?)null));
             }
-            return rows.Values.OrderByDescending(row => row.Score).ThenBy(row => row.GameId.Value).Take(DisplayItemCount).ToArray();
+            return rows;
+        }
+
+        /// <summary>Finds a game's competition rank within the top rows shown on the score screen.</summary>
+        public static uint? GetRank(IReadOnlyList<RankingEntry> ranking, GameId gameId)
+        {
+            return Merge(ranking.Take((int)TopItemCount).ToArray(), System.Array.Empty<RankingEntry>(), default, gameId)
+                .FirstOrDefault(row => row.GameId.Equals(gameId)).Rank;
         }
     }
 }

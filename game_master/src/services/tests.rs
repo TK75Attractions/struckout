@@ -39,7 +39,7 @@ impl DataSource for StubDataSource {
         _: PlayerId,
         _: GameMode,
         _: Difficulty,
-    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::RankedGameResultItem>, crate::GetGamesByPlayerError> {
         Ok(Vec::new())
     }
 
@@ -334,6 +334,64 @@ async fn event_stream_notifies_in_correct_order() {
 
     // Assert: Finished
     assert_matches!(finished, EventData::GameFinished(_));
+}
+
+#[tokio::test(start_paused = true)]
+async fn game_timer_notifies_once_per_second_and_completes_after_90_seconds() {
+    let (event_tx, _) = broadcast::channel(32);
+    let mut events = event_tx.subscribe();
+    let (complete_tx, mut complete_rx) = mpsc::channel(1);
+    let timer = tokio::spawn(game_timer(
+        EventTarget::Single(MachineId::new(1)),
+        event_tx,
+        complete_tx,
+    ));
+
+    tokio::task::yield_now().await;
+    assert_eq!(next_remaining_time(&mut events), 90);
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+    assert_matches!(
+        complete_rx.try_recv(),
+        Err(mpsc::error::TryRecvError::Empty)
+    );
+
+    // Advance one second at a time: a single 88-second advance would fire the missed ticks in a burst and
+    // overflow the broadcast channel.
+    for remaining in (1..=89).rev() {
+        tokio::time::advance(Duration::from_secs(1)).await;
+        tokio::task::yield_now().await;
+        assert_eq!(next_remaining_time(&mut events), remaining);
+        assert_matches!(
+            events.try_recv(),
+            Err(broadcast::error::TryRecvError::Empty)
+        );
+        assert_matches!(
+            complete_rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        );
+    }
+
+    tokio::time::advance(Duration::from_secs(1)).await;
+    timer.await.expect("timer completes");
+    complete_rx
+        .recv()
+        .await
+        .expect("game completes at 90 seconds");
+}
+
+fn next_remaining_time(events: &mut broadcast::Receiver<Event>) -> i64 {
+    let event = events
+        .try_recv()
+        .expect("remaining-time event is available");
+    let SuccessfulEvent::GameTimeLimitNotify { remaining } =
+        event.data.expect("timer event succeeds")
+    else {
+        panic!("expected remaining-time event");
+    };
+    remaining.whole_seconds()
 }
 
 fn target_request(machine_id: u32) -> AddTargetRequest {
@@ -869,7 +927,7 @@ struct RecordingDataSource {
     player_lookup_started: Arc<tokio::sync::Notify>,
     player_lookup_gate: Option<Arc<tokio::sync::Semaphore>>,
     ranking: Vec<crate::GameResultItem>,
-    history: Vec<crate::GameResultItem>,
+    history: Vec<crate::RankedGameResultItem>,
     ranking_limits: Arc<parking_lot::Mutex<Vec<(u32, GameMode, Difficulty)>>>,
     history_players: Arc<parking_lot::Mutex<Vec<(PlayerId, GameMode, Difficulty)>>>,
     save_started: Arc<tokio::sync::Notify>,
@@ -928,7 +986,7 @@ impl DataSource for RecordingDataSource {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::RankedGameResultItem>, crate::GetGamesByPlayerError> {
         self.history_players
             .lock()
             .push((player_id, mode, difficulty));
@@ -1555,9 +1613,12 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
             Vec::new()
         },
         history: if populated {
-            vec![crate::GameResultItem {
-                result,
-                players: players.clone(),
+            vec![crate::RankedGameResultItem {
+                item: crate::GameResultItem {
+                    result,
+                    players: players.clone(),
+                },
+                rank: 3,
             }]
         } else {
             Vec::new()
@@ -1610,6 +1671,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
                 game_id: 42,
                 total_score: 987,
                 player_info: Some(players.into()),
+                rank: 3,
             }
         );
     }

@@ -1,4 +1,8 @@
 mod proto {
+    include!(concat!(
+        env!("OUT_DIR"),
+        "/tk75attractions.struckout.ball_tracker.v1.rs"
+    ));
     include!(concat!(env!("OUT_DIR"), "/tk75attractions.struckout.v1.rs"));
     include!(concat!(
         env!("OUT_DIR"),

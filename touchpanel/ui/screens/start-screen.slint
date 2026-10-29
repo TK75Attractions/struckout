@@ -7,7 +7,7 @@ global Adopter {
 
 export component StartScreen {
     private property <float> comp_btn_expand_ratio: 1;
-    private property <length> comp_btn_font_size: 72px;
+    private property <length> comp_btn_font_size: 48px;
 
     VerticalLayout {
         alignment: LayoutAlignment.center;
@@ -21,7 +21,7 @@ export component StartScreen {
 
         btn1 := TwoColorOutlinedButton {
             text: "プレイ(初回)";
-            font-size: 102px;
+            font-size: comp_btn_font_size;
             width: max(btn1.preferred-width * comp_btn_expand_ratio, btn2.preferred-width * comp_btn_expand_ratio);
             height: self.preferred-height * comp_btn_expand_ratio;
             clicked => {
@@ -31,7 +31,7 @@ export component StartScreen {
 
         btn2 := TwoColorOutlinedButton {
             text: "プレイ(2回目以降)";
-            font-size: 102px;
+            font-size: comp_btn_font_size;
             width: max(btn1.preferred-width * comp_btn_expand_ratio, btn2.preferred-width * comp_btn_expand_ratio);
             height: self.preferred-height * comp_btn_expand_ratio;
             clicked => {
