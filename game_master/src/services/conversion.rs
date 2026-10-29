@@ -36,6 +36,10 @@ pub enum SuccessfulEvent {
     NavigateToPreviousTutorialRequested(MachineId),
     /// [`struckout_proto::event::NavigateToNextTutorialRequested`]
     NavigateToNextTutorialRequested(MachineId),
+    /// [`struckout_proto::event::NavigateToRankingScreenRequested`]
+    NavigateToRankingScreenRequested(MachineId),
+    /// [`struckout_proto::event::NavigateToHomeScreenRequested`]
+    NavigateToHomeScreenRequested(MachineId),
 }
 
 impl SuccessfulEvent {
@@ -102,6 +106,16 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
             }
             SuccessfulEvent::NavigateToNextTutorialRequested(machine_id) => {
                 EventData::NavigateToNextTutorialRequested(NavigateToNextTutorialRequested {
+                    machine_id: machine_id.into(),
+                })
+            }
+            SuccessfulEvent::NavigateToRankingScreenRequested(machine_id) => {
+                EventData::NavigateToRankingScreenRequested(NavigateToRankingScreenRequested {
+                    machine_id: machine_id.into(),
+                })
+            }
+            SuccessfulEvent::NavigateToHomeScreenRequested(machine_id) => {
+                EventData::NavigateToHomeScreenRequsted(NavigateToHomeScreenRequested {
                     machine_id: machine_id.into(),
                 })
             }

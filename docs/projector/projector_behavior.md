@@ -144,7 +144,7 @@ UUID を通知する。`Single` の的は所有マシンに、`All` の的は両
 
 game_master は `GetRanking` / `GetGamesByPlayer` に対応している。取得順と協力プレイの扱いは
 [ランキングとプレイヤー別履歴](../llm_memory/game_master/ranking.md) を参照。
-画面遷移 RPC は未実装のため、実サーバーでの一連の画面遷移には配信側の実装が必要。
+`GoRankingScreen` / `GoHomeScreen` はセッション破棄後も指定マシンに画面遷移イベントを配信する。
 
 現在の API には、再接続後に現在のターゲット一覧やプレイヤー情報を取得する機能がない。
 切断中に取り逃したイベントの復元と状態の再同期は、今回の対象外とする。

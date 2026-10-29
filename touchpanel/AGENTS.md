@@ -18,8 +18,8 @@
 失敗した場合は画面上にエラーを出し、再試行できる。
 
 現在の API にはセッション取消やモード再選択がないため、モード選択の送信後と準備完了後の戻る操作は無効にする。
-チュートリアル画面は未実装。`game_master` の `GoRankingScreen` と `GoHomeScreen` も現時点では未実装で、
-サーバーが対応するまで実際の projector の画面遷移はできない。
+チュートリアル画面は未実装。`game_master` の `GoRankingScreen` と `GoHomeScreen` は、
+セッション破棄後も指定マシンの projector へ画面遷移イベントを配信する。
 
 ## アーキテクチャ
 
