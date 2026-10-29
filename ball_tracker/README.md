@@ -1,3 +1,10 @@
+## ビルド
+
+配布と `scripts/run_pc1.py` には tracker 専用の `release-tracker` プロファイルを使う。
+`mise exec rust protoc -- cargo build --locked --profile release-tracker -p ball_tracker` でビルドし、
+`target/release-tracker/ball_tracker`（Windows は `.exe` 付き）を起動する。
+設定の目的と検証状況は [ビルドプロファイル](../docs/ball_tracker/ball_tracker_build_profiles.md) を参照。
+
 ## 設定ファイル
 
 既定では、次の場所にある `config.yaml` を読み込みます。`--config PATH` または `--config=PATH` で別のファイルを指定できます。

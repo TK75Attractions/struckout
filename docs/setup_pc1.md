@@ -145,16 +145,16 @@ mise -C camera install java protoc
 
 ```powershell
 $env:SQLX_OFFLINE = 'true'
-mise -C ball_tracker exec rust protoc -- cargo build --release --locked -p ball_tracker
+mise -C ball_tracker exec rust protoc -- cargo build --profile release-tracker --locked -p ball_tracker
 ```
 
 初回は依存クレートの取得で時間がかかる。成功すると
-`target\release\ball_tracker.exe` ができる。
+`target\release-tracker\ball_tracker.exe` ができる。最適化設定は [ビルドプロファイル](ball_tracker/ball_tracker_build_profiles.md) を参照。
 
 単体で起動できるか確かめる (projector もカメラも要らない):
 
 ```powershell
-.\target\release\ball_tracker.exe --input network --output csv
+.\target\release-tracker\ball_tracker.exe --input network --output csv
 ```
 
 次のログが出て止まらずに待ち続ければよい。Ctrl+C で終了する。
@@ -422,7 +422,7 @@ ball_tracker にオプションを足すときは `--` のあとに書く (`pyth
 2. **PC①: ball_tracker を起動する**
 
    ```powershell
-   .\target\release\ball_tracker.exe --input network --output network
+   .\target\release-tracker\ball_tracker.exe --input network --output network
    ```
 
    `listening for projector` で止まるのが正常。
