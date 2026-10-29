@@ -9,7 +9,7 @@ use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 use tonic::Status;
 use touchpanel_ui::{
-    KeyBoardMode, NameInputFirstPropertyMappers, NameInputFirstStates,
+    KeyBoardMode, MultiPlayAvailability, NameInputFirstPropertyMappers, NameInputFirstStates,
     NameInputFirstViewModelTrait, NavRoute, NavRouteKind,
 };
 use tracing::{Instrument, debug, instrument, trace};
@@ -18,6 +18,7 @@ use crate::{
     Application, Context, NavController,
     data::RequestError,
     keyboard::{keyboard_modify, pop_player_name},
+    presentation::{SingleSessionStarter, route_after_player},
 };
 
 touchpanel_ui::define_name_input_first_mapper! {}
@@ -25,11 +26,12 @@ touchpanel_ui::define_name_input_first_mapper! {}
 viewmodel_rc!(NameInputViewModel<Context, SlintExecutor>, NameInputFirstAdopter);
 
 #[derive(derive_more::Debug)]
-pub struct NameInputViewModel<C, E> {
+pub(crate) struct NameInputViewModel<C, E> {
     nav_controller: NavController,
     #[debug(skip)]
     worker: WorkerThread<C, E>,
     state: NameInputFirstStates<Mapper>,
+    multiplay_availability: MultiPlayAvailability,
     /// Token to cancel request to game-master.
     gm_cancel_tok: Option<CancellationToken>,
 }
@@ -76,6 +78,7 @@ impl NameInputViewModel<Context, SlintExecutor> {
                     .global::<touchpanel_ui::NameInputFirstAdopter>()
                     .as_weak(),
             ),
+            multiplay_availability: application.config.multiplay_availability,
             gm_cancel_tok: None,
         }
     }
@@ -83,7 +86,7 @@ impl NameInputViewModel<Context, SlintExecutor> {
 
 impl<C, E> NameInputViewModel<C, E>
 where
-    C: PlayerRepository,
+    C: PlayerRepository + SingleSessionStarter,
     E: ForegroundExecutor,
 {
     /// Validates `name`. Returns the handle to the task which handles validation result.
@@ -150,7 +153,7 @@ where
 
 impl<C, E> NameInputFirstViewModelTrait for NameInputViewModel<C, E>
 where
-    C: PlayerRepository,
+    C: PlayerRepository + SingleSessionStarter,
     E: ForegroundExecutor,
 {
     fn on_set_keyboard_mode(&mut self, mode: KeyBoardMode) {
@@ -182,20 +185,25 @@ where
         let name = self.state.player_name_text.get_ref().clone();
         let msg = self.state.error_msg.clone();
         let nc = self.nav_controller.clone();
+        let multiplay_availability = self.multiplay_availability;
         let (tx, rx) = oneshot::channel();
         self.worker.spawn_cx(async move |cx| {
-            let res = cx.add_player(name).await;
+            let res = match cx.add_player(name).await {
+                Ok(player_id) => route_after_player(cx.as_ref(), multiplay_availability, player_id)
+                    .await
+                    .map_err(|error| ("セッションの開始", error)),
+                Err(error) => Err(("プレイヤー名の設定", error)),
+            };
             tx.send(res).unwrap();
         });
         slint::spawn_local(async move {
             match rx.await.unwrap() {
-                Ok(player_id) => {
-                    nc.navigate(NavRoute::ModeSelect { player_id });
+                Ok(route) => {
+                    nc.navigate(route);
                 }
-                Err(e) => {
+                Err((operation, error)) => {
                     msg.set(
-                        format!("プレイヤー名の設定中にエラーが発生しました: {}", e)
-                            .to_shared_string(),
+                        format!("{operation}中にエラーが発生しました: {error}").to_shared_string(),
                     );
                 }
             }
@@ -246,6 +254,12 @@ mod tests {
     use touchpanel_ui::UiNavRoute;
 
     use super::*;
+
+    impl SingleSessionStarter for MockPlayerRepository {
+        async fn start_single_session(&self, _player_id: PlayerId) -> Result<(), Status> {
+            Ok(())
+        }
+    }
 
     #[rstest]
     #[case::cancelled(300.milliseconds(), 200.milliseconds(), 400.milliseconds(), "dummy!", "")]
@@ -363,6 +377,7 @@ mod tests {
                 nav_controller,
                 worker: worker.clone(),
                 state,
+                multiplay_availability: MultiPlayAvailability::Enabled,
                 gm_cancel_tok: None,
             };
             Self { worker, vm }

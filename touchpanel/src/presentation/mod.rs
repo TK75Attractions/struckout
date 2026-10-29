@@ -1,8 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
 use stern::{WorkerThread, nav::NavHost, worker::ForegroundExecutor};
+use struckout_proto::{GameMode, types::PlayerId};
 use tokio::{sync::oneshot, time::timeout};
-use touchpanel_ui::NavRoute;
+use tonic::Status;
+use touchpanel_ui::{MultiPlayAvailability, NavRoute};
 use tracing::{debug, warn};
 
 use crate::{
@@ -68,6 +70,38 @@ pub mod playing;
 pub mod ranking_control;
 pub mod start;
 //@xtask-pub-mod
+
+pub(crate) trait SingleSessionStarter: Send + Sync + 'static {
+    fn start_single_session(
+        &self,
+        player_id: PlayerId,
+    ) -> impl Future<Output = Result<(), Status>> + Send;
+}
+
+impl SingleSessionStarter for Context {
+    async fn start_single_session(&self, player_id: PlayerId) -> Result<(), Status> {
+        let mut gm = self
+            .game_master
+            .get()
+            .expect("connection is initialized")
+            .clone();
+        gm.start_session(player_id).await?;
+        gm.set_game_mode(GameMode::Single).await
+    }
+}
+
+async fn route_after_player<C: SingleSessionStarter>(
+    context: &C,
+    multiplay_availability: MultiPlayAvailability,
+    player_id: PlayerId,
+) -> Result<NavRoute, Status> {
+    if multiplay_availability == MultiPlayAvailability::Disabled {
+        context.start_single_session(player_id).await?;
+        Ok(NavRoute::DifficulitySelect)
+    } else {
+        Ok(NavRoute::ModeSelect { player_id })
+    }
+}
 
 /// Connects to game-master's gRPC server. **Must be called within tokio context**.
 ///
@@ -197,12 +231,71 @@ pub fn attach_navhost(application: &Application) {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
 
     use slint::ComponentHandle as _;
     use stern::nav::NavController;
 
     use super::*;
+
+    struct TestSessionStarter {
+        starts: AtomicUsize,
+        fail: bool,
+    }
+
+    impl SingleSessionStarter for TestSessionStarter {
+        async fn start_single_session(&self, _player_id: PlayerId) -> Result<(), Status> {
+            self.starts.fetch_add(1, Ordering::Relaxed);
+            if self.fail {
+                Err(Status::unavailable("session failed"))
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn disabled_multiplay_starts_single_session_before_difficulty_selection() {
+        let starter = TestSessionStarter {
+            starts: AtomicUsize::new(0),
+            fail: false,
+        };
+        let route = route_after_player(&starter, MultiPlayAvailability::Disabled, 1.into())
+            .await
+            .unwrap();
+
+        assert!(matches!(route, NavRoute::DifficulitySelect));
+        assert_eq!(starter.starts.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn enabled_multiplay_shows_mode_selection_without_starting_session() {
+        let starter = TestSessionStarter {
+            starts: AtomicUsize::new(0),
+            fail: false,
+        };
+        let route = route_after_player(&starter, MultiPlayAvailability::Enabled, 1.into())
+            .await
+            .unwrap();
+
+        assert!(matches!(route, NavRoute::ModeSelect { .. }));
+        assert_eq!(starter.starts.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn disabled_multiplay_does_not_navigate_when_session_start_fails() {
+        let starter = TestSessionStarter {
+            starts: AtomicUsize::new(0),
+            fail: true,
+        };
+        let result = route_after_player(&starter, MultiPlayAvailability::Disabled, 1.into()).await;
+
+        assert!(result.is_err());
+        assert_eq!(starter.starts.load(Ordering::Relaxed), 1);
+    }
 
     #[test]
     fn attach_navhost_registers_all_screen() {

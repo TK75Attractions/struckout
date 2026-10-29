@@ -61,10 +61,7 @@ struct Cli {
     server_addr: String,
     #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
     machine_id: u32,
-    #[arg(
-        long,
-        help = "hide the multiplayer button on the mode selection screen"
-    )]
+    #[arg(long, help = "skip mode selection and start a single-player session")]
     disable_multiplay: bool,
 }
 
@@ -93,7 +90,7 @@ struct Config {
     server_addr: String,
     /// The id of this machine.
     machine_id: u32,
-    /// Whether multiplayer can be selected from the mode selection screen.
+    /// Whether the mode selection screen is available.
     multiplay_availability: touchpanel_ui::MultiPlayAvailability,
 }
 
@@ -118,6 +115,9 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) {
     let config = Arc::new(Config::from_cli(cli));
 
     let ui = touchpanel_ui::AppWindow::new().unwrap();
+    ui.set_mode_selection_enabled(
+        config.multiplay_availability == touchpanel_ui::MultiPlayAvailability::Enabled,
+    );
 
     let nav_controller = NavController::new(NavRoute::Connecting, {
         let ui = ui.as_weak();
