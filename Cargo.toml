@@ -22,7 +22,7 @@ struckout-macros = { path = "./macros/" }
 async-stream = "0.3.6"
 backon = "1.6.0"
 futures-util = "0.3"
-sentry = { version = "0.49.3", features = ["tracing"] }
+sentry = { version = "0.49.5", features = ["tracing"] }
 tokio = "1.52.3"
 tokio-stream = "0.1.19"
 tokio-util = "0.7"
