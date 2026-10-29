@@ -19,6 +19,7 @@ lockfile_platforms = [
 dotnet = "10"
 rust = "latest"
 python = "latest"
+uv = "latest"
 grpcurl = "latest"
 protoc = "35.1"
 buf = "latest"
@@ -41,6 +42,11 @@ dir = "{{ config_root }}"
 depends = ["proto"]
 run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
 description = "Check the committed C# matches api/proto (regenerates in place)"
+
+[tasks."recording-analysis"]
+run = "uv run --locked --project scripts/recording_analysis"
+raw_args = true
+description = "Run a recording-analysis Python script with locked dependencies"
 
 [tasks."patches:disable"]
 run = """

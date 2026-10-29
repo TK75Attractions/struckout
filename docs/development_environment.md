@@ -1,19 +1,18 @@
 # 開発環境
 
-ツールの入手先は 2 つに分かれている。
+共通ツールのバージョンとタスクはmiseで管理する。Unity、Android SDK、Docker Desktopはmiseで管理できないため、個別に用意する。
 
 | | 何を持つか | どこで動くか |
 |---|---|---|
-| `.mise/config.toml`と各モジュールの`mise.toml` | モジュールごとのツール・タスク | Windows / macOS / Linux |
-| `scripts/Bootstrap-Windows.ps1` | Unity, Android SDK, msys2, .NET SDK, rustup, dev.db, ASCII ジャンクション | Windows のみ |
+| `mise.toml` と各モジュールの `mise.toml` | 共通・モジュールごとのツールとタスク | Windows / macOS / Linux |
+| 個別に用意するツール | Unity、Android SDK、Docker Desktop | Windows / macOS / Linux |
 
-`mise.toml` に置けるものは置く、という方針。
-残っているものは OS 固有の事情があって mise では表現できないものだけ。
+miseで管理できるツールは`mise.toml`に置く。
 
 ## モジュールごとの環境 (mise)
 
 [mise](https://mise.jdx.dev/tasks/monorepo.html) 2026.10.3以降のmonorepo機能を使う。
-ルートの`.mise/config.toml`で`monorepo_root = true`と`[monorepo].config_roots`を宣言し、
+ルートの`mise.toml`で`monorepo_root = true`と`[monorepo].config_roots`を宣言し、
 各モジュールの`mise.toml`でツール・タスクを定義する。
 
 ```bash
@@ -28,14 +27,14 @@ mise run fmt-slint
 
 | 設定 | ツール・タスク |
 |---|---|
-| `.mise/config.toml` | 共通の.NET SDK、grpcurl、Cargoパッチ操作 |
+| `mise.toml` | 共通の.NET SDK、Python/uv、grpcurl、Cargoパッチ操作、録画解析タスク |
 | `api/mise.toml` | Rust、protoc、buf、C#のprotobuf生成・差分確認 |
 | `ball_tracker/mise.toml` | Rust、protoc |
 | `camera/mise.toml` | JDK、protoc、Python、OpenCVインストール、adb reverse |
 | `game_master/mise.toml` | Rust、protoc、sqlx-cli、Docker Compose操作・ビルド |
 | `touchpanel/mise.toml` | Rust、protoc、slint-viewer、slint-lsp、UI操作 |
 | `xtask/mise.toml`、`sandbox/testTCP/mise.toml` | Rust、protoc |
-| `scripts/mise.toml` | Python |
+| `scripts/recording_analysis/pyproject.toml`、`uv.lock` | 録画解析用のPython依存 |
 
 共通ツールはすべてのモジュールに継承される。protocは必要なモジュールに同じバージョンを宣言する。
 各設定と同じディレクトリの`mise.lock`でバージョン・チェックサムを管理する。
@@ -55,6 +54,9 @@ mise run //touchpanel:view --help
 mise tasks ls --all            # 全モジュールのタスク一覧
 ```
 
+録画解析用の Python 依存は `scripts/recording_analysis/pyproject.toml` と `uv.lock` で管理する。
+リポジトリのルートから `mise run //:recording-analysis <スクリプト> [引数...]` を実行すると、uvがロックした依存を同期してスクリプトを実行する。
+
 タスクはbashで動く。WindowsではGit Bash (Git for Windows同梱) を使う。
 既存の`patches:*`はルート共通タスクとして残り、`//:patches:status`などで呼び出せる。
 DBの自動起動フックは`game_master`に入ったときだけ実行する。
@@ -62,7 +64,7 @@ DBの自動起動フックは`game_master`に入ったときだけ実行する�
 ### 個人設定
 
 共有する環境変数は`.mise/config.local.toml`の`[env]`、モジュール専用の環境変数やタスクの
-上書きは各モジュールの`mise.local.toml`へ書く。いずれもGit管理対象外。
+上書きは各モジュールの`mise.local.toml`へ書く。いずれもGit管理対象外で、すでに使っている個人設定を移動する必要はない。
 例えばgame_masterのパスワードは`game_master/mise.local.toml`に以下のように設定できる。
 
 ```toml
@@ -70,34 +72,13 @@ DBの自動起動フックは`game_master`に入ったときだけ実行する�
 MYSQL_ROOT_PASSWORD_DEV = "自分の開発用パスワード"
 ```
 
-旧`.mise/config.local.toml`の`[tasks."game-master:dev"]`、`[tasks."game-master:db"]`、
-`[tasks."game-master:prod"]`による上書きは`game_master/mise.local.toml`へ移し、
-セクション名をそれぞれ`[tasks.dev]`、`[tasks.db]`、`[tasks.prod]`へ変更する。
-`run_pc2.py`でも使う`MYSQL_ROOT_PASSWORD_DEV`は共通の`.mise/config.local.toml`の`[env]`に置く。
-
 ## Windows
 
-```powershell
-.\scripts\Bootstrap-Windows.ps1     # 初回のみ。mise 本体も入れる
-. .\scripts\Enter-DevShell.ps1      # シェルごとに読み込む
-```
-
-`Enter-DevShell.ps1` は内部で `mise env` を読み込んだうえで、
-mise では扱えない以下を設定する。
-
-- **Rust の退避先** — このリポジトリが `...\ドキュメント\` 配下にあると
-  GNU binutils が非 ASCII パスで壊れる。`CARGO_HOME` / `RUSTUP_HOME` /
-  `CARGO_TARGET_DIR` を `%USERPROFILE%\src\.struckout-tools` に逃がし、
-  リポジトリ自体も `%USERPROFILE%\src\struckout` のジャンクション越しに参照する
-- **msys2 の mingw** — `x86_64-pc-windows-gnu` ターゲットのリンクに使う
-  `CC` / `AR` / リンカ / `RUSTFLAGS -C dlltool=`
-- **`DOTNET_ROOT`** と **Android SDK の探索**
-- **`DATABASE_URL`** — mise.toml の値を ASCII 側のパスで上書きする
+Rust、.NET SDK、Python、Javaのバージョンはmiseで管理する。Windowsでもルートと開発対象モジュールで
+`mise install`を実行する。タスク (`mise run ...`) はGit Bash (Git for Windows同梱) から実行する。
 
 ## 手動で用意するもの
 
-**Unity / Android SDK / msys2。** インストーラや`sdkmanager`のライセンス同意など、
-OSごとの設定が必要になる。
-
-Rustと.NET SDKのバージョンはmiseで管理する。Windows固有のRustターゲットや
-.NETのパス設定などは、利用する環境に応じて別途設定する。
+- **Unity** — `projector` の開発に使う。
+- **Android Studio と Android SDK** — `camera` の開発とAndroidデバイスとの接続に使う。
+- **Docker Desktop** — `game_master` の開発と実行に使う。

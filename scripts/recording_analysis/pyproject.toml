@@ -1,0 +1,12 @@
+[project]
+name = "struckout-recording-analysis"
+version = "0.1.0"
+description = "Video analysis scripts for struckout recordings"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "opencv-python",
+]
+
+[tool.uv]
+package = false

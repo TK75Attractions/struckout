@@ -3,7 +3,9 @@
 撮影した動画を PC 上で解析し、ball_tracker の検証に使うデータを作るスクリプト。
 動画そのものは `recordings/` に置く (サイズが大きいので git では追跡しない)。
 
-必要なもの: Python 3、`numpy`、`opencv-python`、PATH 上の `ffmpeg` と `ffprobe`。
+依存パッケージは `pyproject.toml` と `uv.lock` で管理する。実行環境は `mise` が用意した `uv` と Python を使い、
+スクリプトはリポジトリのルートから `mise run //:recording-analysis <スクリプト> [引数...]` で実行する。
+初回の実行時に `uv` がロックファイルに沿って環境を作る。`ffmpeg` と `ffprobe` は引き続き PATH 上に必要。
 
 | スクリプト | 役割 |
 |---|---|
@@ -26,7 +28,7 @@
 ## landing_truth.py
 
 ```bash
-python scripts/recording_analysis/landing_truth.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/landing_truth.json --out recordings/2026-10-07/impacts.csv --debug-dir recordings/2026-10-07/landing_truth_debug
+mise run //:recording-analysis scripts/recording_analysis/landing_truth.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/landing_truth.json --out recordings/2026-10-07/impacts.csv --debug-dir recordings/2026-10-07/landing_truth_debug
 ```
 
 奥面の上にある位置の分かった点を 4 点以上使って、画像の座標を奥面上の座標に直す。
@@ -58,7 +60,7 @@ python scripts/recording_analysis/landing_truth.py recordings/2026-10-07/IMG_704
 ## sync_audio.py
 
 ```bash
-python scripts/recording_analysis/sync_audio.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/cam_131208/KVID0003.mp4
+mise run //:recording-analysis scripts/recording_analysis/sync_audio.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/cam_131208/KVID0003.mp4
 ```
 
 基準の動画 (短いほう) の 0 秒が、ほかの動画の何秒にあたるかを表示する。
@@ -67,7 +69,7 @@ python scripts/recording_analysis/sync_audio.py recordings/2026-10-07/IMG_7044.M
 ## detect_objects.py
 
 ```bash
-python scripts/recording_analysis/detect_objects.py recordings/2026-10-07/cam_131208/KVID0003.mp4 --start 224 --duration 26 --out detections.csv
+mise run //:recording-analysis scripts/recording_analysis/detect_objects.py recordings/2026-10-07/cam_131208/KVID0003.mp4 --start 224 --duration 26 --out detections.csv
 ```
 
 処理の手順と既定値は `struckoutCameraApp` の `ObjectTracker` と `CameraRepository` に合わせてある。
@@ -99,7 +101,7 @@ python scripts/recording_analysis/detect_objects.py recordings/2026-10-07/cam_13
 ## predict_landing.py
 
 ```bash
-python scripts/recording_analysis/predict_landing.py recordings/2026-10-07/predict_landing.json
+mise run //:recording-analysis scripts/recording_analysis/predict_landing.py recordings/2026-10-07/predict_landing.json
 ```
 
 `detect_objects.py` の検出結果を視線に直し、ball_tracker と同じ計算 (放物線を視線に当てはめて的の面まで
@@ -136,7 +138,7 @@ python scripts/recording_analysis/predict_landing.py recordings/2026-10-07/predi
 ## estimate_time_offset.py
 
 ```bash
-python scripts/recording_analysis/estimate_time_offset.py recordings/2026-10-10/predict_landing_time25.json
+mise run //:recording-analysis scripts/recording_analysis/estimate_time_offset.py recordings/2026-10-10/predict_landing_time25.json
 ```
 
 2 台の時刻が合っていれば、2 台の視線は 1 本の放物線に乗る。右のカメラ (設定した位置の y が大きいほう) の
@@ -186,7 +188,7 @@ python scripts/recording_analysis/estimate_time_offset.py recordings/2026-10-10/
 ## simulate_layouts.py
 
 ```bash
-python scripts/recording_analysis/simulate_layouts.py
+mise run //:recording-analysis scripts/recording_analysis/simulate_layouts.py
 ```
 
 投球をランダムに作り、カメラの画角・フレームレート・露光中のぶれ・時計のずれ・取り付けの誤差を入れて、
@@ -202,7 +204,7 @@ python scripts/recording_analysis/simulate_layouts.py
 ```
 
 ```bash
-python scripts/recording_analysis/replay_to_tracker.py recordings/2026-10-10/replay_all.json
+mise run //:recording-analysis scripts/recording_analysis/replay_to_tracker.py recordings/2026-10-10/replay_all.json
 ```
 
 先に ball_tracker を起動しておき、別のターミナルから実行する。カメラの登録 (6060 番) と検出結果の送信
@@ -241,7 +243,7 @@ ball_tracker の `--time-trim-ms` に 25 (行ごとの時刻差を入れると�
 ## calibrate_camera.py
 
 ```bash
-python scripts/recording_analysis/calibrate_camera.py pose recordings/calibration/<シリアル>/frame_XXXX.png --position 0.257 0.180 1.230 --rotation 140 -2 -31
+mise run //:recording-analysis scripts/recording_analysis/calibrate_camera.py pose recordings/calibration/<シリアル>/frame_XXXX.png --position 0.257 0.180 1.230 --rotation 140 -2 -31
 ```
 
 カメラを置くたびに、次の手順で位置と向きを求める。
@@ -263,7 +265,7 @@ python scripts/recording_analysis/calibrate_camera.py pose recordings/calibratio
 実物を測ったら書き換えること。
 
 ```bash
-python scripts/recording_analysis/calibrate_camera.py check --help
+mise run //:recording-analysis scripts/recording_analysis/calibrate_camera.py check --help
 ```
 
 `check` は、位置を測った印にボールを当てた状態の画像を 2 台ぶん渡すと、ボールの中心を三角測量して、測った位置との
@@ -272,7 +274,7 @@ python scripts/recording_analysis/calibrate_camera.py check --help
 ## calibrate_intrinsics.py
 
 ```bash
-python scripts/recording_analysis/calibrate_intrinsics.py recordings/calibration/<シリアル> --board 9x6 --out intrinsics.json
+mise run //:recording-analysis scripts/recording_analysis/calibrate_intrinsics.py recordings/calibration/<シリアル> --board 9x6 --out intrinsics.json
 ```
 
 チェッカーボード (印刷したものか PC の画面) を「Save frame」で 15 枚ほど、向きと位置を変えて撮り、焦点距離・
