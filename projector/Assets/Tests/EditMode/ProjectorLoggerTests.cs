@@ -1,4 +1,6 @@
 using System;
+using Sentry;
+using Sentry.Extensibility;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -9,6 +11,7 @@ using Struckout.Infrastructure.Grpc;
 using Struckout.Infrastructure.TCP;
 using Struckout.Domain;
 using Struckout.Unity;
+using Struckout.Unity.Logging;
 using Tk75Attractions.Struckout.V1;
 using UnityEngine.TestTools;
 using VContainer;
@@ -16,7 +19,7 @@ using LogType = UnityEngine.LogType;
 
 namespace Struckout.Tests.Tests.EditMode
 {
-    public class UnityLoggerTests
+    public class ProjectorLoggerTests
     {
         [TestCase(LogLevel.Trace, LogType.Log)]
         [TestCase(LogLevel.Debug, LogType.Log)]
@@ -26,8 +29,8 @@ namespace Struckout.Tests.Tests.EditMode
         [TestCase(LogLevel.Critical, LogType.Error)]
         public void Writes_category_and_formatted_values_at_the_Unity_log_level(LogLevel level, LogType expected)
         {
-            var logger = new UnityLogger<UnityLoggerTests>();
-            LogAssert.Expect(expected, $"[{typeof(UnityLoggerTests).FullName}] Target 42");
+            var logger = new ProjectorLogger<ProjectorLoggerTests>(DisabledHub.Instance, new LoggerExternalScopeProvider());
+            LogAssert.Expect(expected, $"[{typeof(ProjectorLoggerTests).FullName}] Target 42");
 
             logger.Log(level, "Target {TargetId}", 42);
         }
@@ -35,10 +38,10 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Includes_exception_details_with_the_message()
         {
-            var logger = new UnityLogger<UnityLoggerTests>();
+            var logger = new ProjectorLogger<ProjectorLoggerTests>(DisabledHub.Instance, new LoggerExternalScopeProvider());
             var exception = new InvalidOperationException("failure", new ArgumentException("cause"));
             LogAssert.Expect(LogType.Error,
-                $"[{typeof(UnityLoggerTests).FullName}] Request failed\n{exception}");
+                $"[{typeof(ProjectorLoggerTests).FullName}] Request failed\n{exception}");
 
             logger.LogError(exception, "Request failed");
         }
@@ -46,7 +49,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void None_does_not_format_or_write_a_message()
         {
-            var logger = new UnityLogger<UnityLoggerTests>();
+            var logger = new ProjectorLogger<ProjectorLoggerTests>(DisabledHub.Instance, new LoggerExternalScopeProvider());
             Assert.That(logger.IsEnabled(LogLevel.None), Is.False);
 
             logger.Log(LogLevel.None, default, "ignored", null,
@@ -58,16 +61,18 @@ namespace Struckout.Tests.Tests.EditMode
         public void Container_resolves_category_loggers_and_both_game_master_clients()
         {
             var builder = new ContainerBuilder();
-            builder.Register(typeof(UnityLogger<>), Lifetime.Singleton).As(typeof(ILogger<>));
+            builder.RegisterInstance<IHub>(DisabledHub.Instance);
+            builder.RegisterInstance<IExternalScopeProvider>(new LoggerExternalScopeProvider());
+            builder.Register(typeof(ProjectorLogger<>), Lifetime.Singleton).As(typeof(ILogger<>));
             builder.RegisterInstance(new NetworkSettings());
             builder.Register<Struckout.Application.Interface.IGameMasterClient>(container => new FakeGameMasterClient(
                 container.Resolve<ILogger<FakeGameMasterClient>>()), Lifetime.Singleton);
             builder.Register<GrpcGameMasterClient>(Lifetime.Singleton);
             using var container = builder.Build();
 
-            Assert.That(container.Resolve<ILogger<GameRuntime>>(), Is.TypeOf<UnityLogger<GameRuntime>>());
+            Assert.That(container.Resolve<ILogger<GameRuntime>>(), Is.TypeOf<ProjectorLogger<GameRuntime>>());
             Assert.That(container.Resolve<ILogger<TcpClientBase<ProjectorPacket>>>(),
-                Is.TypeOf<UnityLogger<TcpClientBase<ProjectorPacket>>>());
+                Is.TypeOf<ProjectorLogger<TcpClientBase<ProjectorPacket>>>());
             Assert.That(container.Resolve<Struckout.Application.Interface.IGameMasterClient>(), Is.TypeOf<FakeGameMasterClient>());
             Assert.That(container.Resolve<GrpcGameMasterClient>(), Is.Not.Null);
         }
@@ -75,7 +80,7 @@ namespace Struckout.Tests.Tests.EditMode
         [Test]
         public void Invalid_network_settings_use_the_supplied_logger()
         {
-            var resolver = new NetworkSettingsResolver(new UnityLogger<NetworkSettingsResolver>());
+            var resolver = new NetworkSettingsResolver(new ProjectorLogger<NetworkSettingsResolver>(DisabledHub.Instance, new LoggerExternalScopeProvider()));
             LogAssert.Expect(LogType.Warning,
                 new Regex("\\[Struckout.Infrastructure.NetworkSettingsResolver\\].*invalid.*Real"));
 

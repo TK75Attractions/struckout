@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using UnityEngine;
 using Struckout.Domain;
 using System.Collections.Generic;
@@ -26,6 +27,9 @@ namespace Struckout.Unity
     /// </summary>
     public class UIService : MonoBehaviour, IUIService
     {
+        private ILogger<UIService> _logger;
+        private ILogger<CompassTargetUI> _targetLogger;
+
         private const int BackgroundSortingOrder = -100;
         private const int OverlaySortingOrder = 100;
         private const int MarkerSortingOrder = 150;
@@ -112,9 +116,13 @@ namespace Struckout.Unity
         [Inject]
         public void Construct(
             UIRoot uiRoot,
-            WorldCoordinateTransform world
+            WorldCoordinateTransform world,
+            ILogger<UIService> logger,
+            ILogger<CompassTargetUI> targetLogger
         )
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _targetLogger = targetLogger ?? throw new ArgumentNullException(nameof(targetLogger));
             _uiRoot = uiRoot;
             _world = world;
             if (!float.IsFinite(pocketWatchDiameter) || pocketWatchDiameter <= 0 ||
@@ -158,7 +166,7 @@ namespace Struckout.Unity
         {
             if (hudCanvas == null || displayFont == null)
             {
-                Debug.LogError("[HUD] Assign the HUD Canvas and Oxanium font to UIService.");
+                _logger.LogError("[HUD] Assign the HUD Canvas and Oxanium font to UIService.");
                 return;
             }
 
@@ -323,19 +331,20 @@ namespace Struckout.Unity
                 case TargetType.Compass:
                     if (compassUI == null)
                     {
-                        Debug.LogError("CompassUI is null");
+                        _logger.LogError("CompassUI is null");
                         return;
                     }
 
                     if (!TryInstantiateTargetUI<CompassTargetUI>(compassUI, out var trans))
                     {
-                        Debug.LogError("CompassTargetUI is null");
+                        _logger.LogError("CompassTargetUI is null");
                         return;
                     }
+                    trans.GetComponent<CompassTargetUI>().Construct(_targetLogger);
                     instantiatedTrans = trans;
                     break;
                 default:
-                    Debug.LogError($"Missing TargetType {target.Type}");
+                    _logger.LogError("Missing TargetType {TargetType}", target.Type);
                     return;
             }
             var ui = instantiatedTrans.GetComponent<ITargetUI>() ?? throw new InvalidOperationException("The Prefab doesn't contain ITargetUI");
@@ -356,7 +365,7 @@ namespace Struckout.Unity
             if (prefab.GetComponent<TTargetUI>() == null)
             {
                 trans = null;
-                Debug.LogError("There are no ITargetUI");
+                _logger.LogError("There are no ITargetUI");
                 return false;
             }
 
@@ -369,7 +378,7 @@ namespace Struckout.Unity
             if (!showCollisionMarkers) return;
             if (_uiRoot == null || _uiRoot.TargetRoot == null)
             {
-                Debug.LogWarning("UIRoot is not ready; cannot show a collision marker.");
+                _logger.LogWarning("UIRoot is not ready; cannot show a collision marker.");
                 return;
             }
 

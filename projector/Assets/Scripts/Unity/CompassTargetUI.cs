@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using UnityEngine;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
@@ -8,6 +9,8 @@ namespace Struckout.Unity
     [RequireComponent(typeof(SpriteRenderer))]
     public class CompassTargetUI : MonoBehaviour, ITargetUI
     {
+        private ILogger<CompassTargetUI> _logger;
+
         [FormerlySerializedAs("_visibilityDurationSeconds")]
         [SerializeField]
         [Tooltip("登録済みの的がフェードインする秒数。")]
@@ -42,6 +45,11 @@ namespace Struckout.Unity
         private float _visibilityDelay;
         private float _rotationPhase;
 
+        public void Construct(ILogger<CompassTargetUI> logger)
+        {
+            _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+        }
+
         private void Awake()
         {
             CacheRenderer();
@@ -62,6 +70,8 @@ namespace Struckout.Unity
 
         public void Initialize(Target target, WorldCoordinateTransform world)
         {
+            if (_logger == null)
+                throw new System.InvalidOperationException("CompassTargetUI must be constructed before initialization.");
             _world = world;
             _target = target;
             _rotationPhase = target.Coordinate.X * 0.005f + target.Coordinate.Y * 0.011f;
@@ -167,7 +177,7 @@ namespace Struckout.Unity
 
             if (spriteWidth <= 0f)
             {
-                Debug.LogWarning($"{name}: sprite has no width; cannot size {target}.");
+                _logger.LogWarning("{ObjectName}: sprite has no width; cannot size {Target}.", name, target);
                 return;
             }
 

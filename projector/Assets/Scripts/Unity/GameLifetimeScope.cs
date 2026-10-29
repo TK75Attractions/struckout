@@ -1,3 +1,5 @@
+using Sentry;
+using Sentry.Extensibility;
 using Microsoft.Extensions.Logging;
 using Struckout.Application;
 using Struckout.Application.Interface;
@@ -8,6 +10,7 @@ using Struckout.Bootstrap;
 using Struckout.Infrastructure.Fake;
 using Struckout.Infrastructure.Grpc;
 using Struckout.Infrastructure.TCP;
+using Struckout.Unity.Logging;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -18,6 +21,8 @@ namespace Struckout.Unity
 {
     public class GameLifetimeScope : LifetimeScope
     {
+        private ILogger<GameLifetimeScope> _logger;
+
         [FormerlySerializedAs("_uiService")] [SerializeField]
         private UIService uiService;
         [FormerlySerializedAs("_dispatcher")] [SerializeField]
@@ -60,9 +65,15 @@ namespace Struckout.Unity
 
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register(typeof(UnityLogger<>), Lifetime.Singleton)
+            var hub = HubAdapter.Instance;
+            var scopes = new LoggerExternalScopeProvider();
+            _logger = new ProjectorLogger<GameLifetimeScope>(hub, scopes);
+            // RegisterInstance leaves ownership of the existing SDK with Sentry Unity.
+            builder.RegisterInstance<IHub>(hub);
+            builder.RegisterInstance<IExternalScopeProvider>(scopes);
+            builder.Register(typeof(ProjectorLogger<>), Lifetime.Singleton)
                 .As(typeof(ILogger<>));
-            var resolver = new NetworkSettingsResolver(new UnityLogger<NetworkSettingsResolver>());
+            var resolver = new NetworkSettingsResolver(new ProjectorLogger<NetworkSettingsResolver>(hub, scopes));
             var networkSettings = resolver.Resolve(this.networkSettings);
             builder.RegisterInstance(networkSettings);
 
@@ -74,18 +85,18 @@ namespace Struckout.Unity
             var collisionTransformPath = CollisionTransformStore.ResolvePath();
             if (CollisionTransformStore.TryLoadInto(collisionTransform, collisionTransformPath, out var collisionTransformError))
             {
-                Debug.Log($"[Collision] loaded {collisionTransformPath}");
+                _logger.LogInformation("[Collision] loaded {CollisionTransformPath}", collisionTransformPath);
             }
             else if (collisionTransformError != null)
             {
-                Debug.LogWarning($"[Collision] could not read {collisionTransformPath}; using the Inspector values: {collisionTransformError}");
+                _logger.LogWarning("[Collision] could not read {Path}; using the Inspector values: {Error}", collisionTransformPath, collisionTransformError);
             }
             else
             {
-                Debug.Log($"[Collision] {collisionTransformPath} not found; using the Inspector values");
+                _logger.LogInformation("[Collision] {Path} not found; using the Inspector values", collisionTransformPath);
             }
 
-            Debug.Log($"[Collision] transform {collisionTransform}");
+            _logger.LogInformation("[Collision] transform {CollisionTransform}", collisionTransform);
             builder.RegisterInstance(collisionTransform);
             builder.RegisterBuildCallback(container =>
             {
@@ -95,7 +106,7 @@ namespace Struckout.Unity
                     container.Resolve<CollisionCoordinateTransform>(),
                     inspectorCollisionTransform,
                     container.Resolve<IUIService>(),
-                    collisionTransformPath);
+                    collisionTransformPath, container.Resolve<ILogger<CollisionCalibrationPanel>>());
             });
 
             // 盤面の広さは的の配置 (TargetGenerator) と描画 (WorldCoordinateTransform) の
@@ -103,10 +114,10 @@ namespace Struckout.Unity
             builder.RegisterInstance(field);
 
             var world = new WorldCoordinateTransform(field, pixelsPerUnit);
-            Debug.Log($"[Field] {world}");
+            _logger.LogInformation("[Field] {World}", world);
             builder.RegisterInstance(world);
 
-            Debug.Log($"[Game] {gameSettings}");
+            _logger.LogInformation("[Game] {GameSettings}", gameSettings);
             builder.RegisterInstance(gameSettings);
 
             if (networkSettings.mode == NetworkMode.Fake)
@@ -127,7 +138,7 @@ namespace Struckout.Unity
             builder.RegisterComponent(uiService).As<IUIService>();
             builder.RegisterComponent(dispatcher).As<IMainThreadDispatcher>();
             if (fieldCamera != null) builder.RegisterComponent(fieldCamera);
-            else Debug.LogWarning("FieldCamera is not assigned; the camera will not match the field.");
+            else _logger.LogWarning("FieldCamera is not assigned; the camera will not match the field.");
             builder.Register<GameRuntime>(Lifetime.Singleton);
             builder.Register<ScreenController>(Lifetime.Singleton);
 
@@ -149,7 +160,7 @@ namespace Struckout.Unity
 
         protected override void OnDestroy()
         {
-            Debug.Log("Scope Destroy");
+            _logger?.LogInformation("Scope Destroy");
             base.OnDestroy();
         }
     }

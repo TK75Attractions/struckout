@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Struckout.Domain;
 using UnityEngine;
 using VContainer;
@@ -19,6 +20,8 @@ namespace Struckout.Unity
     [RequireComponent(typeof(Camera))]
     public class FieldCamera : MonoBehaviour
     {
+        private ILogger<FieldCamera> _logger;
+
         private Camera _camera;
         private WorldCoordinateTransform _world;
 
@@ -26,8 +29,9 @@ namespace Struckout.Unity
         private float _appliedAspect = -1f;
 
         [Inject]
-        public void Construct(WorldCoordinateTransform world)
+        public void Construct(WorldCoordinateTransform world, ILogger<FieldCamera> logger)
         {
+            _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
             _world = world;
             Apply();
         }
@@ -53,8 +57,7 @@ namespace Struckout.Unity
             _camera.orthographicSize = _world.OrthographicSizeFor(aspect);
             _appliedAspect = aspect;
 
-            Debug.Log(
-                $"[Field] {_world} aspect={aspect:F3} orthographicSize={_camera.orthographicSize:F3}");
+            _logger.LogInformation("[Field] {World} aspect={Aspect:F3} orthographicSize={CameraOrthographicSize:F3}", _world, aspect, _camera.orthographicSize);
         }
     }
 }

@@ -21,7 +21,9 @@
     "precompiledReferences": [
         "nunit.framework.dll",
         "Google.Protobuf.dll",
-        "Microsoft.Extensions.Logging.Abstractions.dll"
+        "Microsoft.Extensions.Logging.Abstractions.dll",
+        "Sentry.dll",
+        "Sentry.Unity.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [
