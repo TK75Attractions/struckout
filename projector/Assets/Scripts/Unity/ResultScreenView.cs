@@ -41,9 +41,6 @@ namespace Struckout.Unity
             _score = Label("ResultScore", rect, 80, 330, 1760, 300, 180, numberFont);
             _score.alignment = TextAnchor.MiddleCenter;
             _score.color = Cyan;
-            var footer = Label("Footer", rect, 80, 990, 1760, 55, 24);
-            footer.text = "画面の切り替えはタッチパネルから";
-            footer.color = new Color(0.65f, 0.7f, 0.75f);
 
             var list = new GameObject("RankingList", typeof(RectTransform));
             _content = list.GetComponent<RectTransform>();
