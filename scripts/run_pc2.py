@@ -34,7 +34,7 @@ from pathlib import Path
 
 from struckout_common import (IS_MACOS, IS_WINDOWS, ROOT, SCRIPTS, Failure, detached_popen, fail, find_mise_tool,
                               kill_process, load_json, note, ok, per_platform, platform_key, process_running,
-                              read_shared, report_failure, run, setup_console, step, tcp_ready, warn)
+                              read_shared, report_failure, run, server_port, setup_console, step, tcp_ready, warn)
 
 COMPOSE = ["compose", "-f", str(ROOT / "game_master" / "compose.yaml"),
            "-f", str(ROOT / "game_master" / "compose.dev.yaml")]
@@ -154,12 +154,13 @@ def start_game_master() -> None:
     if up.returncode != 0:
         fail(f"game_master を起動できませんでした (docker compose の出力: {up_log})")
     deadline = time.monotonic() + 120
-    while not tcp_ready("127.0.0.1", 8020):
+    port = server_port("game-master", "grpc")
+    while not tcp_ready("127.0.0.1", port):
         if time.monotonic() > deadline:
-            fail("game_master が 8020 番で待ち受けません (docker compose logs で確かめる)")
+            fail(f"game_master が {port} 番で待ち受けません (docker compose logs で確かめる)")
         time.sleep(2)
     migrate_database(password)
-    ok("game_master: 127.0.0.1:8020")
+    ok(f"game_master: 127.0.0.1:{port}")
 
 
 def unity_locked(project: Path) -> bool:

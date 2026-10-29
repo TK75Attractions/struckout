@@ -42,6 +42,14 @@ depends = ["proto"]
 run = "git diff --exit-code -- projector/Assets/Scripts/ProtoBuf/Generated sandbox/testTcpCLI/Network/Protocol/Generated"
 description = "Check the committed C# matches api/proto (regenerates in place)"
 
+[tasks."ports:generate"]
+run = "python scripts/generate_server_ports.py"
+description = "Generate server-port constants from api/spec/servers.yaml"
+
+[tasks."ports:check"]
+run = "python scripts/generate_server_ports.py --check"
+description = "Check generated server-port constants against api/spec/servers.yaml"
+
 [tasks."patches:disable"]
 run = """
     if [ -f ./patches.toml ]; then

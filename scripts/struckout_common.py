@@ -13,7 +13,10 @@ import shutil
 import socket
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
+
+from generate_server_ports import ServerPortsError, get_server_port
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -69,6 +72,15 @@ def note(text: str) -> None:
 
 class Failure(Exception):
     """続けられない。メッセージを NG として表示して終わる。"""
+
+
+@lru_cache
+def server_port(module_name: str, endpoint: str) -> int:
+    """ビルド済みモジュールと同じ spec から接続先の既定ポートを読む。"""
+    try:
+        return get_server_port(module_name, endpoint)
+    except (OSError, ServerPortsError) as error:
+        raise Failure(f"サーバーポートの定義を読めません: {error}") from error
 
 
 def fail(text: str):
