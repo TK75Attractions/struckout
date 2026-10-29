@@ -120,6 +120,10 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetResponse> __Marshaller_tk75attractions_struckout_game_master_v1_HitTargetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest> __Marshaller_tk75attractions_struckout_game_master_v1_ResetComboRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse> __Marshaller_tk75attractions_struckout_game_master_v1_ResetComboResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest> __Marshaller_tk75attractions_struckout_game_master_v1_ListenEventsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse> __Marshaller_tk75attractions_struckout_game_master_v1_ListenEventsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse.Parser));
@@ -243,6 +247,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         "HitTarget",
         __Marshaller_tk75attractions_struckout_game_master_v1_HitTargetRequest,
         __Marshaller_tk75attractions_struckout_game_master_v1_HitTargetResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest, global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse> __Method_ResetCombo = new grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest, global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ResetCombo",
+        __Marshaller_tk75attractions_struckout_game_master_v1_ResetComboRequest,
+        __Marshaller_tk75attractions_struckout_game_master_v1_ResetComboResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse> __Method_ListenEvents = new grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse>(
@@ -428,13 +440,25 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// <summary>
       /// Ball is hit to the target. Used by `projector`.
       ///
-      /// Causes `GameScoreChanged` event to be emitted.
+      /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetResponse> HitTarget(global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// projector が、球が的に当たらなかったときに呼ぶ。
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse> ResetCombo(global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1132,7 +1156,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// <summary>
       /// Ball is hit to the target. Used by `projector`.
       ///
-      /// Causes `GameScoreChanged` event to be emitted.
+      /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1147,7 +1171,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// <summary>
       /// Ball is hit to the target. Used by `projector`.
       ///
-      /// Causes `GameScoreChanged` event to be emitted.
+      /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -1160,7 +1184,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// <summary>
       /// Ball is hit to the target. Used by `projector`.
       ///
-      /// Causes `GameScoreChanged` event to be emitted.
+      /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1175,7 +1199,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// <summary>
       /// Ball is hit to the target. Used by `projector`.
       ///
-      /// Causes `GameScoreChanged` event to be emitted.
+      /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -1184,6 +1208,54 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetResponse> HitTargetAsync(global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_HitTarget, null, options, request);
+      }
+      /// <summary>
+      /// projector が、球が的に当たらなかったときに呼ぶ。
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse ResetCombo(global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ResetCombo(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// projector が、球が的に当たらなかったときに呼ぶ。
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse ResetCombo(global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ResetCombo, null, options, request);
+      }
+      /// <summary>
+      /// projector が、球が的に当たらなかったときに呼ぶ。
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse> ResetComboAsync(global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ResetComboAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// projector が、球が的に当たらなかったときに呼ぶ。
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse> ResetComboAsync(global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ResetCombo, null, options, request);
       }
       /// <summary>
       /// Notify events occured in game_master.
@@ -1238,6 +1310,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           .AddMethod(__Method_AddTarget, serviceImpl.AddTarget)
           .AddMethod(__Method_RemoveTarget, serviceImpl.RemoveTarget)
           .AddMethod(__Method_HitTarget, serviceImpl.HitTarget)
+          .AddMethod(__Method_ResetCombo, serviceImpl.ResetCombo)
           .AddMethod(__Method_ListenEvents, serviceImpl.ListenEvents).Build();
     }
 
@@ -1263,6 +1336,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       serviceBinder.AddMethod(__Method_AddTarget, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetRequest, global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetResponse>(serviceImpl.AddTarget));
       serviceBinder.AddMethod(__Method_RemoveTarget, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.RemoveTargetRequest, global::Tk75Attractions.Struckout.GameMaster.V1.RemoveTargetResponse>(serviceImpl.RemoveTarget));
       serviceBinder.AddMethod(__Method_HitTarget, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetRequest, global::Tk75Attractions.Struckout.GameMaster.V1.HitTargetResponse>(serviceImpl.HitTarget));
+      serviceBinder.AddMethod(__Method_ResetCombo, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboRequest, global::Tk75Attractions.Struckout.GameMaster.V1.ResetComboResponse>(serviceImpl.ResetCombo));
       serviceBinder.AddMethod(__Method_ListenEvents, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsRequest, global::Tk75Attractions.Struckout.GameMaster.V1.ListenEventsResponse>(serviceImpl.ListenEvents));
     }
 
