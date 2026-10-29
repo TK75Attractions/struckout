@@ -77,6 +77,7 @@ namespace Struckout.Tests.Tests.EditMode
 
         private sealed class UI : IUIService
         {
+            public void ShowResultContext(GameMode mode, Difficulty difficulty, uint? rank = null) { }
             public readonly List<Target> Targets = new();
             public readonly List<Target> Added = new();
             public readonly List<Guid> Removed = new();

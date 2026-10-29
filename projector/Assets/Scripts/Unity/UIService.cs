@@ -308,6 +308,9 @@ namespace Struckout.Unity
         }
 
         public void ShowGameResult(uint score) => _results?.ShowScore(score);
+        public void ShowResultContext(Tk75Attractions.Struckout.GameMaster.V1.GameMode mode,
+            Tk75Attractions.Struckout.GameMaster.V1.Difficulty difficulty, uint? rank = null)
+            => _results?.ShowContext(mode, difficulty, rank);
         public void ShowRanking(IReadOnlyList<RankingRow> rows) => _results?.ShowRanking(rows);
         public void ShowScreenMessage(string message) => _results?.ShowMessage(message);
 

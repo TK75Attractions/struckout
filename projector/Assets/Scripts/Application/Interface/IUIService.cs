@@ -11,6 +11,8 @@ namespace Struckout.Application.Interface
         /// <summary>サーバーからの通知に対応する画面を表示する。</summary>
         void SetScreen(ProjectorScreen screen);
         void ShowGameResult(uint score);
+        void ShowResultContext(Tk75Attractions.Struckout.GameMaster.V1.GameMode mode,
+            Tk75Attractions.Struckout.GameMaster.V1.Difficulty difficulty, uint? rank = null);
         void ShowRanking(IReadOnlyList<RankingRow> rows);
         void ShowScreenMessage(string message);
 
