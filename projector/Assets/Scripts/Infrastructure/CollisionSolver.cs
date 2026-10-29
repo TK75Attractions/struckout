@@ -1,37 +1,32 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Struckout.Application.Interface;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
 using Tk75Attractions.Struckout.V1;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 
 namespace Struckout.Infrastructure
 {
     public class CollisionSolver : ICollisionSolver
     {
+        private readonly ILogger<CollisionSolver> _logger;
+
         private readonly CollisionCoordinateTransform _transform;
 
-        public CollisionSolver(CollisionCoordinateTransform transform)
+        public CollisionSolver(CollisionCoordinateTransform transform, ILogger<CollisionSolver> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _transform = transform;
         }
 
         public bool TryCollision(CollisionPoint collisionPoint, IReadOnlyList<Target> targets, out Target target)
         {
-            target = null;
-            foreach (var tar in targets)
-            {
-                // ReSharper disable once InvertIf
-                if (IsWithinTarget(collisionPoint, tar))
-                {
-                    target = tar;
-                    break;
-                }
-            }
+            target = targets.FirstOrDefault(tar => IsWithinTarget(collisionPoint, tar));
 
-            if (_transform != null && _transform.logConversions)
+            if (_transform is { logConversions: true })
             {
                 LogDecision(collisionPoint, targets, target);
             }
@@ -79,7 +74,7 @@ namespace Struckout.Infrastructure
                     $"distance={distance:F1} {(distance <= t.Radius ? "INSIDE" : "outside")}");
             }
 
-            Debug.Log(sb.ToString());
+            _logger.LogInformation("{Details}", sb.ToString());
         }
     }
 }

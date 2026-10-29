@@ -7,13 +7,15 @@ using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Tk75Attractions.Struckout.V1;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 using Target = Struckout.Domain.TargetDefinition.Target;
 
 namespace Struckout.Bootstrap
 {
     public class GameBootstrap : IAsyncDestroy
     {
+        private readonly ILogger<GameBootstrap> _logger;
+
         private readonly GameRuntime _runtime;
         private readonly ScreenController _screens;
         private readonly ISensorProvider _sensorProvider;
@@ -30,9 +32,11 @@ namespace Struckout.Bootstrap
             IUIService uiService,
             IGameMasterClient master,
             IMainThreadDispatcher dispatcher,
-            ScreenController screens
+            ScreenController screens,
+            ILogger<GameBootstrap> logger
         )
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _screens = screens ?? throw new ArgumentNullException(nameof(screens));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _sensorProvider = sensorProvider ?? throw new ArgumentNullException(nameof(sensorProvider));
@@ -138,7 +142,7 @@ namespace Struckout.Bootstrap
             return UniTask.CompletedTask;
         }
 
-        private static async UniTaskVoid ObserveAsync(UniTask operation)
+        private async UniTaskVoid ObserveAsync(UniTask operation)
         {
             try
             {
@@ -150,7 +154,7 @@ namespace Struckout.Bootstrap
             }
             catch (Exception ex)
             {
-                Debug.LogException(ex);
+                _logger.LogError(ex, "処理中に例外が発生しました。");
             }
         }
     }

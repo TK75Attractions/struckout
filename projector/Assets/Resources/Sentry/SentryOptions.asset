@@ -47,16 +47,16 @@ MonoBehaviour:
   <NetworkMetricsIntervalSeconds>k__BackingField: 10
   <EnableStructuredLogging>k__BackingField: 1
   <StructuredLogOnDebugLog>k__BackingField: 0
-  <StructuredLogOnDebugLogWarning>k__BackingField: 1
-  <StructuredLogOnDebugLogAssertion>k__BackingField: 1
-  <StructuredLogOnDebugLogError>k__BackingField: 1
-  <StructuredLogOnDebugLogException>k__BackingField: 1
+  <StructuredLogOnDebugLogWarning>k__BackingField: 0
+  <StructuredLogOnDebugLogAssertion>k__BackingField: 0
+  <StructuredLogOnDebugLogError>k__BackingField: 0
+  <StructuredLogOnDebugLogException>k__BackingField: 0
   <AddBreadcrumbsWithStructuredLogs>k__BackingField: 0
-  <BreadcrumbsForLogs>k__BackingField: 1
-  <BreadcrumbsForWarnings>k__BackingField: 1
-  <BreadcrumbsForAsserts>k__BackingField: 1
-  <BreadcrumbsForErrors>k__BackingField: 1
-  <CaptureLogErrorEvents>k__BackingField: 1
+  <BreadcrumbsForLogs>k__BackingField: 0
+  <BreadcrumbsForWarnings>k__BackingField: 0
+  <BreadcrumbsForAsserts>k__BackingField: 0
+  <BreadcrumbsForErrors>k__BackingField: 0
+  <CaptureLogErrorEvents>k__BackingField: 0
   <MaxBreadcrumbs>k__BackingField: 100
   <ReportAssembliesMode>k__BackingField: 1
   <SendDefaultPii>k__BackingField: 0

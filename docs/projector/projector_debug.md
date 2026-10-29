@@ -210,3 +210,62 @@ mise run //api:proto:check    # ズレていないかだけ確認 (exit 1 で失
 
 CI では `.github/workflows/ci.yaml` が変更パスに応じて `proto_ci.yml` を呼び出し、
 生成コードに差分があれば自動でコミットして push する。
+
+## 7. ログの出力
+
+Application・Infrastructure・Bootstrap と Unity の画面コンポーネントは
+`Microsoft.Extensions.Logging.ILogger<T>` を使う。Domain にロギングの依存は置かない。
+通常の C# クラスではコンストラクター、Scene のコンポーネントでは `[Inject]` の初期化メソッドで受け取る。
+動的に作る UI は生成元からロガーを渡し、初期化より先に設定する。
+
+`GameLifetimeScope` は `ILogger<T>` → `ProjectorLogger<T>` を VContainer に singleton として登録する。
+カテゴリごとのロガーは同じ `IExternalScopeProvider` を共有し、Sentry の `IHub` には
+既存 SDK へ接続する `HubAdapter` を使う。コンテナー構築前の設定解決と終了時のログも同じ経路を通る。
+ロガーは SDK を初期化・終了せず、SDK の寿命は Sentry Unity に任せる。
+
+### Console と Sentry への出力
+
+Console と `Player.log` にはカテゴリ（型の完全修飾名）と整形済み本文を出す。
+Trace / Debug / Information は通常ログ、Warning は警告、Error / Critical はエラーになる。
+None は出力しない。例外が付いていれば詳細とスタックトレースも表示する。
+Sentry が無効でもローカル出力は行う。直接 `Debug.Log*` を呼ぶのは `UnityLogOutput` だけとする。
+
+Sentry Logs には同じログを、対応するレベル（Critical は Fatal）で属性付きで送る。
+Error / Critical は例外の有無にかかわらず `IHub.CaptureEvent` で Issues のイベントも作る。
+例外が付く場合は文字列化だけでなく例外オブジェクトも渡す。
+Warning 以下は Logs のみで、Issues のイベントは作らない。
+
+`SentryOptions.asset` では Unity ログの構造化ログ収集、Breadcrumb 収集、
+`Debug.LogError` のイベント化を無効にしている。`ILogger` から Console へ出したログを
+再収集して、属性のないログや重複したイベントを作らないため。
+Unity の例外ハンドラーとネイティブクラッシュ収集は維持する。
+このため、外部コードの `Debug.LogException` は引き続き例外イベントとして収集される。
+`SetBeforeSendLog` は属性追加や送信フィルターに使い、Console 出力には使わない。
+
+### 属性とスコープ
+
+値は `logger.LogWarning("的がありません: {TargetId}", id)` のようにメッセージテンプレートで渡す。
+例外は `LogError(exception, "処理に失敗しました。")` の例外引数へ渡す。
+Sentry の本文は `ILogger` の formatter で一度だけ整形し、元のテンプレートは
+`sentry.message.template` 属性に保持する。名前付きプロパティは同じキーの属性として送る。
+追加メタデータは `logger.category`、`event.id`、`event.name`、例外の
+`exception.type` / `exception.message` / `exception.stacktrace`。
+Issues にも同じ情報を Extra として付ける。
+
+`BeginScope` に渡したキーと値はカテゴリをまたいで共有する。
+キーが重複した場合は外側スコープ、内側スコープ、ログ自身の順で上書きする。
+ロガーのメタデータは呼び出し側の同名属性より優先する。
+基本型は型を保ち、それ以外（UUID や独自の ID 型など）は文字列にする。null の値は属性から除く。
+Console の本文はスコープ属性の有無にかかわらず同じ表示とする。
+
+スコープは .NET の実行コンテキストに従う。通常の Task では非同期処理へ伝播するが、
+UniTask は実行コンテキストを自動で伝播しない。
+UniTask の `await` をまたぐスコープには依存せず、必要な属性を各ログに明示する。
+今回の変更では Activity / Span や独自の非同期伝播機構は追加しない。
+既存の `logConversions` による診断ログの切り替えは維持する。
+
+### テスト
+
+出力を必要としないテストでは `NullLogger<T>.Instance` を明示的に渡す。
+ローカル出力のテストでは無効な Hub、Sentry のテストではメモリ内 Transport を使い、実サービスへは送信しない。
+Unity SDK の公開 API はグローバルに初期化するため、SDK を使うテストは各ケースで初期化・終了する。

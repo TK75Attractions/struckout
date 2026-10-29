@@ -1,6 +1,6 @@
 using Tk75Attractions.Struckout.V1;
 using Cysharp.Threading.Tasks;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using Struckout.Application.Interface;
@@ -11,6 +11,8 @@ namespace Struckout.Bootstrap
 {
     public class NetworkBootstrap : IAsyncDestroy
     {
+        private readonly ILogger<NetworkBootstrap> _logger;
+
         private readonly IClientService<ProjectorPacket> _client;
         private readonly IGameMasterClient _master;
         private readonly IPacketRouter _packetRouter;
@@ -26,9 +28,11 @@ namespace Struckout.Bootstrap
             IClientService<ProjectorPacket> clientService,
             IGameMasterClient masterService,
             IPacketRouter packetRouter,
-            NetworkSettings settings
+            NetworkSettings settings,
+            ILogger<NetworkBootstrap> logger
         )
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _client = clientService ?? throw new ArgumentNullException(nameof(clientService));
             _master = masterService ?? throw new ArgumentNullException(nameof(masterService));
             _packetRouter = packetRouter ?? throw new ArgumentNullException(nameof(packetRouter));
@@ -40,7 +44,7 @@ namespace Struckout.Bootstrap
             if (_client == null || _master == null || _packetRouter == null)
                 return NetworkConnectionResult.InvalidConfiguration;
 
-            Debug.Log($"[Network] {_settings}");
+            _logger.LogInformation("initializing with the setting: {Settings}", _settings);
 
             _packetRouter.OnStringMessageReceived += OnReceiveMessage;
 
@@ -66,7 +70,7 @@ namespace Struckout.Bootstrap
 
         private void OnTrackerConnectionLost()
         {
-            Debug.LogWarning("[Network] lost the connection to the tracker. Reconnecting...");
+            _logger.LogWarning("lost the connection to the tracker. Reconnecting...");
             ReconnectTrackerAsync(_reconnectCancellation.Token).Forget();
         }
 
@@ -85,13 +89,13 @@ namespace Struckout.Bootstrap
                     {
                         if (await _client.ConnectAsync())
                         {
-                            Debug.Log("[Network] reconnected to the tracker.");
+                            _logger.LogInformation("reconnected to the tracker.");
                             return;
                         }
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogWarning($"[Network] failed to reconnect to the tracker: {ex.Message}");
+                        _logger.LogWarning(ex, "failed to reconnect to the tracker: {ErrorMessage}", ex.Message);
                     }
                     await UniTask.Delay(TrackerReconnectInterval, cancellationToken: token);
                 }
@@ -106,11 +110,11 @@ namespace Struckout.Bootstrap
         }
 
         private void OnMasterConnectionLost() =>
-            Debug.LogWarning("[Network] lost the connection to game_master. Reconnecting...");
+            _logger.LogWarning("[Network] lost the connection to game-master. Reconnecting...");
 
         private void OnReceiveMessage(TestMessage message)
         {
-            Debug.Log($"Received message: {message.Message}");
+            _logger.LogDebug("Received message: {Message}", message.Message);
             // Handle the received string message
         }
 

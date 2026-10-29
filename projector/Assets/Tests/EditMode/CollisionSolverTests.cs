@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -19,7 +20,7 @@ namespace Struckout.Tests.Tests.EditMode
 
         private static CollisionPoint At(double x, double y) => new() { X = x, Y = y };
 
-        private static CollisionSolver NewSolver() => new(new CollisionCoordinateTransform());
+        private static CollisionSolver NewSolver() => new(new CollisionCoordinateTransform(), NullLogger<CollisionSolver>.Instance);
 
         [Test]
         public void 中心は当たる()

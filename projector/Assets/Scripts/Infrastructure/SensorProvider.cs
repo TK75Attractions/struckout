@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
 using Tk75Attractions.Struckout.V1;
-using UnityEngine;
+using Microsoft.Extensions.Logging;
 
 namespace Struckout.Infrastructure
 {
@@ -15,25 +15,28 @@ namespace Struckout.Infrastructure
     /// </summary>
     public class SensorProvider : ISensorProvider
     {
+        private readonly ILogger<SensorProvider> _logger;
+
         private readonly CollisionCoordinateTransform _transform;
 
         public event Action<CollisionPoint> OnCollisionReceived;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public SensorProvider(CollisionCoordinateTransform transform)
+        public SensorProvider(CollisionCoordinateTransform transform, ILogger<SensorProvider> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _transform = transform ?? throw new ArgumentNullException(nameof(transform));
         }
 
         public void GetSensorData(CollisionPoint point)
         {
-            if (point == null) return;
+            if (point == null) throw new ArgumentNullException(nameof(point));
 
             var (x, y) = _transform.ToRenderSpace(point.X, point.Y);
 
             if (_transform.logConversions)
             {
-                Debug.Log($"[Collision] ({point.X:F3}, {point.Y:F3}) m -> ({x:F1}, {y:F1})");
+                _logger.LogInformation("[Collision] ({PointX:F3}, {PointY:F3}) m -> ({X:F1}, {Y:F1})", point.X, point.Y, x, y);
             }
 
             OnCollisionReceived?.Invoke(new CollisionPoint { X = x, Y = y });

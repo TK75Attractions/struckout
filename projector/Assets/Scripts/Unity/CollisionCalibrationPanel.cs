@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Globalization;
 using Struckout.Application.Interface;
@@ -20,6 +21,8 @@ namespace Struckout.Unity
     /// </summary>
     public class CollisionCalibrationPanel : MonoBehaviour
     {
+        private ILogger<CollisionCalibrationPanel> _logger;
+
         /// <summary>
         /// 確かめに使う板の点 (左の壁からの距離, 地面からの高さ。m)。2026-10-16 に測った、奥の板の上の段の 4 隅
         /// (左右の黒い柱の内側の縁と、上の梁の下の縁・上下の板の継ぎ目が交わる点) と、その真ん中。
@@ -52,8 +55,9 @@ namespace Struckout.Unity
         private string _m1X = "", _m1Y = "", _m2X = "", _m2Y = "";
 
         /// <param name="inspectorValues">「Inspector の値に戻す」で戻す値 (設定ファイルを読む前の値)</param>
-        public void Construct(CollisionCoordinateTransform transform, CollisionCoordinateTransform inspectorValues, IUIService ui, string path)
+        public void Construct(CollisionCoordinateTransform transform, CollisionCoordinateTransform inspectorValues, IUIService ui, string path, ILogger<CollisionCalibrationPanel> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _transform = transform ?? throw new ArgumentNullException(nameof(transform));
             _inspectorValues = inspectorValues;
             _ui = ui;
@@ -219,7 +223,7 @@ namespace Struckout.Unity
                 _transform.FitTwoPoints(FitRender1, (x1, y1), FitRender2, (x2, y2));
                 RefreshFields();
                 _status = $"2 点から計算しました: {_transform}";
-                Debug.Log($"[Collision] fitted from two points: {_transform}");
+                _logger.LogInformation("[Collision] fitted from two points: {Transform}", _transform);
             }
             catch (ArgumentException ex)
             {
@@ -233,7 +237,7 @@ namespace Struckout.Unity
             {
                 CollisionTransformStore.Save(_transform, _path);
                 _status = $"保存しました ({DateTime.Now:HH:mm:ss})";
-                Debug.Log($"[Collision] saved {_transform} to {_path}");
+                _logger.LogInformation("[Collision] saved {Transform} to {Path}", _transform, _path);
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
