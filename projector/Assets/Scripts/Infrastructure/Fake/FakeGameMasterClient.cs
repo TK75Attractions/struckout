@@ -265,7 +265,7 @@ namespace Struckout.Infrastructure.Fake
                 var entries = RankingEntries().ToArray();
                 return UniTask.FromResult<IReadOnlyList<RankingEntry>>(_results.Select(game =>
                     new RankingEntry(game.Key, game.Value, (uint)entries.Count(entry => entry.Score > game.Value) + 1,
-                        FakePlayer, "サンプル")).ToArray());
+                        new RankingParticipant(1, FakePlayer, "サンプル"))).ToArray());
             }
         }
 

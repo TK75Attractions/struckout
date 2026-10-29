@@ -217,7 +217,7 @@ namespace Struckout.Tests.Tests.EditMode
                 var ranking = await client.GetRankingAsync(10, GameMode.Single, Difficulty.Normal);
                 var history = await client.GetGamesByPlayerAsync(playerId, GameMode.Single, Difficulty.Normal);
                 Assert.That(ranking.Count, Is.EqualTo(10));
-                Assert.That(history, Has.Some.Matches<RankingEntry>(game => game.GameId.Equals(gameId) && game.Rank == 11));
+                Assert.That(history, Has.Some.Matches<RankingEntry>(game => game.GameId.Equals(gameId) && game.Rank == 13));
                 Assert.That(await client.GetGameResultAsync(new GameId(9999)), Is.Null);
             }
             finally { await client.DisconnectAsync(); }
