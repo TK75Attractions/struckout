@@ -22,14 +22,14 @@ RUN mise install --locked protoc mold \
     && mise -C game_master/ install --locked github:LukeMathWalker/cargo-chef
 
 FROM base AS planner
-COPY ./ ./
+COPY --chown=builder:builder ./ ./
 RUN mise exec github:LukeMathWalker/cargo-chef -- cargo chef prepare --recipe-path recipe.json
 
 FROM base AS builder
-COPY --from=planner /build/recipe.json recipe.json
-COPY .cargo/config.toml .cargo/config.toml
-COPY api/proto api/proto
-COPY api/spec api/spec
+COPY --from=planner --chown=builder:builder /build/recipe.json recipe.json
+COPY --chown=builder:builder .cargo/config.toml .cargo/config.toml
+COPY --chown=builder:builder api/proto api/proto
+COPY --chown=builder:builder api/spec api/spec
 ARG RELEASE_MODE=false
 RUN if [ "$RELEASE_MODE" = "true" ]; then \
     FLAGS="--release --features=sentry"; \
@@ -39,7 +39,7 @@ RUN if [ "$RELEASE_MODE" = "true" ]; then \
     SQLX_OFFLINE=true mise exec protoc mold github:LukeMathWalker/cargo-chef -- \
     cargo chef cook --recipe-path recipe.json ${FLAGS} -p game_master
 
-COPY ./ ./
+COPY --chown=builder:builder ./ ./
 ARG ST_VERSION
 ARG ST_COMMIT_SHORT_HASH
 RUN if [ "$RELEASE_MODE" = "true" ]; then \

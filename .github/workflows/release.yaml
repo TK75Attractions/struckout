@@ -286,7 +286,7 @@ jobs:
     needs: [get-version]
     permissions:
       contents: read
-      packages: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
       - name: Set up Docker Buildx

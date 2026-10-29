@@ -78,3 +78,16 @@ Dockerfile に `cargo-chef` の `prepare` と `cook` を追加した。`cook` �
 `cargo-chef` は `game_master/mise.toml` と `mise.lock` で 0.1.78 に固定した。
 ソースだけを変更した場合も workspace 内の crate は再コンパイルされる場合がある。
 GitHub Actions とローカル Docker の完成ビルドは実行していない。
+
+## Release #28 の権限エラー
+
+[Release #28](https://github.com/TK75Attractions/struckout/actions/runs/40665865506) は
+`cargo chef cook` が `/build/.cargo/config.toml` を書き直す際の
+`Permission denied (os error 13)` で失敗した。`USER builder` の後でも
+`COPY` の既定の所有者は root になるため、planner と builder にコピーする
+ソース・recipe・Cargo 設定・API 定義を `--chown=builder:builder` で配置する。
+`cook` は recipe から workspace のファイルを作成・更新するため、コピーした
+入力にも builder の書き込み権限が必要になる。
+
+各アーキテクチャのビルドジョブも digest で GHCR に push するため、
+`build-game-master-image` の `GITHUB_TOKEN` に `packages: write` を付与する。
