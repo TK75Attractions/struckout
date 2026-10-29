@@ -39,7 +39,7 @@ impl DataSource for StubDataSource {
         _: PlayerId,
         _: GameMode,
         _: Difficulty,
-    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::RankedGameResultItem>, crate::GetGamesByPlayerError> {
         Ok(Vec::new())
     }
 
@@ -869,7 +869,7 @@ struct RecordingDataSource {
     player_lookup_started: Arc<tokio::sync::Notify>,
     player_lookup_gate: Option<Arc<tokio::sync::Semaphore>>,
     ranking: Vec<crate::GameResultItem>,
-    history: Vec<crate::GameResultItem>,
+    history: Vec<crate::RankedGameResultItem>,
     ranking_limits: Arc<parking_lot::Mutex<Vec<(u32, GameMode, Difficulty)>>>,
     history_players: Arc<parking_lot::Mutex<Vec<(PlayerId, GameMode, Difficulty)>>>,
     save_started: Arc<tokio::sync::Notify>,
@@ -928,7 +928,7 @@ impl DataSource for RecordingDataSource {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::RankedGameResultItem>, crate::GetGamesByPlayerError> {
         self.history_players
             .lock()
             .push((player_id, mode, difficulty));
@@ -1551,9 +1551,12 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
             Vec::new()
         },
         history: if populated {
-            vec![crate::GameResultItem {
-                result,
-                players: players.clone(),
+            vec![crate::RankedGameResultItem {
+                item: crate::GameResultItem {
+                    result,
+                    players: players.clone(),
+                },
+                rank: 3,
             }]
         } else {
             Vec::new()
@@ -1606,6 +1609,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
                 game_id: 42,
                 total_score: 987,
                 player_info: Some(players.into()),
+                rank: 3,
             }
         );
     }

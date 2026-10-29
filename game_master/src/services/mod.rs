@@ -627,9 +627,10 @@ where
                 .into_iter()
                 .map(
                     |item| struckout_proto::get_games_by_player_response::GamesByPlayerItem {
-                        game_id: item.result.game_id.into(),
-                        total_score: item.result.total_score,
-                        player_info: Some(item.players.into()),
+                        game_id: item.item.result.game_id.into(),
+                        total_score: item.item.result.total_score,
+                        player_info: Some(item.item.players.into()),
+                        rank: item.rank,
                     },
                 )
                 .collect(),
