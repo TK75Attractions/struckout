@@ -40,10 +40,12 @@ public sealed class Supervisor : IDisposable
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
 
     private readonly LauncherConfig config;
+    private readonly InstallState installState;
     private readonly ServerPorts ports;
     private readonly Dictionary<ModuleId, IModuleRunner> runners = [];
     private readonly Dictionary<ModuleId, ModuleStatus> statuses = [];
     private readonly HashSet<ModuleId> launched = [];
+    private bool remoteReleaseWarningLogged;
 
     // Starting, stopping and checking run one at a time.
     private readonly SemaphoreSlim gate = new(1, 1);
@@ -52,6 +54,7 @@ public sealed class Supervisor : IDisposable
         LauncherConfig config, InstallState state, AppPaths paths, HostPlatform platform, ServerPorts ports, ICommandRunner runner)
     {
         this.config = config;
+        installState = state;
         this.ports = ports;
         Order = ModuleGraph.StartOrder(config.Modules, ports);
         var locator = new ToolLocator(platform, paths);
@@ -109,6 +112,31 @@ public sealed class Supervisor : IDisposable
 
     private async Task StartAllUnlockedAsync(IProgress<string> log, CancellationToken cancellationToken)
     {
+        if (!remoteReleaseWarningLogged)
+        {
+            var hasRemoteModules = config.Modules
+                .SelectMany(id => ModuleGraph.DependenciesOf(id, ports))
+                .Any(dependency => !config.Modules.Contains(dependency.Target));
+            if (hasRemoteModules)
+            {
+                log.Report("別 PC のモジュールのリリースは確認できません。各 PC のモジュールを同じリリースにそろえてください");
+            }
+
+            remoteReleaseWarningLogged = true;
+        }
+
+        var mismatch = ReleaseCompatibility.FindMismatch(config.Modules, installState);
+        if (mismatch is not null)
+        {
+            log.Report(mismatch);
+            foreach (var id in ReleaseCompatibility.Checked(config.Modules, installState))
+            {
+                Update(id, ModuleState.Failed, mismatch);
+            }
+
+            return;
+        }
+
         foreach (var id in Order)
         {
             if (!runners.TryGetValue(id, out var runner) || launched.Contains(id))
