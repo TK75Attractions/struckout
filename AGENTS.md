@@ -59,7 +59,7 @@ taichi は Linux で開発している。CI も `ubuntu-24.04` で動く。
   - 捕まえる例外は具体的な型に絞る (`except (OSError, urllib.error.URLError) as error:`)。素の `except:` は書かない
   - 型ヒントを付ける (`str | None` など)
 - 改行は LF にする (`.gitattributes` を見る)。シェルスクリプトと生成コードは特に必ず LF
-- サーバーは Docker で動かす (`game_master/compose*.yaml`)。イメージは digest で固定し、arm64 でもビルドできるようにする
+- サーバーは Docker で動かす (`game_master/docker/compose*.yaml`)。イメージは digest で固定し、arm64 でもビルドできるようにする
 - 非 ASCII のパスや Windows のジャンクションのような、特定の環境だけの回避策をリポジトリに入れない。必要なら個人の設定 (`.mise/config.local.toml`、`<module>/mise.local.toml`、`.cargo/patches.toml`) に閉じ込める
 
 ### バージョンの固定と再現性

@@ -34,7 +34,7 @@ macOS と Linux では `chmod +x` してから実行する。
 | ball-tracker | リリースの `ball-tracker-<OS>` | FFmpeg |
 | touchpanel | リリースの `touchpanel-<OS>` | |
 | projector | リリースの `projector-<OS>.zip` を展開したもの | |
-| game-master | リリースの `game_master/compose.yaml` と `compose.prod.yaml`、リリースと同じタグの ghcr.io のイメージ (`docker compose pull`) | Docker |
+| game-master | リリースの `game_master/docker/compose.yaml` と `compose.prod.yaml`、リリースと同じタグの ghcr.io のイメージ (`docker compose pull`) | Docker |
 | camera | リリースの `camera.apk` を、`cameras.json` にある接続中のスマホに `adb install` | Android Platform Tools |
 
 要るツールが見つからなければ入れる。Windows は winget、macOS は Homebrew、Android Platform Tools はどの OS でも Google から
