@@ -399,9 +399,9 @@ python scripts/run_pc1.py
 2. スマホのアプリをいったん止め、`adb reverse` を張り、設定を入れる (端末の `device_id` を `cameras.json` に記録する)
 3. ball_tracker を `scripts\pc1.json` の設定と `--cameras scripts\cameras.json` で起動する (精度を確かめた設定。値の意味は 3 章の表)
 4. PC② の `scripts\pc2.json` の `tracker_host` に書く、この PC の名前と IP を表示する。projector は待たない
-5. スマホを開く。つながらなければ 1 回開き直す
+5. スマホを起こしてから開く。ロック中なら解除を案内し、USB が未接続ならケーブル／ハブと「USB デバッグを許可」を確かめるよう表示する。つながらなければ 1 回開き直す
 6. 届いている fps と遅れを表にし、Save frame を撮って取り込む
-7. 「準備完了」と出たら投げてよい。着弾と警告、projector とスマホのつながり具合を表示する。Ctrl+C で止めると、
+7. 「準備完了」と出たら投げてよい。着弾と警告、projector とスマホのつながり具合を表示する。カメラが切断中なら最終受信時刻を表示し、古い fps は表示しない。Ctrl+C で止めると、
    記録をまとめてスマホのアプリを止める
 
 スマホのアプリ (高速撮影版) と projector は、ball_tracker が止まっても 2 秒おきにつなぎ直す。ball_tracker を
