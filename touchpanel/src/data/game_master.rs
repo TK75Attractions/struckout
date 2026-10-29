@@ -509,6 +509,12 @@ mod tests {
         ) -> Result<Response<proto::HitTargetResponse>, Status> {
             panic!("hit_target must not be called in this test")
         }
+        async fn reset_combo(
+            &self,
+            _: Request<proto::ResetComboRequest>,
+        ) -> Result<Response<proto::ResetComboResponse>, Status> {
+            panic!("reset_combo must not be called in this test")
+        }
     }
 
     fn response(data: EventData) -> ListenEventsResponse {

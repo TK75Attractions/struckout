@@ -108,6 +108,7 @@ namespace Struckout.Unity
         private ResultScreenView _results;
         private GameObject _hud;
         private Text _scoreText;
+        private Text _comboText;
         private Text _remainingTimeText;
         private ProjectorScreen _screen = ProjectorScreen.Home;
         private float _idleOpacity = 1f;
@@ -180,8 +181,11 @@ namespace Struckout.Unity
             root.offsetMin = root.offsetMax = Vector2.zero;
 
             _scoreText = CreateHudLabel("Score", root, false, 800f);
+            _comboText = CreateHudLabel("Combo", root, false, 480f);
+            _comboText.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(48f, -156f);
             _remainingTimeText = CreateHudLabel("RemainingTime", root, true, 480f);
             SetScore(0);
+            SetCombo(0);
             _remainingTimeText.text = "TIME  --:--";
             _hud.SetActive(false);
         }
@@ -249,6 +253,13 @@ namespace Struckout.Unity
                 "TIME  {0:00}:{1:00}", seconds / 60, seconds % 60);
         }
 
+        public void SetCombo(uint combo)
+        {
+            if (_comboText == null) return;
+            _comboText.text = combo.ToString(CultureInfo.InvariantCulture) + " COMBO";
+            _comboText.transform.parent.gameObject.SetActive(combo >= 2);
+        }
+
         public void SetScore(uint totalScore)
         {
             if (_scoreText != null)
@@ -287,6 +298,7 @@ namespace Struckout.Unity
                 if (screen == ProjectorScreen.Playing)
                 {
                     SetScore(0);
+                    SetCombo(0);
                     _remainingTimeText.text = "TIME  --:--";
                 }
                 else if (screen == ProjectorScreen.Score)

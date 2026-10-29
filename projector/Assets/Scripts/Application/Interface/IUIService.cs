@@ -28,6 +28,9 @@ namespace Struckout.Application.Interface
         /// <summary>game_master が確定した累計得点を表示する。</summary>
         void SetScore(uint totalScore);
 
+        /// <summary>コンボ数を表示する。2 未満は隠す。</summary>
+        void SetCombo(uint combo);
+
         /// <summary>TargetAdded で通知された UUID を持つ的を描画する。</summary>
         void AddTarget(Target target);
 

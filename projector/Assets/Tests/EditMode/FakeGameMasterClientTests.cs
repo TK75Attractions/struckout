@@ -102,6 +102,34 @@ namespace Struckout.Tests.Tests.EditMode
             finally { await client.DisconnectAsync(); }
         }
         [Test]
+        public async Task Combo_bonuses_apply_at_thresholds_and_restart_after_reset()
+        {
+            var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
+            var combos = new List<uint>();
+            var scores = new List<uint>();
+            var id = Guid.Empty;
+            client.TargetAdded += target => id = target.Id;
+            client.ComboChanged += combos.Add;
+            try
+            {
+                Assert.That(await client.ResetComboAsync(), Is.False);
+                await client.ConnectAsync();
+                client.ScoreChanged += scores.Add;
+                await client.AddTargetAsync(default, 200);
+                Assert.That(await client.ResetComboAsync(), Is.True);
+                for (var i = 0; i < 6; i++) Assert.That(await client.HitTargetAsync(id), Is.True);
+                Assert.That(combos, Is.EqualTo(new uint[] { 1, 2, 3, 4, 5, 6 }));
+                Assert.That(scores, Is.EqualTo(new uint[] { 500, 1000, 2000, 2500, 3800, 4300 }));
+                Assert.That(await client.ResetComboAsync(), Is.True);
+                Assert.That(await client.ResetComboAsync(), Is.True);
+                Assert.That(await client.HitTargetAsync(id), Is.True);
+                Assert.That(combos, Is.EqualTo(new uint[] { 1, 2, 3, 4, 5, 6, 0, 1 }));
+                Assert.That(scores[scores.Count - 1], Is.EqualTo(4800));
+            }
+            finally { await client.DisconnectAsync(); }
+        }
+
+        [Test]
         public async Task Registered_targets_score_repeatedly_until_removed()
         {
             var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
