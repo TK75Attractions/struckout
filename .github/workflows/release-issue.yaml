@@ -1,0 +1,167 @@
+name: Release issue
+
+on:
+  workflow_run:
+    workflows:
+      - Release
+    types:
+      - completed
+
+permissions: {}
+
+concurrency:
+  group: release-issue-${{ github.repository }}
+  queue: max
+
+jobs:
+  update-issue:
+    if: >-
+      github.repository == 'TK75Attractions/struckout' &&
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.head_branch == 'master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+      EVENT_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+    steps:
+      - name: Reconcile the release failure issue
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          issue_title='[ci] Release ワークフローに失敗がある'
+          issue_marker='<!-- release-workflow-incident:master -->'
+          body_file=$(mktemp)
+          trap 'rm -f "$body_file"' EXIT
+
+          runs=$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yaml/runs?branch=master&per_page=100")
+          latest_completed_run=$(jq -c '
+            [.[] | .workflow_runs[]]
+            | map(select(
+                .event == "workflow_dispatch"
+                and .head_branch == "master"
+                and .status == "completed"
+                and (.conclusion == "success" or .conclusion == "failure")
+              ))
+            | sort_by([.run_number, .run_attempt])
+            | last // null
+          ' <<<"$runs")
+
+          if [[ "$latest_completed_run" == null ]]; then
+            echo "No completed master Release run has a success or failure conclusion."
+            exit 0
+          fi
+
+          newer_active_run=$(jq -r --argjson completed "$latest_completed_run" '
+            [.[] | .workflow_runs[]]
+            | any(.[];
+                .event == "workflow_dispatch"
+                and .head_branch == "master"
+                and .status != "completed"
+                and (
+                  (.run_number > $completed.run_number)
+                  or (
+                    .run_number == $completed.run_number
+                    and .run_attempt > $completed.run_attempt
+                  )
+                )
+              )
+          ' <<<"$runs")
+
+          run_id=$(jq -er '.id' <<<"$latest_completed_run")
+          run_attempt=$(jq -er '.run_attempt' <<<"$latest_completed_run")
+          run_conclusion=$(jq -er '.conclusion' <<<"$latest_completed_run")
+          run_url=$(jq -er '.html_url' <<<"$latest_completed_run")
+          run_sha=$(jq -er '.head_sha' <<<"$latest_completed_run")
+          run_marker="<!-- release-workflow-run:${run_id}:attempt:${run_attempt}:${run_conclusion} -->"
+
+          if [[ "$run_conclusion" == success && "$newer_active_run" == true ]]; then
+            echo "A newer master Release run is still active; keeping any failure issue open until it completes."
+            exit 0
+          fi
+
+          open_issues=$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/issues?state=open&per_page=100")
+          issue_records=$(jq -c --arg marker "$issue_marker" '
+            [add[]
+             | select(.pull_request == null)
+             | select((.body // "") | contains($marker))]
+          ' <<<"$open_issues")
+          issue_count=$(jq -er 'length' <<<"$issue_records")
+
+          if [[ "$issue_count" -gt 1 ]]; then
+            echo "Multiple open release failure issues contain the automation marker; refusing to update an ambiguous issue." >&2
+            exit 1
+          fi
+
+          if [[ "$run_conclusion" == failure ]]; then
+            if [[ "$issue_count" -eq 0 ]]; then
+              cat >"$body_file" <<EOF
+          ${issue_marker}
+          ${run_marker}
+
+          master ブランチの Release ワークフローが失敗しました。
+
+          - 実行: ${run_url}
+          - コミット: ${run_sha}
+
+          成功したリリース実行の完了後、この Issue は自動で閉じられます。
+          EOF
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$issue_title" --body-file "$body_file"
+              exit 0
+            fi
+
+            issue_number=$(jq -er '.[0].number' <<<"$issue_records")
+            issue_has_run=$(jq -r --arg marker "$run_marker" \
+              '.[0] | (.body // "") | contains($marker)' <<<"$issue_records")
+            if [[ "$issue_has_run" == true ]]; then
+              echo "This failed Release attempt is already recorded in issue #${issue_number}."
+              exit 0
+            fi
+
+            comments=$(gh api --paginate --slurp \
+              "repos/${GITHUB_REPOSITORY}/issues/${issue_number}/comments?per_page=100")
+            if jq -e --arg marker "$run_marker" \
+              'add | any(.[]; (.body // "") | contains($marker))' <<<"$comments" >/dev/null; then
+              echo "This failed Release attempt is already recorded in issue #${issue_number}."
+              exit 0
+            fi
+
+            cat >"$body_file" <<EOF
+          ${run_marker}
+          Release ワークフローが再び失敗しました。
+
+          - 実行: ${run_url}
+          - コミット: ${run_sha}
+          EOF
+            gh issue comment "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body_file"
+            exit 0
+          fi
+
+          if [[ "$issue_count" -eq 0 ]]; then
+            echo "No open release failure issue needs to be closed."
+            exit 0
+          fi
+
+          issue_number=$(jq -er '.[0].number' <<<"$issue_records")
+          comments=$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/issues/${issue_number}/comments?per_page=100")
+          if ! jq -e --arg marker "$run_marker" \
+            'add | any(.[]; (.body // "") | contains($marker))' <<<"$comments" >/dev/null; then
+            cat >"$body_file" <<EOF
+          ${run_marker}
+          master ブランチの Release ワークフローが成功し、リリースが完了しました。
+
+          - 実行: ${run_url}
+          - コミット: ${run_sha}
+          EOF
+            gh issue comment "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body_file"
+          fi
+
+          gh issue close "$issue_number" --repo "$GITHUB_REPOSITORY" --reason completed
