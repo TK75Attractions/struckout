@@ -1,7 +1,8 @@
 # launcher
 
-struckout のモジュールを PC にインストールし、依存の順に起動するアプリ (C# / Avalonia)。Windows、macOS、Linux で動く。
-ソースもビルドの道具も要らないので、ブースの PC を用意するときに使う。
+struckout のモジュールを PC にインストールし、依存の順に起動するアプリ (C# / Avalonia)。Windows と macOS 向けに配布する。
+配布版はソースもビルドの道具も要らないので、ブースの PC を用意するときに使う。
+Linux ではソースから実行できるが、現行リリースに Linux 向けモジュールはない。
 
 画面は 2 つ。
 
@@ -19,9 +20,8 @@ struckout のモジュールを PC にインストールし、依存の順に起
 | Windows (x64) | `struckout-launcher-x86_64-windows.exe` |
 | Windows (Arm) | `struckout-launcher-arm64-windows.exe` |
 | macOS (Apple シリコン) | `struckout-launcher-arm64-macos` |
-| Linux (x64) | `struckout-launcher-x86_64-linux` |
 
-macOS と Linux では `chmod +x` してから実行する。
+macOS では `chmod +x` してから実行する。
 
 ソースから動かすときは `mise run //launcher:run`。
 
