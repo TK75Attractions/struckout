@@ -3,6 +3,8 @@
 //! 接続ごとに、[`VideoStreamServerPacket`] で引き受けたことを知らせ、そのあと [`VideoStreamPacket`] を読み続ける。
 //! 設定 ([`VideoStreamConfig`]) を受け取ったら [`Pipeline`] を作り、フレームを渡していく。
 
+use std::{collections::HashMap, sync::Arc};
+
 use chrono::{DateTime, Utc};
 use struckout_proto::{
     DetectionsPacket, ReadPacketError, VideoStreamConfig, VideoStreamPacket,
@@ -16,6 +18,8 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
+use crate::{camera_status::CameraStatusStore, types::CameraId};
+
 use super::{VideoOptions, analysis::AnalysisSettings, pipeline::Pipeline, recorder::Recorder};
 
 pub const VIDEO_ADDR_DEFAULT: &str = concat!("0.0.0.0:", env!("CAMERA_VIDEO_PORT"));
@@ -23,18 +27,26 @@ pub const VIDEO_ADDR_DEFAULT: &str = concat!("0.0.0.0:", env!("CAMERA_VIDEO_PORT
 pub struct VideoTransport {
     listener: TcpListener,
     options: VideoOptions,
+    camera_status: Arc<CameraStatusStore>,
 }
 
 impl VideoTransport {
     /// 5052 番で待ち受ける。
-    pub async fn new(options: VideoOptions) -> std::io::Result<Self> {
+    pub async fn new(
+        options: VideoOptions,
+        camera_status: Arc<CameraStatusStore>,
+    ) -> std::io::Result<Self> {
         info!(
             port = VIDEO_ADDR_DEFAULT,
             "trying to bind port for `VideoTransport`"
         );
         let listener = TcpListener::bind(VIDEO_ADDR_DEFAULT).await?;
         info!("succeed to bind port for `VideoTransport`");
-        Ok(Self { listener, options })
+        Ok(Self {
+            listener,
+            options,
+            camera_status,
+        })
     }
 
     /// 接続を受け付け続ける。解析した検出は、受け取った時刻と一緒に `packet_tx` に送る
@@ -57,6 +69,7 @@ impl VideoTransport {
                     connections.spawn(handle_connection(
                         stream,
                         self.options.clone(),
+                        self.camera_status.clone(),
                         packet_tx.clone(),
                         shutdown.clone(),
                     ));
@@ -77,6 +90,7 @@ impl VideoTransport {
 async fn handle_connection(
     stream: TcpStream,
     options: VideoOptions,
+    camera_status: Arc<CameraStatusStore>,
     packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
     shutdown: CancellationToken,
 ) {
@@ -89,6 +103,8 @@ async fn handle_connection(
         return;
     }
 
+    let mut connections = HashMap::new();
+    let mut current_camera = None;
     let mut pipeline: Option<Pipeline> = None;
     let mut recorder: Option<Recorder> = None;
     loop {
@@ -122,9 +138,19 @@ async fn handle_connection(
         }
         match packet.data {
             Some(video_stream_packet::Data::Config(config)) => {
-                pipeline = apply_config(pipeline, &config, &options, &packet_tx);
+                let id = CameraId::new(config.camera_id);
+                connections
+                    .entry(config.camera_id)
+                    .or_insert_with(|| camera_status.connect(id, ""));
+                current_camera = Some(id);
+                pipeline = apply_config(pipeline, &config, &options, &packet_tx, &camera_status);
             }
             Some(video_stream_packet::Data::Frame(frame)) => {
+                if !frame.codec_config
+                    && let Some(id) = current_camera
+                {
+                    camera_status.received(id, received_at);
+                }
                 if let Some(pipeline) = pipeline.as_mut() {
                     pipeline.push(frame, received_at);
                 }
@@ -145,6 +171,7 @@ fn apply_config(
     config: &VideoStreamConfig,
     options: &VideoOptions,
     packet_tx: &mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+    camera_status: &Arc<CameraStatusStore>,
 ) -> Option<Pipeline> {
     let settings = match AnalysisSettings::from_config(config) {
         Ok(settings) => settings,
@@ -180,7 +207,7 @@ fn apply_config(
         analysis = format!("{}x{}", settings.width, settings.height),
         "received video stream config"
     );
-    match Pipeline::spawn(options, settings, packet_tx.clone()) {
+    match Pipeline::spawn(options, settings, packet_tx.clone(), camera_status.clone()) {
         Ok(pipeline) => Some(pipeline),
         Err(e) => {
             warn!(error = ?e, ffmpeg = options.ffmpeg, "failed to start ffmpeg; is it installed? (see --ffmpeg)");

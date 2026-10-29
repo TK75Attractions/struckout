@@ -26,6 +26,7 @@ use tracing::{debug, info, trace_span, warn};
 use crate::{
     CameraLocationStore,
     camera_config::CameraConfig,
+    camera_status::CameraStatusStore,
     clock_sync::ClockSync,
     detection_input::{CameraFrame, DetectionInput},
     types::CameraId,
@@ -65,16 +66,18 @@ impl NetworkDetectionInput {
         clock: Arc<ClockSync>,
         video: Option<VideoOptions>,
         cameras: Option<Arc<CameraConfig>>,
+        camera_status: Arc<CameraStatusStore>,
     ) -> Result<Self, NetworkDetectionInputCreationError> {
-        let data_transport = DataTransport::new()
+        let data_transport = DataTransport::new(camera_status.clone())
             .await
             .map_err(NetworkDetectionInputCreationError::Data)?;
-        let tcp_transport = TcpTransport::new(camera_locs, clock.clone(), cameras)
-            .await
-            .map_err(NetworkDetectionInputCreationError::Tcp)?;
+        let tcp_transport =
+            TcpTransport::new(camera_locs, clock.clone(), cameras, camera_status.clone())
+                .await
+                .map_err(NetworkDetectionInputCreationError::Tcp)?;
         let video_transport = match video {
             Some(video) => Some(
-                VideoTransport::new(video)
+                VideoTransport::new(video, camera_status)
                     .await
                     .map_err(NetworkDetectionInputCreationError::Video)?,
             ),
@@ -144,12 +147,13 @@ pub enum NetworkDetectionInputCreationError {
 
 /// UDP Socket to receive frames from cameras.
 pub struct DataTransport {
+    camera_status: Arc<CameraStatusStore>,
     listener: TcpListener,
     join_handles: Vec<JoinHandle<Result<(), ReadPacketError>>>,
 }
 
 impl DataTransport {
-    pub async fn new() -> std::io::Result<Self> {
+    pub async fn new(camera_status: Arc<CameraStatusStore>) -> std::io::Result<Self> {
         info!(
             port = DATA_ADDR_DEFAULT,
             "trying to bind port for `DataTransport`"
@@ -158,6 +162,7 @@ impl DataTransport {
         info!("succeed to bind port for `DataTransport`");
         Ok(Self {
             listener,
+            camera_status,
             join_handles: Vec::new(),
         })
     }
@@ -183,6 +188,7 @@ impl DataTransport {
                     let connection_packet_tx = packet_tx.clone();
                     let join = tokio::spawn(Self::handle_input(
                         connection_packet_tx,
+                        self.camera_status.clone(),
                         reader,
                         connection_shutdown,
                     ));
@@ -208,16 +214,25 @@ impl DataTransport {
 
     pub async fn handle_input(
         packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+        camera_status: Arc<CameraStatusStore>,
         mut reader: tcp::OwnedReadHalf,
         shutdown: CancellationToken,
     ) -> Result<(), ReadPacketError> {
+        let mut connections = HashMap::new();
         loop {
             let packet: DetectionsPacket = tokio::select! {
                 _ = shutdown.cancelled() => return Ok(()),
                 packet = read_packet(&mut reader) => packet?,
             };
 
-            if packet_tx.send((Utc::now(), packet)).await.is_err() {
+            let received_at = Utc::now();
+            let id = CameraId::new(packet.camera_id);
+            connections
+                .entry(packet.camera_id)
+                .or_insert_with(|| camera_status.connect(id, ""));
+            camera_status.received(id, received_at);
+            camera_status.processed(id);
+            if packet_tx.send((received_at, packet)).await.is_err() {
                 return Ok(());
             }
         }
@@ -228,6 +243,7 @@ impl DataTransport {
 ///
 /// この接続で、端末の時計と PC の時計の差も測る。
 pub struct TcpTransport {
+    camera_status: Arc<CameraStatusStore>,
     listener: TcpListener,
     join_handles: Vec<JoinHandle<()>>,
     camera_locs: Arc<CameraLocationStore>,
@@ -244,6 +260,7 @@ impl TcpTransport {
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
         cameras: Option<Arc<CameraConfig>>,
+        camera_status: Arc<CameraStatusStore>,
     ) -> std::io::Result<Self> {
         info!(
             port = CAMERA_LOC_TCP_ADDR_DEFAULT,
@@ -253,6 +270,7 @@ impl TcpTransport {
         info!("succeed to bind port for `CameraLocationListener`");
         Ok(Self {
             listener,
+            camera_status,
             join_handles: Vec::new(),
             camera_locs,
             clock,
@@ -278,6 +296,7 @@ impl TcpTransport {
                     let join = tokio::spawn(Self::handle_connection(
                         stream,
                         self.cameras.clone(),
+                        self.camera_status.clone(),
                         Arc::clone(&self.next_camera_id),
                         Arc::clone(&self.camera_locs),
                         Arc::clone(&self.clock),
@@ -305,6 +324,7 @@ impl TcpTransport {
     async fn handle_connection(
         stream: TcpStream,
         cameras: Option<Arc<CameraConfig>>,
+        camera_status: Arc<CameraStatusStore>,
         next_camera_id: Arc<AtomicU32>,
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
@@ -349,6 +369,7 @@ impl TcpTransport {
             Some((camera_id, _)) => camera_id,
             None => next_camera_id.fetch_add(1, Ordering::Relaxed),
         };
+        let _connection = camera_status.connect(CameraId::new(camera_id), device_id);
         let managed = known.is_some();
         match (&hello, known) {
             (_, Some((_, entry))) => {
