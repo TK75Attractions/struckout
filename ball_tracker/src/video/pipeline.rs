@@ -27,7 +27,7 @@ use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
 use struckout_proto::{DetectionsPacket, VideoFrame};
 use tokio::sync::mpsc;
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use super::{
     VideoOptions,
@@ -617,7 +617,7 @@ impl Stats {
         self.delays_ms.sort_unstable();
         self.inputs.sort_unstable();
         self.decodes.sort_unstable();
-        info!(
+        trace!(
             camera_id,
             fps = format!("{:.1}", f64::from(self.frames) / seconds),
             dropped_before_ffmpeg = self.dropped_before_ffmpeg,
