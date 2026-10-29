@@ -414,7 +414,8 @@ public sealed class Supervisor : IDisposable
                 }
 
                 return new ProcessModuleRunner(
-                    id, platform, runner, executable.Executable, arguments, [], ModuleGraph.HealthPortOf(id, ports), null);
+                    id, platform, runner, executable.Executable, arguments, [], ModuleGraph.HealthPortOf(id, ports), null,
+                    verify: log => ProjectorFiles.ValidateForLaunch(executable.Directory, platform.Os, log));
             case (ModuleId.GameMaster, ComposeInstallation compose):
                 var password = GameMasterSecret.Load(paths)
                     ?? throw new LauncherException("データベースのパスワードがありません。インストールし直してください");
