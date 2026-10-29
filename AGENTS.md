@@ -51,7 +51,8 @@ taichi は Linux で開発している。CI も `ubuntu-24.04` で動く。
 - 定型の作業は mise のタスクにする (`mise run proto`、`mise run //game_master:build` など)。タスクは bash で書く。Windows では Git Bash で動く
 - **スクリプトは Python か POSIX sh で書く。PowerShell (`.ps1`) やバッチ (`.bat`) は足さない。** 以前の `.ps1` は Python に置き換えた (`scripts/run_pc1.py` など)。Gradle が生成する `gradlew.bat` は例外
 - Python のスクリプトは:
-  - 標準ライブラリだけで書き、外部パッケージを要求しない。解析用の `scripts/recording_analysis/` だけは例外で、要るものを README に書く
+  - 通常は標準ライブラリだけで書く。解析用の `scripts/recording_analysis/` は例外として、外部パッケージを `pyproject.toml` に宣言し、`uv.lock` で固定して `mise run //:recording-analysis` から実行する
+  - `scripts/recording_analysis/` では、標準ライブラリだけで複雑な処理を増やすより、適切なパッケージを使う
   - パスは `pathlib.Path` で扱う。`C:\...` や `\` 区切りを埋め込まない。実行ファイルは `shutil.which()` で探す
   - OS ごとに分ける処理は `struckout_common.py` の `IS_WINDOWS` / `per_platform()` に集め、呼び出し側に散らさない
   - `def main() -> int:` と `if __name__ == "__main__": raise SystemExit(main())` の形にする。失敗したら stderr に日本語で理由を出し、0 以外で終える
