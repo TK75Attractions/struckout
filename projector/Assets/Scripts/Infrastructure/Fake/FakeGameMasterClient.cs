@@ -79,6 +79,7 @@ namespace Struckout.Infrastructure.Fake
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
+        public event Action<uint> ComboChanged;
         public event Action<Target> TargetAdded;
         public event Action<Guid, TargetOwnership> PocketWatchAdded;
         public event Action<Guid> TargetRemoved;
@@ -90,6 +91,8 @@ namespace Struckout.Infrastructure.Fake
         private UniTask? _gameTask;
         private readonly object _stateLock = new();
         private uint _totalScore;
+        private uint _combo;
+        private static readonly (uint Combo, uint Bonus)[] ComboBonuses = { (3, 500), (5, 800) };
         private readonly Dictionary<Guid, double> _targetRadii = new();
         private bool _connected;
         private Guid? _pocketWatchId;
@@ -107,6 +110,7 @@ namespace Struckout.Infrastructure.Fake
                 _currentGameId = new GameId(++_nextGameId);
                 _started = true;
                 _totalScore = 0;
+                _combo = 0;
                 _startedDifficulty = Difficulty.Normal;
                 _gameCancellation = new CancellationTokenSource();
                 var elapsed = Stopwatch.StartNew();
@@ -214,25 +218,48 @@ namespace Struckout.Infrastructure.Fake
             PocketWatchAdded?.Invoke(_pocketWatchId.Value, TargetOwnership.Single);
         }
 
+        public UniTask<bool> ResetComboAsync(CancellationToken token = default)
+        {
+            lock (_stateLock)
+            {
+                if (!_connected || !_started || token.IsCancellationRequested) return UniTask.FromResult(false);
+                if (_combo != 0)
+                {
+                    _combo = 0;
+                    ComboChanged?.Invoke(0);
+                }
+                return UniTask.FromResult(true);
+            }
+        }
+
         public UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default)
         {
             lock (_stateLock)
             {
                 if (!_connected || !_started || token.IsCancellationRequested) return UniTask.FromResult(false);
-                if (_pocketWatchId == targetId)
+                var watch = _pocketWatchId == targetId;
+                var points = 0.0;
+                if (!watch)
+                {
+                    if (!_targetRadii.TryGetValue(targetId, out var radius) ||
+                        double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0)
+                        return UniTask.FromResult(false);
+                    points = Math.Truncate(100000.0 / radius);
+                }
+                if (_combo == uint.MaxValue) return UniTask.FromResult(false);
+                var combo = _combo + 1;
+                var bonus = ComboBonuses.FirstOrDefault(item => item.Combo == combo).Bonus;
+                if (points > uint.MaxValue || points + bonus + _totalScore > uint.MaxValue) return UniTask.FromResult(false);
+                _totalScore += (uint)points + bonus;
+                _combo = combo;
+                ScoreChanged?.Invoke(_totalScore);
+                ComboChanged?.Invoke(_combo);
+                if (watch)
                 {
                     _pocketWatchId = null;
                     TargetRemoved?.Invoke(targetId);
                     AddPocketWatch();
-                    return UniTask.FromResult(true);
                 }
-                if (!_targetRadii.TryGetValue(targetId, out var radius) ||
-                    double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0)
-                    return UniTask.FromResult(false);
-                var points = Math.Truncate(100000.0 / radius);
-                if (points > uint.MaxValue || points + _totalScore > uint.MaxValue) return UniTask.FromResult(false);
-                _totalScore += (uint)points;
-                ScoreChanged?.Invoke(_totalScore);
                 return UniTask.FromResult(true);
             }
         }

@@ -37,6 +37,35 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public void Combo_events_are_forwarded_only_during_play()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
+            var combos = new List<uint>();
+            client.ComboChanged += combos.Add;
+            var changed = new Event { ComboChanged = new Event.Types.ComboChanged { Combo = 3 } };
+            Dispatch(client, changed);
+            Assert.That(combos, Is.Empty);
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    PlayerInfo = new PlayerInfo
+                    {
+                        Single = new PlayerInfo.Types.Single
+                        {
+                            Player = new PlayerInfo.Types.PlayerItem { MachineId = 7, PlayerId = 71 },
+                        },
+                    },
+                },
+            });
+            Dispatch(client, changed);
+            Dispatch(client, new Event { ComboChanged = new Event.Types.ComboChanged { Combo = 0 } });
+            Dispatch(client, new Event { GameFinished = new Event.Types.GameFinished { GameId = 1 } });
+            Dispatch(client, changed);
+            Assert.That(combos, Is.EqualTo(new uint[] { 3, 0 }));
+        }
+
+        [Test]
         public void Target_events_supply_server_identity_and_geometry_independently_of_rpc_responses()
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);

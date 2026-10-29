@@ -52,6 +52,7 @@ namespace Struckout.Infrastructure.Grpc
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<uint> ScoreChanged;
+        public event Action<uint> ComboChanged;
         public event Action ConnectionLost;
         public event Action<DomainTarget> TargetAdded;
         public event Action<Guid, TargetOwnership> PocketWatchAdded;
@@ -222,6 +223,10 @@ namespace Struckout.Infrastructure.Grpc
                         break;
                     }
                     RemainingTimeChanged?.Invoke(remainingTime);
+                    break;
+
+                case Event.EventDataOneofCase.ComboChanged:
+                    if (_running) ComboChanged?.Invoke(received.ComboChanged.Combo);
                     break;
 
                 case Event.EventDataOneofCase.GameScoreChanged:
@@ -407,6 +412,22 @@ namespace Struckout.Infrastructure.Grpc
             {
                 if (!token.IsCancellationRequested)
                     _logger.LogWarning(ex, "[GameMaster] 命中の通知に失敗しました: {StatusCode} {StatusDetail}", ex.StatusCode, ex.Status.Detail);
+                return false;
+            }
+        }
+
+        public async UniTask<bool> ResetComboAsync(CancellationToken token = default)
+        {
+            if (_client == null || !_running || token.IsCancellationRequested) return false;
+            try
+            {
+                await _client.ResetComboAsync(new ResetComboRequest { MachineId = _settings.machineId }, cancellationToken: token);
+                return true;
+            }
+            catch (RpcException ex)
+            {
+                if (!token.IsCancellationRequested)
+                    _logger.LogWarning(ex, "[GameMaster] コンボのリセットに失敗しました: {StatusCode} {StatusDetail}", ex.StatusCode, ex.Status.Detail);
                 return false;
             }
         }

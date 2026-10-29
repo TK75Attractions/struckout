@@ -61,6 +61,7 @@ namespace Struckout.Bootstrap
             // すべて同じ dispatcher を経由し、開始・HUD 更新・終了の順序を保つ。
             _master.RemainingTimeChanged += OnRemainingTimeChanged;
             _master.ScoreChanged += OnScoreChanged;
+            _master.ComboChanged += OnComboChanged;
             _master.GameStarted += OnGameStarted;
             _master.GameFinished += OnGameFinished;
             _master.ConnectionLost += OnConnectionLost;
@@ -118,6 +119,9 @@ namespace Struckout.Bootstrap
         private void OnRemainingTimeChanged(TimeSpan remaining) =>
             _dispatcher.Enqueue(() => _service.SetRemainingTime(remaining));
 
+        private void OnComboChanged(uint combo) =>
+            _dispatcher.Enqueue(() => _service.SetCombo(combo));
+
         private void OnScoreChanged(uint totalScore) =>
             _dispatcher.Enqueue(() => _service.SetScore(totalScore));
 
@@ -138,6 +142,7 @@ namespace Struckout.Bootstrap
             _master.HomeScreenRequested -= OnHomeScreenRequested;
             _master.RemainingTimeChanged -= OnRemainingTimeChanged;
             _master.ScoreChanged -= OnScoreChanged;
+            _master.ComboChanged -= OnComboChanged;
             _context = null;
             return UniTask.CompletedTask;
         }
