@@ -249,13 +249,9 @@ namespace Struckout.Infrastructure.Fake
             {
                 if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
                 if (mode != GameMode.Single || difficulty != _startedDifficulty) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(Array.Empty<RankingEntry>());
-                var entries = Enumerable.Range(1, 10).Select(i => new RankingEntry(new GameId((uint)i),
-                    (uint)(2000 - i * 100), i == 5 ? FakePlayer : new PlayerId((uint)i + 1),
-                    i == 5 ? "サンプル" : "プレイヤー" + i)).ToList();
-                foreach (var game in _results.Where(game => game.Key.Value > 10))
-                    entries.Add(new RankingEntry(game.Key, game.Value, FakePlayer, "サンプル"));
-                return UniTask.FromResult<IReadOnlyList<RankingEntry>>(entries.OrderByDescending(entry => entry.Score)
-                    .ThenBy(entry => entry.GameId.Value).Take((int)Math.Min(maxItemCount, int.MaxValue)).ToArray());
+                return UniTask.FromResult<IReadOnlyList<RankingEntry>>(RankingEntries()
+                    .OrderByDescending(entry => entry.Score).ThenBy(entry => entry.GameId.Value)
+                    .Take((int)Math.Min(maxItemCount, int.MaxValue)).ToArray());
             }
         }
 
@@ -264,9 +260,23 @@ namespace Struckout.Infrastructure.Fake
             lock (_stateLock)
             {
                 if (!_connected || token.IsCancellationRequested) return UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
-                return UniTask.FromResult<IReadOnlyList<RankingEntry>>(playerId.Equals(FakePlayer) && mode == GameMode.Single && difficulty == _startedDifficulty
-                    ? _results.Select(game => new RankingEntry(game.Key, game.Value, FakePlayer, "サンプル")).ToArray() : Array.Empty<RankingEntry>());
+                if (!playerId.Equals(FakePlayer) || mode != GameMode.Single || difficulty != _startedDifficulty)
+                    return UniTask.FromResult<IReadOnlyList<RankingEntry>>(Array.Empty<RankingEntry>());
+                var entries = RankingEntries().ToArray();
+                return UniTask.FromResult<IReadOnlyList<RankingEntry>>(_results.Select(game =>
+                    new RankingEntry(game.Key, game.Value, (uint)entries.Count(entry => entry.Score > game.Value) + 1,
+                        new RankingParticipant(1, FakePlayer, "サンプル"))).ToArray());
             }
+        }
+
+        private IEnumerable<RankingEntry> RankingEntries()
+        {
+            var entries = Enumerable.Range(1, 10).Select(i => new RankingEntry(new GameId((uint)i),
+                (uint)(2000 - i * 100), i == 5 ? FakePlayer : new PlayerId((uint)i + 1),
+                i == 5 ? "サンプル" : "プレイヤー" + i)).ToList();
+            foreach (var game in _results.Where(game => game.Key.Value > 10))
+                entries.Add(new RankingEntry(game.Key, game.Value, FakePlayer, "サンプル"));
+            return entries;
         }
 
         public async UniTask DisconnectAsync()

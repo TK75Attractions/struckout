@@ -45,8 +45,15 @@ namespace Struckout.Application
             {
                 var score = await _master.GetGameResultAsync(gameId, token);
                 if (token.IsCancellationRequested) return;
-                if (score.HasValue) _ui.ShowGameResult(score.Value);
-                else _ui.ShowScreenMessage("結果の取得に失敗しました。");
+                if (!score.HasValue)
+                {
+                    _ui.ShowScreenMessage("結果の取得に失敗しました。");
+                    return;
+                }
+                _ui.ShowGameResult(score.Value);
+                var ranking = await _master.GetRankingAsync(RankingResults.TopItemCount, _mode, _difficulty, token);
+                if (token.IsCancellationRequested || ranking == null) return;
+                _ui.ShowResultContext(_mode, _difficulty, RankingResults.GetRank(ranking, gameId));
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         }
@@ -96,6 +103,7 @@ namespace Struckout.Application
             CancelRequest();
             _request = new CancellationTokenSource();
             _ui.SetScreen(screen);
+            _ui.ShowResultContext(_mode, _difficulty);
             return _request.Token;
         }
 

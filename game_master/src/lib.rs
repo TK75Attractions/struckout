@@ -39,7 +39,7 @@ pub trait DataSource: Clone + Send + Sync + 'static {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> impl Future<Output = Result<Vec<GameResultItem>, GetGamesByPlayerError>> + Send;
+    ) -> impl Future<Output = Result<Vec<RankedGameResultItem>, GetGamesByPlayerError>> + Send;
 
     fn get_player_by_id(
         &self,
@@ -136,6 +136,13 @@ pub struct GameResult {
 pub struct GameResultItem {
     pub result: GameResult,
     pub players: GamePlayerInfo,
+}
+
+/// A player history game with its competition rank among all games in the same mode and difficulty.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RankedGameResultItem {
+    pub item: GameResultItem,
+    pub rank: u32,
 }
 
 /// Error returned from [`DataSource::get_ranking()`].
