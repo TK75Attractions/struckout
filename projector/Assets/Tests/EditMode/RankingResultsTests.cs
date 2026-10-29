@@ -20,19 +20,19 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
-        public void Only_the_first_ten_merged_rows_have_known_ranks_even_with_ties_at_the_boundary()
+        public void History_uses_server_ranks_beyond_the_top_ten()
         {
             var ranking = Enumerable.Range(1, 10).Select(i =>
                 new RankingEntry(new GameId((uint)i), (uint)(100 - i), new PlayerId(8), "別の人")).ToArray();
             var history = new[]
             {
                 ranking[0],
-                new RankingEntry(new GameId(11), 90, new PlayerId(7), "本人"),
-                new RankingEntry(new GameId(12), 50, new PlayerId(7), "本人"),
+                new RankingEntry(new GameId(11), 89, 11, new RankingParticipant(1, new PlayerId(7), "本人")),
+                new RankingEntry(new GameId(12), 50, 12, new RankingParticipant(1, new PlayerId(7), "本人")),
             };
             var rows = RankingResults.Merge(ranking, history, new PlayerId(7), new GameId(11));
             Assert.That(rows.Take(10).Select(row => row.Rank), Is.EqualTo(Enumerable.Range(1, 10)));
-            Assert.That(rows.Skip(10).Select(row => row.Rank), Is.EqualTo(new uint?[] { null, null }));
+            Assert.That(rows.Skip(10).Select(row => row.Rank), Is.EqualTo(new uint?[] { 11, 12 }));
             Assert.That(RankingResults.GetRank(ranking.Concat(history).ToArray(), new GameId(11)), Is.Null);
             Assert.That(RankingResults.GetRank(Array.Empty<RankingEntry>(), new GameId(1)), Is.Null);
         }

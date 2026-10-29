@@ -22,12 +22,17 @@ namespace Struckout.Domain.Ranking
         public GameId GameId { get; }
         public uint Score { get; }
         public IReadOnlyList<RankingParticipant> Participants { get; }
+        public uint? Rank { get; }
         public string PlayerName => string.Join(" / ", Participants.Select(player => player.PlayerName));
 
         public RankingEntry(GameId gameId, uint score, params RankingParticipant[] participants)
+            : this(gameId, score, null, participants) { }
+
+        public RankingEntry(GameId gameId, uint score, uint? rank, params RankingParticipant[] participants)
         {
             GameId = gameId;
             Score = score;
+            Rank = rank;
             Participants = System.Array.AsReadOnly((RankingParticipant[])participants.Clone());
         }
 

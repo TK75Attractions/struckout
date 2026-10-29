@@ -29,8 +29,8 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 「あなた」の記録と今回の `game_id` を強調する。
 12 行の固定レイアウトで一画面に収め、得点順に上から下へ並べる。
 スクロールやページ切り替えは行わない。
-順位は Domain で統合後の先頭10行だけに付け、同点は同順位（1、2、2、4）とする。
-11行目以降は API から全体順位を判断できないため、同点でも「圏外」と表示する。
+順位は本人履歴の各行で `GetGamesByPlayer` が返す全体順位を使う。
+上位10件の行は Domain で同点を同順位（1、2、2、4）として計算する。
 順位・プレイヤー・スコアの見出しと、モード・難易度を表示する。
 1〜3位の順位と得点は金・銀・銅で強調する。
 サーバーのランキングは multi-play も1ゲーム1行とし、両プレイヤーの情報を含む。
@@ -38,8 +38,7 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 `player1 / player2` の形式で両名を表示する。どちらかの参加者が本人なら行を強調する。
 同じプレイヤーが両マシンで参加した場合も両方の名前を表示する。
 本人履歴の参加者情報は `GetGamesByPlayerResponse.GamesByPlayerItem.player_info` から取得する。
-現時点の game_master の履歴取得処理はこの新フィールドを設定していないため、
-実サーバーでの名前表示にはサーバー側でも参加者情報を返す対応が必要。
+本人履歴の順位は `GetGamesByPlayerResponse.GamesByPlayerItem.rank` から取得する。
 
 画面切り替え時に取得処理をキャンセルする。遅れて返った結果が HomeScreen や
 次のゲームの画面を上書きしないよう、応答を適用する前にもキャンセルを確認する。
