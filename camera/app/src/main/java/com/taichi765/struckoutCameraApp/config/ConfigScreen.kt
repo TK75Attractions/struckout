@@ -48,6 +48,7 @@ fun ConfigScreenRoute(
 ) {
     val viewModel = hiltViewModel<ConfigViewModel>()
     val savedState by viewModel.uiState.collectAsState()
+    val validationErrors by viewModel.validationErrors.collectAsState()
 
     var editingState by remember { mutableStateOf(savedState.copy()) }
     var streamSize by remember(savedState.highSpeedStreamSize) {
@@ -93,6 +94,7 @@ fun ConfigScreenRoute(
         rotationX = rotationX,
         rotationY = rotationY,
         rotationZ = rotationZ,
+        validationErrors = validationErrors,
         focalLengthRatio = focalLengthRatio,
         ignoredLeft = ignoredLeft,
         ignoredTop = ignoredTop,
@@ -132,8 +134,7 @@ fun ConfigScreenRoute(
                     ignoredRightPercent = ignoredRight.text,
                     ignoredBottomPercent = ignoredBottom.text
                 )
-            viewModel.applyChanges(editingState)
-            onNavigateToCameraScreen()
+            if (viewModel.applyChanges(editingState)) onNavigateToCameraScreen()
         },
         onDiscardChanges = {
             showDiscardDialog = false
@@ -172,6 +173,7 @@ private fun ConfigScreen(
     rotationX: TextFieldState,
     rotationY: TextFieldState,
     rotationZ: TextFieldState,
+    validationErrors: Map<ConfigField, String>,
     focalLengthRatio: TextFieldState,
     ignoredLeft: TextFieldState,
     ignoredTop: TextFieldState,
@@ -236,9 +238,16 @@ private fun ConfigScreen(
                 rotationY,
                 rotationZ,
                 focalLengthRatio,
+                validationErrors,
             )
 
-            DetectionAreaInput(ignoredLeft, ignoredTop, ignoredRight, ignoredBottom)
+            DetectionAreaInput(
+                ignoredLeft,
+                ignoredTop,
+                ignoredRight,
+                ignoredBottom,
+                validationErrors,
+            )
 
             ConfirmButton(onClick = onApplyChanges)
 
@@ -370,6 +379,7 @@ private fun CameraPoseInput(
     rotationY: TextFieldState,
     rotationZ: TextFieldState,
     focalLengthRatio: TextFieldState,
+    validationErrors: Map<ConfigField, String>,
 ) {
     Card(
         modifier = Modifier
@@ -382,15 +392,19 @@ private fun CameraPoseInput(
         ) {
             Text("Camera Pose", fontSize = 24.sp)
             Text("Location")
-            PositionField("x", x)
-            PositionField("y", y)
-            PositionField("z", z)
+            PositionField("x", x, validationErrors[ConfigField.LOCATION_X])
+            PositionField("y", y, validationErrors[ConfigField.LOCATION_Y])
+            PositionField("z", z, validationErrors[ConfigField.LOCATION_Z])
             Text("Rotation (degrees)")
-            PositionField("roll (x)", rotationX)
-            PositionField("pitch (y)", rotationY)
-            PositionField("yaw (z)", rotationZ)
+            PositionField("roll (x)", rotationX, validationErrors[ConfigField.ROTATION_X_DEGREES])
+            PositionField("pitch (y)", rotationY, validationErrors[ConfigField.ROTATION_Y_DEGREES])
+            PositionField("yaw (z)", rotationZ, validationErrors[ConfigField.ROTATION_Z_DEGREES])
             Text("Focal length / image width (0: auto)")
-            PositionField("focal length ratio", focalLengthRatio)
+            PositionField(
+                "focal length ratio",
+                focalLengthRatio,
+                validationErrors[ConfigField.FOCAL_LENGTH_RATIO],
+            )
         }
     }
 }
@@ -404,6 +418,7 @@ private fun DetectionAreaInput(
     top: TextFieldState,
     right: TextFieldState,
     bottom: TextFieldState,
+    validationErrors: Map<ConfigField, String>,
 ) {
     Card(
         modifier = Modifier
@@ -416,10 +431,10 @@ private fun DetectionAreaInput(
         ) {
             Text("Detection Area", fontSize = 24.sp)
             Text("Ignored width from each edge of the preview (%)")
-            PositionField("left", left)
-            PositionField("top", top)
-            PositionField("right", right)
-            PositionField("bottom", bottom)
+            PositionField("left", left, validationErrors[ConfigField.IGNORED_LEFT_PERCENT])
+            PositionField("top", top, validationErrors[ConfigField.IGNORED_TOP_PERCENT])
+            PositionField("right", right, validationErrors[ConfigField.IGNORED_RIGHT_PERCENT])
+            PositionField("bottom", bottom, validationErrors[ConfigField.IGNORED_BOTTOM_PERCENT])
         }
     }
 }
@@ -427,10 +442,12 @@ private fun DetectionAreaInput(
 private val DECIMAL_PATTERN = Regex("-?[0-9]*([.][0-9]*)?")
 
 @Composable
-private fun PositionField(text: String, textState: TextFieldState) {
+private fun PositionField(text: String, textState: TextFieldState, error: String? = null) {
     TextField(
         textState,
         label = { Text(text) },
+        isError = error != null,
+        supportingText = error?.let { message -> { Text(message) } },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Decimal,
             imeAction = ImeAction.Next
@@ -541,6 +558,7 @@ private fun DummyConfigScreen(
         rotationX = rotationX,
         rotationY = rotationY,
         rotationZ = rotationZ,
+        validationErrors = emptyMap(),
         focalLengthRatio = focalLengthRatio,
         ignoredLeft = ignoredLeft,
         ignoredTop = ignoredTop,
