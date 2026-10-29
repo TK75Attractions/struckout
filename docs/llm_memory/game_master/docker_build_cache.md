@@ -100,3 +100,13 @@ GitHub Actions とローカル Docker の完成ビルドは実行していない
 root 所有で作られる。`base` ステージで `game_master/mise.toml` をコピーした時点で
 `/build/game_master` が root 所有になり、前回の修正だけでは不足していた。
 `cook` の直前に `/build` 以下を builder 所有に揃える。
+
+## Release #31 の digest push エラー
+
+[Release #31](https://github.com/TK75Attractions/struckout/actions/runs/40818989737) は
+arm64 ジョブの Docker ビルド後、GHCR への push で
+`can't push tagged ref ... by digest` と表示して失敗した。
+`push-by-digest=true` を指定した出力にバージョン付きの `tags` も渡していたため、
+digest と tag の二つの push 方式が衝突した。
+アーキテクチャ別のジョブは tag のないイメージ名で digest を push し、
+両方の digest を取得した後に `publish-game-master-image` がバージョンタグを付ける。

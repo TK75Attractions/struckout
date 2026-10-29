@@ -5,6 +5,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  GAME_MASTER_IMAGE: ghcr.io/tk75attractions/game-master
 
 concurrency:
   cancel-in-progress: true
@@ -307,7 +308,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/game-master
+          images: ${{ env.GAME_MASTER_IMAGE }}
           tags: type=raw,value=${{ needs.get-version.outputs.version }}
       - name: Build and push game-master image
         id: build
@@ -316,8 +317,7 @@ jobs:
           context: .
           file: ./game_master/docker/Dockerfile
           platforms: linux/${{ matrix.arch }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=image,name=${{ env.GAME_MASTER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=game-master-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=game-master-${{ matrix.arch }}
@@ -364,16 +364,17 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/game-master
+          images: ${{ env.GAME_MASTER_IMAGE }}
           tags: type=raw,value=${{ needs.get-version.outputs.version }}
       - name: Publish multi-platform game-master image
         working-directory: ${{ runner.temp }}/game-master-digests
         env:
+          IMAGE_NAME: ${{ env.GAME_MASTER_IMAGE }}
           IMAGE_TAG: ${{ steps.meta.outputs.tags }}
         run: |
           sources=()
           for digest in *; do
-            sources+=("${IMAGE_TAG}@sha256:${digest}")
+            sources+=("${IMAGE_NAME}@sha256:${digest}")
           done
           docker buildx imagetools create --tag "$IMAGE_TAG" "${sources[@]}"
           docker buildx imagetools inspect "$IMAGE_TAG"
