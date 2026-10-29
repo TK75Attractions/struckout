@@ -9,6 +9,35 @@ namespace Struckout.Tests.Tests.EditMode
     public class RankingResultsTests
     {
         [Test]
+        public void Equal_scores_share_competition_ranks_and_skip_the_following_place()
+        {
+            var ranking = new[] { 100u, 90u, 90u, 80u }.Select((score, i) =>
+                new RankingEntry(new GameId((uint)i + 1), score, new PlayerId(7), "本人")).Reverse().ToArray();
+            var rows = RankingResults.Merge(ranking, ranking, new PlayerId(7), new GameId(3));
+            Assert.That(rows.Select(row => row.Rank), Is.EqualTo(new uint?[] { 1, 2, 2, 4 }));
+            Assert.That(RankingResults.GetRank(ranking, new GameId(3)), Is.EqualTo(2));
+            Assert.That(RankingResults.GetRank(ranking, new GameId(99)), Is.Null);
+        }
+
+        [Test]
+        public void Only_the_first_ten_merged_rows_have_known_ranks_even_with_ties_at_the_boundary()
+        {
+            var ranking = Enumerable.Range(1, 10).Select(i =>
+                new RankingEntry(new GameId((uint)i), (uint)(100 - i), new PlayerId(8), "別の人")).ToArray();
+            var history = new[]
+            {
+                ranking[0],
+                new RankingEntry(new GameId(11), 90, new PlayerId(7), "本人"),
+                new RankingEntry(new GameId(12), 50, new PlayerId(7), "本人"),
+            };
+            var rows = RankingResults.Merge(ranking, history, new PlayerId(7), new GameId(11));
+            Assert.That(rows.Take(10).Select(row => row.Rank), Is.EqualTo(Enumerable.Range(1, 10)));
+            Assert.That(rows.Skip(10).Select(row => row.Rank), Is.EqualTo(new uint?[] { null, null }));
+            Assert.That(RankingResults.GetRank(ranking.Concat(history).ToArray(), new GameId(11)), Is.Null);
+            Assert.That(RankingResults.GetRank(Array.Empty<RankingEntry>(), new GameId(1)), Is.Null);
+        }
+
+        [Test]
         public void Merges_by_game_id_sorts_scores_and_keeps_personal_games_outside_the_top_list()
         {
             var player = new PlayerId(7);
