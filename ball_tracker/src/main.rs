@@ -144,11 +144,15 @@ enum DetectionInputImpl {
 }
 
 impl DetectionInput for DetectionInputImpl {
-    async fn start(self, tx: mpsc::Sender<CameraFrame>) -> std::io::Result<()> {
+    async fn start(
+        self,
+        tx: mpsc::Sender<CameraFrame>,
+        shutdown: tokio_util::sync::CancellationToken,
+    ) -> std::io::Result<()> {
         match self {
-            DetectionInputImpl::Network(input) => input.start(tx).await,
+            DetectionInputImpl::Network(input) => input.start(tx, shutdown).await,
             #[cfg(feature = "input-sqlite")]
-            DetectionInputImpl::Sqlite(input) => input.start(tx).await,
+            DetectionInputImpl::Sqlite(input) => input.start(tx, shutdown).await,
         }
     }
 }
@@ -292,7 +296,23 @@ fn main() {
         .build()
         .unwrap()
         .block_on(async {
-            let fut = run_main();
+            #[cfg(unix)]
+            let mut terminate = tokio::signal::unix::signal(
+                tokio::signal::unix::SignalKind::terminate(),
+            )
+            .expect("SIGTERM handler should be installed");
+            let shutdown_signal = async move {
+                #[cfg(unix)]
+                tokio::select! {
+                    result = tokio::signal::ctrl_c() => result.expect("Ctrl-C handler should be installed"),
+                    _ = terminate.recv() => {}
+                }
+                #[cfg(not(unix))]
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("Ctrl-C handler should be installed");
+            };
+            let fut = run_main(shutdown_signal);
             #[cfg(feature = "sentry")]
             let fut = {
                 use sentry::SentryFutureExt;
@@ -302,10 +322,12 @@ fn main() {
         });
 }
 
-async fn run_main() {
+async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send) {
+    let shutdown = tokio_util::sync::CancellationToken::new();
     let config = load_config();
 
-    let health_reporter = health::start().await;
+    let health_server = health::start(shutdown.clone()).await;
+    let health_reporter = health_server.as_ref().map(|(reporter, _)| reporter);
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = config.cameras.as_ref().map(|path| {
@@ -374,7 +396,20 @@ async fn run_main() {
             .set_service_status("", tonic_health::ServingStatus::Serving)
             .await;
     }
-    app.run().await.unwrap();
+    let run = app.run(shutdown.clone());
+    tokio::pin!(run);
+    tokio::select! {
+        result = &mut run => result.unwrap(),
+        _ = shutdown_signal => {
+            tracing::info!("received shutdown signal; stopping the application");
+            shutdown.cancel();
+            run.await.unwrap();
+        }
+    }
+    shutdown.cancel();
+    if let Some((_, server)) = health_server {
+        server.await.expect("health server exits after shutdown");
+    }
 }
 
 /// 設定ファイルを読み、コマンドライン引数で上書きする。誤りがあれば、理由を出して終える

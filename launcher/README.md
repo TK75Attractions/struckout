@@ -100,7 +100,7 @@ flowchart LR
 
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
 
-「すべて止める」かウィンドウを閉じると、起動したものを逆の順に止める。Windows の ball_tracker はウィンドウを持たない
+「すべて止める」かウィンドウを閉じると、依存されるモジュールを先に止める。依存関係のないモジュールは並行して止める。Windows の ball_tracker はウィンドウを持たない
 ので、10 秒待ってから強制終了する。
 
 ログは `<モジュールの置き場所>/logs/<日付>/<モジュール>_<時分秒>.log`。

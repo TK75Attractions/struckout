@@ -1,3 +1,11 @@
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+};
+
 use touchpanel::run_main;
 use tracing::Level;
 use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
@@ -33,6 +41,47 @@ fn main() -> std::process::ExitCode {
     #[cfg(feature = "sentry")]
     tracing::info!("initialized tracing with sentry layer");
 
-    run_main();
+    let shutdown_requested = Arc::new(AtomicBool::new(false));
+    let signal_shutdown = Arc::clone(&shutdown_requested);
+    let (done_tx, done_rx) = tokio::sync::oneshot::channel();
+    let signal_thread = thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("signal runtime should be created");
+        runtime.block_on(async move {
+            tokio::select! {
+                _ = shutdown_signal() => signal_shutdown.store(true, Ordering::Release),
+                _ = done_rx => {}
+            }
+        });
+    });
+
+    run_main(shutdown_requested);
+    let _ = done_tx.send(());
+    if signal_thread.join().is_err() {
+        eprintln!("終了シグナルの待機スレッドが異常終了しました");
+        return std::process::ExitCode::FAILURE;
+    }
+
     std::process::ExitCode::SUCCESS
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::SignalKind;
+
+        let mut terminate = tokio::signal::unix::signal(SignalKind::terminate())
+            .expect("SIGTERM handler should be installed");
+        tokio::select! {
+            result = tokio::signal::ctrl_c() => result.expect("Ctrl-C handler should be installed"),
+            _ = terminate.recv() => {}
+        }
+    }
+
+    #[cfg(not(unix))]
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Ctrl-C handler should be installed");
 }

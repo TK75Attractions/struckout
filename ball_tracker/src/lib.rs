@@ -2,13 +2,14 @@
 use std::{collections::HashMap, marker::Send, sync::Arc};
 
 use parking_lot::RwLock;
-use struckout_proto::CameraPose;
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     collision_output::CollisionOutput, detection_input::DetectionInput, tracking::TrackRunner,
     types::CameraId,
 };
+use struckout_proto::CameraPose;
 
 pub mod camera_config;
 pub mod clock_sync;
@@ -53,12 +54,15 @@ where
         }
     }
 
-    pub async fn run(self) -> anyhow::Result<()> {
+    pub async fn run(self, shutdown: CancellationToken) -> anyhow::Result<()> {
         let (frame_tx, frame_rx) = mpsc::channel(FRAME_CHANNEL_BUF);
         let (collision_tx, collision_rx) = mpsc::channel(COLLISION_CHANNEL_BUF);
 
         let join1 = tokio::spawn(async move {
-            self.detection_input.start(frame_tx).await.unwrap();
+            self.detection_input
+                .start(frame_tx, shutdown)
+                .await
+                .unwrap();
         });
         let join2 = tokio::spawn(async move {
             self.track_runner

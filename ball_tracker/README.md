@@ -37,6 +37,9 @@ reflection には対応していないので、grpcurl で確かめるときは 
 grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto health.proto localhost:5080 grpc.health.v1.Health/Check
 ```
 
+SIGTERM または Ctrl-C を受けると、新しい接続を止めてから受信中のフレームを処理し、CSV と動画の記録を閉じて終了する。
+動画記録の終了時は、受け付け済みのデータが書き終わるまで待つ。
+
 ## アルゴリズムの説明
 ### フレームの時刻をそろえる
 カメラの時計は PC とも互いにも合っておらず、進み方も少し違う (実機で 2 台の差が 1.4 秒、1 分に 3ms ずつ変化)。
