@@ -12,13 +12,9 @@ export component RankingControlScreen {
         cross-axis-alignment: center;
         spacing: 32px;
         padding: 32px;
-        Text {
-            text: "プロジェクターでランキングを表示中";
-            font-size: 28px;
-        }
 
         TwoColorOutlinedButton {
-            text: "ホームに戻る";
+            text: "ホーム画面へ";
             font-size: 28px;
             enabled: !Adopter.busy;
             clicked => { Adopter.move-to-start-screen(); }

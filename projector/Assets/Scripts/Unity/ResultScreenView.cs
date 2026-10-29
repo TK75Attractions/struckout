@@ -13,7 +13,6 @@ namespace Struckout.Unity
         private readonly Text _title;
         private readonly Text _message;
         private readonly Text _score;
-        private readonly Text _description;
         private readonly RectTransform _content;
         private readonly Font _textFont;
         private readonly Font _numberFont;
@@ -34,8 +33,6 @@ namespace Struckout.Unity
             var accent = new GameObject("Accent", typeof(RectTransform), typeof(Image));
             Place(accent.GetComponent<RectTransform>(), rect, 80, 145, 1760, 3);
             accent.GetComponent<Image>().color = Cyan;
-            _description = Label("Description", rect, 80, 160, 1760, 55, 26);
-            _description.color = new Color(0.75f, 0.8f, 0.85f);
             _message = Label("Status", rect, 80, 450, 1760, 120, 38);
             _message.alignment = TextAnchor.MiddleCenter;
             _score = Label("ResultScore", rect, 80, 330, 1760, 300, 180, numberFont);
@@ -52,7 +49,6 @@ namespace Struckout.Unity
         {
             _root.SetActive(screen == ProjectorScreen.Score || screen == ProjectorScreen.Ranking);
             _title.text = screen == ProjectorScreen.Score ? "今回の結果" : "ランキング";
-            _description.text = screen == ProjectorScreen.Score ? "今回の得点" : $"上位{RankingResults.TopItemCount}件とあなたの履歴を統合し、得点上位{RankingResults.DisplayItemCount}件を表示しています";
             _score.gameObject.SetActive(false);
             _content.gameObject.SetActive(false);
             _message.text = "";
