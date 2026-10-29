@@ -701,6 +701,7 @@ async fn game_timer(
     complete_tx: mpsc::Sender<()>,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(1));
+    interval.tick().await;
     let duration_secs = GAME_DURATION.whole_seconds();
     for i in 0..duration_secs {
         trace!(secs_elapsed = i, "timer tick");

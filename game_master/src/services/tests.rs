@@ -336,6 +336,64 @@ async fn event_stream_notifies_in_correct_order() {
     assert_matches!(finished, EventData::GameFinished(_));
 }
 
+#[tokio::test(start_paused = true)]
+async fn game_timer_notifies_once_per_second_and_completes_after_90_seconds() {
+    let (event_tx, _) = broadcast::channel(32);
+    let mut events = event_tx.subscribe();
+    let (complete_tx, mut complete_rx) = mpsc::channel(1);
+    let timer = tokio::spawn(game_timer(
+        EventTarget::Single(MachineId::new(1)),
+        event_tx,
+        complete_tx,
+    ));
+
+    tokio::task::yield_now().await;
+    assert_eq!(next_remaining_time(&mut events), 90);
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+    assert_matches!(
+        complete_rx.try_recv(),
+        Err(mpsc::error::TryRecvError::Empty)
+    );
+
+    // Advance one second at a time: a single 88-second advance would fire the missed ticks in a burst and
+    // overflow the broadcast channel.
+    for remaining in (1..=89).rev() {
+        tokio::time::advance(Duration::from_secs(1)).await;
+        tokio::task::yield_now().await;
+        assert_eq!(next_remaining_time(&mut events), remaining);
+        assert_matches!(
+            events.try_recv(),
+            Err(broadcast::error::TryRecvError::Empty)
+        );
+        assert_matches!(
+            complete_rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        );
+    }
+
+    tokio::time::advance(Duration::from_secs(1)).await;
+    timer.await.expect("timer completes");
+    complete_rx
+        .recv()
+        .await
+        .expect("game completes at 90 seconds");
+}
+
+fn next_remaining_time(events: &mut broadcast::Receiver<Event>) -> i64 {
+    let event = events
+        .try_recv()
+        .expect("remaining-time event is available");
+    let SuccessfulEvent::GameTimeLimitNotify { remaining } =
+        event.data.expect("timer event succeeds")
+    else {
+        panic!("expected remaining-time event");
+    };
+    remaining.whole_seconds()
+}
+
 fn target_request(machine_id: u32) -> AddTargetRequest {
     use struckout_proto::{add_target_request::TargetData, target::Compass};
     AddTargetRequest {
