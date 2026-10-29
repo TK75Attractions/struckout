@@ -1,9 +1,12 @@
 import { TwoColorOutlinedButton } from "../components/button.slint";
 
+enum MultiPlayAvailability { Enabled, Disabled }
+
 global Adopter {
     in property <bool> busy;
     in property <bool> back-enabled;
     in property <string> error-msg;
+    in property <MultiPlayAvailability> multiplay-availability;
     callback select-single();
     callback select-multi();
 }
@@ -26,7 +29,7 @@ export component ModeSelectScreen {
             clicked => { Adopter.select-single(); }
         }
 
-        TwoColorOutlinedButton {
+        if Adopter.multiplay-availability == MultiPlayAvailability.Enabled: TwoColorOutlinedButton {
             text: "2人で協力プレイ";
             font-size: 32px;
             enabled: !Adopter.busy;
