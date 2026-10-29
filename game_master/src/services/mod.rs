@@ -183,7 +183,8 @@ where
     ///
     /// Returns `InvalidArgument` for unspecified or unknown modes and
     /// `FailedPrecondition` for a missing session or an invalid session state.
-    /// Errors leave session state unchanged. This operation emits no events.
+    /// Errors leave session state unchanged. When multi-play inherits a difficulty,
+    /// emits `SessionDifficultyChanged` only to the requesting machine to sync its UI.
     #[instrument]
     async fn set_game_mode(
         &self,
@@ -195,13 +196,26 @@ where
             .map_err(|e| Status::invalid_argument(format!("GameMode is out of range: {e}")))?;
         let machine_id: MachineId = machine_id.into();
 
-        self.sessions
+        let difficulty = self
+            .sessions
             .write()
             .set_game_mode(machine_id, mode)
             .map_err(|e| match e {
                 SessionError::UnspecifiedGameMode => Status::invalid_argument(e.to_string()),
                 _ => Status::failed_precondition(e.to_string()),
             })?;
+
+        if let Some(difficulty) = difficulty
+            && self
+                .event_tx
+                .send(Event {
+                    target: EventTarget::Single(machine_id),
+                    data: Ok(SuccessfulEvent::SessionDifficultyChanged(difficulty)),
+                })
+                .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
 
         Ok(Response::new(SetGameModeResponse {}))
     }

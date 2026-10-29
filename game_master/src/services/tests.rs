@@ -196,6 +196,86 @@ async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMo
 }
 
 #[rstest]
+#[case::configuring(GameMode::Multi, Some(Difficulty::Hard), false)]
+#[case::ready(GameMode::Multi, Some(Difficulty::Hard), true)]
+#[case::unset(GameMode::Multi, None, false)]
+#[case::single(GameMode::Single, Some(Difficulty::Hard), false)]
+#[tokio::test(start_paused = true)]
+async fn set_game_mode_notifies_only_the_machine_inheriting_difficulty(
+    #[case] mode: GameMode,
+    #[case] partner_difficulty: Option<Difficulty>,
+    #[case] ready: bool,
+) {
+    let first_id = MachineId::new(1);
+    let second_id = MachineId::new(2);
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        player_id: PlayerId::new(1),
+    });
+    {
+        let mut sessions = service.sessions.write();
+        sessions.insert(first_id, PlayerId::new(1)).expect("first");
+        sessions
+            .insert(second_id, PlayerId::new(2))
+            .expect("second");
+        sessions
+            .set_game_mode(first_id, GameMode::Multi)
+            .expect("partner mode");
+        if let Some(difficulty) = partner_difficulty {
+            sessions
+                .update_difficulty(first_id, difficulty)
+                .expect("partner difficulty");
+        }
+        if ready {
+            sessions.set_ready(first_id).expect("partner ready");
+        }
+    }
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("partner stream")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("requester stream")
+        .into_inner();
+    let mut events = service.event_tx.subscribe();
+
+    service
+        .set_game_mode(Request::new(SetGameModeRequest {
+            machine_id: 2,
+            mode: mode.into(),
+        }))
+        .await
+        .expect("select mode");
+
+    if mode.is_multi()
+        && let Some(difficulty) = partner_difficulty
+    {
+        let event = events.try_recv().expect("inherited difficulty event");
+        assert_matches!(event.target, EventTarget::Single(id) if id == second_id);
+        assert_matches!(event.data, Ok(SuccessfulEvent::SessionDifficultyChanged(actual)) if actual == difficulty);
+        let EventData::SessionDifficultyChanged(changed) =
+            assert_event!(second, EventData::SessionDifficultyChanged(_))
+        else {
+            unreachable!()
+        };
+        assert_eq!(changed.difficulty, i32::from(difficulty));
+    }
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+    for stream in [&mut first, &mut second] {
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), stream.next())
+                .await
+                .is_err()
+        );
+    }
+}
+
+#[rstest]
 #[case(GameMode::Unspecified.into())]
 #[case(-1)]
 #[case(i32::MAX)]
