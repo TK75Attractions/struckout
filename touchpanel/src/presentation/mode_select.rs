@@ -20,15 +20,20 @@ struct ModeSelectViewModel {
 
 impl ModeSelectViewModel {
     fn new(application: &Application) -> Self {
+        let state = ModeSelectStates::new(
+            application
+                .ui
+                .global::<touchpanel_ui::ModeSelectAdopter>()
+                .as_weak(),
+        );
+        state
+            .multiplay_availability
+            .set(application.config.multiplay_availability);
+
         Self {
             worker: application.worker.clone(),
             nav_controller: application.nav_controller.clone(),
-            state: ModeSelectStates::new(
-                application
-                    .ui
-                    .global::<touchpanel_ui::ModeSelectAdopter>()
-                    .as_weak(),
-            ),
+            state,
             player_id: None,
         }
     }
@@ -103,5 +108,41 @@ impl NavDestination<NavRoute> for ModeSelectDestination {
     }
     fn route(&self) -> NavRouteKind {
         NavRouteKind::ModeSelect
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use stern::{WorkerThread, nav::NavController};
+
+    use super::*;
+
+    #[test]
+    fn viewmodel_passes_multiplay_availability_to_slint() {
+        i_slint_backend_testing::init_no_event_loop();
+        let ui = touchpanel_ui::AppWindow::new().unwrap();
+        let nav_controller = NavController::new(NavRoute::Connecting, {
+            let ui = ui.as_weak();
+            move |route| ui.unwrap().set_nav_route(route)
+        });
+        let application = Application {
+            nav_controller,
+            ui,
+            worker: WorkerThread::new(Context::new_empty()),
+            config: Arc::new(crate::Config {
+                server_addr: "127.0.0.1".to_string(),
+                machine_id: 1,
+                multiplay_availability: touchpanel_ui::MultiPlayAvailability::Disabled,
+            }),
+        };
+
+        let viewmodel = ModeSelectViewModel::new(&application);
+
+        assert_eq!(
+            viewmodel.state.multiplay_availability.get(),
+            touchpanel_ui::MultiPlayAvailability::Disabled
+        );
     }
 }

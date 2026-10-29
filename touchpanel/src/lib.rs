@@ -61,6 +61,8 @@ struct Cli {
     server_addr: String,
     #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
     machine_id: u32,
+    #[arg(long, help = "skip mode selection and start a single-player session")]
+    disable_multiplay: bool,
 }
 
 pub fn version() -> String {
@@ -88,6 +90,8 @@ struct Config {
     server_addr: String,
     /// The id of this machine.
     machine_id: u32,
+    /// Whether the mode selection screen is available.
+    multiplay_availability: touchpanel_ui::MultiPlayAvailability,
 }
 
 impl Config {
@@ -96,6 +100,11 @@ impl Config {
         Self {
             server_addr: cli.server_addr,
             machine_id: cli.machine_id,
+            multiplay_availability: if cli.disable_multiplay {
+                touchpanel_ui::MultiPlayAvailability::Disabled
+            } else {
+                touchpanel_ui::MultiPlayAvailability::Enabled
+            },
         }
     }
 }
@@ -106,6 +115,9 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) {
     let config = Arc::new(Config::from_cli(cli));
 
     let ui = touchpanel_ui::AppWindow::new().unwrap();
+    ui.set_mode_selection_enabled(
+        config.multiplay_availability == touchpanel_ui::MultiPlayAvailability::Enabled,
+    );
 
     let nav_controller = NavController::new(NavRoute::Connecting, {
         let ui = ui.as_weak();
@@ -149,4 +161,34 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) {
         },
     );
     application.ui.run().unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn multiplay_is_enabled_by_default_and_can_be_disabled() {
+        let default_cli =
+            Cli::try_parse_from(["touchpanel", "--address", "127.0.0.1", "--machine-id", "1"])
+                .unwrap();
+        assert_eq!(
+            Config::from_cli(default_cli).multiplay_availability,
+            touchpanel_ui::MultiPlayAvailability::Enabled
+        );
+
+        let disabled_cli = Cli::try_parse_from([
+            "touchpanel",
+            "--address",
+            "127.0.0.1",
+            "--machine-id",
+            "1",
+            "--disable-multiplay",
+        ])
+        .unwrap();
+        assert_eq!(
+            Config::from_cli(disabled_cli).multiplay_availability,
+            touchpanel_ui::MultiPlayAvailability::Disabled
+        );
+    }
 }
