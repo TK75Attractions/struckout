@@ -22,6 +22,8 @@ pub enum SuccessfulEvent {
     GameTimeLimitNotify { remaining: time::SignedDuration },
     /// [`struckout_proto::event::GameScoreChanged`]
     GameScoreChanged { total_score: u32 },
+    /// [`struckout_proto::event::ComboChanged`]
+    ComboChanged { combo: u32 },
     /// [`struckout_proto::event::GameFinished`]
     GameFinished { game_id: GameId },
     /// [`struckout_proto::event::TargetAdded`]
@@ -69,6 +71,9 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
             }),
             SuccessfulEvent::GameScoreChanged { total_score } => {
                 EventData::GameScoreChanged(GameScoreChanged { total_score })
+            }
+            SuccessfulEvent::ComboChanged { combo } => {
+                EventData::ComboChanged(ComboChanged { combo })
             }
             SuccessfulEvent::GameTimeLimitNotify { remaining } => {
                 EventData::GameTimeLimitNotify(GameTimeLimitNotify {

@@ -1464,11 +1464,15 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
                 .expect("hit watch");
             let score = events.try_recv().expect("score event");
             assert_matches!(score.data, Ok(SuccessfulEvent::GameScoreChanged { total_score })
-                if total_score == (index as u32 * 2 + hit + 1) * 500);
+                if total_score == (index as u32 * 2 + hit + 1) * 500
+                    + if index as u32 * 2 + hit + 1 >= 3 { 500 } else { 0 });
             match score.target {
                 EventTarget::All => assert!(mode.is_multi()),
                 EventTarget::Single(id) => assert_eq!(id, machine_id),
             }
+            let combo = events.try_recv().expect("combo event");
+            assert_matches!(combo.data, Ok(SuccessfulEvent::ComboChanged { combo })
+                if combo == index as u32 * 2 + hit + 1);
             let removed = events.try_recv().expect("remove event");
             assert_matches!(removed.target, EventTarget::Single(id) if id == machine_id);
             assert_matches!(removed.data, Ok(SuccessfulEvent::TargetRemoved { target_id: id }) if id == target_id);
@@ -1840,4 +1844,145 @@ async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() 
         );
     }
     assert!(service.sessions.read().get(MachineId::new(1)).is_none());
+}
+
+#[rstest]
+#[case::single(GameMode::Single)]
+#[case::multi(GameMode::Multi)]
+#[tokio::test]
+async fn combo_events_bonuses_reset_and_saved_result(#[case] mode: GameMode) {
+    let ds = RecordingDataSource::default();
+    let service = running_recorded_service(mode, ds.clone());
+    let target_id = service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .expect("register target")
+        .into_inner()
+        .target_id;
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("first listener")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("second listener")
+        .into_inner();
+    service
+        .reset_combo(Request::new(ResetComboRequest { machine_id: 1 }))
+        .await
+        .expect("initial zero combo");
+    let mut total = 123;
+    for combo in 1..=6 {
+        let machine_id = if mode.is_multi() && combo % 2 == 0 {
+            2
+        } else {
+            1
+        };
+        service
+            .hit_target(Request::new(HitTargetRequest {
+                machine_id,
+                target_id: target_id.clone(),
+            }))
+            .await
+            .expect("hit target");
+        total += 100_000
+            + match combo {
+                3 => 500,
+                5 => 800,
+                _ => 0,
+            };
+        let score = assert_event!(first, EventData::GameScoreChanged(_));
+        assert_matches!(score, EventData::GameScoreChanged(event) if event.total_score == total);
+        let changed = assert_event!(first, EventData::ComboChanged(_));
+        assert_matches!(changed, EventData::ComboChanged(event) if event.combo == combo);
+        if mode.is_multi() {
+            assert_event!(second, EventData::GameScoreChanged(_));
+            let changed = assert_event!(second, EventData::ComboChanged(_));
+            assert_matches!(changed, EventData::ComboChanged(event) if event.combo == combo);
+        }
+    }
+    service
+        .reset_combo(Request::new(ResetComboRequest { machine_id: 1 }))
+        .await
+        .expect("reset combo");
+    let changed = assert_event!(first, EventData::ComboChanged(_));
+    assert_matches!(changed, EventData::ComboChanged(event) if event.combo == 0);
+    if mode.is_multi() {
+        assert_event!(second, EventData::ComboChanged(_));
+    }
+    service
+        .reset_combo(Request::new(ResetComboRequest { machine_id: 1 }))
+        .await
+        .expect("already zero");
+    service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id,
+        }))
+        .await
+        .expect("first hit after reset");
+    total += 100_000;
+    assert_event!(first, EventData::GameScoreChanged(_));
+    let changed = assert_event!(first, EventData::ComboChanged(_));
+    assert_matches!(changed, EventData::ComboChanged(event) if event.combo == 1);
+    if mode.is_multi() {
+        assert_event!(second, EventData::GameScoreChanged(_));
+        assert_event!(second, EventData::ComboChanged(_));
+    } else {
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), second.next())
+                .await
+                .is_err()
+        );
+    }
+    let target = if mode.is_multi() {
+        EventTarget::All
+    } else {
+        EventTarget::Single(MachineId::new(1))
+    };
+    complete_game(&service, target).await;
+    assert_eq!(ds.saved.lock()[0].score, total);
+    assert_eq!(
+        service
+            .get_game_result(Request::new(GetGameResultRequest { game_id: 42 }))
+            .await
+            .expect("persisted result")
+            .into_inner()
+            .total_score,
+        total
+    );
+}
+
+#[rstest]
+#[case::unknown(99, false)]
+#[case::not_running(1, true)]
+#[tokio::test]
+async fn reset_combo_rejects_invalid_machine_or_state(
+    #[case] machine_id: u32,
+    #[case] configure: bool,
+) {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        player_id: PlayerId::new(1),
+    });
+    if configure {
+        service
+            .start_session(Request::new(StartSessionRequest {
+                machine_id,
+                player_id: 1,
+            }))
+            .await
+            .expect("new session");
+    }
+    let mut events = service.event_tx.subscribe();
+    let error = service
+        .reset_combo(Request::new(ResetComboRequest { machine_id }))
+        .await
+        .expect_err("machine is not playing");
+    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
 }
