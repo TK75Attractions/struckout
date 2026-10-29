@@ -67,7 +67,7 @@ i-slint-backend-testing = { git = "https://github.com/Tk75Attractions/slint" }
 i-slint-compiler = { git = "https://github.com/Tk75Attractions/slint" }
 i-slint-core = { git = "https://github.com/Tk75Attractions/slint" }
 # slint
-slint = { git = "https://github.com/Tk75Attractions/slint" }
+slint = { git = "https://github.com/Tk75Attractions/slint", features = ["unstable-winit-030"] }
 slint-build = { git = "https://github.com/Tk75Attractions/slint" }
 stern = { git = "https://github.com/Tk75Attractions/stern" }
 
