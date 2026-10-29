@@ -44,7 +44,7 @@ from pathlib import Path
 
 from camera_remote import CameraRemote
 from struckout_common import (ROOT, SCRIPTS, Failure, exe, fail, find_ffmpeg, free_gb, load_json, local_ipv4,
-                              note, ok, on_battery, report_failure, setup_console, step, tracker_data_dir, warn)
+                              note, ok, on_battery, report_failure, server_port, setup_console, step, tracker_data_dir, warn)
 
 # 動画は 2 台で 1 時間に約 45 GB (2026-10-16 の実測: 8.5 分で 6.4 GB)
 VIDEO_GB_PER_HOUR = 45
@@ -220,12 +220,13 @@ def precheck(record_video: bool):
 
 def prepare_phones(remote: CameraRemote) -> None:
     step("スマホのアプリを止め、adb reverse を張り、設定を入れる")
+    ports = [server_port("ball-tracker", endpoint) for endpoint in ("camera-ctrl", "camera-data", "camera-video")]
     for camera in remote.cameras:
         remote.stop_one(camera)
-        for port in (6060, 5050, 5052):
+        for port in ports:
             subprocess.run([remote.adb, "-s", camera["serial"], "reverse", f"tcp:{port}", f"tcp:{port}"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        ok(f"{camera['name']}: 6060、5050、5052")
+        ok(f"{camera['name']}: {'、'.join(map(str, ports))}")
     # 端末の識別子 (device_id) も cameras.json に記録される。ball_tracker はこれで端末を見分ける
     for line in remote.set_config():
         print(f"  {line}")

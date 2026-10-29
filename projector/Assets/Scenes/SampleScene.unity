@@ -756,9 +756,9 @@ MonoBehaviour:
   _networkSettings:
     Mode: 0
     TrackerHost: 127.0.0.1
-    TrackerPort: 5000
+    TrackerPort: 0
     MasterHost: 127.0.0.1
-    MasterPort: 8020
+    MasterPort: 0
     MachineId: 1
     ConnectAttempts: 5
   _collisionTransform:

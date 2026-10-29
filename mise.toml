@@ -48,6 +48,14 @@ run = "uv run --locked --project scripts/recording_analysis"
 raw_args = true
 description = "Run a recording-analysis Python script with locked dependencies"
 
+[tasks."ports:generate"]
+run = "python scripts/generate_server_ports.py"
+description = "Generate server-port constants from api/spec/servers.yaml"
+
+[tasks."ports:check"]
+run = "python scripts/generate_server_ports.py --check"
+description = "Check generated server-port constants against api/spec/servers.yaml"
+
 [tasks."patches:disable"]
 run = """
     if [ -f ./patches.toml ]; then

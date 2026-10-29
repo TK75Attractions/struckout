@@ -108,6 +108,6 @@ class DataConnectionImpl : DataConnection {
         /**
          * Send packet to port 5050
          */
-        const val REMOTE_PORT = 5050
+        const val REMOTE_PORT = ServerPorts.BALL_TRACKER_CAMERA_DATA
     }
 }
