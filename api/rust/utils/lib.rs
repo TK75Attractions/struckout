@@ -14,6 +14,8 @@ pub mod yaml {
         module_name: &str,
         server_name: &str,
     ) -> Result<u16, Box<dyn std::error::Error>> {
+        let file_path = file_path.as_ref();
+        println!("cargo::rerun-if-changed={}", file_path.display());
         let content = std::fs::read_to_string(file_path)?;
         let config: Config = serde_saphyr::from_str(&content)?;
         let server = config

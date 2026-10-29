@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Security;
 using Struckout.Domain;
 using Microsoft.Extensions.Logging;
@@ -56,16 +57,18 @@ namespace Struckout.Infrastructure
             var defaults = new NetworkSettings();
             if (string.IsNullOrWhiteSpace(settings.trackerHost)) settings.trackerHost = defaults.trackerHost;
             if (string.IsNullOrWhiteSpace(settings.masterHost)) settings.masterHost = defaults.masterHost;
-            if (settings.trackerPort <= 0) settings.trackerPort = defaults.trackerPort;
-            if (settings.masterPort <= 0) settings.masterPort = defaults.masterPort;
+            settings.trackerPort = ResolvePort(settings.trackerPort, ServerPorts.BallTrackerProjector, "trackerPort");
+            settings.masterPort = ResolvePort(settings.masterPort, ServerPorts.GameMasterGrpc, "masterPort");
 
             settings.mode = ResolveMode(commandLine, environment, settings.mode);
 
             settings.trackerHost = ResolveString(commandLine, environment, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.trackerHost);
-            settings.trackerPort = ResolveUShort(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.trackerPort);
+            settings.trackerPort = ResolvePort(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT",
+                settings.trackerPort, ServerPorts.BallTrackerProjector);
 
             settings.masterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.masterHost);
-            settings.masterPort = ResolveUShort(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.masterPort);
+            settings.masterPort = ResolvePort(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT",
+                settings.masterPort, ServerPorts.GameMasterGrpc);
 
             settings.machineId = Math.Max(
                 0,
@@ -114,7 +117,7 @@ namespace Struckout.Infrastructure
                 if (!args[i].StartsWith("-", StringComparison.Ordinal)) continue;
 
                 var value = args[i + 1];
-                if (value.StartsWith("-", StringComparison.Ordinal)) continue;
+                if (value.StartsWith("-", StringComparison.Ordinal) && !LooksLikeInteger(value)) continue;
 
                 result[args[i].TrimStart('-')] = value;
             }
@@ -140,16 +143,48 @@ namespace Struckout.Infrastructure
             => Lookup(commandLine, environment, argName, envName) ?? fallback;
 
 
-        private ushort ResolveUShort(IReadOnlyDictionary<string, string> commandLine,
-            Func<string, string> environment, string argName, string envName, ushort fallback)
+        private static int ResolvePort(int port, int defaultPort, string argName)
+            => ResolvePort((long)port, defaultPort, argName);
+
+        private static int ResolvePort(long port, int defaultPort, string argName)
+        {
+            if (port < 0 || port > 65535)
+            {
+                throw new ArgumentOutOfRangeException(argName, port, "ポート番号は0〜65535で指定してください。");
+            }
+            return port == 0 ? defaultPort : (int)port;
+        }
+
+        private int ResolvePort(
+            IReadOnlyDictionary<string, string> commandLine, Func<string, string> environment,
+            string argName, string envName, int fallback, int defaultPort)
         {
             var raw = Lookup(commandLine, environment, argName, envName);
-            if (raw is null) return fallback;
+            if (raw == null) return ResolvePort(fallback, defaultPort, argName);
 
-            if (ushort.TryParse(raw, out var value)) return value;
-            
+            if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port))
+            {
+                return ResolvePort(port, defaultPort, argName);
+            }
+            if (LooksLikeInteger(raw))
+            {
+                throw new ArgumentOutOfRangeException(argName, raw, "ポート番号は0〜65535で指定してください。");
+            }
+
             _logger.LogWarning("'{Value}' is not a valid value for {Argument}; falling back to {Fallback}", raw, argName, fallback);
-            return fallback;
+            return ResolvePort(fallback, defaultPort, argName);
+        }
+
+        private static bool LooksLikeInteger(string value)
+        {
+            var start = value.StartsWith("+", StringComparison.Ordinal)
+                || value.StartsWith("-", StringComparison.Ordinal) ? 1 : 0;
+            if (start == value.Length) return false;
+            for (var i = start; i < value.Length; i++)
+            {
+                if (value[i] < '0' || value[i] > '9') return false;
+            }
+            return true;
         }
 
         private uint ResolveUInt(IReadOnlyDictionary<string, string> commandLine,

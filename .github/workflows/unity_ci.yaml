@@ -10,7 +10,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
+            api/spec
+            game_master/docker/compose.yaml
+            mise.toml
+            mise.lock
             projector
+            scripts/generate_server_ports.py
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          install_args: python
+      - name: Check server ports
+        run: mise run //:ports:check
+        env:
+          MISE_TASK_RUN_AUTO_INSTALL: "false"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: projector/Library
@@ -34,7 +46,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
+            api/spec
+            game_master/docker/compose.yaml
+            mise.toml
+            mise.lock
             projector
+            scripts/generate_server_ports.py
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          install_args: python
+      - name: Check server ports
+        run: mise run //:ports:check
+        env:
+          MISE_TASK_RUN_AUTO_INSTALL: "false"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: projector/Library
