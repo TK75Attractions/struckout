@@ -9,8 +9,8 @@ updates:
     directory: "/scripts/recording_analysis"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "cargo" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "cargo"
+    directory: "/"
     schedule:
       interval: "weekly"
   - package-ecosystem: "gradle"
@@ -22,11 +22,11 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: docker
-    directory: "/game_master"
+    directory: "/game_master/docker"
     schedule:
       interval: weekly
   - package-ecosystem: docker-compose
-    directory: "/game_master"
+    directory: "/game_master/docker"
     schedule:
       interval: weekly
   - package-ecosystem: nuget
