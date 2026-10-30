@@ -40,7 +40,7 @@ projector は `HitTarget` で命中を通知する。
 
 1. `IUIService` に `SetRemainingTime(TimeSpan)` と `SetScore(uint)` を追加する。
 2. `UIService` に serialized `Canvas _hudCanvas` と `Font _displayFont` を用意し、シーンで既存 Canvas と Oxanium を割り当てる。
-3. Canvas 上の左右上部に legacy uGUI Text で時間・得点表示を作成し、盤面や文字の重なりを避ける。ラベルは Oxanium に含まれる英数字で構成する。新しい scene コンポーネントを増やす必要がなければ `UIService` 内で構築する。
+3. Canvas の中央上部に legacy uGUI Text で得点を大きく、その下に残り時間を表示し、盤面や文字の重なりを避ける。ラベルは Oxanium に含まれる英数字で構成する。新しい scene コンポーネントを増やす必要がなければ `UIService` 内で構築する。
 4. `SetGamePhase` で表示状態と初期値を管理し、受信値の表示 API を実装する。負の残り時間はゼロに丸め、時間の分数を 59 に制限しない。uint 得点を int に縮小しない。
 5. `CreateFinishedText` の TextMesh にもフォントとその material を割り当てる。
 6. フォントを Unity が正常にインポートし利用できることを確認する。変換が必要な場合も同じ Oxanium を使用し、別のフォントへの黙示的な差し替えはしない。
