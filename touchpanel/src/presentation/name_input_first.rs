@@ -133,9 +133,16 @@ where
 
     /// Cancels previous request to game-master.
     fn cancel_previous_request(&mut self) {
-        if let Some(tok) = &self.gm_cancel_tok {
+        if let Some(tok) = self.gm_cancel_tok.take() {
             tok.cancel();
         }
+    }
+
+    fn reset(&mut self) {
+        self.cancel_previous_request();
+        self.state.player_name_text.set("".into());
+        self.state.keyboard_mode.set(KeyBoardMode::Hiragana);
+        self.state.error_msg.set("".into());
     }
 
     #[instrument(skip(self), level = "debug")]
@@ -236,6 +243,7 @@ impl NavDestination<NavRoute> for NameInputFirstDestination {
         let NavRoute::NameInputFirst = route else {
             panic!("matched variant should be given");
         };
+        self.0.borrow_mut().reset();
     }
 
     fn route(&self) -> NavRouteKind {
@@ -382,5 +390,23 @@ mod tests {
             };
             Self { worker, vm }
         }
+    }
+
+    #[test]
+    fn reset_clears_previous_input() {
+        let mut test = NameInputScreenTest::new(MockPlayerRepository::new());
+        test.vm.state.player_name_text.set("previous".into());
+        test.vm.state.keyboard_mode.set(KeyBoardMode::Number);
+        test.vm.state.error_msg.set("error".into());
+        let request = CancellationToken::new();
+        test.vm.gm_cancel_tok = Some(request.clone());
+
+        test.vm.reset();
+
+        assert!(request.is_cancelled());
+        assert!(test.vm.gm_cancel_tok.is_none());
+        assert_eq!(test.vm.state.player_name_text.get_ref().as_str(), "");
+        assert_eq!(test.vm.state.keyboard_mode.get(), KeyBoardMode::Hiragana);
+        assert_eq!(test.vm.state.error_msg.get_ref().as_str(), "");
     }
 }

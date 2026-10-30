@@ -73,7 +73,7 @@ fn main() -> std::process::ExitCode {
     }
 
     if let Err(error) = result {
-        eprintln!("touchpanel を起動・実行できません: {error}");
+        eprintln!("起動できません: {error:#}");
         return std::process::ExitCode::FAILURE;
     }
 

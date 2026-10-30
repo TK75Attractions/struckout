@@ -50,6 +50,14 @@ impl NameInputNonFirstViewModel<Context, SlintExecutor> {
     }
 }
 
+impl<C, E> NameInputNonFirstViewModel<C, E> {
+    fn reset(&self) {
+        self.state.player_name_text.set("".into());
+        self.state.keyboard_mode.set(KeyBoardMode::Hiragana);
+        self.state.error_msg.set("".into());
+    }
+}
+
 trait GetPlayer {
     fn get_player(
         &self,
@@ -158,6 +166,7 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
         let NavRoute::NameInputNonFirst = route else {
             unreachable!();
         };
+        self.0.borrow().reset();
     }
 
     fn route(&self) -> NavRouteKind {
@@ -166,4 +175,36 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use std::{cell::RefCell, rc::Rc};
+
+    use stern::{WorkerThread, nav::NavController, worker::SmolExecutor};
+    use touchpanel_ui::UiNavRoute;
+
+    use super::*;
+
+    #[test]
+    fn reset_clears_previous_input() {
+        let route = Rc::new(RefCell::new(UiNavRoute::Start));
+        let nav_controller = NavController::new(NavRoute::Start, {
+            let route = Rc::clone(&route);
+            move |new| *route.borrow_mut() = new
+        });
+        let (state, _mock) = NameInputNonFirstStates::new_mocked();
+        let vm = NameInputNonFirstViewModel {
+            state,
+            nav_controller,
+            worker: WorkerThread::<Context, SmolExecutor>::new_smol(Context::new_empty()),
+            multiplay_availability: MultiPlayAvailability::Enabled,
+        };
+        vm.state.player_name_text.set("previous".into());
+        vm.state.keyboard_mode.set(KeyBoardMode::Number);
+        vm.state.error_msg.set("error".into());
+
+        vm.reset();
+
+        assert_eq!(vm.state.player_name_text.get_ref().as_str(), "");
+        assert_eq!(vm.state.keyboard_mode.get(), KeyBoardMode::Hiragana);
+        assert_eq!(vm.state.error_msg.get_ref().as_str(), "");
+    }
+}

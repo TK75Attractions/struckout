@@ -34,8 +34,10 @@ internal static class ProjectorFiles
         yield return data + "/globalgamemanagers";
         // ProjectSettings.asset sets scriptingBackend only for Android; Standalone uses the Mono default.
         // release.yaml's unity-build does not override it; ReleaseBuild.BuildWindowsArm64 also selects Mono2x.
+        // Every runtime script is in an asmdef, so Unity emits no Assembly-CSharp.dll. Struckout.Bootstrap holds
+        // RootBootstrap, the entry point that GameLifetimeScope in the build scene registers, so every player ships it.
         // Requiring the assembly also verifies its containing Data and Managed directories.
-        yield return data + "/Managed/Assembly-CSharp.dll";
+        yield return data + "/Managed/Struckout.Bootstrap.dll";
     }
 
     internal static async Task ExtractAsync(string archive, string extracting, OperatingSystemKind os, CancellationToken cancellationToken)
