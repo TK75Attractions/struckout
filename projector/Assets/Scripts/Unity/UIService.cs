@@ -180,10 +180,12 @@ namespace Struckout.Unity
             root.anchorMax = Vector2.one;
             root.offsetMin = root.offsetMax = Vector2.zero;
 
-            _scoreText = CreateHudLabel("Score", root, false, 800f);
-            _comboText = CreateHudLabel("Combo", root, false, 480f);
-            _comboText.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(48f, -156f);
-            _remainingTimeText = CreateHudLabel("RemainingTime", root, true, 480f);
+            _scoreText = CreateHudLabel("Score", root, new Vector2(0.5f, 1f),
+                new Vector2(0f, -36f), 800f, 64, TextAnchor.MiddleCenter);
+            _comboText = CreateHudLabel("Combo", root, new Vector2(0f, 1f),
+                new Vector2(48f, -156f), 480f, 48, TextAnchor.MiddleLeft);
+            _remainingTimeText = CreateHudLabel("RemainingTime", root, new Vector2(0.5f, 1f),
+                new Vector2(0f, -152f), 480f, 48, TextAnchor.MiddleCenter);
             SetScore(0);
             SetCombo(0);
             _remainingTimeText.text = "TIME  --:--";
@@ -209,13 +211,14 @@ namespace Struckout.Unity
             label.text = BuildInfo.Display;
         }
 
-        private Text CreateHudLabel(string objectName, RectTransform root, bool right, float width)
+        private Text CreateHudLabel(string objectName, RectTransform root, Vector2 anchor,
+            Vector2 position, float width, int fontSize, TextAnchor alignment)
         {
             var panel = new GameObject(objectName, typeof(RectTransform), typeof(Image));
             var rect = panel.GetComponent<RectTransform>();
             rect.SetParent(root, false);
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(right ? 1f : 0f, 1f);
-            rect.anchoredPosition = new Vector2(right ? -48f : 48f, -36f);
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.anchoredPosition = position;
             rect.sizeDelta = new Vector2(width, 104f);
             var background = panel.GetComponent<Image>();
             background.color = new Color(0.015f, 0.025f, 0.05f, 0.8f);
@@ -230,8 +233,8 @@ namespace Struckout.Unity
             labelRect.offsetMax = new Vector2(-24f, -8f);
             var label = go.GetComponent<Text>();
             label.font = displayFont;
-            label.fontSize = 48;
-            label.alignment = right ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+            label.fontSize = fontSize;
+            label.alignment = alignment;
             label.color = Color.white;
             label.supportRichText = false;
             label.raycastTarget = false;
