@@ -7,24 +7,31 @@ use std::{
 };
 
 use touchpanel::run_main;
-use tracing::Level;
-use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{
+    Layer,
+    filter::{LevelFilter, Targets},
+    fmt,
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+};
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
 fn main() -> std::process::ExitCode {
-    let fmt_layer = fmt::layer().with_filter(filter::filter_fn(|meta| {
-        meta.module_path()
-            .map(|p| {
-                if p.starts_with("touchpanel") {
-                    true
-                } else {
-                    *meta.level() <= Level::DEBUG
-                }
-            })
-            .unwrap_or(*meta.level() >= Level::DEBUG)
-    }));
+    // The gRPC stream to game_master and Sentry's uploads log every HTTP/2 frame and pooled connection,
+    // which made the log file grow by megabytes an hour. Keep the transport layers at INFO and our own logs in full.
+    let fmt_filter = Targets::new()
+        .with_default(LevelFilter::DEBUG)
+        .with_target("touchpanel", LevelFilter::TRACE)
+        .with_targets([
+            ("h2", LevelFilter::INFO),
+            ("hyper", LevelFilter::INFO),
+            ("tower", LevelFilter::INFO),
+            ("tonic", LevelFilter::INFO),
+            ("reqwest", LevelFilter::INFO),
+        ]);
+    let fmt_layer = fmt::layer().with_filter(fmt_filter);
 
     #[cfg(feature = "sentry")]
     let _sentry_guard = sentry::init(
