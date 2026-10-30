@@ -122,11 +122,6 @@ impl Config {
 pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
     let cli = Cli::parse();
     let monitor = cli.monitor;
-    if monitor.is_some() {
-        slint::BackendSelector::new()
-            .backend_name("winit".into())
-            .select()?;
-    }
 
     let config = Arc::new(Config::from_cli(cli));
 
@@ -199,8 +194,17 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Shows `window` full screen on the `number`th display.
+///
+/// The backend is left to Slint's usual selection (e.g. `SLINT_BACKEND`), which is not always winit.
+/// Only the winit backend can choose a display, so on another backend this fails rather than
+/// silently showing on the primary display.
 async fn configure_monitor(window: &slint::Window, number: NonZeroUsize) -> anyhow::Result<()> {
-    let window = window.winit_window().await?;
+    let window = window.winit_window().await.map_err(|error| {
+        anyhow::anyhow!(
+            "--monitor は Slint の winit バックエンドでしか使えません。SLINT_BACKEND で別のバックエンドを選んでいないか確かめてください: {error}"
+        )
+    })?;
     let monitors: Vec<_> = window.available_monitors().collect();
     for (index, monitor) in monitors.iter().enumerate() {
         info!(number = index + 1, name = ?monitor.name(), position = ?monitor.position(), "available display");
