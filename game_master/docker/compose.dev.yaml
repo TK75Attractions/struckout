@@ -3,6 +3,11 @@ services:
   app:
     environment:
       - MYSQL_DATABASE=main_dev
+    volumes:
+      - type: bind
+        source: ./config.dev.toml
+        target: /etc/game_master/config.toml
+        read_only: true
 
   db:
     environment:
