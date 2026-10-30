@@ -38,6 +38,7 @@ jobs:
               - '.github/workflows/ci.yaml'
             launcher:
               - 'launcher/**'
+              - 'api/proto/ball_tracker/**'
               - 'api/spec/**'
               - 'mise.toml'
               - 'mise.lock'
