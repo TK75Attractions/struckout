@@ -8,6 +8,7 @@ mod tests;
 use std::{num::NonZeroU32, pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
+use serde::Deserialize;
 use struckout_proto::{
     self, AddTargetRequest, AddTargetResponse, Difficulty, GameMode, GetGameResultRequest,
     GetGameResultResponse, GetGamesByPlayerRequest, GetGamesByPlayerResponse, GetRankingRequest,
@@ -45,14 +46,37 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     #[debug(skip)]
     data_source: D,
     event_tx: broadcast::Sender<Event>,
-    game_duration_secs: NonZeroU32,
+    game_duration_secs: GameDurations,
+}
+
+/// Holds every selectable difficulty's duration so game start never needs a fallback.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GameDurations {
+    pub normal: NonZeroU32,
+    pub hard: NonZeroU32,
+    pub veryhard: NonZeroU32,
+}
+
+impl GameDurations {
+    fn for_difficulty(self, difficulty: Difficulty) -> NonZeroU32 {
+        match difficulty {
+            Difficulty::Normal => self.normal,
+            Difficulty::Hard => self.hard,
+            Difficulty::Veryhard => self.veryhard,
+            Difficulty::Unspecified => {
+                // set_session_difficulty rejects unspecified before a game can start.
+                unreachable!("a running game must have a selectable difficulty")
+            }
+        }
+    }
 }
 
 impl<D> GameMasterSessionServiceImpl<D>
 where
     D: DataSource,
 {
-    pub fn new(data_source: D, game_duration_secs: NonZeroU32) -> Self {
+    pub fn new(data_source: D, game_duration_secs: GameDurations) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
             sessions: Default::default(),
@@ -158,6 +182,9 @@ where
         } = req;
         let difficulty = Difficulty::try_from(difficulty)
             .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        if difficulty == Difficulty::Unspecified {
+            return Err(Status::invalid_argument("difficulty must be specified"));
+        }
         let machine_id: MachineId = machine_id.into();
 
         let ev_target = {
@@ -504,12 +531,13 @@ where
                     difficulty,
                     player_id,
                 }) => {
+                    let game_duration_secs = self.game_duration_secs.for_difficulty(difficulty);
                     if self
                         .event_tx
                         .send(Event {
                             target: EventTarget::Single(machine_id),
                             data: Ok(SuccessfulEvent::GameStarted {
-                                game_duration_secs: self.game_duration_secs.get(),
+                                game_duration_secs: game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Single(PlayerInfo {
                                     machine_id,
@@ -540,7 +568,7 @@ where
 
                     tokio::spawn(game_timer(
                         EventTarget::Single(machine_id),
-                        self.game_duration_secs,
+                        game_duration_secs,
                         self.event_tx.clone(),
                         complete_tx,
                     ));
@@ -558,12 +586,13 @@ where
                     player_1,
                     player_2,
                 }) => {
+                    let game_duration_secs = self.game_duration_secs.for_difficulty(difficulty);
                     if self
                         .event_tx
                         .send(Event {
                             target: EventTarget::All,
                             data: Ok(SuccessfulEvent::GameStarted {
-                                game_duration_secs: self.game_duration_secs.get(),
+                                game_duration_secs: game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Multi(
                                     PlayerInfo {
@@ -605,7 +634,7 @@ where
 
                     tokio::spawn(game_timer(
                         EventTarget::All,
-                        self.game_duration_secs,
+                        game_duration_secs,
                         self.event_tx.clone(),
                         complete_tx,
                     ));

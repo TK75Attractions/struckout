@@ -1,5 +1,3 @@
-use std::{ffi::OsStr, num::NonZeroU32};
-
 use backon::{ExponentialBuilder, Retryable as _};
 use clap::Parser;
 use game_master::{DataSourceImpl, GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
@@ -37,11 +35,7 @@ mod config;
 
 #[derive(Parser)]
 #[command(version = version())]
-struct Cli {
-    /// ゲームの制限時間（秒）
-    #[arg(long)]
-    game_duration_secs: Option<NonZeroU32>,
-}
+struct Cli {}
 
 fn version() -> String {
     version_option().unwrap_or("no version".to_string())
@@ -105,7 +99,8 @@ fn main() -> std::process::ExitCode {
 
 /// Returns exit code.
 async fn run_main() -> u8 {
-    let config = match config::Config::load(Cli::parse()) {
+    Cli::parse();
+    let config = match config::Config::load() {
         Ok(config) => config,
         Err(err) => {
             error!(?err, "設定を読み込めませんでした");
@@ -216,7 +211,7 @@ async fn new_pool() -> Result<Pool<MySql>, PoolCreationError> {
 /// Returns [`PoolCreationError::NoEnvVar`] when variable did not exist.
 fn env_var<K>(key: K) -> Result<String, PoolCreationError>
 where
-    K: AsRef<OsStr> + Into<String>,
+    K: AsRef<std::ffi::OsStr> + Into<String>,
 {
     std::env::var(&key).map_err(|err| PoolCreationError::NoEnvVar {
         name: key.into(),
