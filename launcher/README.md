@@ -45,7 +45,9 @@ macOS では `chmod +x` してから実行する。
 いない) と、raw.githubusercontent.com から取る設定ファイル (`cameras.json`、compose のファイル) は、HTTPS だけに頼っている。
 
 ball-tracker か camera を入れると、リポジトリの `scripts/cameras.json` を設定のディレクトリにコピーする (すでにあれば
-上書きしない)。起動の設定 `launcher.toml` も、無ければ作る。
+上書きしない)。touchpanel を入れると、touchpanel 自身が読む `config.toml` に `address = "127.0.0.1"`、
+`machine-id = 1`、`disable-multiplay = false` を書く。いずれも更新時に既存の設定を上書きしない。
+起動の設定 `launcher.toml` も、無ければ作る。
 
 projector は `<インストール先>.new` に展開し、zip の全エントリの存在とファイルサイズ、各 OS の Unity プレイヤーと
 Mono の必須ファイルを検査する。不足があれば既存のインストールを入れ替えない。全ファイルの相対パスとサイズは、
@@ -65,9 +67,11 @@ projector の起動直前にもマニフェストと必須ファイルを照合�
 | もの | Windows | macOS | Linux |
 |---|---|---|---|
 | 設定 (`launcher.toml`、`cameras.json`) | `%APPDATA%\struckout\launcher` | `~/Library/Application Support/struckout/launcher` | `$XDG_CONFIG_HOME/struckout/launcher` |
+| touchpanel の `config.toml` | `%APPDATA%\struckout\touchpanel` | `~/Library/Application Support/struckout/touchpanel` | `$XDG_CONFIG_HOME/struckout/touchpanel` |
 | モジュール、ツール、ログ、`install-state.json` | `%LOCALAPPDATA%\struckout\launcher` | 同上 | `$XDG_DATA_HOME/struckout/launcher` |
 
 設定のディレクトリは、ball_tracker が使う Rust の `dirs::config_dir()` と同じところにある。
+game-master の設定は、その直下の `struckout/game_master/config.toml` に置く。
 
 ### 記録とアンインストール
 
@@ -111,12 +115,16 @@ camera は既存のアプリを使い続ける場合などに記録のタグが�
 | モジュール | 起動のしかた | 動いているかの確かめ方 |
 |---|---|---|
 | ball-tracker | `--input network --cameras cameras.json --ffmpeg ...` で起動し、出力をログに書く | プロセスが動いていて、5080 番の gRPC ヘルスチェックが `SERVING` |
-| game-master | `docker compose up --detach` (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
+| game-master | `docker compose up` で DB を起動してから app コンテナを再作成する (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
 | camera | 各スマホに `adb reverse` (6060、5050、5052)、`cameras.json` の設定を送り、アプリを開く | アプリのプロセスが動いている |
 | projector | `-trackerHost`、`-masterHost`、`-machineId`、`-monitor` などを付けて起動する | プロセスが動いている |
-| touchpanel | `--address`、`--machine-id` と、指定時のみ `--monitor` を付けて起動する | プロセスが動いている |
+| touchpanel | 引数を付けずに起動する (`touchpanel.monitor` があれば `--monitor` だけ付ける)。接続先や筐体番号は touchpanel の `config.toml` から読む | プロセスが動いている |
 
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
+
+game-master の設定ファイルは、インストール時に無ければ `game_duration_secs = 90` で作る。既存の設定は
+上書きしない。コンテナの `/etc/game_master/config.toml` にバインドマウントするので、制限時間を
+変えたらランチャーで game-master を止めて起動し直す。app コンテナを再作成して新しい値を読む。
 
 「すべて止める」かウィンドウを閉じると、依存されるモジュールを先に止める。依存関係のないモジュールは並行して止める。Windows の ball_tracker はウィンドウを持たない
 ので、10 秒待ってから強制終了する。
@@ -125,7 +133,7 @@ camera は、スマホが返した `device_id` を `cameras.json` に書き込�
 
 ### `launcher.toml`
 
-ランチャーはコマンドラインの引数を取らない。PC ごとの違いはすべて `launcher.toml` に書く。インストールのときに、
+ランチャーはコマンドラインの引数を取らない。ランチャーが使う PC ごとの違いは `launcher.toml` に書く。touchpanel の接続先と筐体番号は touchpanel の `config.toml` に書く。インストールのときに、
 各項目の説明つきで作る。書き間違い (知らないキー、ありえない値) は、読み直したときに一覧にして出す。
 
 PC① (ball_tracker とカメラ) の例:

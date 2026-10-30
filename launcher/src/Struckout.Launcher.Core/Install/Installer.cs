@@ -107,6 +107,10 @@ public sealed class Installer
             }
 
             installation = await installers[id].InstallAsync(context, previous);
+            if (id == ModuleId.Touchpanel && TouchpanelConfigTemplate.WriteIfMissing(paths.TouchpanelConfigFile))
+            {
+                context.Log.Report($"touchpanel: 設定を {paths.TouchpanelConfigFile} に作りました");
+            }
         }
         catch (LauncherException e)
         {

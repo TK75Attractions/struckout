@@ -18,7 +18,7 @@ public static class LauncherConfigTemplate
             # camera は adb reverse でこの PC の ball-tracker につなぐので、ball-tracker と同じ PC にする。
             modules = [{{list}}]
 
-            # この筐体の番号。projector と touchpanel が game-master に名乗る。
+            # この筐体の番号。projector が game-master に名乗る。touchpanel は自分の config.toml を使う。
             machine-id = 1
 
             # ほかの PC で動かすモジュールのつなぎ先 (PC の名前か IP)。

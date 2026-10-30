@@ -35,6 +35,7 @@ toml = { workspace = true }
 dtor = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["mysql"] }
 rstest = { workspace = true }
+tempfile = { workspace = true }
 
 [build-dependencies]
 struckout-utils = { workspace = true }
