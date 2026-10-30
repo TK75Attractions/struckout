@@ -22,7 +22,7 @@ public sealed class GameMasterCompose(
     public const string ProjectName = "struckout-launcher";
 
     private const string OverrideFile = "compose.launcher.yaml";
-    private const string DefaultConfig = "game_duration_secs = 90\n";
+    private const string DefaultConfig = "[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n";
 
     public string Directory { get; } = directory;
 
