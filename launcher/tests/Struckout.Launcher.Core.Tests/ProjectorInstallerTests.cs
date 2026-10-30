@@ -40,7 +40,7 @@ public sealed class ProjectorInstallerTests : IDisposable
     [Theory]
     [InlineData("StandaloneWindows64/UnityPlayer.dll")]
     [InlineData("StandaloneWindows64/StandaloneWindows64_Data/globalgamemanagers")]
-    [InlineData("StandaloneWindows64/StandaloneWindows64_Data/Managed/Assembly-CSharp.dll")]
+    [InlineData("StandaloneWindows64/StandaloneWindows64_Data/Managed/Struckout.Bootstrap.dll")]
     public async Task RejectsIncompleteZipAndKeepsExistingInstallation(string missing)
     {
         var archive = CreateArchive(OperatingSystemKind.Windows, missing);
@@ -307,21 +307,21 @@ public sealed class ProjectorInstallerTests : IDisposable
                 "StandaloneWindows64/StandaloneWindows64.exe",
                 "StandaloneWindows64/UnityPlayer.dll",
                 "StandaloneWindows64/StandaloneWindows64_Data/globalgamemanagers",
-                "StandaloneWindows64/StandaloneWindows64_Data/Managed/Assembly-CSharp.dll",
+                .. ScriptAssemblies("StandaloneWindows64/StandaloneWindows64_Data"),
             ],
             OperatingSystemKind.Linux =>
             [
                 "StandaloneLinux64/StandaloneLinux64.x86_64",
                 "StandaloneLinux64/UnityPlayer.so",
                 "StandaloneLinux64/StandaloneLinux64_Data/globalgamemanagers",
-                "StandaloneLinux64/StandaloneLinux64_Data/Managed/Assembly-CSharp.dll",
+                .. ScriptAssemblies("StandaloneLinux64/StandaloneLinux64_Data"),
             ],
             OperatingSystemKind.MacOS =>
             [
                 "StandaloneOSX/StandaloneOSX.app/Contents/MacOS/StruckOut",
                 "StandaloneOSX/StandaloneOSX.app/Contents/Frameworks/UnityPlayer.dylib",
                 "StandaloneOSX/StandaloneOSX.app/Contents/Resources/Data/globalgamemanagers",
-                "StandaloneOSX/StandaloneOSX.app/Contents/Resources/Data/Managed/Assembly-CSharp.dll",
+                .. ScriptAssemblies("StandaloneOSX/StandaloneOSX.app/Contents/Resources/Data"),
             ],
             _ => throw new ArgumentOutOfRangeException(nameof(os)),
         };
@@ -335,6 +335,18 @@ public sealed class ProjectorInstallerTests : IDisposable
         }
 
         return archive;
+    }
+
+    /// <summary>The script assemblies of the released players, one per asmdef in projector/Assets/Scripts.</summary>
+    /// <remarks>
+    /// Copied from the released zips, not from <see cref="ProjectorFiles.RequiredFiles"/>, so that the tests catch a required file
+    /// the player does not ship. There is no Assembly-CSharp.dll because every runtime script is in an asmdef.
+    /// </remarks>
+    private static IEnumerable<string> ScriptAssemblies(string data)
+    {
+        string[] names = ["Struckout.Application", "Struckout.Bootstrap", "Struckout.Domain",
+            "Struckout.Generated", "Struckout.Infrastructure", "Struckout.Unity"];
+        return names.Select(name => $"{data}/Managed/{name}.dll");
     }
 
     private static void WriteFile(string root, string relative, string contents)
