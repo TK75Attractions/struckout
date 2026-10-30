@@ -1,0 +1,12 @@
+[game_duration_secs]
+normal = 90
+hard = 90
+veryhard = 90
+
+[[combo_bonuses]]
+combo = 3
+points = 500
+
+[[combo_bonuses]]
+combo = 5
+points = 800

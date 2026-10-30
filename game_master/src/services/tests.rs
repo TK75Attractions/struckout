@@ -18,6 +18,19 @@ const TEST_GAME_DURATIONS: GameDurations = GameDurations {
     veryhard: TEST_GAME_DURATION_SECS,
 };
 
+fn test_combo_bonuses() -> ComboBonuses {
+    #[derive(Deserialize)]
+    struct TestConfig {
+        combo_bonuses: ComboBonuses,
+    }
+
+    toml::from_str::<TestConfig>(
+        "[[combo_bonuses]]\ncombo = 3\npoints = 500\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n",
+    )
+    .expect("valid combo bonuses")
+    .combo_bonuses
+}
+
 #[derive(Clone)]
 struct StubDataSource {
     player_id: PlayerId,
@@ -169,8 +182,11 @@ async fn start_game_single<DS>(
 async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMode) {
     let machine_id = MachineId::new(1);
     let player_id = PlayerId::new(2);
-    let service =
-        GameMasterSessionServiceImpl::new(StubDataSource { player_id }, TEST_GAME_DURATIONS);
+    let service = GameMasterSessionServiceImpl::new(
+        StubDataSource { player_id },
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
     service
         .start_session(Request::new(StartSessionRequest {
             machine_id: machine_id.into(),
@@ -211,8 +227,11 @@ async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMo
 async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
     let machine_id = MachineId::new(1);
     let player_id = PlayerId::new(2);
-    let service =
-        GameMasterSessionServiceImpl::new(StubDataSource { player_id }, TEST_GAME_DURATIONS);
+    let service = GameMasterSessionServiceImpl::new(
+        StubDataSource { player_id },
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
     service
         .start_session(Request::new(StartSessionRequest {
             machine_id: machine_id.into(),
@@ -244,6 +263,7 @@ async fn set_game_mode_requires_an_existing_session() {
             player_id: PlayerId::new(2),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     let error = service
         .set_game_mode(Request::new(SetGameModeRequest {
@@ -262,7 +282,8 @@ async fn set_session_ready_triggers_game_started_event() {
     };
     let machine_id = MachineId::new(1);
     let difficulty = Difficulty::Normal;
-    let service = GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS);
+    let service =
+        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
 
     let stream = service
         .listen_events(Request::new(ListenEventsRequest {
@@ -314,6 +335,7 @@ async fn set_session_difficulty_rejects_unspecified() {
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     let error = service
         .set_session_difficulty(Request::new(SetSessionDifficultyRequest {
@@ -332,7 +354,8 @@ async fn event_stream_notifies_in_correct_order() {
     };
     let machine_id = MachineId::new(2);
     let difficulty = Difficulty::Normal;
-    let service = GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS);
+    let service =
+        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
 
     let stream = service
         .listen_events(Request::new(ListenEventsRequest {
@@ -504,6 +527,7 @@ async fn add_target_rejects_missing_data() {
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     assert_eq!(
         service
@@ -528,6 +552,7 @@ async fn remove_target_rejects_invalid_ids(#[case] target_id: &str) {
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     assert_eq!(
         service
@@ -549,6 +574,7 @@ async fn target_operations_require_a_running_session() {
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     assert_eq!(
         service
@@ -626,6 +652,7 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     start_game_single(
         &service,
@@ -847,6 +874,7 @@ async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     let machine_count = if mode.is_multi() { 2 } else { 1 };
     for machine_id in 1..=machine_count {
@@ -945,6 +973,7 @@ async fn hit_target_rejects_invalid_ids(#[case] target_id: &str, #[case] code: t
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     start_game_single(
         &service,
@@ -986,6 +1015,7 @@ async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: to
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     start_game_single(
         &service,
@@ -1149,7 +1179,8 @@ fn configured_recorded_service(
     mode: GameMode,
     data_source: RecordingDataSource,
 ) -> GameMasterSessionServiceImpl<RecordingDataSource> {
-    let service = GameMasterSessionServiceImpl::new(data_source, TEST_GAME_DURATIONS);
+    let service =
+        GameMasterSessionServiceImpl::new(data_source, TEST_GAME_DURATIONS, test_combo_bonuses());
     let mut sessions = service.sessions.write();
     for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
         let machine_id = MachineId::new(machine_id);
@@ -1292,6 +1323,7 @@ async fn single_game_started_reaches_only_its_machine(
             normal: NonZeroU32::new(30).expect("30 is nonzero"),
             ..TEST_GAME_DURATIONS
         },
+        test_combo_bonuses(),
     );
     let mut streams = Vec::new();
     for machine_id in [machine_id, other_machine_id] {
@@ -1526,7 +1558,7 @@ async fn get_game_result_reads_the_persisted_score_without_a_session() {
         difficulty: Difficulty::Normal,
         score: 123,
     });
-    let service = GameMasterSessionServiceImpl::new(ds, TEST_GAME_DURATIONS);
+    let service = GameMasterSessionServiceImpl::new(ds, TEST_GAME_DURATIONS, test_combo_bonuses());
 
     let result = service
         .get_game_result(Request::new(GetGameResultRequest { game_id: 42 }))
@@ -1539,8 +1571,11 @@ async fn get_game_result_reads_the_persisted_score_without_a_session() {
 
 #[tokio::test]
 async fn get_game_result_returns_not_found_for_an_unknown_game_id() {
-    let service =
-        GameMasterSessionServiceImpl::new(RecordingDataSource::default(), TEST_GAME_DURATIONS);
+    let service = GameMasterSessionServiceImpl::new(
+        RecordingDataSource::default(),
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
 
     let error = service
         .get_game_result(Request::new(GetGameResultRequest { game_id: 999 }))
@@ -1558,6 +1593,7 @@ async fn get_game_result_reports_database_errors() {
             ..Default::default()
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
 
     let error = service
@@ -1741,7 +1777,8 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
         },
         ..Default::default()
     };
-    let service = GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS);
+    let service =
+        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
     let ranking = service
         .get_ranking(Request::new(GetRankingRequest {
             max_item_num: 10,
@@ -1801,6 +1838,7 @@ async fn ranking_and_history_report_database_errors() {
             ..Default::default()
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     let error = service
         .get_ranking(Request::new(GetRankingRequest {
@@ -1832,7 +1870,8 @@ async fn ranking_and_history_report_database_errors() {
 #[tokio::test]
 async fn result_queries_reject_invalid_filters(#[case] mode: i32, #[case] difficulty: i32) {
     let ds = RecordingDataSource::default();
-    let service = GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS);
+    let service =
+        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
     let error = service
         .get_ranking(Request::new(GetRankingRequest {
             max_item_num: 0,
@@ -1988,6 +2027,7 @@ async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() 
             player_id: PlayerId::new(2),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     let error = service
         .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id: 1 }))
@@ -2152,6 +2192,7 @@ async fn reset_combo_rejects_invalid_machine_or_state(
             player_id: PlayerId::new(1),
         },
         TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
     );
     if configure {
         service

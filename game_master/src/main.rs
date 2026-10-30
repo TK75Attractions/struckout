@@ -151,7 +151,11 @@ async fn run_main() -> u8 {
     };
     let result = Server::builder()
         .add_service(GameMasterSessionServiceServer::new(
-            GameMasterSessionServiceImpl::new(data_source.clone(), config.game_duration_secs),
+            GameMasterSessionServiceImpl::new(
+                data_source.clone(),
+                config.game_duration_secs,
+                config.combo_bonuses,
+            ),
         ))
         .add_service(GameMasterPlayerServiceServer::new(
             GameMasterPlayerServiceImpl::new(data_source),

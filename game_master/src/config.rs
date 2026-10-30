@@ -3,7 +3,7 @@ use std::{fs, io, path::Path};
 use serde::Deserialize;
 use thiserror::Error;
 
-use game_master::GameDurations;
+use game_master::{ComboBonuses, GameDurations};
 
 const CONFIG_PATH: &str = "/etc/game_master/config.toml";
 
@@ -11,6 +11,7 @@ const CONFIG_PATH: &str = "/etc/game_master/config.toml";
 #[serde(deny_unknown_fields)]
 struct FileConfig {
     game_duration_secs: GameDurations,
+    combo_bonuses: ComboBonuses,
 }
 
 #[derive(Debug, Error)]
@@ -31,6 +32,7 @@ pub enum LoadConfigError {
 
 pub struct Config {
     pub game_duration_secs: GameDurations,
+    pub combo_bonuses: ComboBonuses,
 }
 
 impl Config {
@@ -38,6 +40,7 @@ impl Config {
         let file = Self::read_file(Path::new(CONFIG_PATH))?;
         Ok(Self {
             game_duration_secs: file.game_duration_secs,
+            combo_bonuses: file.combo_bonuses,
         })
     }
 
@@ -62,6 +65,14 @@ mod tests {
 normal = 120
 hard = 90
 veryhard = 60
+
+[[combo_bonuses]]
+combo = 3
+points = 500
+
+[[combo_bonuses]]
+combo = 5
+points = 800
 ";
 
     #[test]
@@ -86,5 +97,49 @@ veryhard = 60
             toml::from_str::<FileConfig>(&VALID_CONFIG.replace("hard = 90", "hard = 0")).is_err()
         );
         assert!(toml::from_str::<FileConfig>(&format!("{VALID_CONFIG}extra = 30\n")).is_err());
+    }
+
+    #[test]
+    fn requires_combo_bonuses() {
+        assert!(
+            toml::from_str::<FileConfig>(
+                "[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_combo_bonuses() {
+        assert!(
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("combo = 5", "combo = 3")).is_err()
+        );
+        assert!(
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("combo = 3", "combo = 0")).is_err()
+        );
+        assert!(
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("points = 500", "points = 0"))
+                .is_err()
+        );
+        assert!(
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("points = 500", "points = -1"))
+                .is_err()
+        );
+        assert!(
+            toml::from_str::<FileConfig>(
+                &VALID_CONFIG.replace("points = 500", "points = 500\nextra = 1")
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn permits_explicitly_empty_combo_bonuses() {
+        assert!(
+            toml::from_str::<FileConfig>(
+                "combo_bonuses = []\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
+            )
+            .is_ok()
+        );
     }
 }

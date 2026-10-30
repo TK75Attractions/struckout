@@ -36,7 +36,7 @@ use uuid::Uuid;
 
 use crate::{
     DataSource, DataSourceImpl, GamePlayerInfo, GetGameResultError, PlayerInfo,
-    session::{HitTargetError, SessionError, Sessions, SetReadyAction},
+    session::{ComboBonuses, HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
 /// Implementation of [`GameMasterSessionService`].
@@ -47,6 +47,7 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     data_source: D,
     event_tx: broadcast::Sender<Event>,
     game_duration_secs: GameDurations,
+    combo_bonuses: ComboBonuses,
 }
 
 /// Holds every selectable difficulty's duration so game start never needs a fallback.
@@ -76,13 +77,18 @@ impl<D> GameMasterSessionServiceImpl<D>
 where
     D: DataSource,
 {
-    pub fn new(data_source: D, game_duration_secs: GameDurations) -> Self {
+    pub fn new(
+        data_source: D,
+        game_duration_secs: GameDurations,
+        combo_bonuses: ComboBonuses,
+    ) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
             sessions: Default::default(),
             data_source,
             event_tx,
             game_duration_secs,
+            combo_bonuses,
         }
     }
 
@@ -389,7 +395,7 @@ where
             Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let mut sessions = self.sessions.write();
         let outcome = sessions
-            .hit_target(machine_id.into(), target_id)
+            .hit_target(machine_id.into(), target_id, &self.combo_bonuses)
             .map_err(|e| match e {
                 HitTargetError::Session(SessionError::TargetNotFound { .. }) => {
                     Status::not_found(e.to_string())
