@@ -418,7 +418,7 @@ public sealed class Supervisor : IDisposable
             case (ModuleId.Touchpanel, ExecutableInstallation executable):
                 return new ProcessModuleRunner(
                     id, platform, runner, executable.Executable,
-                    ["--address", config.HostOf(ModuleId.GameMaster), "--machine-id", machineId],
+                    [],
                     [],
                     ModuleGraph.HealthPortOf(id, ports),
                     logFile);
