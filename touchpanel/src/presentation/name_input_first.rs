@@ -149,7 +149,13 @@ where
     pub fn on_push_character_impl(&mut self, char: SharedString) -> E::SpawnedHandle {
         trace!("NameInputViewModel::on_push_character");
 
-        assert_eq!(char.chars().count(), 1, "character length must 1");
+        let cnt = char.chars().count();
+        if cnt == 0 {
+            return self.worker.spawn_local(async {});
+        } else if cnt != 1 {
+            unreachable!("character length must be 1")
+        }
+
         let old_text = self.state.player_name_text.get_ref().clone();
         let new_text = old_text + &char;
         self.state.player_name_text.set(new_text.clone());
