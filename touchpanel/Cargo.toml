@@ -37,6 +37,7 @@ tracing-subscriber = { workspace = true }
 
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive", "string"] }
+dirs = { workspace = true }
 derive-getters = { workspace = true, features = ["auto_copy_getters"] }
 derive_more = { workspace = true, features = ["debug"] }
 enum_dispatch = { workspace = true }
@@ -48,6 +49,7 @@ strum = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
 time = { workspace = true }
+toml = { workspace = true }
 
 i-slint-core = { workspace = true }
 slint = { workspace = true }

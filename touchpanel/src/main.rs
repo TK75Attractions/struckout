@@ -65,10 +65,15 @@ fn main() -> std::process::ExitCode {
         });
     });
 
-    run_main(shutdown_requested);
+    let result = run_main(shutdown_requested);
     let _ = done_tx.send(());
     if signal_thread.join().is_err() {
         eprintln!("終了シグナルの待機スレッドが異常終了しました");
+        return std::process::ExitCode::FAILURE;
+    }
+
+    if let Err(error) = result {
+        eprintln!("起動できません: {error:#}");
         return std::process::ExitCode::FAILURE;
     }
 
