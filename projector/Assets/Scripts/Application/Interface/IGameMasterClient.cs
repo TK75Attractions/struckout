@@ -10,6 +10,24 @@ using Target = Struckout.Domain.TargetDefinition.Target;
 
 namespace Struckout.Application.Interface
 {
+    public enum ScoreReason { None, TargetHit, Combo }
+
+    public readonly struct ScoreChange
+    {
+        public uint TotalScore { get; }
+        public long Difference { get; }
+        public ScoreReason Reason { get; }
+        public Guid TargetId { get; }
+
+        public ScoreChange(uint totalScore, long difference, ScoreReason reason, Guid targetId = default)
+        {
+            TotalScore = totalScore;
+            Difference = difference;
+            Reason = reason;
+            TargetId = targetId;
+        }
+    }
+
     /// <summary>
     /// game_master との通信。gRPC で話す。
     ///
@@ -37,7 +55,7 @@ namespace Struckout.Application.Interface
         event Action<TimeSpan> RemainingTimeChanged;
 
         /// <summary>サーバーの累計得点。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
-        event Action<uint> ScoreChanged;
+        event Action<ScoreChange> ScoreChanged;
 
         /// <summary>サーバーのコンボ数。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
         event Action<uint> ComboChanged;

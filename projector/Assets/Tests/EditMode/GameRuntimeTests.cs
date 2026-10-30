@@ -25,7 +25,7 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
-            public event Action<uint> ScoreChanged { add { } remove { } }
+            public event Action<ScoreChange> ScoreChanged { add { } remove { } }
             public event Action<uint> ComboChanged { add { } remove { } }
             public UniTask<bool> ResetComboAsync(CancellationToken token = default)
             {
@@ -98,6 +98,7 @@ namespace Struckout.Tests.Tests.EditMode
             public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
             public void SetCombo(uint combo) { }
+            public void ShowScoreChange(ScoreChange change) { }
             public void AddTarget(Target target)
             {
                 if (Targets.Exists(other => other.Id == target.Id)) return;

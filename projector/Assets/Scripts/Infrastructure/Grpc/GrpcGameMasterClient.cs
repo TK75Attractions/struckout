@@ -51,7 +51,7 @@ namespace Struckout.Infrastructure.Grpc
         public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
-        public event Action<uint> ScoreChanged;
+        public event Action<ScoreChange> ScoreChanged;
         public event Action<uint> ComboChanged;
         public event Action ConnectionLost;
         public event Action<DomainTarget> TargetAdded;
@@ -231,7 +231,26 @@ namespace Struckout.Infrastructure.Grpc
 
                 case Event.EventDataOneofCase.GameScoreChanged:
                     if (!_running) break;
-                    ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
+                    var score = received.GameScoreChanged;
+                    switch (score.ScoreReasonCase)
+                    {
+                        case Event.Types.GameScoreChanged.ScoreReasonOneofCase.TargetHit:
+                            if (Guid.TryParse(score.TargetHit.TargetId, out var scoreTargetId))
+                                ScoreChanged?.Invoke(new ScoreChange(score.TotalScore, score.Diff,
+                                    ScoreReason.TargetHit, scoreTargetId));
+                            else
+                            {
+                                _logger.LogWarning("[GameMaster] received an invalid target ID in score event.");
+                                ScoreChanged?.Invoke(new ScoreChange(score.TotalScore, score.Diff, ScoreReason.None));
+                            }
+                            break;
+                        case Event.Types.GameScoreChanged.ScoreReasonOneofCase.Combo:
+                            ScoreChanged?.Invoke(new ScoreChange(score.TotalScore, score.Diff, ScoreReason.Combo));
+                            break;
+                        default:
+                            ScoreChanged?.Invoke(new ScoreChange(score.TotalScore, 0, ScoreReason.None));
+                            break;
+                    }
                     break;
 
                 case Event.EventDataOneofCase.NavigateToRankingScreenRequested:

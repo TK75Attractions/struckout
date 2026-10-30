@@ -78,7 +78,7 @@ namespace Struckout.Infrastructure.Fake
         public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
-        public event Action<uint> ScoreChanged;
+        public event Action<ScoreChange> ScoreChanged;
         public event Action<uint> ComboChanged;
         public event Action<Target> TargetAdded;
         public event Action<Guid, TargetOwnership> PocketWatchAdded;
@@ -117,7 +117,7 @@ namespace Struckout.Infrastructure.Fake
                 _gameStarted?.Invoke(_startedDifficulty, GameMode.Single, FakePlayer, _gameDuration);
                 AddPocketWatch();
                 RemainingTimeChanged?.Invoke(_gameDuration);
-                ScoreChanged?.Invoke(_totalScore);
+                ScoreChanged?.Invoke(new ScoreChange(_totalScore, 0, ScoreReason.None));
 
                 _gameTask = RunGameAsync(elapsed, _gameCancellation.Token);
 
@@ -252,7 +252,10 @@ namespace Struckout.Infrastructure.Fake
                 if (points > uint.MaxValue || points + bonus + _totalScore > uint.MaxValue) return UniTask.FromResult(false);
                 _totalScore += (uint)points + bonus;
                 _combo = combo;
-                ScoreChanged?.Invoke(_totalScore);
+                ScoreChanged?.Invoke(new ScoreChange(_totalScore - bonus, (long)points,
+                    ScoreReason.TargetHit, targetId));
+                if (bonus > 0)
+                    ScoreChanged?.Invoke(new ScoreChange(_totalScore, bonus, ScoreReason.Combo));
                 ComboChanged?.Invoke(_combo);
                 if (watch)
                 {
