@@ -102,6 +102,7 @@ struct FileConfig {
     machine_id: Option<u32>,
     #[serde(default)]
     disable_multiplay: bool,
+    monitor: Option<NonZeroUsize>,
 }
 
 #[derive(Debug, Error)]
@@ -154,6 +155,8 @@ struct Config {
     machine_id: u32,
     /// Whether the mode selection screen is available.
     multiplay_availability: touchpanel_ui::MultiPlayAvailability,
+    /// The display to show on, from 1 in winit's order. `None` for the primary display.
+    monitor: Option<NonZeroUsize>,
 }
 
 impl Config {
@@ -173,13 +176,13 @@ impl Config {
             } else {
                 touchpanel_ui::MultiPlayAvailability::Enabled
             },
+            monitor: cli.monitor.or(file.monitor),
         })
     }
 }
 
 pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let monitor = cli.monitor;
     let file = match dirs::config_dir() {
         Some(dir) => FileConfig::from_file(&dir.join("struckout/touchpanel/config.toml"))?,
         None => FileConfig::default(),
@@ -192,7 +195,7 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
     );
 
     let startup_error = Rc::new(RefCell::new(None));
-    if let Some(monitor) = monitor {
+    if let Some(monitor) = config.monitor {
         let ui = ui.as_weak();
         let startup_error = Rc::clone(&startup_error);
         // Native windows are created only once the event loop is active.
@@ -263,7 +266,7 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
 async fn configure_monitor(window: &slint::Window, number: NonZeroUsize) -> anyhow::Result<()> {
     let window = window.winit_window().await.map_err(|error| {
         anyhow::anyhow!(
-            "--monitor は Slint の winit バックエンドでしか使えません。SLINT_BACKEND で別のバックエンドを選んでいないか確かめてください: {error}"
+            "monitor は Slint の winit バックエンドでしか使えません。SLINT_BACKEND で別のバックエンドを選んでいないか確かめてください: {error}"
         )
     })?;
     let monitors: Vec<_> = window.available_monitors().collect();
@@ -331,6 +334,41 @@ mod tests {
         assert_eq!(
             config.multiplay_availability,
             touchpanel_ui::MultiPlayAvailability::Enabled
+        );
+    }
+
+    #[test]
+    fn monitor_comes_from_cli_or_config_file() {
+        let file = toml::from_str(
+            "address = 'a'
+machine-id = 1
+monitor = 2
+",
+        )
+        .unwrap();
+        let config =
+            Config::from_sources(file, Cli::try_parse_from(["touchpanel"]).unwrap()).unwrap();
+        assert_eq!(config.monitor, NonZeroUsize::new(2));
+
+        let file = toml::from_str(
+            "address = 'a'
+machine-id = 1
+monitor = 2
+",
+        )
+        .unwrap();
+        let cli = Cli::try_parse_from(["touchpanel", "--monitor", "3"]).unwrap();
+        assert_eq!(
+            Config::from_sources(file, cli).unwrap().monitor,
+            NonZeroUsize::new(3)
+        );
+
+        assert!(
+            toml::from_str::<FileConfig>(
+                "monitor = 0
+"
+            )
+            .is_err()
         );
     }
 

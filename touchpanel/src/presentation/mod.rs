@@ -322,6 +322,7 @@ mod tests {
                 server_addr: "127.0.0.1".to_string(),
                 machine_id: 1,
                 multiplay_availability: touchpanel_ui::MultiPlayAvailability::Enabled,
+                monitor: None,
             }),
         };
 
