@@ -143,6 +143,11 @@ export component TopBar {
             }
         }
 
+        // TopBarItemが左に詰められるのを防ぐ
+        if !root.show-backbutton: Rectangle {
+            width: 0px;
+        }
+
         HorizontalLayout {
             for item[idx] in root.items: TopBarItem {
                 enphasize: current-item-idx == idx;
