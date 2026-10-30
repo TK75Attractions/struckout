@@ -52,11 +52,8 @@ public sealed class Supervisor : IDisposable
 
     public Supervisor(
         LauncherConfig config, InstallState state, AppPaths paths, HostPlatform platform, ServerPorts ports, ICommandRunner runner)
+        : this(config, state, ports, [])
     {
-        this.config = config;
-        installState = state;
-        this.ports = ports;
-        Order = ModuleGraph.StartOrder(config.Modules, ports);
         var locator = new ToolLocator(platform, paths);
         var logs = Path.Combine(paths.LogsDirectory, DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         var time = DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture);
@@ -72,6 +69,19 @@ public sealed class Supervisor : IDisposable
             {
                 statuses[id] = new ModuleStatus(id, ModuleState.Failed, e.Message);
             }
+        }
+    }
+
+    internal Supervisor(LauncherConfig config, InstallState state, ServerPorts ports, IEnumerable<IModuleRunner> runners)
+    {
+        this.config = config;
+        installState = state;
+        this.ports = ports;
+        Order = ModuleGraph.StartOrder(config.Modules, ports);
+        foreach (var runner in runners)
+        {
+            this.runners[runner.Id] = runner;
+            statuses[runner.Id] = new ModuleStatus(runner.Id, ModuleState.Stopped, "止まっています");
         }
     }
 
@@ -149,6 +159,19 @@ public sealed class Supervisor : IDisposable
             {
                 Update(id, ModuleState.Failed, blocker);
                 continue;
+            }
+
+            if (id == ModuleId.BallTracker && runners.TryGetValue(ModuleId.Camera, out var cameraRunner)
+                && cameraRunner is CameraRunner camera)
+            {
+                try
+                {
+                    await camera.RecordDeviceIdsAsync(log, cancellationToken);
+                }
+                catch (LauncherException e)
+                {
+                    log.Report($"camera: device_id を記録できません: {e.Message}");
+                }
             }
 
             Update(id, ModuleState.Starting, "起動しています");

@@ -118,6 +118,10 @@ camera は既存のアプリを使い続ける場合などに記録のタグが�
 | touchpanel | `--address`、`--machine-id` を付けて起動する | プロセスが動いている |
 
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
+ball-tracker と camera が両方この PC のモジュールで、ball-tracker がまだ起動していない場合は、
+ball-tracker の起動前に接続中のスマホへ `STATUS` を送り、`device_id` を記録する。
+ball-tracker は起動時に一度だけこのファイルを読むため、アプリの入れ直しや端末の交換で変わった ID も先に反映する。
+未接続のスマホや ID を返さないアプリはログに出して起動を続け、カメラの設定送信と撮影開始は従来どおり ball-tracker の起動後に行う。
 
 game-master の設定ファイルは、インストール時に無ければ `game_duration_secs = 90` で作る。既存の設定は
 上書きしない。コンテナの `/etc/game_master/config.toml` にバインドマウントするので、制限時間を
