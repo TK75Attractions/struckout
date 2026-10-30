@@ -416,16 +416,9 @@ public sealed class Supervisor : IDisposable
                     ModuleGraph.HealthPortOf(id, ports),
                     logFile);
             case (ModuleId.Touchpanel, ExecutableInstallation executable):
-                // The address and machine ID come from touchpanel's own config.toml.
-                List<string> touchpanelArguments = [];
-                if (config.Touchpanel.Monitor is { } monitor)
-                {
-                    touchpanelArguments.AddRange(["--monitor", monitor.ToString(CultureInfo.InvariantCulture)]);
-                }
-
                 return new ProcessModuleRunner(
                     id, platform, runner, executable.Executable,
-                    touchpanelArguments,
+                    [],
                     [],
                     ModuleGraph.HealthPortOf(id, ports),
                     logFile);

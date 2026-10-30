@@ -118,7 +118,7 @@ camera は既存のアプリを使い続ける場合などに記録のタグが�
 | game-master | `docker compose up` で DB を起動してから app コンテナを再作成する (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
 | camera | 各スマホに `adb reverse` (6060、5050、5052)、`cameras.json` の設定を送り、アプリを開く | アプリのプロセスが動いている |
 | projector | `-trackerHost`、`-masterHost`、`-machineId`、`-monitor` などを付けて起動する | プロセスが動いている |
-| touchpanel | 引数を付けずに起動する (`touchpanel.monitor` があれば `--monitor` だけ付ける)。接続先や筐体番号は touchpanel の `config.toml` から読む | プロセスが動いている |
+| touchpanel | 引数を付けずに起動する。接続先や筐体番号は touchpanel の `config.toml` から読む | プロセスが動いている |
 
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
 
@@ -161,22 +161,6 @@ monitor = 2
 fullscreen = true
 collision-transform = "collision_transform.json"
 ```
-
-受付画面の表示先は、省略可能な `touchpanel.monitor` で選ぶ。省略するとメインのディスプレイに全画面表示する。
-1 以上の整数を指定し、存在しない番号は touchpanel が起動時にエラーにする。
-
-```toml
-[touchpanel]
-monitor = 1
-
-[projector]
-monitor = 2
-fullscreen = true
-```
-
-`touchpanel.monitor` は winit の列挙順で 1 から数える。Unity の `projector.monitor` や Windows の「識別」の番号と
-一致するとは限らないため、touchpanel の起動ログ (番号・ディスプレイ名・位置) と実際の表示先を確認する。
-Windows のタッチ入力の割り当てとメイン画面の設定は、[touchpanel の README](../touchpanel/README.md#表示先ディスプレイ)を参照する。
 
 ## 開発
 
