@@ -13,6 +13,7 @@ export enum KeyBoardMode {
 
 component KeyButton {
     in property <string> text;
+    in property <length> font-size;
     private property <brush> comp_outline: StruckoutPalette.ref_grey_50;
     callback clicked();
 
@@ -22,6 +23,7 @@ component KeyButton {
 
         Text {
             text: text;
+            font-size: root.font-size;
         }
 
         touch := TouchArea {
@@ -33,6 +35,7 @@ component KeyButton {
 }
 
 component AlphabetUpperKeyboard inherits Rectangle {
+    in property <length> font-size;
     callback char-added(char: string);
 
     GridLayout {
@@ -40,6 +43,7 @@ component AlphabetUpperKeyboard inherits Rectangle {
             text: c;
             row: 0;
             col: i;
+            font-size: root.font-size;
             clicked => {
                 root.char-added(c);
             }
@@ -49,6 +53,7 @@ component AlphabetUpperKeyboard inherits Rectangle {
             text: c;
             row: 1;
             col: i;
+            font-size: root.font-size;
             clicked => {
                 root.char-added(c);
             }
@@ -58,6 +63,7 @@ component AlphabetUpperKeyboard inherits Rectangle {
             text: c;
             row: 2;
             col: i;
+            font-size: root.font-size;
             clicked => {
                 root.char-added(c);
             }
@@ -65,18 +71,21 @@ component AlphabetUpperKeyboard inherits Rectangle {
 
         for c[i] in ["", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 2;
             col: i + 6;
         }
 
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 3;
             col: i;
         }
 
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 4;
             col: i;
         }
@@ -84,11 +93,13 @@ component AlphabetUpperKeyboard inherits Rectangle {
 }
 
 component AlphabetLowerKeyboard inherits Rectangle {
+    in property <length> font-size;
     callback char-added(char: string);
 
     GridLayout {
         for c[i] in ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 0;
             col: i;
             clicked => {
@@ -98,6 +109,7 @@ component AlphabetLowerKeyboard inherits Rectangle {
 
         for c[i] in ["k", "l", "m", "n", "o", "p", "q", "r", "s", "t"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 1;
             col: i;
             clicked => {
@@ -107,6 +119,7 @@ component AlphabetLowerKeyboard inherits Rectangle {
 
         for c[i] in ["u", "v", "w", "x", "y", "z"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 2;
             col: i;
             clicked => {
@@ -116,18 +129,21 @@ component AlphabetLowerKeyboard inherits Rectangle {
 
         for c[i] in ["", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 2;
             col: i + 6;
         }
 
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 3;
             col: i;
         }
 
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 4;
             col: i;
         }
@@ -135,11 +151,13 @@ component AlphabetLowerKeyboard inherits Rectangle {
 }
 
 component NumberKeyboard inherits Rectangle {
+    in property <length> font-size;
     callback char-added(char: string);
 
     GridLayout {
         for c[i] in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 0;
             col: i;
             clicked => {
@@ -148,21 +166,25 @@ component NumberKeyboard inherits Rectangle {
         }
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 1;
             col: i;
         }
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 2;
             col: i;
         }
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 3;
             col: i;
         }
         for c[i] in ["", "", "", "", "", "", "", "", "", ""]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: 4;
             col: i;
         }
@@ -170,11 +192,13 @@ component NumberKeyboard inherits Rectangle {
 }
 
 component HiraganaKeyboard inherits Rectangle {
+    in property <length> font-size;
     callback char-added(char: string);
 
     GridLayout {
         KeyButton {
             text: "わ";
+            font-size: root.font-size;
             row: 0;
             col: 0;
             clicked => {
@@ -184,12 +208,14 @@ component HiraganaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 1;
             col: 0;
         }
 
         KeyButton {
             text: "を";
+            font-size: root.font-size;
             row: 2;
             col: 0;
             clicked => {
@@ -199,12 +225,14 @@ component HiraganaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 3;
             col: 0;
         }
 
         KeyButton {
             text: "ん";
+            font-size: root.font-size;
             row: 4;
             col: 0;
             clicked => {
@@ -214,6 +242,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["ら", "り", "る", "れ", "ろ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 1;
             clicked => {
@@ -223,6 +252,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "や";
+            font-size: root.font-size;
             row: 0;
             col: 2;
             clicked => {
@@ -232,12 +262,14 @@ component HiraganaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 1;
             col: 2;
         }
 
         KeyButton {
             text: "ゆ";
+            font-size: root.font-size;
             row: 2;
             col: 2;
             clicked => {
@@ -247,12 +279,14 @@ component HiraganaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 3;
             col: 2;
         }
 
         KeyButton {
             text: "よ";
+            font-size: root.font-size;
             row: 4;
             col: 2;
             clicked => {
@@ -262,6 +296,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["ま", "み", "む", "め", "も"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 3;
             clicked => {
@@ -271,6 +306,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["は", "ひ", "ふ", "へ", "ほ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 4;
             clicked => {
@@ -280,6 +316,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["な", "に", "ぬ", "ね", "の"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 5;
             clicked => {
@@ -289,6 +326,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["た", "ち", "つ", "て", "と"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 6;
             clicked => {
@@ -298,6 +336,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["さ", "し", "す", "せ", "そ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 7;
             clicked => {
@@ -307,6 +346,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["か", "き", "く", "け", "こ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 8;
             clicked => {
@@ -316,6 +356,7 @@ component HiraganaKeyboard inherits Rectangle {
 
         for c[i] in ["あ", "い", "う", "え", "お"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 9;
             clicked => {
@@ -327,11 +368,13 @@ component HiraganaKeyboard inherits Rectangle {
 
 component KatakanaKeyboard inherits Rectangle {
     property <length> spacing;
+    in property <length> font-size;
     callback char-added(char: string);
 
     GridLayout {
         KeyButton {
             text: "ワ";
+            font-size: root.font-size;
             row: 0;
             col: 0;
             clicked => {
@@ -341,6 +384,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 1;
             col: 0;
             clicked => {
@@ -350,6 +394,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "ヲ";
+            font-size: root.font-size;
             row: 2;
             col: 0;
             clicked => {
@@ -359,6 +404,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 3;
             col: 0;
             clicked => {
@@ -368,6 +414,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "ン";
+            font-size: root.font-size;
             row: 4;
             col: 0;
             clicked => {
@@ -377,6 +424,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["ラ", "リ", "ル", "レ", "ロ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 1;
             clicked => {
@@ -386,6 +434,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "ヤ";
+            font-size: root.font-size;
             row: 0;
             col: 2;
             clicked => {
@@ -395,6 +444,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 1;
             col: 2;
             clicked => {
@@ -404,6 +454,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "ユ";
+            font-size: root.font-size;
             row: 2;
             col: 2;
             clicked => {
@@ -413,6 +464,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "";
+            font-size: root.font-size;
             row: 3;
             col: 2;
             clicked => {
@@ -422,6 +474,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         KeyButton {
             text: "ヨ";
+            font-size: root.font-size;
             row: 4;
             col: 2;
             clicked => {
@@ -431,6 +484,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["マ", "ミ", "ム", "メ", "モ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 3;
             clicked => {
@@ -440,6 +494,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["ハ", "ヒ", "フ", "ヘ", "ホ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 4;
             clicked => {
@@ -449,6 +504,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["ナ", "ニ", "ヌ", "ネ", "ノ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 5;
             clicked => {
@@ -458,6 +514,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["タ", "チ", "ツ", "テ", "ト"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 6;
             clicked => {
@@ -467,6 +524,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["サ", "シ", "ス", "セ", "ソ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 7;
             clicked => {
@@ -476,6 +534,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["カ", "キ", "ク", "ケ", "コ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 8;
             clicked => {
@@ -485,6 +544,7 @@ component KatakanaKeyboard inherits Rectangle {
 
         for c[i] in ["ア", "イ", "ウ", "エ", "オ"]: KeyButton {
             text: c;
+            font-size: root.font-size;
             row: i;
             col: 9;
             clicked => {
@@ -497,12 +557,14 @@ component KatakanaKeyboard inherits Rectangle {
 
 component LeftBar {
     in property <KeyBoardMode> current-mode;
+    in property <length> font-size;
     callback set-keyboard-mode(mode: KeyBoardMode);
     max-width: 28px;
 
     VerticalLayout {
         SquareButton {
             text: "あ";
+            font-size: root.font-size;
             clicked => {
                 root.set-keyboard-mode(KeyBoardMode.Hiragana);
             }
@@ -510,6 +572,7 @@ component LeftBar {
 
         SquareButton {
             text: "ア";
+            font-size: root.font-size;
             clicked => {
                 root.set-keyboard-mode(KeyBoardMode.Katakana);
             }
@@ -517,6 +580,7 @@ component LeftBar {
 
         SquareButton {
             text: "a";
+            font-size: root.font-size;
             clicked => {
                 root.set-keyboard-mode(KeyBoardMode.AlphabetLower);
             }
@@ -524,6 +588,7 @@ component LeftBar {
 
         SquareButton {
             text: "A";
+            font-size: root.font-size;
             clicked => {
                 root.set-keyboard-mode(KeyBoardMode.AlphabetUpper);
             }
@@ -531,6 +596,7 @@ component LeftBar {
 
         SquareButton {
             text: "123";
+            font-size: root.font-size;
             clicked => {
                 root.set-keyboard-mode(KeyBoardMode.Number);
             }
@@ -539,15 +605,17 @@ component LeftBar {
 }
 
 component RightBar {
+    in property <length> font-size;
     callback backspace();
     callback submit();
     callback modify();
 
     GridLayout {
 
-        Button {
+        SquareButton {
             icon: Icons.backspace;
             row: 0;
+            font-size: root.font-size;
             clicked => {
                 root.backspace();
             }
@@ -557,6 +625,7 @@ component RightBar {
             // U+FF9E, U+FF9F
             text: "小字ﾞﾟ";
             row: 1;
+            font-size: root.font-size;
             clicked => {
                 root.modify();
             }
@@ -567,6 +636,7 @@ component RightBar {
             filled: true;
             row: 2;
             rowspan: 3;
+            font-size: root.font-size;
             clicked => {
                 root.submit();
             }
@@ -582,40 +652,49 @@ export component Keyboard inherits Rectangle {
     callback submit();
     callback modify();
 
+    property <length> comp_font_size: 1rem;
+
     HorizontalLayout {
         LeftBar {
+            font-size: root.comp_font-size;
             set-keyboard-mode(mode) => {
                 root.set-keyboard-mode(mode);
             }
         }
 
         if mode == KeyBoardMode.Hiragana: HiraganaKeyboard {
+            font-size: root.comp_font-size;
             char-added(char) => {
                 root.char-added(char);
             }
         }
         if mode == KeyBoardMode.Katakana: KatakanaKeyboard {
+            font-size: root.comp_font-size;
             char-added(char) => {
                 root.char-added(char);
             }
         }
         if mode == KeyBoardMode.AlphabetUpper: AlphabetUpperKeyboard {
+            font-size: root.comp_font-size;
             char-added(char) => {
                 root.char-added(char);
             }
         }
         if mode == KeyBoardMode.AlphabetLower: AlphabetLowerKeyboard {
+            font-size: root.comp_font-size * 1.2;
             char-added(char) => {
                 root.char-added(char);
             }
         }
         if mode == KeyBoardMode.Number: NumberKeyboard {
+            font-size: root.comp_font-size;
             char-added(char) => {
                 root.char-added(char);
             }
         }
 
         RightBar {
+            font-size: root.comp_font-size;
             backspace => {
                 root.backspace();
             }
