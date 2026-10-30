@@ -275,12 +275,13 @@ fn main() {
             .traces_sample_rate(1.0),
     );
 
-    // ランチャーは 1 秒ごとにヘルスを問い合わせる。そのたびに HTTP/2 の TRACE のログが大量に出ないよう、通信の層は INFO までにする
+    // ランチャーのヘルス問い合わせと Sentry への送信で通信ログが大量に出ないよう、通信の層は INFO までにする
     let transport_logs = Targets::new()
         .with_default(LevelFilter::TRACE)
         .with_targets([
             ("h2", LevelFilter::INFO),
             ("hyper", LevelFilter::INFO),
+            ("reqwest", LevelFilter::INFO),
             ("tower", LevelFilter::INFO),
             ("tonic", LevelFilter::INFO),
         ]);
