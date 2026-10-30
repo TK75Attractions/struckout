@@ -9,6 +9,7 @@ game_master のゲーム制限時間は起動時に必ず指定する。Docker C
 
 リリースの projector と game_master (ghcr.io のイメージ) を使うだけなら、ランチャー (`launcher/README.md`) で
 インストールと起動ができる。Unity も Rust も要らない。
+ランチャーを使う場合、制限時間は `<dirs::config_dir()>/struckout/game_master/config.toml` で設定する。
 
 ## 用意するもの
 

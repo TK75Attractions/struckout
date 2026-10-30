@@ -22,7 +22,8 @@ internal sealed class GameMasterInstaller(
 
         var compose = new GameMasterCompose(
             platform, context.Tools[PrerequisiteId.Docker], directory, context.Release.Tag,
-            GameMasterSecret.LoadOrCreate(paths), runner);
+            GameMasterSecret.LoadOrCreate(paths), paths.GameMasterConfigFile, runner);
+        compose.EnsureConfigFile();
         await compose.EnsureEngineRunningAsync(context.Log, context.CancellationToken);
         context.Log.Report($"{slug}: Docker のイメージを取得します (初回は数分かかります)");
         var result = await compose.RunAsync(["pull", "--quiet"], context.CancellationToken);
@@ -53,7 +54,7 @@ internal sealed class GameMasterInstaller(
         {
             var compose = new GameMasterCompose(
                 platform, docker, installation.Directory, installation.ReleaseTag, GameMasterSecret.Load(paths) ?? "",
-                runner);
+                paths.GameMasterConfigFile, runner);
             await compose.EnsureEngineRunningAsync(log, cancellationToken);
             log.Report(options.DeleteDatabase
                 ? $"{slug}: コンテナとイメージ、データベースを消します"

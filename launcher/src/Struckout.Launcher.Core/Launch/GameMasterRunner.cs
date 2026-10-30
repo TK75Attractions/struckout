@@ -9,12 +9,21 @@ internal sealed class GameMasterRunner(GameMasterCompose compose, int grpcPort) 
 
     public async Task StartAsync(IProgress<string> log, CancellationToken cancellationToken)
     {
+        compose.EnsureConfigFile();
         await compose.EnsureEngineRunningAsync(log, cancellationToken);
-        log.Report("game-master: コンテナを起動します");
-        var result = await compose.RunAsync(["up", "--detach"], cancellationToken);
+        log.Report("game-master: データベースを起動します");
+        var result = await compose.RunAsync(["up", "--detach", "--wait", "db"], cancellationToken);
         if (!result.Succeeded)
         {
-            throw new LauncherException($"docker compose up が失敗しました:\n{result.Output.Trim()}");
+            throw new LauncherException($"データベースを起動できません:\n{result.Output.Trim()}");
+        }
+
+        // A file bind mount keeps the old inode when an editor replaces the file, so recreate app on every start.
+        log.Report("game-master: コンテナを起動します");
+        result = await compose.RunAsync(["up", "--detach", "--force-recreate", "--no-deps", "app"], cancellationToken);
+        if (!result.Succeeded)
+        {
+            throw new LauncherException($"game-master コンテナを再作成できません:\n{result.Output.Trim()}");
         }
     }
 
