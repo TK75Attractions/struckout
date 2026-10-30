@@ -68,14 +68,23 @@ service GameMasterSessionService {
 
   // Ball is hit to the target. Used by `projector`.
   //
-  // Causes `GameScoreChanged` event to be emitted.
+  // Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
   rpc HitTarget(HitTargetRequest) returns (HitTargetResponse);
+
+  // projector が、球が的に当たらなかったときに呼ぶ。
+  rpc ResetCombo(ResetComboRequest) returns (ResetComboResponse);
 
   /* ----- Events ----- */
 
   // Notify events occured in game_master.
   rpc ListenEvents(ListenEventsRequest) returns (stream ListenEventsResponse);
 }
+
+message ResetComboRequest {
+  uint32 machine_id = 1;
+}
+
+message ResetComboResponse {}
 
 message StartSessionRequest {
   uint32 machine_id = 1;
@@ -120,6 +129,7 @@ message GetGamesByPlayerResponse {
     uint32 game_id = 1;
     uint32 total_score = 2;
     PlayerInfo player_info = 3;
+    uint32 rank = 4;
   }
 
   repeated GamesByPlayerItem items = 1;

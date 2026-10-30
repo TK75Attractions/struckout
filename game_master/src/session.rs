@@ -67,9 +67,19 @@ pub enum HitTargetError {
     ScoreOverflow,
 }
 
+/// Bonuses awarded only when the combo reaches a threshold.
+const COMBO_BONUSES: &[(u32, u32)] = &[(3, 500), (5, 800)];
+
+#[derive(Debug, Error)]
+pub enum ResetComboError {
+    #[error(transparent)]
+    Session(#[from] SessionError),
+}
+
 /// The score update and optional target replacement produced by a hit.
 #[derive(Debug)]
 pub struct HitTargetOutcome {
+    pub combo: u32,
     pub total_score: u32,
     pub event_target: EventTarget,
     pub replacement: Option<(Target, Target)>,
@@ -319,6 +329,34 @@ impl Sessions {
         Ok((target_id, target))
     }
 
+    /// Resets consecutive hits, returning the notification target only when changed.
+    pub fn reset_combo(
+        &mut self,
+        machine_id: MachineId,
+    ) -> Result<Option<EventTarget>, ResetComboError> {
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (state,) = ms
+            .as_running()
+            .map_err(|actual_state| SessionError::InvalidState {
+                msg: "combo can only be reset while running",
+                expected_state: "Running",
+                actual_state,
+                machine_id,
+            })?;
+        let mut shared = state.shared.write();
+        if shared.combo == 0 {
+            return Ok(None);
+        }
+        shared.combo = 0;
+        Ok(Some(if shared.mode.is_multi() {
+            EventTarget::All
+        } else {
+            EventTarget::Single(machine_id)
+        }))
+    }
+
     /// Removes a target from the running game.
     ///
     /// Returns removed [`Target`].
@@ -350,7 +388,8 @@ impl Sessions {
     /// Adds points to the shared game score and replaces a hit pocket watch.
     ///
     /// Compass hits add `100000 / radius`, truncated to an integer; pocket watch
-    /// hits add 500 points. Errors leave the score and targets unchanged.
+    /// hits add 500 points. Reaching a combo threshold also adds its bonus.
+    /// Errors leave the score, combo and targets unchanged.
     pub fn hit_target(
         &mut self,
         machine_id: MachineId,
@@ -393,9 +432,15 @@ impl Sessions {
         if points > f64::from(u32::MAX) {
             return Err(HitTargetError::ScoreOverflow);
         }
+        let combo = shared.combo.saturating_add(1);
+        let bonus = COMBO_BONUSES
+            .iter()
+            .find(|&&(threshold, _)| threshold == combo)
+            .map_or(0, |&(_, bonus)| bonus);
         let total_score = shared
             .score
             .checked_add(points as u32)
+            .and_then(|score| score.checked_add(bonus))
             .ok_or(HitTargetError::ScoreOverflow)?;
         let replacement = if matches!(target.target_data, Some(TargetData::PocketWatch(_))) {
             let removed = target.clone();
@@ -411,12 +456,14 @@ impl Sessions {
             None
         };
         shared.score = total_score;
+        shared.combo = combo;
         let event_target = if shared.mode.is_multi() {
             EventTarget::All
         } else {
             EventTarget::Single(machine_id)
         };
         Ok(HitTargetOutcome {
+            combo,
             total_score,
             event_target,
             replacement,
@@ -612,6 +659,7 @@ impl Sessions {
                         mode,
                         difficulty,
                         score: 0,
+                        combo: 0,
                         targets,
                     })),
                 });
@@ -662,6 +710,7 @@ impl Sessions {
                     mode: GameMode::Multi,
                     difficulty,
                     score: 0,
+                    combo: 0,
                     targets,
                 }));
                 {
@@ -808,6 +857,7 @@ pub struct SharedRunningState {
     pub mode: GameMode,
     pub difficulty: Difficulty,
     pub score: u32,
+    pub combo: u32,
     pub targets: HashMap<Uuid, Target>,
 }
 
@@ -1023,6 +1073,39 @@ mod tests {
             500
         );
         assert_eq!(sessions.score_multi().expect("shared score"), 500);
+    }
+
+    #[test]
+    fn combo_bonus_overflow_preserves_score_combo_and_targets() {
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let (target_id, targets) = {
+            let (state,) = sessions
+                .get(machine_id)
+                .expect("session")
+                .as_running()
+                .expect("running");
+            let mut shared = state.shared.write();
+            shared.combo = 2;
+            shared.score = u32::MAX - 500;
+            (
+                *shared.targets.keys().next().expect("initial watch"),
+                shared.targets.clone(),
+            )
+        };
+        assert_matches!(
+            sessions.hit_target(machine_id, target_id),
+            Err(HitTargetError::ScoreOverflow)
+        );
+        let (state,) = sessions
+            .get(machine_id)
+            .expect("session")
+            .as_running()
+            .expect("running");
+        let shared = state.shared.read();
+        assert_eq!(shared.combo, 2);
+        assert_eq!(shared.score, u32::MAX - 500);
+        assert_eq!(shared.targets, targets);
     }
 
     #[rstest]
@@ -1341,6 +1424,7 @@ mod tests {
                 mode: GameMode::Multi,
                 difficulty: Difficulty::Hard,
                 score: 10,
+                combo: 0,
                 targets: HashMap::new(),
             })),
         })

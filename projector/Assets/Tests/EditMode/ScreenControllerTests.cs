@@ -25,6 +25,8 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action HomeScreenRequested { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
+            public event Action<uint> ComboChanged { add { } remove { } }
+            public UniTask<bool> ResetComboAsync(CancellationToken token = default) => UniTask.FromResult(true);
             public event Action<Target> TargetAdded { add { } remove { } }
             public event Action<Guid, TargetOwnership> PocketWatchAdded { add { } remove { } }
             public event Action<Guid> TargetRemoved { add { } remove { } }
@@ -76,6 +78,15 @@ namespace Struckout.Tests.Tests.EditMode
             public uint? Score;
             public IReadOnlyList<RankingRow> Rows;
             public string Message;
+            public GameMode Mode;
+            public Difficulty Difficulty;
+            public uint? Rank;
+            public void ShowResultContext(GameMode mode, Difficulty difficulty, uint? rank = null)
+            {
+                Mode = mode;
+                Difficulty = difficulty;
+                Rank = rank;
+            }
             public void SetScreen(ProjectorScreen screen) { Screen = screen; Score = null; Rows = null; Message = null; }
             public void ShowGameResult(uint score) { Score = score; Message = null; }
             public void ShowRanking(IReadOnlyList<RankingRow> rows) { Rows = rows; Message = null; }
@@ -84,9 +95,49 @@ namespace Struckout.Tests.Tests.EditMode
             public void StartGameClock(TimeSpan duration) { }
             public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
+            public void SetCombo(uint combo) { }
             public void AddTarget(Target target) { }
             public bool RemoveTarget(Guid id) => true;
             public void ShowCollisionMarker(float x, float y, CollisionResult result) { }
+        }
+
+        [Test]
+        public async Task Score_is_shown_before_optional_ranking_and_a_late_rank_cannot_overwrite_home()
+        {
+            var client = new Client { PendingRanking = new UniTaskCompletionSource<IReadOnlyList<RankingEntry>>() };
+            var ui = new UI();
+            using var screens = new ScreenController(client, ui);
+            screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
+            var pending = screens.ShowScoreAsync(new GameId(42));
+            Assert.That(ui.Score, Is.EqualTo(888));
+            Assert.That(ui.Mode, Is.EqualTo(GameMode.Multi));
+            Assert.That(ui.Difficulty, Is.EqualTo(Difficulty.Hard));
+            screens.ShowHome();
+            client.PendingRanking.TrySetResult(new[] { new RankingEntry(new GameId(42), 888, new PlayerId(7), "本人") });
+            await pending;
+            Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Home));
+            Assert.That(ui.Rank, Is.Null);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task Score_rank_uses_the_finished_game_and_ranking_failure_preserves_the_score(bool available)
+        {
+            var client = new Client
+            {
+                Ranking = available ? new[]
+                {
+                    new RankingEntry(new GameId(1), 900, new PlayerId(8), "別の人"),
+                    new RankingEntry(new GameId(42), 888, new PlayerId(7), "本人"),
+                } : null,
+            };
+            var ui = new UI();
+            using var screens = new ScreenController(client, ui);
+            screens.ShowPlaying(new PlayerId(7), GameMode.Single, Difficulty.Normal);
+            await screens.ShowScoreAsync(new GameId(42));
+            Assert.That(ui.Score, Is.EqualTo(888));
+            Assert.That(ui.Message, Is.Null);
+            Assert.That(ui.Rank, Is.EqualTo(available ? (uint?)2 : null));
         }
 
         [Test]

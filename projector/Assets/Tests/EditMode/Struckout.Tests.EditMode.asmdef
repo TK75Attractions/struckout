@@ -2,6 +2,7 @@
     "name": "Struckout.Tests.EditMode",
     "rootNamespace": "Struckout.Tests",
     "references": [
+        "UnityEngine.UI",
         "GUID:b0214a6008ed146ff8f122a6a9c2f6cc",
         "GUID:6726640549d964d4b8a744687f229b34",
         "GUID:460e46054705c7f49a140c08e36982c2",

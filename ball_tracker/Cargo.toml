@@ -67,3 +67,6 @@ struckout-utils = { workspace = true }
 [features]
 input-sqlite = []
 sentry = ["dep:sentry"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

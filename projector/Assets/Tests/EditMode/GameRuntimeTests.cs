@@ -26,6 +26,12 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
             public event Action<uint> ScoreChanged { add { } remove { } }
+            public event Action<uint> ComboChanged { add { } remove { } }
+            public UniTask<bool> ResetComboAsync(CancellationToken token = default)
+            {
+                Calls.Add("reset");
+                return UniTask.FromResult(true);
+            }
             public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
             public UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default) => UniTask.FromResult<uint?>(null);
@@ -77,6 +83,7 @@ namespace Struckout.Tests.Tests.EditMode
 
         private sealed class UI : IUIService
         {
+            public void ShowResultContext(GameMode mode, Difficulty difficulty, uint? rank = null) { }
             public readonly List<Target> Targets = new();
             public readonly List<Target> Added = new();
             public readonly List<Guid> Removed = new();
@@ -90,6 +97,7 @@ namespace Struckout.Tests.Tests.EditMode
             public void StartGameClock(TimeSpan duration) { }
             public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
+            public void SetCombo(uint combo) { }
             public void AddTarget(Target target)
             {
                 if (Targets.Exists(other => other.Id == target.Id)) return;
@@ -122,6 +130,23 @@ namespace Struckout.Tests.Tests.EditMode
             X = ui.Targets[0].Coordinate.X,
             Y = ui.Targets[0].Coordinate.Y,
         };
+
+        [Test]
+        public async Task Miss_resets_combo_only_while_playing()
+        {
+            var (runtime, master, ui) = Create();
+            var miss = new CollisionPoint { X = -10000, Y = -10000 };
+            await runtime.CollisionDetectedAsync(miss);
+            Assert.That(master.Calls, Is.Empty);
+            await runtime.StartGameAsync(Difficulty.Normal);
+            master.Calls.Clear();
+            await runtime.CollisionDetectedAsync(miss);
+            Assert.That(master.Calls, Is.EqualTo(new[] { "reset" }));
+            Assert.That(ui.LastCollision, Is.EqualTo(CollisionResult.Missed));
+            runtime.FinishGame();
+            await runtime.CollisionDetectedAsync(miss);
+            Assert.That(master.Calls, Has.Count.EqualTo(1));
+        }
 
         [Test]
         public async Task Successful_add_rpc_alone_does_not_create_or_draw_a_target()
@@ -224,7 +249,7 @@ namespace Struckout.Tests.Tests.EditMode
             pending.TrySetResult(false);
             await hit;
             await runtime.CollisionDetectedAsync(point);
-            Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit", "remove", "add" }));
+            Assert.That(master.Calls, Is.EqualTo(new[] { "add", "hit", "remove", "add", "reset" }));
             Assert.That(ui.Targets, Is.Empty);
             Assert.That(ui.Added, Has.Count.EqualTo(1));
         }

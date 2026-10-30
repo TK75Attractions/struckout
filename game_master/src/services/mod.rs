@@ -15,9 +15,10 @@ use struckout_proto::{
     GoNextTutorialResponse, GoPreviousTutorialRequest, GoPreviousTutorialResponse,
     GoRankingScreenRequest, GoRankingScreenResponse, HitTargetRequest, HitTargetResponse,
     ListenEventsRequest, ListenEventsResponse, RemoveTargetRequest, RemoveTargetResponse,
-    SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
-    SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
-    StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
+    ResetComboRequest, ResetComboResponse, SetGameModeRequest, SetGameModeResponse,
+    SetSessionDifficultyRequest, SetSessionDifficultyResponse, SetSessionReadyRequest,
+    SetSessionReadyResponse, StartSessionRequest, StartSessionResponse, StartTutorialRequest,
+    StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
     target::Owner,
     types::{MachineId, PlayerId},
@@ -326,6 +327,29 @@ where
     }
 
     #[instrument]
+    async fn reset_combo(
+        &self,
+        req: Request<ResetComboRequest>,
+    ) -> Result<Response<ResetComboResponse>, Status> {
+        let machine_id = req.into_inner().machine_id.into();
+        let mut sessions = self.sessions.write();
+        if let Some(target) = sessions
+            .reset_combo(machine_id)
+            .map_err(|e| Status::failed_precondition(e.to_string()))?
+            && self
+                .event_tx
+                .send(Event {
+                    target,
+                    data: Ok(SuccessfulEvent::ComboChanged { combo: 0 }),
+                })
+                .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
+        Ok(Response::new(ResetComboResponse {}))
+    }
+
+    #[instrument]
     async fn hit_target(
         &self,
         req: Request<HitTargetRequest>,
@@ -357,6 +381,18 @@ where
             .is_err()
         {
             warn!("all event receiver has been dropped");
+        }
+        if self
+            .event_tx
+            .send(Event {
+                target: outcome.event_target,
+                data: Ok(SuccessfulEvent::ComboChanged {
+                    combo: outcome.combo,
+                }),
+            })
+            .is_err()
+        {
+            warn!("all event receivers have been dropped");
         }
         if let Some((removed, added)) = outcome.replacement {
             for event in [
@@ -627,9 +663,10 @@ where
                 .into_iter()
                 .map(
                     |item| struckout_proto::get_games_by_player_response::GamesByPlayerItem {
-                        game_id: item.result.game_id.into(),
-                        total_score: item.result.total_score,
-                        player_info: Some(item.players.into()),
+                        game_id: item.item.result.game_id.into(),
+                        total_score: item.item.result.total_score,
+                        player_info: Some(item.item.players.into()),
+                        rank: item.rank,
                     },
                 )
                 .collect(),
@@ -701,6 +738,7 @@ async fn game_timer(
     complete_tx: mpsc::Sender<()>,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(1));
+    interval.tick().await;
     let duration_secs = GAME_DURATION.whole_seconds();
     for i in 0..duration_secs {
         trace!(secs_elapsed = i, "timer tick");

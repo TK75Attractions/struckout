@@ -37,6 +37,22 @@ reflection には対応していないので、grpcurl で確かめるときは 
 grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto health.proto localhost:5080 grpc.health.v1.Health/Check
 ```
 
+同じポートで `tk75attractions.struckout.ball_tracker.v1.CameraStatusService/ListCameraStatus` を提供する。
+リポジトリルートから、次のコマンドでカメラごとの状態を取得できる。
+
+```sh
+grpcurl -plaintext -import-path api/proto -proto ball_tracker/camera_status.proto localhost:5080 tk75attractions.struckout.ball_tracker.v1.CameraStatusService/ListCameraStatus
+```
+
+`cameras` には `--cameras` の全カメラを記載順の `camera_id` で含め、未接続のカメラも省略しない。
+設定にない端末も割り当てられた ID で含め、`name` は空にする。`device_id` は設定または制御接続の Hello から取得する。
+`connected` は制御・検出・動画のいずれかの接続が残っている間は `true`。
+`last_frame_at` は映像フレーム（コーデック設定を除く）か検出パケットを最後に受信した UTC 時刻で、未受信なら未設定。
+`disconnected_at` は最後の接続が切れた UTC 時刻で、再接続後も直前の切断時刻を残す。
+`fps` は直近に完了した 1 秒の集計区間で処理したフレーム数。検出入力は受信パケット、動画入力は解析を終えたフレームを数える。
+最初の区間の完了前、処理がなかった区間、切断後は 0 になる。起動完了を判定する側は `connected` と併せて
+`last_frame_at` の新しさや `fps` を確かめる。sqlite 入力では設定どおりの未接続を返し、設定がなければ空のリストを返す。
+
 SIGTERM または Ctrl-C を受けると、新しい接続を止めてから受信中のフレームを処理し、CSV と動画の記録を閉じて終了する。
 動画記録の終了時は、受け付け済みのデータが書き終わるまで待つ。
 
@@ -101,7 +117,7 @@ SIGTERM または Ctrl-C を受けると、新しい接続を止めてから受�
 
   | 項目 | 内容 |
   |---|---|
-  | `fps` | 解析したフレームの数 (1 秒あたり) |
+  | `fps` | RPC と共通の、直近に完了した 1 秒の集計区間で解析したフレーム数 |
   | `dropped_before_ffmpeg` | この 10 秒間に ffmpeg に書く前に捨てたフレームの数 |
   | `dropped_after_ffmpeg` | この 10 秒間に ffmpeg から読み、解析せずに捨てたフレームの数 |
   | `convert_ms` | NV12 の縮小と RGB24 への変換にかかった時間の平均 |

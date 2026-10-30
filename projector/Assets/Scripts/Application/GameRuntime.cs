@@ -150,6 +150,9 @@ namespace Struckout.Application
             if (!_collisionSolver.TryCollision(collisionPoint, _state.Targets, out var target))
             {
                 _uiService.ShowCollisionMarker(x, y, CollisionResult.Missed);
+                var missToken = _gameCancellation.Token;
+                if (!await _master.ResetComboAsync(missToken) && !missToken.IsCancellationRequested)
+                    _logger.LogWarning("コンボをリセットできませんでした。");
                 return;
             }
             if (!_pendingTargets.Add(target.Id))

@@ -39,7 +39,7 @@ impl DataSource for StubDataSource {
         _: PlayerId,
         _: GameMode,
         _: Difficulty,
-    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::RankedGameResultItem>, crate::GetGamesByPlayerError> {
         Ok(Vec::new())
     }
 
@@ -334,6 +334,64 @@ async fn event_stream_notifies_in_correct_order() {
 
     // Assert: Finished
     assert_matches!(finished, EventData::GameFinished(_));
+}
+
+#[tokio::test(start_paused = true)]
+async fn game_timer_notifies_once_per_second_and_completes_after_90_seconds() {
+    let (event_tx, _) = broadcast::channel(32);
+    let mut events = event_tx.subscribe();
+    let (complete_tx, mut complete_rx) = mpsc::channel(1);
+    let timer = tokio::spawn(game_timer(
+        EventTarget::Single(MachineId::new(1)),
+        event_tx,
+        complete_tx,
+    ));
+
+    tokio::task::yield_now().await;
+    assert_eq!(next_remaining_time(&mut events), 90);
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
+    assert_matches!(
+        complete_rx.try_recv(),
+        Err(mpsc::error::TryRecvError::Empty)
+    );
+
+    // Advance one second at a time: a single 88-second advance would fire the missed ticks in a burst and
+    // overflow the broadcast channel.
+    for remaining in (1..=89).rev() {
+        tokio::time::advance(Duration::from_secs(1)).await;
+        tokio::task::yield_now().await;
+        assert_eq!(next_remaining_time(&mut events), remaining);
+        assert_matches!(
+            events.try_recv(),
+            Err(broadcast::error::TryRecvError::Empty)
+        );
+        assert_matches!(
+            complete_rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        );
+    }
+
+    tokio::time::advance(Duration::from_secs(1)).await;
+    timer.await.expect("timer completes");
+    complete_rx
+        .recv()
+        .await
+        .expect("game completes at 90 seconds");
+}
+
+fn next_remaining_time(events: &mut broadcast::Receiver<Event>) -> i64 {
+    let event = events
+        .try_recv()
+        .expect("remaining-time event is available");
+    let SuccessfulEvent::GameTimeLimitNotify { remaining } =
+        event.data.expect("timer event succeeds")
+    else {
+        panic!("expected remaining-time event");
+    };
+    remaining.whole_seconds()
 }
 
 fn target_request(machine_id: u32) -> AddTargetRequest {
@@ -869,7 +927,7 @@ struct RecordingDataSource {
     player_lookup_started: Arc<tokio::sync::Notify>,
     player_lookup_gate: Option<Arc<tokio::sync::Semaphore>>,
     ranking: Vec<crate::GameResultItem>,
-    history: Vec<crate::GameResultItem>,
+    history: Vec<crate::RankedGameResultItem>,
     ranking_limits: Arc<parking_lot::Mutex<Vec<(u32, GameMode, Difficulty)>>>,
     history_players: Arc<parking_lot::Mutex<Vec<(PlayerId, GameMode, Difficulty)>>>,
     save_started: Arc<tokio::sync::Notify>,
@@ -928,7 +986,7 @@ impl DataSource for RecordingDataSource {
         player_id: PlayerId,
         mode: GameMode,
         difficulty: Difficulty,
-    ) -> Result<Vec<crate::GameResultItem>, crate::GetGamesByPlayerError> {
+    ) -> Result<Vec<crate::RankedGameResultItem>, crate::GetGamesByPlayerError> {
         self.history_players
             .lock()
             .push((player_id, mode, difficulty));
@@ -1464,11 +1522,15 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
                 .expect("hit watch");
             let score = events.try_recv().expect("score event");
             assert_matches!(score.data, Ok(SuccessfulEvent::GameScoreChanged { total_score })
-                if total_score == (index as u32 * 2 + hit + 1) * 500);
+                if total_score == (index as u32 * 2 + hit + 1) * 500
+                    + if index as u32 * 2 + hit + 1 >= 3 { 500 } else { 0 });
             match score.target {
                 EventTarget::All => assert!(mode.is_multi()),
                 EventTarget::Single(id) => assert_eq!(id, machine_id),
             }
+            let combo = events.try_recv().expect("combo event");
+            assert_matches!(combo.data, Ok(SuccessfulEvent::ComboChanged { combo })
+                if combo == index as u32 * 2 + hit + 1);
             let removed = events.try_recv().expect("remove event");
             assert_matches!(removed.target, EventTarget::Single(id) if id == machine_id);
             assert_matches!(removed.data, Ok(SuccessfulEvent::TargetRemoved { target_id: id }) if id == target_id);
@@ -1551,9 +1613,12 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
             Vec::new()
         },
         history: if populated {
-            vec![crate::GameResultItem {
-                result,
-                players: players.clone(),
+            vec![crate::RankedGameResultItem {
+                item: crate::GameResultItem {
+                    result,
+                    players: players.clone(),
+                },
+                rank: 3,
             }]
         } else {
             Vec::new()
@@ -1606,6 +1671,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
                 game_id: 42,
                 total_score: 987,
                 player_info: Some(players.into()),
+                rank: 3,
             }
         );
     }
@@ -1840,4 +1906,145 @@ async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() 
         );
     }
     assert!(service.sessions.read().get(MachineId::new(1)).is_none());
+}
+
+#[rstest]
+#[case::single(GameMode::Single)]
+#[case::multi(GameMode::Multi)]
+#[tokio::test]
+async fn combo_events_bonuses_reset_and_saved_result(#[case] mode: GameMode) {
+    let ds = RecordingDataSource::default();
+    let service = running_recorded_service(mode, ds.clone());
+    let target_id = service
+        .add_target(Request::new(target_request(1)))
+        .await
+        .expect("register target")
+        .into_inner()
+        .target_id;
+    let mut first = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("first listener")
+        .into_inner();
+    let mut second = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+        .await
+        .expect("second listener")
+        .into_inner();
+    service
+        .reset_combo(Request::new(ResetComboRequest { machine_id: 1 }))
+        .await
+        .expect("initial zero combo");
+    let mut total = 123;
+    for combo in 1..=6 {
+        let machine_id = if mode.is_multi() && combo % 2 == 0 {
+            2
+        } else {
+            1
+        };
+        service
+            .hit_target(Request::new(HitTargetRequest {
+                machine_id,
+                target_id: target_id.clone(),
+            }))
+            .await
+            .expect("hit target");
+        total += 100_000
+            + match combo {
+                3 => 500,
+                5 => 800,
+                _ => 0,
+            };
+        let score = assert_event!(first, EventData::GameScoreChanged(_));
+        assert_matches!(score, EventData::GameScoreChanged(event) if event.total_score == total);
+        let changed = assert_event!(first, EventData::ComboChanged(_));
+        assert_matches!(changed, EventData::ComboChanged(event) if event.combo == combo);
+        if mode.is_multi() {
+            assert_event!(second, EventData::GameScoreChanged(_));
+            let changed = assert_event!(second, EventData::ComboChanged(_));
+            assert_matches!(changed, EventData::ComboChanged(event) if event.combo == combo);
+        }
+    }
+    service
+        .reset_combo(Request::new(ResetComboRequest { machine_id: 1 }))
+        .await
+        .expect("reset combo");
+    let changed = assert_event!(first, EventData::ComboChanged(_));
+    assert_matches!(changed, EventData::ComboChanged(event) if event.combo == 0);
+    if mode.is_multi() {
+        assert_event!(second, EventData::ComboChanged(_));
+    }
+    service
+        .reset_combo(Request::new(ResetComboRequest { machine_id: 1 }))
+        .await
+        .expect("already zero");
+    service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id,
+        }))
+        .await
+        .expect("first hit after reset");
+    total += 100_000;
+    assert_event!(first, EventData::GameScoreChanged(_));
+    let changed = assert_event!(first, EventData::ComboChanged(_));
+    assert_matches!(changed, EventData::ComboChanged(event) if event.combo == 1);
+    if mode.is_multi() {
+        assert_event!(second, EventData::GameScoreChanged(_));
+        assert_event!(second, EventData::ComboChanged(_));
+    } else {
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), second.next())
+                .await
+                .is_err()
+        );
+    }
+    let target = if mode.is_multi() {
+        EventTarget::All
+    } else {
+        EventTarget::Single(MachineId::new(1))
+    };
+    complete_game(&service, target).await;
+    assert_eq!(ds.saved.lock()[0].score, total);
+    assert_eq!(
+        service
+            .get_game_result(Request::new(GetGameResultRequest { game_id: 42 }))
+            .await
+            .expect("persisted result")
+            .into_inner()
+            .total_score,
+        total
+    );
+}
+
+#[rstest]
+#[case::unknown(99, false)]
+#[case::not_running(1, true)]
+#[tokio::test]
+async fn reset_combo_rejects_invalid_machine_or_state(
+    #[case] machine_id: u32,
+    #[case] configure: bool,
+) {
+    let service = GameMasterSessionServiceImpl::new(StubDataSource {
+        player_id: PlayerId::new(1),
+    });
+    if configure {
+        service
+            .start_session(Request::new(StartSessionRequest {
+                machine_id,
+                player_id: 1,
+            }))
+            .await
+            .expect("new session");
+    }
+    let mut events = service.event_tx.subscribe();
+    let error = service
+        .reset_combo(Request::new(ResetComboRequest { machine_id }))
+        .await
+        .expect_err("machine is not playing");
+    assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+    assert_matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    );
 }

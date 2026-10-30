@@ -5,6 +5,7 @@ use ball_tracker::detection_input::SqliteDetectionInput;
 use ball_tracker::{
     Application, CameraLocationStore,
     camera_config::CameraConfig,
+    camera_status::CameraStatusStore,
     clock_sync::{AutoTimeTrim, ClockSync, ClockSyncOptions},
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{CameraFrame, DetectionInput, NetworkDetectionInput},
@@ -164,10 +165,11 @@ impl DetectionInputImpl {
         clock: Arc<ClockSync>,
         video: Option<VideoOptions>,
         cameras: Option<Arc<CameraConfig>>,
+        camera_status: Arc<CameraStatusStore>,
     ) -> Self {
         match kind {
             DetectionInputKind::Network => DetectionInputImpl::Network(
-                NetworkDetectionInput::new(camera_locs, clock, video, cameras)
+                NetworkDetectionInput::new(camera_locs, clock, video, cameras, camera_status)
                     .await
                     .unwrap(),
             ),
@@ -328,9 +330,6 @@ async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send)
     let shutdown = tokio_util::sync::CancellationToken::new();
     let config = load_config();
 
-    let health_server = health::start(shutdown.clone()).await;
-    let health_reporter = health_server.as_ref().map(|(reporter, _)| reporter);
-
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = config.cameras.as_ref().map(|path| {
         let camera_config = CameraConfig::load(path).unwrap();
@@ -348,6 +347,10 @@ async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send)
         }
         Arc::new(camera_config)
     });
+
+    let camera_status = Arc::new(CameraStatusStore::new(cameras.as_deref()));
+    let health_server = health::start(shutdown.clone(), camera_status.clone()).await;
+    let health_reporter = health_server.as_ref().map(|(reporter, _)| reporter);
 
     let auto_trim = Arc::new(AutoTimeTrim::new(config.auto_time_trim));
     let clock = Arc::new(
@@ -379,6 +382,7 @@ async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send)
         clock,
         video,
         cameras,
+        camera_status,
     )
     .await;
     let collision_output = CollisionOutputImpl::new(&config).await;
