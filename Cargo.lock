@@ -2463,6 +2463,7 @@ dependencies = [
  "struckout-proto",
  "struckout-utils",
  "strum",
+ "tempfile",
  "testcontainers-modules",
  "thiserror 2.0.21",
  "time",

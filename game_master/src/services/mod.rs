@@ -5,7 +5,7 @@ pub use player::GameMasterPlayerServiceImpl;
 #[cfg(test)]
 mod tests;
 
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::{num::NonZeroU32, pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
 use struckout_proto::{
@@ -23,7 +23,7 @@ use struckout_proto::{
     target::Owner,
     types::{MachineId, PlayerId},
 };
-use time::{SignedDuration, ext::NumericalDuration};
+use time::ext::NumericalDuration;
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::{
     Stream, StreamExt,
@@ -38,8 +38,6 @@ use crate::{
     session::{HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
-const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
-
 /// Implementation of [`GameMasterSessionService`].
 #[derive(derive_more::Debug, Clone)]
 pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
@@ -47,18 +45,20 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     #[debug(skip)]
     data_source: D,
     event_tx: broadcast::Sender<Event>,
+    game_duration_secs: NonZeroU32,
 }
 
 impl<D> GameMasterSessionServiceImpl<D>
 where
     D: DataSource,
 {
-    pub fn new(data_source: D) -> Self {
+    pub fn new(data_source: D, game_duration_secs: NonZeroU32) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
             sessions: Default::default(),
             data_source,
             event_tx,
+            game_duration_secs,
         }
     }
 
@@ -509,6 +509,7 @@ where
                         .send(Event {
                             target: EventTarget::Single(machine_id),
                             data: Ok(SuccessfulEvent::GameStarted {
+                                game_duration_secs: self.game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Single(PlayerInfo {
                                     machine_id,
@@ -539,6 +540,7 @@ where
 
                     tokio::spawn(game_timer(
                         EventTarget::Single(machine_id),
+                        self.game_duration_secs,
                         self.event_tx.clone(),
                         complete_tx,
                     ));
@@ -561,6 +563,7 @@ where
                         .send(Event {
                             target: EventTarget::All,
                             data: Ok(SuccessfulEvent::GameStarted {
+                                game_duration_secs: self.game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Multi(
                                     PlayerInfo {
@@ -602,6 +605,7 @@ where
 
                     tokio::spawn(game_timer(
                         EventTarget::All,
+                        self.game_duration_secs,
                         self.event_tx.clone(),
                         complete_tx,
                     ));
@@ -734,12 +738,13 @@ async fn pass_events_through_by_machine_id(
 #[instrument(skip(tx, complete_tx))]
 async fn game_timer(
     ev_target: EventTarget,
+    game_duration_secs: NonZeroU32,
     tx: broadcast::Sender<Event>,
     complete_tx: mpsc::Sender<()>,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(1));
     interval.tick().await;
-    let duration_secs = GAME_DURATION.whole_seconds();
+    let duration_secs = i64::from(game_duration_secs.get());
     for i in 0..duration_secs {
         trace!(secs_elapsed = i, "timer tick");
         let res = tx.send(Event {
