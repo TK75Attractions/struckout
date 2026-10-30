@@ -208,7 +208,7 @@ CI (`.github/workflows/launcher_ci.yaml`) は、整形 (`dotnet format --verify-
 
 ### camera.apk の署名
 
-ランチャーはカメラアプリを `adb install -r` で更新するので、毎晩同じ鍵で署名しなければならない。鍵はリポジトリの
+ランチャーはカメラアプリを `adb install -r -g` で更新し、カメラなどの実行時権限も付ける。毎晩同じ鍵で署名しなければならない。鍵はリポジトリの
 Secrets (`CAMERA_KEYSTORE_BASE64`、`CAMERA_KEYSTORE_PASSWORD`、`CAMERA_KEY_ALIAS`、`CAMERA_KEY_PASSWORD`) に置く。
 署名が違う既存のアプリがある場合は、`cameras.json` の package が端末に入っていることを `pm path` で確かめ、アンインストールせずに使い続ける。アプリ内の較正設定は保持する。ランチャーで camera をアンインストールしても、この端末のアプリは消さない。ログには「署名が違う既存のアプリを使います。リリースの版には更新されません」と出し、`install-state.json` の `devices` と `existing-devices` に記録する。この場合、記録のリリースタグはダウンロードした APK の版であり、端末の既存アプリの版ではない。package が確認できない場合はインストールエラーになる。
 

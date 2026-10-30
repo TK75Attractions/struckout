@@ -67,7 +67,7 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
     internal static async Task<bool> InstallOnDeviceAsync(
         Adb adb, string serial, string apk, string package, IProgress<string> log, CancellationToken cancellationToken)
     {
-        var result = await adb.RunAsync(serial, ["install", "-r", apk], cancellationToken);
+        var result = await adb.RunAsync(serial, ["install", "-r", "-g", apk], cancellationToken);
         if (result.Output.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", StringComparison.Ordinal))
         {
             var path = await adb.RunAsync(serial, ["shell", "pm", "path", package], cancellationToken);
