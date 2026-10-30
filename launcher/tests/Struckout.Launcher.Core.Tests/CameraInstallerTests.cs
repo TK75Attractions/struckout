@@ -10,6 +10,15 @@ namespace Struckout.Launcher.Core.Tests;
 public sealed class CameraInstallerTests
 {
     [Fact]
+    public async Task GrantsRuntimePermissionsWhenInstalling()
+    {
+        var commands = new FakeAdb(0, "Success") { InstallSucceeds = true };
+        Assert.False(await CameraInstaller.InstallOnDeviceAsync(new Adb("adb", commands), "serial", "camera.apk",
+            "camera.highspeed", new Messages(), TestContext.Current.CancellationToken));
+        Assert.Equal(["-s serial install -r -g camera.apk"], commands.Calls);
+    }
+
+    [Fact]
     public async Task RecordsExistingAppForInitialLauncherConfiguration()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"camera-install-{Guid.NewGuid()}");
@@ -68,7 +77,7 @@ public sealed class CameraInstallerTests
             Assert.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", error.Message, StringComparison.Ordinal);
         }
 
-        Assert.Equal(["-s serial install -r camera.apk", "-s serial shell pm path camera.highspeed"], commands.Calls);
+        Assert.Equal(["-s serial install -r -g camera.apk", "-s serial shell pm path camera.highspeed"], commands.Calls);
     }
 
     [Fact]
@@ -95,6 +104,7 @@ public sealed class CameraInstallerTests
 
     private sealed class FakeAdb(int pathExitCode, string pathOutput) : ICommandRunner
     {
+        public bool InstallSucceeds { get; init; }
         public List<string> Calls { get; } = [];
         public Task<CommandResult> RunAsync(string fileName, IReadOnlyList<string> arguments, CommandOptions? options = null, CancellationToken cancellationToken = default)
         {
@@ -103,7 +113,7 @@ public sealed class CameraInstallerTests
             if (command == "devices")
                 return Task.FromResult(new CommandResult(0, "serial\tdevice\n"));
             return Task.FromResult(command.Contains("install -r", StringComparison.Ordinal)
-                ? new CommandResult(1, "Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE]")
+                ? InstallSucceeds ? new CommandResult(0, "Success") : new CommandResult(1, "Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE]")
                 : new CommandResult(pathExitCode, pathOutput));
         }
     }

@@ -7,6 +7,35 @@ namespace Struckout.Launcher.Core.Tests;
 
 public sealed class CameraRunnerTests
 {
+    [Theory]
+    [InlineData(true, "device_id=new-left", "new-left")]
+    [InlineData(true, "old app", "old-left")]
+    [InlineData(false, "device_id=new-left", "old-left")]
+    public async Task RecordsDeviceIdsWithoutOpeningApps(bool connected, string response, string expectedId)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"camera-ids-{Guid.NewGuid()}.json");
+        await File.WriteAllTextAsync(path, """
+            { "package": "camera.highspeed", "cameras": [
+              { "serial": "left", "device_id": "old-left", "name": "left", "output": "network", "focal_ratio": 1, "pose": [] }
+            ] }
+            """, TestContext.Current.CancellationToken);
+        try
+        {
+            var commands = new Phones { LeftConnected = connected, Response = response };
+            var runner = new CameraRunner(new Adb("adb", commands), path, new ServerPorts(1, 2, 3, 4, 5, 0));
+            await runner.RecordDeviceIdsAsync(new Progress<string>(), TestContext.Current.CancellationToken);
+            Assert.Equal(expectedId, Assert.Single(CamerasFile.Load(path).Cameras).DeviceId);
+            Assert.Equal(connected ? 1 : 0, commands.Calls.Count(c => c.Contains("STATUS", StringComparison.Ordinal)));
+            Assert.DoesNotContain(commands.Calls, c => c.Contains("SET_CONFIG", StringComparison.Ordinal)
+                || c.Contains("am start", StringComparison.Ordinal) || c.Contains("force-stop", StringComparison.Ordinal)
+                || c.Contains("reverse", StringComparison.Ordinal));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public async Task OpensLateCameraOnceAndDoesNotRestartStoppedApps()
     {
@@ -48,6 +77,8 @@ public sealed class CameraRunnerTests
 
     private sealed class Phones : ICommandRunner
     {
+        public bool LeftConnected { get; set; } = true;
+        public string Response { get; set; } = "";
         public bool RightConnected { get; set; }
         public List<string> Calls { get; } = [];
         public Task<CommandResult> RunAsync(string fileName, IReadOnlyList<string> arguments, CommandOptions? options = null, CancellationToken cancellationToken = default)
@@ -56,7 +87,8 @@ public sealed class CameraRunnerTests
             Calls.Add(command);
             var output = command switch
             {
-                "devices" => "left\tdevice\n" + (RightConnected ? "right\tdevice\n" : ""),
+                "devices" => (LeftConnected ? "left\tdevice\n" : "") + (RightConnected ? "right\tdevice\n" : ""),
+                _ when command.Contains("am broadcast", StringComparison.Ordinal) => $"Broadcast completed: result=0, data=\"{Response}\"",
                 _ when command.Contains("dumpsys power", StringComparison.Ordinal) => "mWakefulness=Awake",
                 _ when command.Contains("dumpsys window", StringComparison.Ordinal) => "mShowingLockscreen=false",
                 _ => "",
