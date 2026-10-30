@@ -11,7 +11,9 @@ import com.taichi765.struckoutCameraApp.network.types.udpIsConnected
 import com.taichi765.struckoutCameraApp.proto.CameraBallTracker
 import com.taichi765.struckoutCameraApp.proto.cameraPose
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,6 +26,8 @@ class ConfigViewModel @Inject constructor(
     private val configRepository: ConfigStoreRepository,
     private val captureSession: CaptureSession
 ) : ViewModel() {
+    private val _validationErrors = MutableStateFlow<Map<ConfigField, String>>(emptyMap())
+    val validationErrors = _validationErrors.asStateFlow()
     /** Formatted like `--version` of the Rust modules. Only release builds have the commit hash. */
     val version = if (BuildConfig.COMMIT_SHORT_HASH.isEmpty()) {
         "no version"
@@ -80,8 +84,12 @@ class ConfigViewModel @Inject constructor(
     /**
      * Persists temporary changes.
      */
-    fun applyChanges(newState: ConfigUiState) {
+    fun applyChanges(newState: ConfigUiState): Boolean {
         val oldState = uiState.value
+
+        val validation = validateConfig(newState)
+        _validationErrors.value = validation.errors
+        if (validation.errors.isNotEmpty()) return false
 
         if (newState.highSpeedStreamSize != oldState.highSpeedStreamSize) {
             viewModelScope.launch {
@@ -102,33 +110,28 @@ class ConfigViewModel @Inject constructor(
             }
         }
 
-        val newLocation =
-            convertCharsToCameraLocation(newState) ?: TODO("あとでUI追加する")
-        if (newLocation != convertCharsToCameraLocation(oldState)) {
+        val newLocation = requireNotNull(validation.cameraPose)
+        if (newLocation != validateConfig(oldState).cameraPose) {
             viewModelScope.launch {
                 configRepository.updateCameraPose(newLocation)
             }
         }
 
-        val newRatio = newState.focalLengthRatio.toString().toDoubleOrNull()
-        if (newRatio == null || newRatio < 0.0) {
-            // 入力が数でない、または負のとき。前の設定のままにする。
-            Timber.tag(TAG).w("ignoring an invalid focal length ratio")
-        } else if (newRatio != oldState.focalLengthRatio.toString().toDoubleOrNull()) {
+        val newRatio = requireNotNull(validation.focalLengthRatio)
+        if (newRatio != oldState.focalLengthRatio.toString().toDoubleOrNull()) {
             viewModelScope.launch {
                 configRepository.updateFocalLengthRatio(newRatio)
             }
         }
 
-        val newArea = convertCharsToDetectionArea(newState)
-        if (newArea == null) {
-            // 入力が数でない、または検出を受け付ける場所が残らないとき。前の設定のままにする。
-            Timber.tag(TAG).w("ignoring an invalid detection area")
-        } else if (newArea != convertCharsToDetectionArea(oldState)) {
+        val newArea = requireNotNull(validation.detectionArea)
+        if (newArea != convertCharsToDetectionArea(oldState)) {
             viewModelScope.launch {
                 configRepository.updateDetectionArea(newArea)
             }
         }
+
+        return true
     }
 
     fun setDetectionOutputKind(kind: DetectionOutputKind) {
@@ -143,27 +146,91 @@ class ConfigViewModel @Inject constructor(
     }
 }
 
-/**
- * @return `null` if [CharSequence]s contains invalid characters.
- */
-private fun convertCharsToCameraLocation(newState: ConfigUiState): CameraBallTracker.CameraPose? {
-    val x = runCatching { newState.locationX.toString().toDouble() }.getOrNull() ?: return null
-    val y = runCatching { newState.locationY.toString().toDouble() }.getOrNull() ?: return null
-    val z = runCatching { newState.locationZ.toString().toDouble() }.getOrNull() ?: return null
-    val rotationX =
-        runCatching { newState.rotationXDegrees.toString().toDouble() }.getOrNull() ?: return null
-    val rotationY =
-        runCatching { newState.rotationYDegrees.toString().toDouble() }.getOrNull() ?: return null
-    val rotationZ =
-        runCatching { newState.rotationZDegrees.toString().toDouble() }.getOrNull() ?: return null
-    return cameraPose {
-        this.x = x
-        this.y = y
-        this.z = z
-        rotationXDegrees = rotationX
-        rotationYDegrees = rotationY
-        rotationZDegrees = rotationZ
+private data class ConfigValidation(
+    val errors: Map<ConfigField, String>,
+    val cameraPose: CameraBallTracker.CameraPose?,
+    val focalLengthRatio: Double?,
+    val detectionArea: DetectionArea?,
+)
+
+private fun validateConfig(state: ConfigUiState): ConfigValidation {
+    val errors = mutableMapOf<ConfigField, String>()
+    val values = mutableMapOf<ConfigField, Double>()
+    val fields = listOf(
+        ConfigField.LOCATION_X to state.locationX,
+        ConfigField.LOCATION_Y to state.locationY,
+        ConfigField.LOCATION_Z to state.locationZ,
+        ConfigField.ROTATION_X_DEGREES to state.rotationXDegrees,
+        ConfigField.ROTATION_Y_DEGREES to state.rotationYDegrees,
+        ConfigField.ROTATION_Z_DEGREES to state.rotationZDegrees,
+        ConfigField.FOCAL_LENGTH_RATIO to state.focalLengthRatio,
+        ConfigField.IGNORED_LEFT_PERCENT to state.ignoredLeftPercent,
+        ConfigField.IGNORED_TOP_PERCENT to state.ignoredTopPercent,
+        ConfigField.IGNORED_RIGHT_PERCENT to state.ignoredRightPercent,
+        ConfigField.IGNORED_BOTTOM_PERCENT to state.ignoredBottomPercent,
+    )
+
+    fields.forEach { (key, input) ->
+        val label = key.label
+        val value = input.toString().toDoubleOrNull()
+        when {
+            input.isBlank() -> errors[key] = "${label}を入力してください。"
+            value == null -> errors[key] = "${label}は数値で入力してください。"
+            !value.isFinite() -> errors[key] = "${label}には有限の数値を入力してください。"
+            else -> values[key] = value
+        }
     }
+
+    values[ConfigField.FOCAL_LENGTH_RATIO]?.takeIf { it < 0.0 }?.let {
+        errors[ConfigField.FOCAL_LENGTH_RATIO] = "焦点距離比は 0 以上で入力してください。"
+    }
+
+    val left = values[ConfigField.IGNORED_LEFT_PERCENT]
+    val top = values[ConfigField.IGNORED_TOP_PERCENT]
+    val right = values[ConfigField.IGNORED_RIGHT_PERCENT]
+    val bottom = values[ConfigField.IGNORED_BOTTOM_PERCENT]
+    if (left != null && right != null && left >= 0.0 && right >= 0.0 && left + right >= 100.0) {
+        errors[ConfigField.IGNORED_LEFT_PERCENT] = "左右の検出無視幅の合計は 100% 未満にしてください。"
+        errors[ConfigField.IGNORED_RIGHT_PERCENT] = "左右の検出無視幅の合計は 100% 未満にしてください。"
+    }
+    if (top != null && bottom != null && top >= 0.0 && bottom >= 0.0 && top + bottom >= 100.0) {
+        errors[ConfigField.IGNORED_TOP_PERCENT] = "上下の検出無視幅の合計は 100% 未満にしてください。"
+        errors[ConfigField.IGNORED_BOTTOM_PERCENT] = "上下の検出無視幅の合計は 100% 未満にしてください。"
+    }
+    listOf(
+        ConfigField.IGNORED_LEFT_PERCENT to left,
+        ConfigField.IGNORED_TOP_PERCENT to top,
+        ConfigField.IGNORED_RIGHT_PERCENT to right,
+        ConfigField.IGNORED_BOTTOM_PERCENT to bottom,
+    ).forEach { (key, value) ->
+        if (value != null && value < 0.0) errors[key] = "検出無視幅は 0 以上で入力してください。"
+    }
+
+    val poseKeys = listOf(
+        ConfigField.LOCATION_X, ConfigField.LOCATION_Y, ConfigField.LOCATION_Z,
+        ConfigField.ROTATION_X_DEGREES, ConfigField.ROTATION_Y_DEGREES, ConfigField.ROTATION_Z_DEGREES,
+    )
+    val pose = if (poseKeys.all { it in values && it !in errors }) cameraPose {
+        x = values.getValue(ConfigField.LOCATION_X)
+        y = values.getValue(ConfigField.LOCATION_Y)
+        z = values.getValue(ConfigField.LOCATION_Z)
+        rotationXDegrees = values.getValue(ConfigField.ROTATION_X_DEGREES)
+        rotationYDegrees = values.getValue(ConfigField.ROTATION_Y_DEGREES)
+        rotationZDegrees = values.getValue(ConfigField.ROTATION_Z_DEGREES)
+    } else null
+    val ratio = values[ConfigField.FOCAL_LENGTH_RATIO]?.takeIf { ConfigField.FOCAL_LENGTH_RATIO !in errors }
+    val areaKeys = listOf(
+        ConfigField.IGNORED_LEFT_PERCENT, ConfigField.IGNORED_TOP_PERCENT, ConfigField.IGNORED_RIGHT_PERCENT, ConfigField.IGNORED_BOTTOM_PERCENT,
+    )
+    val area = if (areaKeys.all { it in values && it !in errors }) {
+        DetectionArea(
+            requireNotNull(left),
+            requireNotNull(top),
+            requireNotNull(right),
+            requireNotNull(bottom),
+        )
+    } else null
+    return ConfigValidation(errors, pose, ratio, area)
 }
 
 /**

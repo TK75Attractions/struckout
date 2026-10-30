@@ -1,4 +1,4 @@
-use std::ffi::OsStr;
+use std::{ffi::OsStr, num::NonZeroU32};
 
 use backon::{ExponentialBuilder, Retryable as _};
 use clap::Parser;
@@ -33,9 +33,15 @@ const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o451222959731
 type SessionServer = GameMasterSessionServiceServer<GameMasterSessionServiceImpl>;
 type PlayerServer = GameMasterSessionServiceServer<GameMasterPlayerServiceImpl>;
 
+mod config;
+
 #[derive(Parser)]
 #[command(version = version())]
-struct Cli {}
+struct Cli {
+    /// ゲームの制限時間（秒）
+    #[arg(long)]
+    game_duration_secs: Option<NonZeroU32>,
+}
 
 fn version() -> String {
     version_option().unwrap_or("no version".to_string())
@@ -99,6 +105,14 @@ fn main() -> std::process::ExitCode {
 
 /// Returns exit code.
 async fn run_main() -> u8 {
+    let config = match config::Config::load(Cli::parse()) {
+        Ok(config) => config,
+        Err(err) => {
+            error!(?err, "設定を読み込めませんでした");
+            return 1;
+        }
+    };
+
     info!("creating MySQL pool");
     let pool = match new_pool().await {
         Ok(p) => p,
@@ -142,7 +156,7 @@ async fn run_main() -> u8 {
     };
     let result = Server::builder()
         .add_service(GameMasterSessionServiceServer::new(
-            GameMasterSessionServiceImpl::new(data_source.clone()),
+            GameMasterSessionServiceImpl::new(data_source.clone(), config.game_duration_secs),
         ))
         .add_service(GameMasterPlayerServiceServer::new(
             GameMasterPlayerServiceImpl::new(data_source),

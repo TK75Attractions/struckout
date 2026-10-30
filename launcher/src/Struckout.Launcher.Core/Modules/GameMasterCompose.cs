@@ -5,12 +5,13 @@ namespace Struckout.Launcher.Core.Modules;
 
 /// <summary>Runs <c>docker compose</c> for the game_master that the installer set up.</summary>
 /// <remarks>
-/// The compose files are the ones in <c>game_master/</c> of the release. <c>compose.prod.yaml</c> replaces the
+/// The compose files are the ones in <c>game_master/docker/</c> of the release. <c>compose.prod.yaml</c> replaces the
 /// build with the image published to ghcr.io, so the PC doesn't need the source.
 /// </remarks>
 /// <param name="version">The release tag, which is also the tag of the image.</param>
 public sealed class GameMasterCompose(
-    HostPlatform platform, string docker, string directory, string version, string password, ICommandRunner runner)
+    HostPlatform platform, string docker, string directory, string version, string password, string configFile,
+    ICommandRunner runner)
 {
     /// <summary>The files under <c>game_master/docker/</c> of the repository, in the order compose merges them.</summary>
     public static IReadOnlyList<string> Files { get; } = ["compose.yaml", "compose.prod.yaml"];
@@ -20,16 +21,42 @@ public sealed class GameMasterCompose(
     /// </summary>
     public const string ProjectName = "struckout-launcher";
 
+    private const string OverrideFile = "compose.launcher.yaml";
+    private const string DefaultConfig = "game_duration_secs = 90\n";
+
     public string Directory { get; } = directory;
+
+    /// <summary>Creates editable settings on first install without overwriting later changes.</summary>
+    public void EnsureConfigFile()
+    {
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(configFile)!);
+        if (!File.Exists(configFile))
+        {
+            File.WriteAllText(configFile, DefaultConfig);
+        }
+    }
 
     public Task<CommandResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
+        var overridePath = Path.Combine(Directory, OverrideFile);
+        File.WriteAllText(overridePath, """
+            services:
+              app:
+                volumes:
+                  - type: bind
+                    source: ${GAME_MASTER_CONFIG_PATH:?set the game_master config path}
+                    target: /etc/game_master/config.toml
+                    bind:
+                      create_host_path: false
+            """ + "\n");
         var all = new List<string> { "compose", "--project-name", ProjectName };
         foreach (var file in Files)
         {
             all.Add("--file");
             all.Add(Path.Combine(Directory, file));
         }
+
+        all.AddRange(["--file", overridePath]);
 
         all.AddRange(arguments);
         return runner.RunAsync(
@@ -42,6 +69,7 @@ public sealed class GameMasterCompose(
                 {
                     ["GAME_MASTER_VERSION"] = version,
                     ["MYSQL_ROOT_PASSWORD"] = password,
+                    ["GAME_MASTER_CONFIG_PATH"] = Path.GetFullPath(configFile),
                 },
             },
             cancellationToken);

@@ -9,7 +9,7 @@ use stern::{
 use struckout_proto::types::PlayerId;
 use tokio::sync::oneshot;
 use touchpanel_ui::{
-    KeyBoardMode, NameInputNonFirstPropertyMappers, NameInputNonFirstStates,
+    KeyBoardMode, MultiPlayAvailability, NameInputNonFirstPropertyMappers, NameInputNonFirstStates,
     NameInputNonFirstViewModelTrait, NavRoute, NavRouteKind,
 };
 use tracing::instrument;
@@ -18,6 +18,7 @@ use crate::{
     Application, Context, NavController,
     data::RequestError,
     keyboard::{keyboard_modify, pop_player_name},
+    presentation::{SingleSessionStarter, route_after_player},
 };
 
 touchpanel_ui::define_name_input_non_first_mapper! {}
@@ -29,6 +30,7 @@ struct NameInputNonFirstViewModel<C, E> {
     nav_controller: NavController,
     #[debug(skip)]
     worker: WorkerThread<C, E>,
+    multiplay_availability: MultiPlayAvailability,
 }
 
 impl NameInputNonFirstViewModel<Context, SlintExecutor> {
@@ -43,7 +45,16 @@ impl NameInputNonFirstViewModel<Context, SlintExecutor> {
             ),
             nav_controller: application.nav_controller.clone(),
             worker: application.worker.clone(),
+            multiplay_availability: application.config.multiplay_availability,
         }
+    }
+}
+
+impl<C, E> NameInputNonFirstViewModel<C, E> {
+    fn reset(&self) {
+        self.state.player_name_text.set("".into());
+        self.state.keyboard_mode.set(KeyBoardMode::Hiragana);
+        self.state.error_msg.set("".into());
     }
 }
 
@@ -66,7 +77,7 @@ impl GetPlayer for Context {
 
 impl<C, E> NameInputNonFirstViewModelTrait for NameInputNonFirstViewModel<C, E>
 where
-    C: Send + Sync + GetPlayer + 'static,
+    C: GetPlayer + SingleSessionStarter,
     E: ForegroundExecutor,
 {
     #[instrument]
@@ -90,9 +101,20 @@ where
 
     fn on_submit_name(&mut self) {
         let name = self.state.player_name_text.get_ref().clone();
+        let multiplay_availability = self.multiplay_availability;
         let (tx, rx) = oneshot::channel();
         self.worker.spawn_cx(async move |cx| {
             let res = cx.get_player(name).await;
+            let res = match res {
+                Ok(Some(player_id)) => {
+                    route_after_player(cx.as_ref(), multiplay_availability, player_id)
+                        .await
+                        .map(Some)
+                        .map_err(|error| error.to_string())
+                }
+                Ok(None) => Ok(None),
+                Err(error) => Err(error.to_string()),
+            };
             tx.send(res).unwrap();
         });
         self.worker.spawn_local({
@@ -101,8 +123,8 @@ where
             async move {
                 let res = rx.await.unwrap();
                 match res {
-                    Ok(Some(player_id)) => {
-                        nc.navigate(NavRoute::ModeSelect { player_id });
+                    Ok(Some(route)) => {
+                        nc.navigate(route);
                     }
                     Ok(None) => {
                         error_msg_prop.set("入力されているプレイヤー名は存在しません。以前遊んだ際のプレイヤー名を忘れた場合は一つ前の画面に戻って新規プレイしてください。".to_shared_string());
@@ -144,6 +166,7 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
         let NavRoute::NameInputNonFirst = route else {
             unreachable!();
         };
+        self.0.borrow().reset();
     }
 
     fn route(&self) -> NavRouteKind {
@@ -152,4 +175,36 @@ impl NavDestination<NavRoute> for NameInputNonFirstDestination {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use std::{cell::RefCell, rc::Rc};
+
+    use stern::{WorkerThread, nav::NavController, worker::SmolExecutor};
+    use touchpanel_ui::UiNavRoute;
+
+    use super::*;
+
+    #[test]
+    fn reset_clears_previous_input() {
+        let route = Rc::new(RefCell::new(UiNavRoute::Start));
+        let nav_controller = NavController::new(NavRoute::Start, {
+            let route = Rc::clone(&route);
+            move |new| *route.borrow_mut() = new
+        });
+        let (state, _mock) = NameInputNonFirstStates::new_mocked();
+        let vm = NameInputNonFirstViewModel {
+            state,
+            nav_controller,
+            worker: WorkerThread::<Context, SmolExecutor>::new_smol(Context::new_empty()),
+            multiplay_availability: MultiPlayAvailability::Enabled,
+        };
+        vm.state.player_name_text.set("previous".into());
+        vm.state.keyboard_mode.set(KeyBoardMode::Number);
+        vm.state.error_msg.set("error".into());
+
+        vm.reset();
+
+        assert_eq!(vm.state.player_name_text.get_ref().as_str(), "");
+        assert_eq!(vm.state.keyboard_mode.get(), KeyBoardMode::Hiragana);
+        assert_eq!(vm.state.error_msg.get_ref().as_str(), "");
+    }
+}

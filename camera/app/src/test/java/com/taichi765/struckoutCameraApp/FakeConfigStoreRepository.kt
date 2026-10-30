@@ -13,8 +13,8 @@ class FakeConfigStoreRepository(
     initialDetectionOutput: DetectionOutputKind = DetectionOutputKind.NETWORK,
     initialRecordingMode: Boolean = ConfigStoreRepository.ENABLE_RECORDING_MODE_DEFAULT
 ) : ConfigStoreRepository {
-    override val cameraPose
-        get() = throw NotImplementedError("stub!")
+    private val _cameraPose = MutableStateFlow(CameraBallTracker.CameraPose.getDefaultInstance())
+    override val cameraPose = _cameraPose.asStateFlow()
 
     private val _recordingModeEnabled =
         MutableStateFlow(initialRecordingMode)
@@ -45,7 +45,7 @@ class FakeConfigStoreRepository(
     }
 
     override suspend fun updateCameraPose(pose: CameraBallTracker.CameraPose) {
-        throw NotImplementedError("stub!")
+        _cameraPose.value = pose
     }
 
     override suspend fun updateDetectionArea(area: DetectionArea) {

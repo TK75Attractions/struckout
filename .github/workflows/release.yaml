@@ -45,7 +45,7 @@ jobs:
   ball-tracker-build:
     strategy:
       matrix:
-        os: ["windows-2022", "windows-11-arm", "macos-14", "ubuntu-22.04"]
+        os: ["windows-2022", "windows-11-arm", "macos-14"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -71,14 +71,9 @@ jobs:
       - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e
         with:
-          install_args: protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }}
-      - name: Install fontconfig for Linux
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libfontconfig1-dev
+          install_args: protoc
       - name: Build ball_tracker
-        run: mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --profile release-tracker -p ball_tracker --features sentry
+        run: mise exec protoc -- cargo build --profile release-tracker -p ball_tracker --features sentry
         env:
           SQLX_OFFLINE: "true"
           ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
@@ -100,10 +95,6 @@ jobs:
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker upload/ball-tracker-arm64-macos
               ;;
-            "ubuntu-22.04")
-              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
-              mv target/release-tracker/ball_tracker upload/ball-tracker-x86_64-linux
-              ;;
             *)
               exit 1;;
           esac
@@ -116,7 +107,7 @@ jobs:
   touchpanel-build:
     strategy:
       matrix:
-        os: ["windows-2022", "windows-11-arm", "macos-14", "ubuntu-22.04"]
+        os: ["windows-2022", "windows-11-arm", "macos-14"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -142,14 +133,9 @@ jobs:
       - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
       - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e
         with:
-          install_args: protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }}
-      - name: Install fontconfig for Linux
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libfontconfig1-dev
+          install_args: protoc
       - name: Build touchpanel
-        run: mise exec protoc ${{ matrix.os == 'ubuntu-22.04' && 'mold' }} -- cargo build --release -p touchpanel --features sentry
+        run: mise exec protoc -- cargo build --release -p touchpanel --features sentry
         env:
           SQLX_OFFLINE: "true"
           ST_COMMIT_SHORT_HASH: ${{ needs.get-version.outputs.short-hash }}
@@ -170,10 +156,6 @@ jobs:
             "macos-14")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release/touchpanel upload/touchpanel-arm64-macos
-              ;;
-            "ubuntu-22.04")
-              echo "triple=x86_64-linux" >> "$GITHUB_OUTPUT"
-              mv target/release/touchpanel upload/touchpanel-x86_64-linux
               ;;
             *)
               exit 1;;
@@ -196,9 +178,6 @@ jobs:
           - target-platform: StandaloneWindows64
             triple: arm64-windows
             build-method: Editor.ReleaseBuild.BuildWindowsArm64
-          - target-platform: StandaloneLinux64
-            triple: x86_64-linux
-            build-method: ""
           - target-platform: StandaloneOSX
             triple: arm64-macos
             build-method: ""
@@ -248,9 +227,6 @@ jobs:
           - os: macos-14
             rid: osx-arm64
             asset: struckout-launcher-arm64-macos
-          - os: ubuntu-22.04
-            rid: linux-x64
-            asset: struckout-launcher-x86_64-linux
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -478,7 +454,6 @@ jobs:
             launcher-*/* camera/camera.apk \
             projector-arm64-macos/projector-arm64-macos.zip \
             projector-x86_64-windows/projector-x86_64-windows.zip \
-            projector-arm64-windows/projector-arm64-windows.zip \
-            projector-x86_64-linux/projector-x86_64-linux.zip
+            projector-arm64-windows/projector-arm64-windows.zip
         env:
           GH_TOKEN: ${{ github.token }}

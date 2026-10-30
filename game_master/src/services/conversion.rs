@@ -15,6 +15,7 @@ use crate::{GamePlayerInfo, PlayerInfo};
 pub enum SuccessfulEvent {
     /// [`struckout_proto::event::GameStarted`]
     GameStarted {
+        game_duration_secs: u32,
         difficulty: Difficulty,
         players: GamePlayerInfo,
     },
@@ -22,6 +23,8 @@ pub enum SuccessfulEvent {
     GameTimeLimitNotify { remaining: time::SignedDuration },
     /// [`struckout_proto::event::GameScoreChanged`]
     GameScoreChanged { total_score: u32 },
+    /// [`struckout_proto::event::ComboChanged`]
+    ComboChanged { combo: u32 },
     /// [`struckout_proto::event::GameFinished`]
     GameFinished { game_id: GameId },
     /// [`struckout_proto::event::TargetAdded`]
@@ -57,18 +60,19 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
         use struckout_proto::event::*;
         match ev {
             SuccessfulEvent::GameStarted {
+                game_duration_secs,
                 difficulty,
                 players,
             } => EventData::GameStarted(GameStarted {
-                game_dur_secs: super::GAME_DURATION
-                    .whole_seconds()
-                    .try_into()
-                    .expect("GAME_DURATION is a positive duration within u32 seconds"),
+                game_dur_secs: game_duration_secs,
                 difficulty: difficulty.into(),
                 player_info: Some(players.into()),
             }),
             SuccessfulEvent::GameScoreChanged { total_score } => {
                 EventData::GameScoreChanged(GameScoreChanged { total_score })
+            }
+            SuccessfulEvent::ComboChanged { combo } => {
+                EventData::ComboChanged(ComboChanged { combo })
             }
             SuccessfulEvent::GameTimeLimitNotify { remaining } => {
                 EventData::GameTimeLimitNotify(GameTimeLimitNotify {

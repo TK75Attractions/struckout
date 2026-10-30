@@ -39,6 +39,9 @@ namespace Struckout.Application.Interface
         /// <summary>サーバーの累計得点。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
         event Action<uint> ScoreChanged;
 
+        /// <summary>サーバーのコンボ数。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
+        event Action<uint> ComboChanged;
+
         /// <summary>登録された的。受信スレッドから通知されるため、状態・描画の更新はマーシャリングする。</summary>
         event Action<Target> TargetAdded;
 
@@ -59,6 +62,9 @@ namespace Struckout.Application.Interface
 
         /// <summary>的の削除を要求する。状態からの削除は TargetRemoved の受信時に行う。</summary>
         UniTask<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default);
+
+        /// <summary>球がどの的にも当たらなかったことを通知する。</summary>
+        UniTask<bool> ResetComboAsync(CancellationToken token = default);
 
         /// <summary>命中を通知する。得点はサーバーが計算して ScoreChanged で通知する。</summary>
         UniTask<bool> HitTargetAsync(Guid targetId, CancellationToken token = default);

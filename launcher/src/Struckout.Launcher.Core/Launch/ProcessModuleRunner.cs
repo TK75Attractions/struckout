@@ -12,6 +12,10 @@ namespace Struckout.Launcher.Core.Launch;
 /// <param name="logFile">
 /// Where stdout and stderr go. Null when the module writes its own log (Unity's <c>-logFile</c>).
 /// </param>
+/// <param name="verify">
+/// Module-specific checks run before each start; keeping them in a supplied hook lets this runner
+/// manage processes without depending on a module's installation format.
+/// </param>
 internal sealed class ProcessModuleRunner(
     ModuleId id,
     HostPlatform platform,
@@ -20,7 +24,8 @@ internal sealed class ProcessModuleRunner(
     IReadOnlyList<string> arguments,
     IReadOnlyList<int> servedPorts,
     int? healthPort,
-    string? logFile) : IModuleRunner
+    string? logFile,
+    Action<IProgress<string>>? verify = null) : IModuleRunner
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
 
@@ -39,6 +44,8 @@ internal sealed class ProcessModuleRunner(
 
         // It ended by itself
         await ReleaseAsync(cancellationToken);
+
+        verify?.Invoke(progress);
 
         if (!File.Exists(executable))
         {

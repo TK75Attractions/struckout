@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using Struckout.Launcher.Core.Modules;
 using Struckout.Launcher.Core.Platform;
 
@@ -24,42 +23,32 @@ internal sealed class ProjectorInstaller(HostPlatform platform, AppPaths paths, 
     public async Task<ModuleInstallation> InstallAsync(InstallContext context, ModuleInstallation? previous)
     {
         var slug = ModuleId.Projector.Slug();
-        var asset = ReleaseAssets.Pick(context.Release, platform, slug, ".zip");
         var directory = paths.ModuleDirectory(slug);
+        ProjectorFiles.Recover(directory);
+        var asset = ReleaseAssets.Pick(context.Release, platform, slug, ".zip");
         var archive = directory + ".zip";
         var extracting = directory + ".new";
         context.Log.Report($"{slug}: {asset.Name} をダウンロードします");
         await ReleaseAssets.DownloadAsync(downloader, asset, archive, context);
 
         context.Log.Report($"{slug}: 展開します");
-        if (Directory.Exists(extracting))
-        {
-            Directory.Delete(extracting, recursive: true);
-        }
-
+        await ProjectorFiles.ExtractAsync(archive, extracting, platform.Os, context.CancellationToken);
+        File.Delete(archive);
+        context.CancellationToken.ThrowIfCancellationRequested();
+        ProjectorFiles.Replace(directory);
         try
         {
-            // .NET restores the Unix permissions recorded in the zip, so the player stays executable.
-            await ZipFile.ExtractToDirectoryAsync(archive, extracting, context.CancellationToken);
+            if (Directory.Exists(directory + ".old"))
+            {
+                Directory.Delete(directory + ".old", recursive: true);
+            }
         }
-        catch (InvalidDataException e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            throw new LauncherException($"{asset.Name} が壊れています: {e.Message}", e);
+            // The replacement succeeded. Record it even if removing the backup must wait until the next update.
+            context.Log.Report($"projector: 更新は完了しましたが、{directory}.old を削除できません: {e.Message}");
         }
 
-        File.Delete(archive);
-        if (!File.Exists(Path.Combine(extracting, ExecutableInArchive(platform.Os))))
-        {
-            throw new LauncherException(
-                $"{asset.Name} に {ExecutableInArchive(platform.Os)} がありません (配布物の形が変わった?)");
-        }
-
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-
-        Directory.Move(extracting, directory);
         return new ExecutableInstallation
         {
             ReleaseTag = context.Release.Tag,
@@ -77,11 +66,16 @@ internal sealed class ProjectorInstaller(HostPlatform platform, AppPaths paths, 
         CancellationToken cancellationToken)
     {
         log.Report($"projector: {installation.Directory} を消します");
-        if (Directory.Exists(installation.Directory))
+        // Also remove staging and backup files so a later install cannot recover an uninstalled player.
+        foreach (var directory in new[] { installation.Directory, installation.Directory + ".new", installation.Directory + ".old" })
         {
-            Directory.Delete(installation.Directory, recursive: true);
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
         }
 
+        File.Delete(installation.Directory + ".zip");
         return Task.CompletedTask;
     }
 }

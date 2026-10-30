@@ -1,6 +1,9 @@
 use clap::Parser;
+use serde::Deserialize;
 use slint::ComponentHandle;
 use std::{
+    fs, io,
+    path::Path,
     sync::{
         Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
@@ -8,6 +11,7 @@ use std::{
     time::Duration,
 };
 use stern::{WorkerThread, worker::SlintExecutor};
+use thiserror::Error;
 use tracing::info;
 
 use touchpanel_ui::NavRoute;
@@ -58,9 +62,11 @@ struct Cli {
         long = "address",
         help = "the address of game-master's gRPC server"
     )]
-    server_addr: String,
+    server_addr: Option<String>,
     #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
-    machine_id: u32,
+    machine_id: Option<u32>,
+    #[arg(long, help = "skip mode selection and start a single-player session")]
+    disable_multiplay: bool,
 }
 
 pub fn version() -> String {
@@ -78,34 +84,101 @@ pub fn version_option() -> Option<String> {
     }
 }
 
-/// Application configs.
-///
-/// The fields are similar with [`Cli`] for now, but in future it's possible to
-/// read config from a YAML file and merge it with CLI args, so it's better to define
-/// each struct.
+/// Values read from the optional configuration file.
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+struct FileConfig {
+    address: Option<String>,
+    machine_id: Option<u32>,
+    #[serde(default)]
+    disable_multiplay: bool,
+}
+
+#[derive(Debug, Error)]
+enum LoadConfigError {
+    #[error("設定ファイル {path} を読めません: {source}", path = .path.display())]
+    Io {
+        path: std::path::PathBuf,
+        #[source]
+        source: io::Error,
+    },
+    #[error("設定ファイル {path} を解析できません: {source}", path = .path.display())]
+    Parse {
+        path: std::path::PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
+}
+
+#[derive(Debug, Error)]
+enum ResolveConfigError {
+    #[error("--{0} または設定ファイルの {0} が必要です")]
+    Missing(&'static str),
+}
+
+impl FileConfig {
+    /// Reads the optional file so existing CLI-only installations keep working.
+    fn from_file(path: &Path) -> Result<Self, LoadConfigError> {
+        let content = match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Self::default()),
+            Err(source) => {
+                return Err(LoadConfigError::Io {
+                    path: path.into(),
+                    source,
+                });
+            }
+        };
+        toml::from_str(&content).map_err(|source| LoadConfigError::Parse {
+            path: path.into(),
+            source,
+        })
+    }
+}
+
+/// Application config shared by the UI and the game master client.
 struct Config {
     /// The address of game-master's gRPC server.
     server_addr: String,
     /// The id of this machine.
     machine_id: u32,
+    /// Whether the mode selection screen is available.
+    multiplay_availability: touchpanel_ui::MultiPlayAvailability,
 }
 
 impl Config {
-    /// Constructs [`Config`] from CLI arguments.
-    fn from_cli(cli: Cli) -> Self {
-        Self {
-            server_addr: cli.server_addr,
-            machine_id: cli.machine_id,
-        }
+    /// Combines file values with explicit CLI values, which have priority.
+    fn from_sources(file: FileConfig, cli: Cli) -> Result<Self, ResolveConfigError> {
+        Ok(Self {
+            server_addr: cli
+                .server_addr
+                .or(file.address)
+                .ok_or(ResolveConfigError::Missing("address"))?,
+            machine_id: cli
+                .machine_id
+                .or(file.machine_id)
+                .ok_or(ResolveConfigError::Missing("machine-id"))?,
+            multiplay_availability: if cli.disable_multiplay || file.disable_multiplay {
+                touchpanel_ui::MultiPlayAvailability::Disabled
+            } else {
+                touchpanel_ui::MultiPlayAvailability::Enabled
+            },
+        })
     }
 }
 
-pub fn run_main(shutdown_requested: Arc<AtomicBool>) {
+pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
     let cli = Cli::parse();
-
-    let config = Arc::new(Config::from_cli(cli));
+    let file = match dirs::config_dir() {
+        Some(dir) => FileConfig::from_file(&dir.join("struckout/touchpanel/config.toml"))?,
+        None => FileConfig::default(),
+    };
+    let config = Arc::new(Config::from_sources(file, cli)?);
 
     let ui = touchpanel_ui::AppWindow::new().unwrap();
+    ui.set_mode_selection_enabled(
+        config.multiplay_availability == touchpanel_ui::MultiPlayAvailability::Enabled,
+    );
 
     let nav_controller = NavController::new(NavRoute::Connecting, {
         let ui = ui.as_weak();
@@ -149,4 +222,80 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) {
         },
     );
     application.ui.run().unwrap();
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_config_file_and_uses_cli_for_missing_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        fs::write(&path, "address = '127.0.0.1'\ndisable-multiplay = true\n").unwrap();
+        let cli = Cli::try_parse_from(["touchpanel", "--machine-id", "1"]).unwrap();
+        let config = Config::from_sources(FileConfig::from_file(&path).unwrap(), cli).unwrap();
+        assert_eq!(config.server_addr, "127.0.0.1");
+        assert_eq!(config.machine_id, 1);
+        assert_eq!(
+            config.multiplay_availability,
+            touchpanel_ui::MultiPlayAvailability::Disabled
+        );
+    }
+
+    #[test]
+    fn cli_overrides_config_file() {
+        let file = toml::from_str("address = 'file'\nmachine-id = 1\n").unwrap();
+        let cli = Cli::try_parse_from([
+            "touchpanel",
+            "--address",
+            "cli",
+            "--machine-id",
+            "2",
+            "--disable-multiplay",
+        ])
+        .unwrap();
+        let config = Config::from_sources(file, cli).unwrap();
+        assert_eq!(config.server_addr, "cli");
+        assert_eq!(config.machine_id, 2);
+        assert_eq!(
+            config.multiplay_availability,
+            touchpanel_ui::MultiPlayAvailability::Disabled
+        );
+    }
+
+    #[test]
+    fn config_file_can_supply_all_required_values() {
+        let file = toml::from_str("address = '127.0.0.1'\nmachine-id = 1\n").unwrap();
+        let cli = Cli::try_parse_from(["touchpanel"]).unwrap();
+        let config = Config::from_sources(file, cli).unwrap();
+        assert_eq!(config.server_addr, "127.0.0.1");
+        assert_eq!(config.machine_id, 1);
+        assert_eq!(
+            config.multiplay_availability,
+            touchpanel_ui::MultiPlayAvailability::Enabled
+        );
+    }
+
+    #[test]
+    fn missing_config_file_keeps_cli_only_startup() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = FileConfig::from_file(&dir.path().join("config.toml")).unwrap();
+        let cli = Cli::try_parse_from(["touchpanel", "-a", "127.0.0.1", "-m", "1"]).unwrap();
+        assert!(Config::from_sources(file, cli).is_ok());
+    }
+
+    #[test]
+    fn missing_required_values_and_invalid_file_are_errors() {
+        let cli = Cli::try_parse_from(["touchpanel"]).unwrap();
+        assert!(Config::from_sources(FileConfig::default(), cli).is_err());
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        fs::write(&path, "machine-id = 'wrong'\n").unwrap();
+        assert!(matches!(
+            FileConfig::from_file(&path),
+            Err(LoadConfigError::Parse { .. })
+        ));
+    }
 }

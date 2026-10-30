@@ -1,7 +1,8 @@
 # launcher
 
-struckout のモジュールを PC にインストールし、依存の順に起動するアプリ (C# / Avalonia)。Windows、macOS、Linux で動く。
-ソースもビルドの道具も要らないので、ブースの PC を用意するときに使う。
+struckout のモジュールを PC にインストールし、依存の順に起動するアプリ (C# / Avalonia)。Windows と macOS 向けに配布する。
+配布版はソースもビルドの道具も要らないので、ブースの PC を用意するときに使う。
+Linux ではソースから実行できるが、現行リリースに Linux 向けモジュールはない。
 
 画面は 2 つ。
 
@@ -19,9 +20,8 @@ struckout のモジュールを PC にインストールし、依存の順に起
 | Windows (x64) | `struckout-launcher-x86_64-windows.exe` |
 | Windows (Arm) | `struckout-launcher-arm64-windows.exe` |
 | macOS (Apple シリコン) | `struckout-launcher-arm64-macos` |
-| Linux (x64) | `struckout-launcher-x86_64-linux` |
 
-macOS と Linux では `chmod +x` してから実行する。
+macOS では `chmod +x` してから実行する。
 
 ソースから動かすときは `mise run //launcher:run`。
 
@@ -34,7 +34,7 @@ macOS と Linux では `chmod +x` してから実行する。
 | ball-tracker | リリースの `ball-tracker-<OS>` | FFmpeg |
 | touchpanel | リリースの `touchpanel-<OS>` | |
 | projector | リリースの `projector-<OS>.zip` を展開したもの | |
-| game-master | リリースの `game_master/compose.yaml` と `compose.prod.yaml`、リリースと同じタグの ghcr.io のイメージ (`docker compose pull`) | Docker |
+| game-master | リリースの `game_master/docker/compose.yaml` と `compose.prod.yaml`、リリースと同じタグの ghcr.io のイメージ (`docker compose pull`) | Docker |
 | camera | リリースの `camera.apk` を、`cameras.json` にある接続中のスマホに `adb install` | Android Platform Tools |
 
 要るツールが見つからなければ入れる。Windows は winget、macOS は Homebrew、Android Platform Tools はどの OS でも Google から
@@ -47,6 +47,19 @@ macOS と Linux では `chmod +x` してから実行する。
 ball-tracker か camera を入れると、リポジトリの `scripts/cameras.json` を設定のディレクトリにコピーする (すでにあれば
 上書きしない)。起動の設定 `launcher.toml` も、無ければ作る。
 
+projector は `<インストール先>.new` に展開し、zip の全エントリの存在とファイルサイズ、各 OS の Unity プレイヤーと
+Mono の必須ファイルを検査する。不足があれば既存のインストールを入れ替えない。全ファイルの相対パスとサイズは、
+インストール先の `.struckout-manifest.json` に保存する。
+
+更新時は既存のディレクトリを `.old` に移してから `.new` をインストール先に移し、成功後に `.old` を消す。
+入れ替えに失敗した場合は元に戻し、インストールの記録は更新しない。途中で終了してインストール先が無く `.old` が
+残っている場合も、次のインストールまたは起動時に戻す。
+
+projector の起動直前にもマニフェストと必須ファイルを照合する。欠落やサイズの不一致があれば起動を止め、
+インストール画面からの入れ直しを案内する。以前のランチャーで入れたマニフェストの無い projector は、必須ファイルだけを
+検査して起動を続け、次の更新でファイルの一覧を記録する旨をログで知らせる。
+この検査はファイルの欠落・サイズの変化を検出するもので、過去の欠落原因を特定するものではない。
+
 ### 置き場所
 
 | もの | Windows | macOS | Linux |
@@ -55,6 +68,7 @@ ball-tracker か camera を入れると、リポジトリの `scripts/cameras.js
 | モジュール、ツール、ログ、`install-state.json` | `%LOCALAPPDATA%\struckout\launcher` | 同上 | `$XDG_DATA_HOME/struckout/launcher` |
 
 設定のディレクトリは、ball_tracker が使う Rust の `dirs::config_dir()` と同じところにある。
+game-master の設定は、その直下の `struckout/game_master/config.toml` に置く。
 
 ### 記録とアンインストール
 
@@ -90,15 +104,24 @@ flowchart LR
 3 分たっても応答しなければ起動しない。ほかの PC のモジュールは待たない (どのモジュールも、切れたら自分でつなぎ直す) が、
 ヘルスチェックの結果を画面に出す。ポートは `api/spec/servers.yaml` をビルドのときに埋め込んだもの。
 
+「すべて起動」の前に、この PC の `modules` に指定したモジュールのうち、インストールの記録があるもののリリースタグを照合する。
+camera は既存のアプリを使い続ける場合などに記録のタグが実際のアプリと異なることがあるため、照合しない。タグが食い違う場合は
+どのモジュールも起動せず、モジュールごとのタグと対処をログおよび状態に表示する。インストール画面で「更新」し、同じリリースに
+そろえてから起動する。別 PC (`hosts` の接続先) にあるモジュールのリリースタグは確認できないため、起動時にその旨をログに表示する。
+
 | モジュール | 起動のしかた | 動いているかの確かめ方 |
 |---|---|---|
 | ball-tracker | `--input network --cameras cameras.json --ffmpeg ...` で起動し、出力をログに書く | プロセスが動いていて、5080 番の gRPC ヘルスチェックが `SERVING` |
-| game-master | `docker compose up --detach` (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
+| game-master | `docker compose up` で DB を起動してから app コンテナを再作成する (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
 | camera | 各スマホに `adb reverse` (6060、5050、5052)、`cameras.json` の設定を送り、アプリを開く | 全設定カメラが adb 接続・画面のロック/スリープなし・PID ありで、ball_tracker に接続し、3 秒以内に映像を受信している |
 | projector | `-trackerHost`、`-masterHost`、`-machineId`、`-monitor` などを付けて起動する | プロセスが動いている |
 | touchpanel | `--address`、`--machine-id` を付けて起動する | プロセスが動いている |
 
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
+
+game-master の設定ファイルは、インストール時に無ければ `game_duration_secs = 90` で作る。既存の設定は
+上書きしない。コンテナの `/etc/game_master/config.toml` にバインドマウントするので、制限時間を
+変えたらランチャーで game-master を止めて起動し直す。app コンテナを再作成して新しい値を読む。
 
 「すべて止める」かウィンドウを閉じると、依存されるモジュールを先に止める。依存関係のないモジュールは並行して止める。Windows の ball_tracker はウィンドウを持たない
 ので、10 秒待ってから強制終了する。
