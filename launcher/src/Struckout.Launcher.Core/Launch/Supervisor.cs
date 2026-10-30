@@ -449,7 +449,8 @@ public sealed class Supervisor : IDisposable
                     ?? throw new LauncherException("データベースのパスワードがありません。インストールし直してください");
                 return new GameMasterRunner(
                     new GameMasterCompose(
-                        platform, Tool(PrerequisiteId.Docker), compose.Directory, compose.ReleaseTag, password, runner),
+                        platform, Tool(PrerequisiteId.Docker), compose.Directory, compose.ReleaseTag, password,
+                        paths.GameMasterConfigFile, runner),
                     ModuleGraph.HealthPortOf(id, ports)
                         // guaranteed by the game-master case
                         ?? throw new InvalidOperationException("game-master should have a health endpoint"));

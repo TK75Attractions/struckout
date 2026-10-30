@@ -17,6 +17,9 @@ public sealed record AppPaths(string ConfigDirectory, string DataDirectory)
     /// <summary>Per-phone settings shared by ball_tracker (<c>--cameras</c>) and the camera app.</summary>
     public string CamerasFile => Path.Combine(ConfigDirectory, "cameras.json");
 
+    /// <summary>The game_master configuration, alongside the launcher's settings under struckout.</summary>
+    public string GameMasterConfigFile => Path.Combine(Path.GetDirectoryName(ConfigDirectory)!, "game_master", "config.toml");
+
     public string InstallStateFile => Path.Combine(DataDirectory, "install-state.json");
 
     public string ModulesDirectory => Path.Combine(DataDirectory, "modules");

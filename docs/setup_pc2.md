@@ -3,9 +3,13 @@
 PC② は projector (Unity) とプロジェクターを受け持つ。projector は **ball_tracker (PC①、TCP 5000) と
 game_master (gRPC 8020) の両方につながらないと動き出さない** (`docs/projector_debug.md`)。
 game_master は PC② の Docker で動かす。
+game_master のゲーム制限時間は起動時に必ず指定する。Docker Compose の `app` サービスに
+`command: ["--game-duration-secs", "90"]` を追加する方法は
+[game_master の設定](game_master/configuration.md)を参照。
 
 リリースの projector と game_master (ghcr.io のイメージ) を使うだけなら、ランチャー (`launcher/README.md`) で
 インストールと起動ができる。Unity も Rust も要らない。
+ランチャーを使う場合、制限時間は `<dirs::config_dir()>/struckout/game_master/config.toml` で設定する。
 
 ## 用意するもの
 

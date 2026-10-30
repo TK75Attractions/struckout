@@ -15,6 +15,7 @@ use crate::{GamePlayerInfo, PlayerInfo};
 pub enum SuccessfulEvent {
     /// [`struckout_proto::event::GameStarted`]
     GameStarted {
+        game_duration_secs: u32,
         difficulty: Difficulty,
         players: GamePlayerInfo,
     },
@@ -59,13 +60,11 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
         use struckout_proto::event::*;
         match ev {
             SuccessfulEvent::GameStarted {
+                game_duration_secs,
                 difficulty,
                 players,
             } => EventData::GameStarted(GameStarted {
-                game_dur_secs: super::GAME_DURATION
-                    .whole_seconds()
-                    .try_into()
-                    .expect("GAME_DURATION is a positive duration within u32 seconds"),
+                game_dur_secs: game_duration_secs,
                 difficulty: difficulty.into(),
                 player_info: Some(players.into()),
             }),
