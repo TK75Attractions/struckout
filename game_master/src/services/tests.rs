@@ -662,6 +662,8 @@ fn target_request(machine_id: u32) -> AddTargetRequest {
             x: 0.0,
             y: 0.0,
             radius: 1.0,
+            vx: 0.0,
+            vy: 0.0,
         })),
     }
 }
@@ -1001,6 +1003,8 @@ async fn completion_does_not_emit_shared_target_removals() {
                 x: 0.0,
                 y: 0.0,
                 radius: 1.0,
+                vx: 0.0,
+                vy: 0.0,
             }),
             Owner::All(Default::default()),
         )

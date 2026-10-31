@@ -25,33 +25,30 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChhnYW1lX21hc3Rlci90YXJnZXQucHJvdG8SKHRrNzVhdHRyYWN0aW9ucy5z",
-            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEipQQKBlRhcmdldBIbCgl0YXJnZXRf",
-            "aWQYASABKAlSCHRhcmdldElkElQKB2NvbXBhc3MYAiABKAsyOC50azc1YXR0",
-            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Db21w",
-            "YXNzSABSB2NvbXBhc3MSYQoMcG9ja2V0X3dhdGNoGAUgASgLMjwudGs3NWF0",
-            "dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5UYXJnZXQuUG9j",
-            "a2V0V2F0Y2hIAFILcG9ja2V0V2F0Y2gSVgoGc2luZ2xlGAMgASgLMjwudGs3",
+            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEi9wMKBlRhcmdldBIRCgl0YXJnZXRf",
+            "aWQYASABKAkSSwoHY29tcGFzcxgCIAEoCzI4LnRrNzVhdHRyYWN0aW9ucy5z",
+            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0LkNvbXBhc3NIABJUCgxw",
+            "b2NrZXRfd2F0Y2gYBSABKAsyPC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0",
+            "LmdhbWVfbWFzdGVyLnYxLlRhcmdldC5Qb2NrZXRXYXRjaEgAEk4KBnNpbmds",
+            "ZRgDIAEoCzI8LnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0",
+            "ZXIudjEuVGFyZ2V0Lk93bmVyU2luZ2xlSAESSAoDYWxsGAQgASgLMjkudGs3",
             "NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5UYXJnZXQu",
-            "T3duZXJTaW5nbGVIAVIGc2luZ2xlEk0KA2FsbBgEIAEoCzI5LnRrNzVhdHRy",
-            "YWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuVGFyZ2V0Lk93bmVy",
-            "QWxsSAFSA2FsbBo9CgdDb21wYXNzEgwKAXgYASABKAJSAXgSDAoBeRgCIAEo",
-            "AlIBeRIWCgZyYWRpdXMYAyABKAJSBnJhZGl1cxoNCgtQb2NrZXRXYXRjaBos",
-            "CgtPd25lclNpbmdsZRIdCgptYWNoaW5lX2lkGAEgASgNUgltYWNoaW5lSWQa",
-            "CgoIT3duZXJBbGxCDQoLdGFyZ2V0X2RhdGFCBwoFb3duZXIilgEKEEFkZFRh",
-            "cmdldFJlcXVlc3QSHQoKbWFjaGluZV9pZBgBIAEoDVIJbWFjaGluZUlkElQK",
-            "B2NvbXBhc3MYAiABKAsyOC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0Lmdh",
-            "bWVfbWFzdGVyLnYxLlRhcmdldC5Db21wYXNzSABSB2NvbXBhc3NCDQoLdGFy",
-            "Z2V0X2RhdGEiMAoRQWRkVGFyZ2V0UmVzcG9uc2USGwoJdGFyZ2V0X2lkGAEg",
-            "ASgJUgh0YXJnZXRJZCJRChNSZW1vdmVUYXJnZXRSZXF1ZXN0Eh0KCm1hY2hp",
-            "bmVfaWQYASABKA1SCW1hY2hpbmVJZBIbCgl0YXJnZXRfaWQYAiABKAlSCHRh",
-            "cmdldElkIhYKFFJlbW92ZVRhcmdldFJlc3BvbnNlIk4KEEhpdFRhcmdldFJl",
-            "cXVlc3QSHQoKbWFjaGluZV9pZBgBIAEoDVIJbWFjaGluZUlkEhsKCXRhcmdl",
-            "dF9pZBgCIAEoCVIIdGFyZ2V0SWQiEwoRSGl0VGFyZ2V0UmVzcG9uc2ViBnBy",
-            "b3RvMw=="));
+            "T3duZXJBbGxIARpHCgdDb21wYXNzEgkKAXgYASABKAISCQoBeRgCIAEoAhIO",
+            "CgZyYWRpdXMYAyABKAISCgoCdngYBCABKAESCgoCdnkYBSABKAEaDQoLUG9j",
+            "a2V0V2F0Y2gaIQoLT3duZXJTaW5nbGUSEgoKbWFjaGluZV9pZBgBIAEoDRoK",
+            "CghPd25lckFsbEINCgt0YXJnZXRfZGF0YUIHCgVvd25lciKCAQoQQWRkVGFy",
+            "Z2V0UmVxdWVzdBISCgptYWNoaW5lX2lkGAEgASgNEksKB2NvbXBhc3MYAiAB",
+            "KAsyOC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYx",
+            "LlRhcmdldC5Db21wYXNzSABCDQoLdGFyZ2V0X2RhdGEiJgoRQWRkVGFyZ2V0",
+            "UmVzcG9uc2USEQoJdGFyZ2V0X2lkGAEgASgJIjwKE1JlbW92ZVRhcmdldFJl",
+            "cXVlc3QSEgoKbWFjaGluZV9pZBgBIAEoDRIRCgl0YXJnZXRfaWQYAiABKAki",
+            "FgoUUmVtb3ZlVGFyZ2V0UmVzcG9uc2UiOQoQSGl0VGFyZ2V0UmVxdWVzdBIS",
+            "CgptYWNoaW5lX2lkGAEgASgNEhEKCXRhcmdldF9pZBgCIAEoCSITChFIaXRU",
+            "YXJnZXRSZXNwb25zZWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Parser, new[]{ "TargetId", "Compass", "PocketWatch", "Single", "All" }, new[]{ "TargetData", "Owner" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass.Parser, new[]{ "X", "Y", "Radius" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Parser, new[]{ "TargetId", "Compass", "PocketWatch", "Single", "All" }, new[]{ "TargetData", "Owner" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.Compass.Parser, new[]{ "X", "Y", "Radius", "Vx", "Vy" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.PocketWatch.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerSingle), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerSingle.Parser, new[]{ "MachineId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerAll), global::Tk75Attractions.Struckout.GameMaster.V1.Target.Types.OwnerAll.Parser, null, null, null, null, null)}),
@@ -578,6 +575,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           x_ = other.x_;
           y_ = other.y_;
           radius_ = other.radius_;
+          vx_ = other.vx_;
+          vy_ = other.vy_;
           _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
         }
 
@@ -623,6 +622,33 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           }
         }
 
+        /// <summary>Field number for the "vx" field.</summary>
+        public const int VxFieldNumber = 4;
+        private double vx_;
+        /// <summary>
+        /// Board pixels traveled per second along each axis. Zero keeps the target still.
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public double Vx {
+          get { return vx_; }
+          set {
+            vx_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "vy" field.</summary>
+        public const int VyFieldNumber = 5;
+        private double vy_;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public double Vy {
+          get { return vy_; }
+          set {
+            vy_ = value;
+          }
+        }
+
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override bool Equals(object other) {
@@ -641,6 +667,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(X, other.X)) return false;
           if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(Y, other.Y)) return false;
           if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(Radius, other.Radius)) return false;
+          if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(Vx, other.Vx)) return false;
+          if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(Vy, other.Vy)) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
 
@@ -651,6 +679,8 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           if (X != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(X);
           if (Y != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(Y);
           if (Radius != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(Radius);
+          if (Vx != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(Vx);
+          if (Vy != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(Vy);
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
           }
@@ -681,6 +711,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             output.WriteRawTag(29);
             output.WriteFloat(Radius);
           }
+          if (Vx != 0D) {
+            output.WriteRawTag(33);
+            output.WriteDouble(Vx);
+          }
+          if (Vy != 0D) {
+            output.WriteRawTag(41);
+            output.WriteDouble(Vy);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(output);
           }
@@ -703,6 +741,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             output.WriteRawTag(29);
             output.WriteFloat(Radius);
           }
+          if (Vx != 0D) {
+            output.WriteRawTag(33);
+            output.WriteDouble(Vx);
+          }
+          if (Vy != 0D) {
+            output.WriteRawTag(41);
+            output.WriteDouble(Vy);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(ref output);
           }
@@ -721,6 +767,12 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           }
           if (Radius != 0F) {
             size += 1 + 4;
+          }
+          if (Vx != 0D) {
+            size += 1 + 8;
+          }
+          if (Vy != 0D) {
+            size += 1 + 8;
           }
           if (_unknownFields != null) {
             size += _unknownFields.CalculateSize();
@@ -742,6 +794,12 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           }
           if (other.Radius != 0F) {
             Radius = other.Radius;
+          }
+          if (other.Vx != 0D) {
+            Vx = other.Vx;
+          }
+          if (other.Vy != 0D) {
+            Vy = other.Vy;
           }
           _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
         }
@@ -774,6 +832,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
                 Radius = input.ReadFloat();
                 break;
               }
+              case 33: {
+                Vx = input.ReadDouble();
+                break;
+              }
+              case 41: {
+                Vy = input.ReadDouble();
+                break;
+              }
             }
           }
         #endif
@@ -803,6 +869,14 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
               }
               case 29: {
                 Radius = input.ReadFloat();
+                break;
+              }
+              case 33: {
+                Vx = input.ReadDouble();
+                break;
+              }
+              case 41: {
+                Vy = input.ReadDouble();
                 break;
               }
             }

@@ -1109,6 +1109,8 @@ mod tests {
             x: 0.0,
             y: 0.0,
             radius,
+            vx: 0.0,
+            vy: 0.0,
         })
     }
 
