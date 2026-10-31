@@ -100,10 +100,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialResponse> __Marshaller_tk75attractions_struckout_game_master_v1_GoNextTutorialResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest> __Marshaller_tk75attractions_struckout_game_master_v1_GoRankingScreenRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest.Parser));
-    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse> __Marshaller_tk75attractions_struckout_game_master_v1_GoRankingScreenResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse.Parser));
-    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenRequest> __Marshaller_tk75attractions_struckout_game_master_v1_GoHomeScreenRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenResponse> __Marshaller_tk75attractions_struckout_game_master_v1_GoHomeScreenResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenResponse.Parser));
@@ -207,14 +203,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         "GoNextTutorial",
         __Marshaller_tk75attractions_struckout_game_master_v1_GoNextTutorialRequest,
         __Marshaller_tk75attractions_struckout_game_master_v1_GoNextTutorialResponse);
-
-    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse> __Method_GoRankingScreen = new grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse>(
-        grpc::MethodType.Unary,
-        __ServiceName,
-        "GoRankingScreen",
-        __Marshaller_tk75attractions_struckout_game_master_v1_GoRankingScreenRequest,
-        __Marshaller_tk75attractions_struckout_game_master_v1_GoRankingScreenResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenResponse> __Method_GoHomeScreen = new grpc::Method<global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenResponse>(
@@ -385,18 +373,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialResponse> GoNextTutorial(global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialRequest request, grpc::ServerCallContext context)
-      {
-        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
-      }
-
-      /// <summary>
-      /// Navigates to the ranking screen. Used by `touchpanel`.
-      /// </summary>
-      /// <param name="request">The request received from the client.</param>
-      /// <param name="context">The context of the server-side call handler being invoked.</param>
-      /// <returns>The response to send back to the client (wrapped by a task).</returns>
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse> GoRankingScreen(global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -962,54 +938,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_GoNextTutorial, null, options, request);
       }
       /// <summary>
-      /// Navigates to the ranking screen. Used by `touchpanel`.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
-      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
-      /// <param name="cancellationToken">An optional token for canceling the call.</param>
-      /// <returns>The response received from the server.</returns>
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse GoRankingScreen(global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
-      {
-        return GoRankingScreen(request, new grpc::CallOptions(headers, deadline, cancellationToken));
-      }
-      /// <summary>
-      /// Navigates to the ranking screen. Used by `touchpanel`.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="options">The options for the call.</param>
-      /// <returns>The response received from the server.</returns>
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse GoRankingScreen(global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest request, grpc::CallOptions options)
-      {
-        return CallInvoker.BlockingUnaryCall(__Method_GoRankingScreen, null, options, request);
-      }
-      /// <summary>
-      /// Navigates to the ranking screen. Used by `touchpanel`.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
-      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
-      /// <param name="cancellationToken">An optional token for canceling the call.</param>
-      /// <returns>The call object.</returns>
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse> GoRankingScreenAsync(global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
-      {
-        return GoRankingScreenAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
-      }
-      /// <summary>
-      /// Navigates to the ranking screen. Used by `touchpanel`.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="options">The options for the call.</param>
-      /// <returns>The call object.</returns>
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse> GoRankingScreenAsync(global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest request, grpc::CallOptions options)
-      {
-        return CallInvoker.AsyncUnaryCall(__Method_GoRankingScreen, null, options, request);
-      }
-      /// <summary>
       /// Navigates to the home screen. Used by `touchpanel`.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -1305,7 +1233,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
           .AddMethod(__Method_StartTutorial, serviceImpl.StartTutorial)
           .AddMethod(__Method_GoPreviousTutorial, serviceImpl.GoPreviousTutorial)
           .AddMethod(__Method_GoNextTutorial, serviceImpl.GoNextTutorial)
-          .AddMethod(__Method_GoRankingScreen, serviceImpl.GoRankingScreen)
           .AddMethod(__Method_GoHomeScreen, serviceImpl.GoHomeScreen)
           .AddMethod(__Method_AddTarget, serviceImpl.AddTarget)
           .AddMethod(__Method_RemoveTarget, serviceImpl.RemoveTarget)
@@ -1331,7 +1258,6 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       serviceBinder.AddMethod(__Method_StartTutorial, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.StartTutorialResponse>(serviceImpl.StartTutorial));
       serviceBinder.AddMethod(__Method_GoPreviousTutorial, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GoPreviousTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoPreviousTutorialResponse>(serviceImpl.GoPreviousTutorial));
       serviceBinder.AddMethod(__Method_GoNextTutorial, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoNextTutorialResponse>(serviceImpl.GoNextTutorial));
-      serviceBinder.AddMethod(__Method_GoRankingScreen, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoRankingScreenResponse>(serviceImpl.GoRankingScreen));
       serviceBinder.AddMethod(__Method_GoHomeScreen, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenRequest, global::Tk75Attractions.Struckout.GameMaster.V1.GoHomeScreenResponse>(serviceImpl.GoHomeScreen));
       serviceBinder.AddMethod(__Method_AddTarget, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetRequest, global::Tk75Attractions.Struckout.GameMaster.V1.AddTargetResponse>(serviceImpl.AddTarget));
       serviceBinder.AddMethod(__Method_RemoveTarget, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Tk75Attractions.Struckout.GameMaster.V1.RemoveTargetRequest, global::Tk75Attractions.Struckout.GameMaster.V1.RemoveTargetResponse>(serviceImpl.RemoveTarget));
