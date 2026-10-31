@@ -63,6 +63,7 @@ namespace Struckout.Bootstrap
             _master.ScoreChanged += OnScoreChanged;
             _master.ComboChanged += OnComboChanged;
             _master.GameStarted += OnGameStarted;
+            _master.GameWillStart += OnGameWillStart;
             _master.GameFinished += OnGameFinished;
             _master.ConnectionLost += OnConnectionLost;
             _master.TargetAdded += OnTargetAdded;
@@ -71,6 +72,11 @@ namespace Struckout.Bootstrap
             _master.RankingScreenRequested += OnRankingScreenRequested;
             _master.HomeScreenRequested += OnHomeScreenRequested;
         }
+
+        private void OnGameWillStart(uint seconds) => _dispatcher.Enqueue(() =>
+        {
+            _service.ShowCountdown(seconds);
+        });
 
         private void OnGameStarted(Difficulty difficulty, GameMode mode, PlayerId playerId, TimeSpan duration) =>
             _dispatcher.Enqueue(() =>
@@ -137,6 +143,7 @@ namespace Struckout.Bootstrap
             _runtime.SuspendGame();
             _screens.Dispose();
             _master.GameStarted -= OnGameStarted;
+            _master.GameWillStart -= OnGameWillStart;
             _master.GameFinished -= OnGameFinished;
             _master.ConnectionLost -= OnConnectionLost;
             _master.TargetAdded -= OnTargetAdded;

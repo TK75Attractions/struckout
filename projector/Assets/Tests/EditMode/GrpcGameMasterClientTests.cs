@@ -38,6 +38,21 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public void GameWillStart_passes_remaining_seconds_to_subscribers()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
+            uint? remaining = null;
+            client.GameWillStart += seconds => remaining = seconds;
+
+            Dispatch(client, new Event
+            {
+                GameWillStart = new Event.Types.GameWillStart { SecsUntilStart = 3 },
+            });
+
+            Assert.That(remaining, Is.EqualTo(3));
+        }
+
+        [Test]
         public void Score_events_preserve_the_increment_and_reason()
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);

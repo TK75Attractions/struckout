@@ -47,6 +47,7 @@ namespace Struckout.Infrastructure.Grpc
         private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
 
         public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted;
+        public event Action<uint> GameWillStart;
         public event Action<GameId> GameFinished;
         public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
@@ -189,6 +190,10 @@ namespace Struckout.Infrastructure.Grpc
         {
             switch (received.EventDataCase)
             {
+                case Event.EventDataOneofCase.GameWillStart:
+                    GameWillStart?.Invoke(received.GameWillStart.SecsUntilStart);
+                    break;
+
                 case Event.EventDataOneofCase.GameStarted:
                     var playerId = LocalPlayer(received.GameStarted);
                     if (!playerId.HasValue)

@@ -74,6 +74,7 @@ namespace Struckout.Infrastructure.Fake
         private bool _started;
         private Difficulty _startedDifficulty;
 
+        public event Action<uint> GameWillStart;
         public event Action<GameId> GameFinished;
         public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
