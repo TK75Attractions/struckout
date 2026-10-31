@@ -206,6 +206,18 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public async Task Machine_identity_is_attached_to_local_logs_structured_logs_and_error_events()
+        {
+            var logger = new ProjectorLogger<ProjectorSentryTests>(HubAdapter.Instance, _scopes,
+                new Struckout.Domain.NetworkSettings { machineId = 2 });
+            LogAssert.Expect(LogType.Error, $"[{typeof(ProjectorSentryTests).FullName}] [machine_id=2] Identified");
+            logger.LogError("Identified");
+            await SentrySdk.FlushAsync(TimeSpan.FromSeconds(5));
+            Assert.That(Attribute(_logs.Single(), "machine_id"), Is.EqualTo(2u));
+            Assert.That(_events.Single().GetTag("machine_id"), Is.EqualTo("2"));
+        }
+
+        [Test]
         public async Task Direct_Unity_logs_are_not_forwarded_but_Unity_exceptions_are()
         {
             LogAssert.Expect(LogType.Log, "direct info");
