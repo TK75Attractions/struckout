@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path};
+use std::{fs, io, num::NonZeroU32, path::Path};
 
 use serde::Deserialize;
 use thiserror::Error;
@@ -10,6 +10,7 @@ const CONFIG_PATH: &str = "/etc/game_master/config.toml";
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct FileConfig {
+    game_start_delay_secs: NonZeroU32,
     game_duration_secs: GameDurations,
     combo_bonuses: ComboBonuses,
 }
@@ -31,6 +32,7 @@ pub enum LoadConfigError {
 }
 
 pub struct Config {
+    pub game_start_delay_secs: NonZeroU32,
     pub game_duration_secs: GameDurations,
     pub combo_bonuses: ComboBonuses,
 }
@@ -39,6 +41,7 @@ impl Config {
     pub fn load() -> Result<Self, LoadConfigError> {
         let file = Self::read_file(Path::new(CONFIG_PATH))?;
         Ok(Self {
+            game_start_delay_secs: file.game_start_delay_secs,
             game_duration_secs: file.game_duration_secs,
             combo_bonuses: file.combo_bonuses,
         })
@@ -61,6 +64,7 @@ mod tests {
     use super::*;
 
     const VALID_CONFIG: &str = "\
+game_start_delay_secs = 3
 [game_duration_secs]
 normal = 120
 hard = 90
@@ -81,6 +85,20 @@ points = 800
         assert_eq!(file.game_duration_secs.normal.get(), 120);
         assert_eq!(file.game_duration_secs.hard.get(), 90);
         assert_eq!(file.game_duration_secs.veryhard.get(), 60);
+    }
+
+    #[test]
+    fn requires_positive_game_start_delay() {
+        assert!(
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("game_start_delay_secs = 3\n", ""))
+                .is_err()
+        );
+        assert!(
+            toml::from_str::<FileConfig>(
+                &VALID_CONFIG.replace("game_start_delay_secs = 3", "game_start_delay_secs = 0")
+            )
+            .is_err()
+        );
     }
 
     #[test]
