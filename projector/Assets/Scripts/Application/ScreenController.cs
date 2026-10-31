@@ -1,6 +1,7 @@
 using Tk75Attractions.Struckout.GameMaster.V1;
 using System;
 using System.Threading;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
@@ -65,9 +66,15 @@ namespace Struckout.Application
         {
             try
             {
-                var ranking = await _master.GetRankingAsync(RankingResults.TopItemCount, _mode, _difficulty, token);
-                if (token.IsCancellationRequested || ranking == null) return;
-                _ui.ShowResultContext(_mode, _difficulty, RankingResults.GetRank(ranking, gameId));
+                var rankingTask = _master.GetRankingAsync(RankingResults.TopItemCount, _mode, _difficulty, token);
+                var historyTask = _playerId.HasValue
+                    ? _master.GetGamesByPlayerAsync(_playerId.Value, _mode, _difficulty, token)
+                    : UniTask.FromResult<System.Collections.Generic.IReadOnlyList<RankingEntry>>(null);
+                var (ranking, history) = await UniTask.WhenAll(rankingTask, historyTask);
+                if (token.IsCancellationRequested) return;
+                var entries = (history ?? System.Array.Empty<RankingEntry>())
+                    .Concat(ranking ?? System.Array.Empty<RankingEntry>()).ToArray();
+                _ui.ShowResultContext(_mode, _difficulty, RankingResults.GetRank(entries, gameId));
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         }
