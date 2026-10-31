@@ -24,7 +24,7 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
-            public event Action<uint> ScoreChanged { add { } remove { } }
+            public event Action<ScoreChange> ScoreChanged { add { } remove { } }
             public event Action<uint> ComboChanged { add { } remove { } }
             public UniTask<bool> ResetComboAsync(CancellationToken token = default) => UniTask.FromResult(true);
             public event Action<Target> TargetAdded { add { } remove { } }
@@ -96,6 +96,7 @@ namespace Struckout.Tests.Tests.EditMode
             public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
             public void SetCombo(uint combo) { }
+            public void ShowScoreChange(ScoreChange change) { }
             public void AddTarget(Target target) { }
             public bool RemoveTarget(Guid id) => true;
             public void ShowCollisionMarker(float x, float y, CollisionResult result) { }

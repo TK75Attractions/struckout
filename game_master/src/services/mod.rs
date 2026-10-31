@@ -1,5 +1,5 @@
 mod conversion;
-use conversion::SuccessfulEvent;
+use conversion::{ScoreReason, SuccessfulEvent};
 mod player;
 pub use player::GameMasterPlayerServiceImpl;
 #[cfg(test)]
@@ -403,17 +403,34 @@ where
                 HitTargetError::ScoreOverflow => Status::out_of_range(e.to_string()),
                 _ => Status::failed_precondition(e.to_string()),
             })?;
-        if self
-            .event_tx
-            .send(Event {
-                target: outcome.event_target,
-                data: Ok(SuccessfulEvent::GameScoreChanged {
-                    total_score: outcome.total_score,
-                }),
-            })
-            .is_err()
+        let score_events = [
+            SuccessfulEvent::GameScoreChanged {
+                total_score: outcome.total_score - outcome.combo_bonus,
+                diff: outcome.target_points,
+                reason: ScoreReason::TargetHit {
+                    target_id: target_id.to_string(),
+                },
+            },
+            SuccessfulEvent::GameScoreChanged {
+                total_score: outcome.total_score,
+                diff: outcome.combo_bonus,
+                reason: ScoreReason::Combo,
+            },
+        ];
+        for event in score_events
+            .into_iter()
+            .take(if outcome.combo_bonus > 0 { 2 } else { 1 })
         {
-            warn!("all event receiver has been dropped");
+            if self
+                .event_tx
+                .send(Event {
+                    target: outcome.event_target,
+                    data: Ok(event),
+                })
+                .is_err()
+            {
+                warn!("all event receiver has been dropped");
+            }
         }
         if self
             .event_tx

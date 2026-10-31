@@ -279,7 +279,10 @@ mod tests {
             ..Session::default()
         };
         for data in [
-            EventData::GameScoreChanged(GameScoreChanged { total_score: 123 }),
+            EventData::GameScoreChanged(GameScoreChanged {
+                total_score: 123,
+                ..Default::default()
+            }),
             EventData::GameTimeLimitNotify(GameTimeLimitNotify {
                 remaining: Some(prost_types::Duration {
                     seconds: 95,

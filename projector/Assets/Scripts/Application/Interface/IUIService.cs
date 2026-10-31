@@ -28,6 +28,9 @@ namespace Struckout.Application.Interface
         /// <summary>game_master が確定した累計得点を表示する。</summary>
         void SetScore(uint totalScore);
 
+        /// <summary>得点差分を、命中した的またはコンボ表示の位置に一時表示する。</summary>
+        void ShowScoreChange(ScoreChange change);
+
         /// <summary>コンボ数を表示する。2 未満は隠す。</summary>
         void SetCombo(uint combo);
 
