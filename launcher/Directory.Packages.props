@@ -9,7 +9,7 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageVersion Include="Grpc.HealthCheck" Version="2.84.0" />
+    <PackageVersion Include="Grpc.HealthCheck" Version="2.85.0" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageVersion Include="Tomlyn" Version="2.10.1" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
