@@ -1,4 +1,5 @@
 game_start_delay_secs = 3
+pocket_watch_bonus_secs = 5
 
 [game_duration_secs]
 normal = 90

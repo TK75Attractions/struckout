@@ -24,9 +24,10 @@
 計算は `f64` で行い、累計は `RunningState.shared` の `score` (`u32`) に保存する。
 Compass は命中後も登録を保持し、繰り返し命中できる。
 PocketWatch は固定500点を加算し、元のターゲットを削除して同じ所有者・新しい UUID で追加する。
-残り時間は変更しない。得点の加算と置き換えは同じロック内で行い、オーバーフロー時はどちらも変更しない。
+残り時間と終了時刻を設定された秒数だけ延ばし、開始時の時間を含む総制限時間を `TotalDurationChanged` で通知する。
+得点・総制限時間の加算と置き換えは同じロック内で行い、どちらかがオーバーフローした場合は変更しない。
 ゲーム開始時は `GameStarted` の後に各マシンの PocketWatch の `TargetAdded` を通知する。
-命中時は `GameScoreChanged`、所有マシンへの `TargetRemoved`、`TargetAdded` の順で通知する。
+命中時は `GameScoreChanged`、`ComboChanged`、`TotalDurationChanged`、所有マシンへの `TargetRemoved`、`TargetAdded` の順で通知する。
 成功時は累計得点を `GameScoreChanged` で通知する。シングルプレイは要求したマシンに、マルチプレイは両マシンに通知する。
 マルチプレイでは共有ターゲットへの命中をどちらのマシンからでも受け付け、同じ累計得点を更新する。
 

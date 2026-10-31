@@ -23,6 +23,8 @@ pub enum SuccessfulEvent {
     },
     /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
+    /// [`struckout_proto::event::TotalDurationChanged`]
+    TotalDurationChanged { total_duration_secs: u32 },
     /// [`struckout_proto::event::GameScoreChanged`]
     GameScoreChanged {
         total_score: u32,
@@ -111,6 +113,14 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
                     }),
                 })
             }
+            SuccessfulEvent::TotalDurationChanged {
+                total_duration_secs,
+            } => EventData::TotalDurationChanged(TotalDurationChanged {
+                total_duration: Some(prost_types::Duration {
+                    seconds: i64::from(total_duration_secs),
+                    nanos: 0,
+                }),
+            }),
             SuccessfulEvent::GameFinished { game_id } => EventData::GameFinished(GameFinished {
                 game_id: game_id.into(),
             }),

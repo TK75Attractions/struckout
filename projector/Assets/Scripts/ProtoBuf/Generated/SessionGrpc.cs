@@ -417,6 +417,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// Ball is hit to the target. Used by `projector`.
       ///
       /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
+      /// A PocketWatch hit also causes `TotalDurationChanged`.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -1085,6 +1086,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// Ball is hit to the target. Used by `projector`.
       ///
       /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
+      /// A PocketWatch hit also causes `TotalDurationChanged`.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1100,6 +1102,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// Ball is hit to the target. Used by `projector`.
       ///
       /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
+      /// A PocketWatch hit also causes `TotalDurationChanged`.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -1113,6 +1116,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// Ball is hit to the target. Used by `projector`.
       ///
       /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
+      /// A PocketWatch hit also causes `TotalDurationChanged`.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1128,6 +1132,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       /// Ball is hit to the target. Used by `projector`.
       ///
       /// Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
+      /// A PocketWatch hit also causes `TotalDurationChanged`.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
