@@ -214,7 +214,7 @@ namespace Struckout.Tests.Tests.EditMode
             logger.LogError("Identified");
             await SentrySdk.FlushAsync(TimeSpan.FromSeconds(5));
             Assert.That(Attribute(_logs.Single(), "machine_id"), Is.EqualTo(2u));
-            Assert.That(_events.Single().GetTag("machine_id"), Is.EqualTo("2"));
+            Assert.That(_events.Single().Tags["machine_id"], Is.EqualTo("2"));
         }
 
         [Test]
