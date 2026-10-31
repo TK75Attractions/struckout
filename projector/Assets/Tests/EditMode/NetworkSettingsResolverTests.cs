@@ -107,6 +107,13 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public void シンプルモードを真偽値として解釈する()
+        {
+            Assert.That(Resolve(args: Args("simpleMode", "true")).simpleMode, Is.True);
+            Assert.That(Resolve(new NetworkSettings { simpleMode = true }, Args("simpleMode", "false")).simpleMode, Is.False);
+        }
+
+        [Test]
         public void 元の設定を書き換えない()
         {
             var inspector = new NetworkSettings { trackerHost = "10.0.0.1" };

@@ -21,9 +21,10 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
    得点の表示中に、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
    今回のゲームが上位に含まれるときは「ランキング N 位！」を表示する。
    ランキングを取得できなくても得点表示は維持する。
-3. 得点の数え上げアニメーションが終わった1秒後に RankingScreen に切り替える。
+3. 通常モードでは、得点の数え上げアニメーションが終わった1秒後に RankingScreen に切り替える。
    `GetRanking(max_item_num = 10, mode, difficulty)` と `GetGamesByPlayer(player_id, mode, difficulty)` を並行して取得し、
    `game_id` で重複を除いて得点の降順に統合する。同点の場合は `game_id` の昇順とする。
+   `-simpleMode true` で起動した場合は RankingScreen に切り替えず、ScoreScreen でホーム要求を待つ。
 4. 自分のマシンの `NavigateToHomeScreenRequested` を受信すると HomeScreen に切り替え、
    結果表示用のゲーム ID とプレイヤー ID を破棄する。
 
@@ -157,6 +158,7 @@ Fake は開始時に懐中時計を 1 個生成し、命中時には削除・再
 切断時は削除通知を送らず、再接続時に前回のターゲットの削除通知を開始通知より先に送る。
 終了時には Fake 内で結果とゲーム ID を保持し、取得 RPC も提供する。
 結果表示からランキングへの遷移は実通信時と同様に projector が行う。
+シンプルモードでは Fake モードでも ScoreScreen に留まる。
 Fake はゲーム終了後、設定された待ち時間を経てホーム遷移通知を送る。
 実通信・マルチプレイの確認には本物の game_master を使う。
 
