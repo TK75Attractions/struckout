@@ -7,6 +7,10 @@ global Adopter {
 }
 
 export component GameFinishedScreen {
+    private property <length> comp_button_font_size: 2rem;
+    private property <length> comp_button_padding_lr: 96px;
+    private property <length> comp_button_padding_tb: 48px;
+
     VerticalLayout {
         alignment: center;
         cross-axis-alignment: center;
@@ -19,7 +23,9 @@ export component GameFinishedScreen {
 
         TwoColorOutlinedButton {
             text: "ホーム画面に戻る";
-            font-size: 28px;
+            font-size: root.comp_button_font_size;
+            layout-lr: root.comp_button_padding_lr;
+            layout-tb: root.comp_button_padding_tb;
             enabled: !Adopter.busy;
             clicked => { Adopter.move-to-start-screen(); }
         }
