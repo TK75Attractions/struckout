@@ -146,7 +146,7 @@ namespace Struckout.Tests.Tests.EditMode
             await pending;
 
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Score));
-            Assert.That(client.RequestedPlayer, Is.Null);
+            Assert.That(ui.Rows, Is.Null);
         }
 
         [Test]
