@@ -9,9 +9,7 @@ use ball_tracker::{
     clock_sync::{AutoTimeTrim, ClockSync, ClockSyncOptions},
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
     detection_input::{CameraFrame, DetectionInput, NetworkDetectionInput},
-    tracking::{
-        EventLogger, FmtEventLogger, JsonEventLogger, SentryEventLogger, TrackingEventsDto,
-    },
+    tracking::{EventLogger, FmtEventLogger, JsonEventLogger, TrackingEventsDto},
     types::{CameraId, CollisionPoint3D},
     video::{self, VideoOptions},
 };
@@ -223,8 +221,6 @@ fn csv_path_default() -> PathBuf {
 
 enum EventLoggerImpl {
     Json(JsonEventLogger),
-    #[allow(dead_code)] // 後で追加する
-    Sentry(SentryEventLogger),
     Fmt(FmtEventLogger),
 }
 
@@ -232,8 +228,6 @@ impl EventLoggerImpl {
     fn new(config: &Config) -> Self {
         if config.output_to_json {
             Self::Json(JsonEventLogger::new(json_log_output_dir()))
-        //}else if  {
-        //    Self::Sentry(SentryEventLogger::new())
         } else {
             Self::Fmt(FmtEventLogger)
         }
@@ -244,7 +238,6 @@ impl EventLogger for EventLoggerImpl {
     fn push_events(&mut self, events: TrackingEventsDto) {
         match self {
             EventLoggerImpl::Json(l) => l.push_events(events),
-            EventLoggerImpl::Sentry(l) => l.push_events(events),
             EventLoggerImpl::Fmt(l) => l.push_events(events),
         }
     }
@@ -252,7 +245,6 @@ impl EventLogger for EventLoggerImpl {
     fn push_frame(&mut self, frame: &CameraFrame) {
         match self {
             EventLoggerImpl::Json(l) => l.push_frame(frame),
-            EventLoggerImpl::Sentry(l) => l.push_frame(frame),
             EventLoggerImpl::Fmt(l) => l.push_frame(frame),
         }
     }
