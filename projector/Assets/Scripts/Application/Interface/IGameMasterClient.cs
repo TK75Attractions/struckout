@@ -36,6 +36,9 @@ namespace Struckout.Application.Interface
     /// </summary>
     public interface IGameMasterClient
     {
+        /// <summary>ゲーム開始までの残り秒数。受信スレッドから通知される。</summary>
+        event Action<uint> GameWillStart;
+
         /// <summary>
         /// ゲームが始まった。難易度・プレイヤー・制限時間を受け取り、的を登録して命中を通知できる。
         /// 受信スレッドから飛ぶので、UI に触る購読側はマーシャリングすること。

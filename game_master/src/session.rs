@@ -782,6 +782,15 @@ impl Sessions {
         }
     }
 
+    /// Records when the countdown ended and play actually began.
+    pub fn mark_started(&mut self, machine_id: MachineId) {
+        let session = self
+            .get(machine_id)
+            .expect("countdown session still exists");
+        let (running,) = session.as_running().expect("countdown session is running");
+        running.shared.write().started_at = UtcDateTime::now();
+    }
+
     /// Returns machine ids registered to the session.
     ///
     /// If one of session slot is empty, `None` will be returned regardless of another session slot.

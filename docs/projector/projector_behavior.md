@@ -5,6 +5,8 @@
 projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` で購読する。
 定義は `api/proto/game_master/` にあり、ゲーム開始・残り時間・累計得点・終了は
 それぞれ `GameStarted`、`GameTimeLimitNotify`、`GameScoreChanged`、`GameFinished` に従う。
+`GameWillStart` を受信したら Playing 画面の前面に残り秒数を大きく表示し、
+`GameStarted` でオーバーレイを消してゲームを開始する。
 ゲームの進行状態 (`GamePhase`) と表示画面 (`ProjectorScreen`) は分けて管理する。
 チュートリアル通知による画面遷移は未実装。
 

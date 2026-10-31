@@ -112,6 +112,8 @@ namespace Struckout.Unity
         private Text _comboText;
         private RectTransform _comboPanel;
         private Text _remainingTimeText;
+        private GameObject _countdown;
+        private Text _countdownText;
         private ProjectorScreen _screen = ProjectorScreen.Home;
         private float _idleOpacity = 1f;
         private float _finishedOpacity;
@@ -193,6 +195,38 @@ namespace Struckout.Unity
             SetCombo(0);
             _remainingTimeText.text = "TIME  --:--";
             _hud.SetActive(false);
+
+            _countdown = new GameObject("Countdown", typeof(RectTransform), typeof(Image));
+            var countdownRect = _countdown.GetComponent<RectTransform>();
+            countdownRect.SetParent(hudCanvas.transform, false);
+            countdownRect.anchorMin = Vector2.zero;
+            countdownRect.anchorMax = Vector2.one;
+            countdownRect.offsetMin = countdownRect.offsetMax = Vector2.zero;
+            var backdrop = _countdown.GetComponent<Image>();
+            backdrop.color = new Color(0f, 0f, 0f, 0.65f);
+            backdrop.raycastTarget = false;
+
+            var number = new GameObject("Number", typeof(RectTransform), typeof(Text));
+            var numberRect = number.GetComponent<RectTransform>();
+            numberRect.SetParent(countdownRect, false);
+            numberRect.anchorMin = Vector2.zero;
+            numberRect.anchorMax = Vector2.one;
+            numberRect.offsetMin = numberRect.offsetMax = Vector2.zero;
+            _countdownText = number.GetComponent<Text>();
+            _countdownText.font = displayFont;
+            _countdownText.fontSize = 320;
+            _countdownText.alignment = TextAnchor.MiddleCenter;
+            _countdownText.color = Color.white;
+            _countdownText.supportRichText = false;
+            _countdownText.raycastTarget = false;
+            _countdown.SetActive(false);
+        }
+
+        public void ShowCountdown(uint seconds)
+        {
+            if (_screen != ProjectorScreen.Playing) SetScreen(ProjectorScreen.Playing);
+            _countdownText.text = seconds.ToString(CultureInfo.InvariantCulture);
+            _countdown.SetActive(true);
         }
 
         private void CreateBuildInfoLabel()
@@ -357,6 +391,7 @@ namespace Struckout.Unity
         public void SetScreen(ProjectorScreen screen)
         {
             _screen = screen;
+            if (_countdown != null) _countdown.SetActive(false);
             _results?.SetScreen(screen);
             if (_hud != null)
             {

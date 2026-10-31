@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path};
+use std::{fs, io, num::NonZeroU32, path::Path};
 
 use serde::Deserialize;
 use thiserror::Error;
@@ -10,6 +10,7 @@ const CONFIG_PATH: &str = "/etc/game_master/config.toml";
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct FileConfig {
+    game_start_delay_secs: NonZeroU32,
     game_duration_secs: GameDurations,
     combo_bonuses: ComboBonuses,
 }
@@ -31,6 +32,7 @@ pub enum LoadConfigError {
 }
 
 pub struct Config {
+    pub game_start_delay_secs: NonZeroU32,
     pub game_duration_secs: GameDurations,
     pub combo_bonuses: ComboBonuses,
 }
@@ -39,6 +41,7 @@ impl Config {
     pub fn load() -> Result<Self, LoadConfigError> {
         let file = Self::read_file(Path::new(CONFIG_PATH))?;
         Ok(Self {
+            game_start_delay_secs: file.game_start_delay_secs,
             game_duration_secs: file.game_duration_secs,
             combo_bonuses: file.combo_bonuses,
         })
@@ -61,6 +64,7 @@ mod tests {
     use super::*;
 
     const VALID_CONFIG: &str = "\
+game_start_delay_secs = 3
 [game_duration_secs]
 normal = 120
 hard = 90
@@ -84,11 +88,30 @@ points = 800
     }
 
     #[test]
+    fn requires_positive_game_start_delay() {
+        assert!(
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("game_start_delay_secs = 3\n", ""))
+                .is_err()
+        );
+        assert!(
+            toml::from_str::<FileConfig>(
+                &VALID_CONFIG.replace("game_start_delay_secs = 3", "game_start_delay_secs = 0")
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
     fn requires_every_difficulty() {
         assert!(
-            toml::from_str::<FileConfig>("[game_duration_secs]\nnormal = 120\nhard = 90").is_err()
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("veryhard = 60\n", "")).is_err()
         );
-        assert!(toml::from_str::<FileConfig>("game_duration_secs = 120").is_err());
+        assert!(
+            toml::from_str::<FileConfig>(
+                "game_start_delay_secs = 3\ncombo_bonuses = []\ngame_duration_secs = 120\n"
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -103,7 +126,7 @@ points = 800
     fn requires_combo_bonuses() {
         assert!(
             toml::from_str::<FileConfig>(
-                "[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
+                "game_start_delay_secs = 3\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
             )
             .is_err()
         );
@@ -137,7 +160,7 @@ points = 800
     fn permits_explicitly_empty_combo_bonuses() {
         assert!(
             toml::from_str::<FileConfig>(
-                "combo_bonuses = []\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
+                "game_start_delay_secs = 3\ncombo_bonuses = []\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
             )
             .is_ok()
         );
