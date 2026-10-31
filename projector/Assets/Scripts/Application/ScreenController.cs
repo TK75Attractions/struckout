@@ -50,7 +50,18 @@ namespace Struckout.Application
                     _ui.ShowScreenMessage("結果の取得に失敗しました。");
                     return;
                 }
-                _ui.ShowGameResult(score.Value);
+                ShowResultRankAsync(gameId, token).Forget();
+                await _ui.ShowGameResultAsync(score.Value, token);
+                await UniTask.Delay(TimeSpan.FromSeconds(1), DelayType.Realtime, cancellationToken: token);
+                if (!token.IsCancellationRequested) await ShowRankingAsync();
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        }
+
+        private async UniTaskVoid ShowResultRankAsync(GameId gameId, CancellationToken token)
+        {
+            try
+            {
                 var ranking = await _master.GetRankingAsync(RankingResults.TopItemCount, _mode, _difficulty, token);
                 if (token.IsCancellationRequested || ranking == null) return;
                 _ui.ShowResultContext(_mode, _difficulty, RankingResults.GetRank(ranking, gameId));

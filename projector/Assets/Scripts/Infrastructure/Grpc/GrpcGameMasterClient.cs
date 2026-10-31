@@ -48,7 +48,6 @@ namespace Struckout.Infrastructure.Grpc
 
         public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted;
         public event Action<GameId> GameFinished;
-        public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<ScoreChange> ScoreChanged;
@@ -253,10 +252,6 @@ namespace Struckout.Infrastructure.Grpc
                     }
                     break;
 
-                case Event.EventDataOneofCase.NavigateToRankingScreenRequested:
-                    if (received.NavigateToRankingScreenRequested.MachineId == _settings.machineId)
-                        RankingScreenRequested?.Invoke();
-                    break;
 
                 case Event.EventDataOneofCase.NavigateToHomeScreenRequsted:
                     if (received.NavigateToHomeScreenRequsted.MachineId == _settings.machineId)

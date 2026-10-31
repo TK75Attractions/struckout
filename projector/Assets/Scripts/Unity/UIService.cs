@@ -9,6 +9,8 @@ using VContainer;
 using UnityEngine.UI;
 using System.Globalization;
 using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Struckout.Domain.Ranking;
 using UnityEngine.Serialization;
 
@@ -385,7 +387,8 @@ namespace Struckout.Unity
             }
         }
 
-        public void ShowGameResult(uint score) => _results?.ShowScore(score);
+        public UniTask ShowGameResultAsync(uint score, CancellationToken token)
+            => _results?.ShowScoreAsync(score, token) ?? UniTask.CompletedTask;
         public void ShowResultContext(Tk75Attractions.Struckout.GameMaster.V1.GameMode mode,
             Tk75Attractions.Struckout.GameMaster.V1.Difficulty difficulty, uint? rank = null)
             => _results?.ShowContext(mode, difficulty, rank);

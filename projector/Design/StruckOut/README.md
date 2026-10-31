@@ -30,7 +30,7 @@ The original logo is kept separately as `reference_logo.jpg`. Targets, impact ef
 - `CollisionResult.Scored`, `Missed`, and `Ignored` select different transparent impact sprites. `CollisionMarker` expands, turns where appropriate, fades, and removes itself.
 - ScoreScreen fetches the finished result by game ID. RankingScreen merges the top ten with personal history by game ID, sorts by score, and highlights personal and current games. Japanese labels and names use Noto Sans JP; numbers use Oxanium.
 - `Assets/Editor/StruckOutAnimationSetup.cs` supplies **Tools → STRUCK OUT → Apply Projector Animation Art** to reimport the seven live sprites and assign them to the scene and target prefab after artwork changes.
-- To preview without the physical tracker or game master, set `GameLifetimeScope` → `Network Settings` → `Mode` to `Fake` in the Inspector and enter Play Mode. The fake services start the game, send collisions, and finish it after 90 seconds, then request RankingScreen and HomeScreen at five-second intervals. Restore `Real` for the installation.
+- To preview without the physical tracker or game master, set `GameLifetimeScope` → `Network Settings` → `Mode` to `Fake` in the Inspector and enter Play Mode. The fake services start the game, send collisions, and finish it after 90 seconds. Projector opens RankingScreen one second after the score animation, and the fake service later requests HomeScreen. Restore `Real` for the installation.
 
 ## Reusable image prompt set
 

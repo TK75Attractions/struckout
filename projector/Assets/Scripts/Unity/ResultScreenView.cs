@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Tk75Attractions.Struckout.GameMaster.V1;
 using Struckout.Domain;
@@ -109,13 +110,13 @@ namespace Struckout.Unity
             _content.gameObject.SetActive(false);
         }
 
-        public void ShowScore(uint score)
+        public UniTask ShowScoreAsync(uint score, CancellationToken token)
         {
             _message.text = "";
             _score.text = "0";
             _score.gameObject.SetActive(true);
             _scoreLabel.gameObject.SetActive(true);
-            AnimateScoreAsync(score, ++_animationVersion).Forget();
+            return AnimateScoreAsync(score, ++_animationVersion, token);
         }
 
         public void ShowContext(GameMode mode, Difficulty difficulty, uint? rank)
@@ -137,16 +138,16 @@ namespace Struckout.Unity
             _rankMessage.text = rank.HasValue ? $"ランキング {rank.Value} 位！" : "";
         }
 
-        private async UniTask AnimateScoreAsync(uint score, int version)
+        private async UniTask AnimateScoreAsync(uint score, int version, CancellationToken token)
         {
             // A version invalidates pending frames on screen changes without involving UIService's HUD loop.
             var started = Time.realtimeSinceStartupAsDouble;
-            while (_root != null && version == _animationVersion)
+            while (_root != null && version == _animationVersion && !token.IsCancellationRequested)
             {
                 var progress = System.Math.Min(1, (Time.realtimeSinceStartupAsDouble - started) / CountUpSeconds);
                 _score.text = ((uint)(score * progress)).ToString(CultureInfo.InvariantCulture);
                 if (progress >= 1) return;
-                await UniTask.Yield();
+                await UniTask.Yield(cancellationToken: token);
             }
         }
 
