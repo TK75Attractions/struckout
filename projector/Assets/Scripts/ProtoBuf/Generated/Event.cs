@@ -28,76 +28,81 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             "cnVja291dC5nYW1lX21hc3Rlci52MRoYZ2FtZV9tYXN0ZXIvdGFyZ2V0LnBy",
             "b3RvGhdnYW1lX21hc3Rlci90eXBlcy5wcm90bxoeZ29vZ2xlL3Byb3RvYnVm",
             "L2R1cmF0aW9uLnByb3RvGhtnb29nbGUvcHJvdG9idWYvZW1wdHkucHJvdG8i",
-            "uhUKBUV2ZW50EmAKDGdhbWVfc3RhcnRlZBgBIAEoCzI7LnRrNzVhdHRyYWN0",
+            "3hYKBUV2ZW50EmAKDGdhbWVfc3RhcnRlZBgBIAEoCzI7LnRrNzVhdHRyYWN0",
             "aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuRXZlbnQuR2FtZVN0YXJ0",
-            "ZWRIAFILZ2FtZVN0YXJ0ZWQSegoWZ2FtZV90aW1lX2xpbWl0X25vdGlmeRgC",
-            "IAEoCzJDLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIu",
-            "djEuRXZlbnQuR2FtZVRpbWVMaW1pdE5vdGlmeUgAUhNnYW1lVGltZUxpbWl0",
-            "Tm90aWZ5EmMKDWdhbWVfZmluaXNoZWQYAyABKAsyPC50azc1YXR0cmFjdGlv",
-            "bnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2ZW50LkdhbWVGaW5pc2hl",
-            "ZEgAUgxnYW1lRmluaXNoZWQScAoSZ2FtZV9zY29yZV9jaGFuZ2VkGAQgASgL",
-            "MkAudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5F",
-            "dmVudC5HYW1lU2NvcmVDaGFuZ2VkSABSEGdhbWVTY29yZUNoYW5nZWQSiAEK",
-            "GnNlc3Npb25fZGlmZmljdWx0eV9jaGFuZ2VkGAUgASgLMkgudGs3NWF0dHJh",
-            "Y3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5FdmVudC5TZXNzaW9u",
-            "RGlmZmljdWx0eUNoYW5nZWRIAFIYc2Vzc2lvbkRpZmZpY3VsdHlDaGFuZ2Vk",
-            "EoIBChhzdGFydF90dXRvcmlhbF9yZXF1ZXN0ZWQYBiABKAsyRi50azc1YXR0",
-            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2ZW50LlN0YXJ0",
-            "VHV0b3JpYWxSZXF1ZXN0ZWRIAFIWc3RhcnRUdXRvcmlhbFJlcXVlc3RlZBKr",
-            "AQonbmF2aWdhdGVfdG9fcHJldmlvdXNfdHV0b3JpYWxfcmVxdWVzdGVkGAcg",
-            "ASgLMlMudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52",
-            "MS5FdmVudC5OYXZpZ2F0ZVRvUHJldmlvdXNUdXRvcmlhbFJlcXVlc3RlZEgA",
-            "UiNuYXZpZ2F0ZVRvUHJldmlvdXNUdXRvcmlhbFJlcXVlc3RlZBKfAQojbmF2",
-            "aWdhdGVfdG9fbmV4dF90dXRvcmlhbF9yZXF1ZXN0ZWQYCCABKAsyTy50azc1",
-            "YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2ZW50Lk5h",
-            "dmlnYXRlVG9OZXh0VHV0b3JpYWxSZXF1ZXN0ZWRIAFIfbmF2aWdhdGVUb05l",
-            "eHRUdXRvcmlhbFJlcXVlc3RlZBKXAQogbmF2aWdhdGVfdG9faG9tZV9zY3Jl",
-            "ZW5fcmVxdXN0ZWQYCiABKAsyTS50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0",
-            "LmdhbWVfbWFzdGVyLnYxLkV2ZW50Lk5hdmlnYXRlVG9Ib21lU2NyZWVuUmVx",
-            "dWVzdGVkSABSHG5hdmlnYXRlVG9Ib21lU2NyZWVuUmVxdXN0ZWQSYAoMdGFy",
-            "Z2V0X2FkZGVkGAsgASgLMjsudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5n",
-            "YW1lX21hc3Rlci52MS5FdmVudC5UYXJnZXRBZGRlZEgAUgt0YXJnZXRBZGRl",
-            "ZBJmCg50YXJnZXRfcmVtb3ZlZBgMIAEoCzI9LnRrNzVhdHRyYWN0aW9ucy5z",
-            "dHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuRXZlbnQuVGFyZ2V0UmVtb3ZlZEgA",
-            "Ug10YXJnZXRSZW1vdmVkEmMKDWNvbWJvX2NoYW5nZWQYDSABKAsyPC50azc1",
-            "YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2ZW50LkNv",
-            "bWJvQ2hhbmdlZEgAUgxjb21ib0NoYW5nZWQacAoYU2Vzc2lvbkRpZmZpY3Vs",
-            "dHlDaGFuZ2VkElQKCmRpZmZpY3VsdHkYASABKA4yNC50azc1YXR0cmFjdGlv",
-            "bnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkRpZmZpY3VsdHlSCmRpZmZp",
-            "Y3VsdHka3gEKC0dhbWVTdGFydGVkElQKCmRpZmZpY3VsdHkYASABKA4yNC50",
-            "azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkRpZmZp",
-            "Y3VsdHlSCmRpZmZpY3VsdHkSVQoLcGxheWVyX2luZm8YAiABKAsyNC50azc1",
-            "YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLlBsYXllcklu",
-            "Zm9SCnBsYXllckluZm8SIgoNZ2FtZV9kdXJfc2VjcxgDIAEoDVILZ2FtZUR1",
-            "clNlY3MaTgoTR2FtZVRpbWVMaW1pdE5vdGlmeRI3CglyZW1haW5pbmcYASAB",
-            "KAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25SCXJlbWFpbmluZxqeAgoQ",
-            "R2FtZVNjb3JlQ2hhbmdlZBIfCgt0b3RhbF9zY29yZRgBIAEoDVIKdG90YWxT",
-            "Y29yZRISCgRkaWZmGAIgASgDUgRkaWZmEmsKCnRhcmdldF9oaXQYAyABKAsy",
-            "Si50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2",
-            "ZW50LkdhbWVTY29yZUNoYW5nZWQuVGFyZ2V0SGl0SABSCXRhcmdldEhpdBIu",
-            "CgVjb21ibxgEIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAUgVjb21i",
-            "bxooCglUYXJnZXRIaXQSGwoJdGFyZ2V0X2lkGAEgASgJUgh0YXJnZXRJZEIO",
-            "CgxzY29yZV9yZWFzb24aJAoMQ29tYm9DaGFuZ2VkEhQKBWNvbWJvGAEgASgN",
-            "UgVjb21ibxonCgxHYW1lRmluaXNoZWQSFwoHZ2FtZV9pZBgBIAEoDVIGZ2Ft",
-            "ZUlkGjcKFlN0YXJ0VHV0b3JpYWxSZXF1ZXN0ZWQSHQoKbWFjaGluZV9pZBgB",
-            "IAEoDVIJbWFjaGluZUlkGkQKI05hdmlnYXRlVG9QcmV2aW91c1R1dG9yaWFs",
-            "UmVxdWVzdGVkEh0KCm1hY2hpbmVfaWQYASABKA1SCW1hY2hpbmVJZBpACh9O",
-            "YXZpZ2F0ZVRvTmV4dFR1dG9yaWFsUmVxdWVzdGVkEh0KCm1hY2hpbmVfaWQY",
-            "ASABKA1SCW1hY2hpbmVJZBo+Ch1OYXZpZ2F0ZVRvSG9tZVNjcmVlblJlcXVl",
-            "c3RlZBIdCgptYWNoaW5lX2lkGAEgASgNUgltYWNoaW5lSWQaVwoLVGFyZ2V0",
-            "QWRkZWQSSAoGdGFyZ2V0GAEgASgLMjAudGs3NWF0dHJhY3Rpb25zLnN0cnVj",
-            "a291dC5nYW1lX21hc3Rlci52MS5UYXJnZXRSBnRhcmdldBosCg1UYXJnZXRS",
-            "ZW1vdmVkEhsKCXRhcmdldF9pZBgBIAEoCVIIdGFyZ2V0SWRCDAoKZXZlbnRf",
-            "ZGF0YUoECAkQClIkbmF2aWdhdGVfdG9fcmFua2luZ19zY3JlZW5fcmVxdWVz",
-            "dGVkIjQKE0xpc3RlbkV2ZW50c1JlcXVlc3QSHQoKbWFjaGluZV9pZBgBIAEo",
-            "DVIJbWFjaGluZUlkIl0KFExpc3RlbkV2ZW50c1Jlc3BvbnNlEkUKBWV2ZW50",
-            "GAEgASgLMi8udGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rl",
-            "ci52MS5FdmVudFIFZXZlbnRiBnByb3RvMw=="));
+            "ZWRIAFILZ2FtZVN0YXJ0ZWQSZwoPZ2FtZV93aWxsX3N0YXJ0GA4gASgLMj0u",
+            "dGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5FdmVu",
+            "dC5HYW1lV2lsbFN0YXJ0SABSDWdhbWVXaWxsU3RhcnQSegoWZ2FtZV90aW1l",
+            "X2xpbWl0X25vdGlmeRgCIAEoCzJDLnRrNzVhdHRyYWN0aW9ucy5zdHJ1Y2tv",
+            "dXQuZ2FtZV9tYXN0ZXIudjEuRXZlbnQuR2FtZVRpbWVMaW1pdE5vdGlmeUgA",
+            "UhNnYW1lVGltZUxpbWl0Tm90aWZ5EmMKDWdhbWVfZmluaXNoZWQYAyABKAsy",
+            "PC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2",
+            "ZW50LkdhbWVGaW5pc2hlZEgAUgxnYW1lRmluaXNoZWQScAoSZ2FtZV9zY29y",
+            "ZV9jaGFuZ2VkGAQgASgLMkAudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5n",
+            "YW1lX21hc3Rlci52MS5FdmVudC5HYW1lU2NvcmVDaGFuZ2VkSABSEGdhbWVT",
+            "Y29yZUNoYW5nZWQSiAEKGnNlc3Npb25fZGlmZmljdWx0eV9jaGFuZ2VkGAUg",
+            "ASgLMkgudGs3NWF0dHJhY3Rpb25zLnN0cnVja291dC5nYW1lX21hc3Rlci52",
+            "MS5FdmVudC5TZXNzaW9uRGlmZmljdWx0eUNoYW5nZWRIAFIYc2Vzc2lvbkRp",
+            "ZmZpY3VsdHlDaGFuZ2VkEoIBChhzdGFydF90dXRvcmlhbF9yZXF1ZXN0ZWQY",
+            "BiABKAsyRi50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVy",
+            "LnYxLkV2ZW50LlN0YXJ0VHV0b3JpYWxSZXF1ZXN0ZWRIAFIWc3RhcnRUdXRv",
+            "cmlhbFJlcXVlc3RlZBKrAQonbmF2aWdhdGVfdG9fcHJldmlvdXNfdHV0b3Jp",
+            "YWxfcmVxdWVzdGVkGAcgASgLMlMudGs3NWF0dHJhY3Rpb25zLnN0cnVja291",
+            "dC5nYW1lX21hc3Rlci52MS5FdmVudC5OYXZpZ2F0ZVRvUHJldmlvdXNUdXRv",
+            "cmlhbFJlcXVlc3RlZEgAUiNuYXZpZ2F0ZVRvUHJldmlvdXNUdXRvcmlhbFJl",
+            "cXVlc3RlZBKfAQojbmF2aWdhdGVfdG9fbmV4dF90dXRvcmlhbF9yZXF1ZXN0",
+            "ZWQYCCABKAsyTy50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFz",
+            "dGVyLnYxLkV2ZW50Lk5hdmlnYXRlVG9OZXh0VHV0b3JpYWxSZXF1ZXN0ZWRI",
+            "AFIfbmF2aWdhdGVUb05leHRUdXRvcmlhbFJlcXVlc3RlZBKXAQogbmF2aWdh",
+            "dGVfdG9faG9tZV9zY3JlZW5fcmVxdXN0ZWQYCiABKAsyTS50azc1YXR0cmFj",
+            "dGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2ZW50Lk5hdmlnYXRl",
+            "VG9Ib21lU2NyZWVuUmVxdWVzdGVkSABSHG5hdmlnYXRlVG9Ib21lU2NyZWVu",
+            "UmVxdXN0ZWQSYAoMdGFyZ2V0X2FkZGVkGAsgASgLMjsudGs3NWF0dHJhY3Rp",
+            "b25zLnN0cnVja291dC5nYW1lX21hc3Rlci52MS5FdmVudC5UYXJnZXRBZGRl",
+            "ZEgAUgt0YXJnZXRBZGRlZBJmCg50YXJnZXRfcmVtb3ZlZBgMIAEoCzI9LnRr",
+            "NzVhdHRyYWN0aW9ucy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuRXZlbnQu",
+            "VGFyZ2V0UmVtb3ZlZEgAUg10YXJnZXRSZW1vdmVkEmMKDWNvbWJvX2NoYW5n",
+            "ZWQYDSABKAsyPC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFz",
+            "dGVyLnYxLkV2ZW50LkNvbWJvQ2hhbmdlZEgAUgxjb21ib0NoYW5nZWQacAoY",
+            "U2Vzc2lvbkRpZmZpY3VsdHlDaGFuZ2VkElQKCmRpZmZpY3VsdHkYASABKA4y",
+            "NC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkRp",
+            "ZmZpY3VsdHlSCmRpZmZpY3VsdHka3gEKC0dhbWVTdGFydGVkElQKCmRpZmZp",
+            "Y3VsdHkYASABKA4yNC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVf",
+            "bWFzdGVyLnYxLkRpZmZpY3VsdHlSCmRpZmZpY3VsdHkSVQoLcGxheWVyX2lu",
+            "Zm8YAiABKAsyNC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFz",
+            "dGVyLnYxLlBsYXllckluZm9SCnBsYXllckluZm8SIgoNZ2FtZV9kdXJfc2Vj",
+            "cxgDIAEoDVILZ2FtZUR1clNlY3MaOQoNR2FtZVdpbGxTdGFydBIoChBzZWNz",
+            "X3VudGlsX3N0YXJ0GAEgASgNUg5zZWNzVW50aWxTdGFydBpOChNHYW1lVGlt",
+            "ZUxpbWl0Tm90aWZ5EjcKCXJlbWFpbmluZxgBIAEoCzIZLmdvb2dsZS5wcm90",
+            "b2J1Zi5EdXJhdGlvblIJcmVtYWluaW5nGp4CChBHYW1lU2NvcmVDaGFuZ2Vk",
+            "Eh8KC3RvdGFsX3Njb3JlGAEgASgNUgp0b3RhbFNjb3JlEhIKBGRpZmYYAiAB",
+            "KANSBGRpZmYSawoKdGFyZ2V0X2hpdBgDIAEoCzJKLnRrNzVhdHRyYWN0aW9u",
+            "cy5zdHJ1Y2tvdXQuZ2FtZV9tYXN0ZXIudjEuRXZlbnQuR2FtZVNjb3JlQ2hh",
+            "bmdlZC5UYXJnZXRIaXRIAFIJdGFyZ2V0SGl0Ei4KBWNvbWJvGAQgASgLMhYu",
+            "Z29vZ2xlLnByb3RvYnVmLkVtcHR5SABSBWNvbWJvGigKCVRhcmdldEhpdBIb",
+            "Cgl0YXJnZXRfaWQYASABKAlSCHRhcmdldElkQg4KDHNjb3JlX3JlYXNvbhok",
+            "CgxDb21ib0NoYW5nZWQSFAoFY29tYm8YASABKA1SBWNvbWJvGicKDEdhbWVG",
+            "aW5pc2hlZBIXCgdnYW1lX2lkGAEgASgNUgZnYW1lSWQaNwoWU3RhcnRUdXRv",
+            "cmlhbFJlcXVlc3RlZBIdCgptYWNoaW5lX2lkGAEgASgNUgltYWNoaW5lSWQa",
+            "RAojTmF2aWdhdGVUb1ByZXZpb3VzVHV0b3JpYWxSZXF1ZXN0ZWQSHQoKbWFj",
+            "aGluZV9pZBgBIAEoDVIJbWFjaGluZUlkGkAKH05hdmlnYXRlVG9OZXh0VHV0",
+            "b3JpYWxSZXF1ZXN0ZWQSHQoKbWFjaGluZV9pZBgBIAEoDVIJbWFjaGluZUlk",
+            "Gj4KHU5hdmlnYXRlVG9Ib21lU2NyZWVuUmVxdWVzdGVkEh0KCm1hY2hpbmVf",
+            "aWQYASABKA1SCW1hY2hpbmVJZBpXCgtUYXJnZXRBZGRlZBJICgZ0YXJnZXQY",
+            "ASABKAsyMC50azc1YXR0cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVy",
+            "LnYxLlRhcmdldFIGdGFyZ2V0GiwKDVRhcmdldFJlbW92ZWQSGwoJdGFyZ2V0",
+            "X2lkGAEgASgJUgh0YXJnZXRJZEIMCgpldmVudF9kYXRhSgQICRAKUiRuYXZp",
+            "Z2F0ZV90b19yYW5raW5nX3NjcmVlbl9yZXF1ZXN0ZWQiNAoTTGlzdGVuRXZl",
+            "bnRzUmVxdWVzdBIdCgptYWNoaW5lX2lkGAEgASgNUgltYWNoaW5lSWQiXQoU",
+            "TGlzdGVuRXZlbnRzUmVzcG9uc2USRQoFZXZlbnQYASABKAsyLy50azc1YXR0",
+            "cmFjdGlvbnMuc3RydWNrb3V0LmdhbWVfbWFzdGVyLnYxLkV2ZW50UgVldmVu",
+            "dGIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Tk75Attractions.Struckout.GameMaster.V1.TargetReflection.Descriptor, global::Tk75Attractions.Struckout.GameMaster.V1.TypesReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Parser, new[]{ "GameStarted", "GameTimeLimitNotify", "GameFinished", "GameScoreChanged", "SessionDifficultyChanged", "StartTutorialRequested", "NavigateToPreviousTutorialRequested", "NavigateToNextTutorialRequested", "NavigateToHomeScreenRequsted", "TargetAdded", "TargetRemoved", "ComboChanged" }, new[]{ "EventData" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.SessionDifficultyChanged), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.SessionDifficultyChanged.Parser, new[]{ "Difficulty" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Parser, new[]{ "GameStarted", "GameWillStart", "GameTimeLimitNotify", "GameFinished", "GameScoreChanged", "SessionDifficultyChanged", "StartTutorialRequested", "NavigateToPreviousTutorialRequested", "NavigateToNextTutorialRequested", "NavigateToHomeScreenRequsted", "TargetAdded", "TargetRemoved", "ComboChanged" }, new[]{ "EventData" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.SessionDifficultyChanged), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.SessionDifficultyChanged.Parser, new[]{ "Difficulty" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameStarted), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameStarted.Parser, new[]{ "Difficulty", "PlayerInfo", "GameDurSecs" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart.Parser, new[]{ "SecsUntilStart" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameTimeLimitNotify), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameTimeLimitNotify.Parser, new[]{ "Remaining" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameScoreChanged), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameScoreChanged.Parser, new[]{ "TotalScore", "Diff", "TargetHit", "Combo" }, new[]{ "ScoreReason" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameScoreChanged.Types.TargetHit), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameScoreChanged.Types.TargetHit.Parser, new[]{ "TargetId" }, null, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.ComboChanged), global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.ComboChanged.Parser, new[]{ "Combo" }, null, null, null, null),
@@ -155,6 +160,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         case EventDataOneofCase.GameStarted:
           GameStarted = other.GameStarted.Clone();
           break;
+        case EventDataOneofCase.GameWillStart:
+          GameWillStart = other.GameWillStart.Clone();
+          break;
         case EventDataOneofCase.GameTimeLimitNotify:
           GameTimeLimitNotify = other.GameTimeLimitNotify.Clone();
           break;
@@ -208,6 +216,18 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       set {
         eventData_ = value;
         eventDataCase_ = value == null ? EventDataOneofCase.None : EventDataOneofCase.GameStarted;
+      }
+    }
+
+    /// <summary>Field number for the "game_will_start" field.</summary>
+    public const int GameWillStartFieldNumber = 14;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart GameWillStart {
+      get { return eventDataCase_ == EventDataOneofCase.GameWillStart ? (global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart) eventData_ : null; }
+      set {
+        eventData_ = value;
+        eventDataCase_ = value == null ? EventDataOneofCase.None : EventDataOneofCase.GameWillStart;
       }
     }
 
@@ -354,6 +374,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     public enum EventDataOneofCase {
       None = 0,
       GameStarted = 1,
+      GameWillStart = 14,
       GameTimeLimitNotify = 2,
       GameFinished = 3,
       GameScoreChanged = 4,
@@ -396,6 +417,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         return true;
       }
       if (!object.Equals(GameStarted, other.GameStarted)) return false;
+      if (!object.Equals(GameWillStart, other.GameWillStart)) return false;
       if (!object.Equals(GameTimeLimitNotify, other.GameTimeLimitNotify)) return false;
       if (!object.Equals(GameFinished, other.GameFinished)) return false;
       if (!object.Equals(GameScoreChanged, other.GameScoreChanged)) return false;
@@ -416,6 +438,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
     public override int GetHashCode() {
       int hash = 1;
       if (eventDataCase_ == EventDataOneofCase.GameStarted) hash ^= GameStarted.GetHashCode();
+      if (eventDataCase_ == EventDataOneofCase.GameWillStart) hash ^= GameWillStart.GetHashCode();
       if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) hash ^= GameTimeLimitNotify.GetHashCode();
       if (eventDataCase_ == EventDataOneofCase.GameFinished) hash ^= GameFinished.GetHashCode();
       if (eventDataCase_ == EventDataOneofCase.GameScoreChanged) hash ^= GameScoreChanged.GetHashCode();
@@ -494,6 +517,10 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         output.WriteRawTag(106);
         output.WriteMessage(ComboChanged);
       }
+      if (eventDataCase_ == EventDataOneofCase.GameWillStart) {
+        output.WriteRawTag(114);
+        output.WriteMessage(GameWillStart);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -552,6 +579,10 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         output.WriteRawTag(106);
         output.WriteMessage(ComboChanged);
       }
+      if (eventDataCase_ == EventDataOneofCase.GameWillStart) {
+        output.WriteRawTag(114);
+        output.WriteMessage(GameWillStart);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -564,6 +595,9 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       int size = 0;
       if (eventDataCase_ == EventDataOneofCase.GameStarted) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameStarted);
+      }
+      if (eventDataCase_ == EventDataOneofCase.GameWillStart) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameWillStart);
       }
       if (eventDataCase_ == EventDataOneofCase.GameTimeLimitNotify) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(GameTimeLimitNotify);
@@ -616,6 +650,12 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             GameStarted = new global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameStarted();
           }
           GameStarted.MergeFrom(other.GameStarted);
+          break;
+        case EventDataOneofCase.GameWillStart:
+          if (GameWillStart == null) {
+            GameWillStart = new global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart();
+          }
+          GameWillStart.MergeFrom(other.GameWillStart);
           break;
         case EventDataOneofCase.GameTimeLimitNotify:
           if (GameTimeLimitNotify == null) {
@@ -812,6 +852,15 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             ComboChanged = subBuilder;
             break;
           }
+          case 114: {
+            global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart subBuilder = new global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart();
+            if (eventDataCase_ == EventDataOneofCase.GameWillStart) {
+              subBuilder.MergeFrom(GameWillStart);
+            }
+            input.ReadMessage(subBuilder);
+            GameWillStart = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -937,6 +986,15 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
             }
             input.ReadMessage(subBuilder);
             ComboChanged = subBuilder;
+            break;
+          }
+          case 114: {
+            global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart subBuilder = new global::Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameWillStart();
+            if (eventDataCase_ == EventDataOneofCase.GameWillStart) {
+              subBuilder.MergeFrom(GameWillStart);
+            }
+            input.ReadMessage(subBuilder);
+            GameWillStart = subBuilder;
             break;
           }
         }
@@ -1429,6 +1487,204 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
       }
 
       [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class GameWillStart : pb::IMessage<GameWillStart>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<GameWillStart> _parser = new pb::MessageParser<GameWillStart>(() => new GameWillStart());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<GameWillStart> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[2]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameWillStart() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameWillStart(GameWillStart other) : this() {
+          secsUntilStart_ = other.secsUntilStart_;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public GameWillStart Clone() {
+          return new GameWillStart(this);
+        }
+
+        /// <summary>Field number for the "secs_until_start" field.</summary>
+        public const int SecsUntilStartFieldNumber = 1;
+        private uint secsUntilStart_;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public uint SecsUntilStart {
+          get { return secsUntilStart_; }
+          set {
+            secsUntilStart_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as GameWillStart);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(GameWillStart other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (SecsUntilStart != other.SecsUntilStart) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (SecsUntilStart != 0) hash ^= SecsUntilStart.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (SecsUntilStart != 0) {
+            output.WriteRawTag(8);
+            output.WriteUInt32(SecsUntilStart);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (SecsUntilStart != 0) {
+            output.WriteRawTag(8);
+            output.WriteUInt32(SecsUntilStart);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (SecsUntilStart != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeUInt32Size(SecsUntilStart);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(GameWillStart other) {
+          if (other == null) {
+            return;
+          }
+          if (other.SecsUntilStart != 0) {
+            SecsUntilStart = other.SecsUntilStart;
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 8: {
+                SecsUntilStart = input.ReadUInt32();
+                break;
+              }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 8: {
+                SecsUntilStart = input.ReadUInt32();
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
       public sealed partial class GameTimeLimitNotify : pb::IMessage<GameTimeLimitNotify>
       #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           , pb::IBufferMessage
@@ -1443,7 +1699,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[2]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[3]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1650,7 +1906,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[3]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[4]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2233,7 +2489,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[4]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[5]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2431,7 +2687,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[5]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[6]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2632,7 +2888,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[6]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[7]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2830,7 +3086,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[7]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[8]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3028,7 +3284,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[8]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[9]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3226,7 +3482,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[9]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[10]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3427,7 +3683,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[10]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[11]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3634,7 +3890,7 @@ namespace Tk75Attractions.Struckout.GameMaster.V1 {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public static pbr::MessageDescriptor Descriptor {
-          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[11]; }
+          get { return global::Tk75Attractions.Struckout.GameMaster.V1.Event.Descriptor.NestedTypes[12]; }
         }
 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

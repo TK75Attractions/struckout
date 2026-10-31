@@ -153,6 +153,7 @@ async fn run_main() -> u8 {
         .add_service(GameMasterSessionServiceServer::new(
             GameMasterSessionServiceImpl::new(
                 data_source.clone(),
+                config.game_start_delay_secs,
                 config.game_duration_secs,
                 config.combo_bonuses,
             ),

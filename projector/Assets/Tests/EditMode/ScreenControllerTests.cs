@@ -20,6 +20,7 @@ namespace Struckout.Tests.Tests.EditMode
         private sealed class Client : IGameMasterClient
         {
             public event Action<Difficulty, GameMode, PlayerId, TimeSpan> GameStarted { add { } remove { } }
+            public event Action<uint> GameWillStart { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
@@ -101,6 +102,7 @@ namespace Struckout.Tests.Tests.EditMode
             public void ShowScreenMessage(string message) => Message = message;
             public void SetRemainingTime(TimeSpan remaining) { }
             public void StartGameClock(TimeSpan duration) { }
+            public void ShowCountdown(uint seconds) { }
             public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }
             public void SetCombo(uint combo) { }

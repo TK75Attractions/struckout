@@ -5,6 +5,8 @@
 projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` で購読する。
 定義は `api/proto/game_master/` にあり、ゲーム開始・残り時間・累計得点・終了は
 それぞれ `GameStarted`、`GameTimeLimitNotify`、`GameScoreChanged`、`GameFinished` に従う。
+`GameWillStart` を受信したら Playing 画面の前面に残り秒数を大きく表示し、
+`GameStarted` でオーバーレイを消してゲームを開始する。
 ゲームの進行状態 (`GamePhase`) と表示画面 (`ProjectorScreen`) は分けて管理する。
 チュートリアル通知による画面遷移は未実装。
 
@@ -16,7 +18,7 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
    `GetGameResult(game_id)` で DB 保存済みの確定得点を取得して表示する。
    プレイ中の HUD の値を確定結果として流用しない。
    モード・難易度と SCORE ラベルを表示し、確定得点を約1秒で0から数え上げる。
-   得点の表示後、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
+   得点の表示中に、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
    今回のゲームが上位に含まれるときは「ランキング N 位！」を表示する。
    ランキングを取得できなくても得点表示は維持する。
 3. 得点の数え上げアニメーションが終わった1秒後に RankingScreen に切り替える。

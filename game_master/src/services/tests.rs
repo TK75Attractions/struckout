@@ -11,6 +11,7 @@ use crate::{
     session::{ConfiguringDifficultyState, ConfiguringGameModeState},
 };
 
+const TEST_GAME_START_DELAY_SECS: NonZeroU32 = NonZeroU32::new(1).expect("1 is nonzero");
 const TEST_GAME_DURATION_SECS: NonZeroU32 = NonZeroU32::new(90).expect("90 is nonzero");
 const TEST_GAME_DURATIONS: GameDurations = GameDurations {
     normal: TEST_GAME_DURATION_SECS,
@@ -116,23 +117,31 @@ macro_rules! wait_event {
 macro_rules! assert_event {
     ($stream_var:ident, $ev_pat:pat) => {{
         use tokio_stream::StreamExt;
-
-        let Some(ev) = $stream_var.next().await else {
-            panic!("event stream ended");
-        };
-        match ev {
-            Ok(ListenEventsResponse {
-                event:
-                    Some(::struckout_proto::Event {
-                        event_data: Some(ret @ $ev_pat),
-                        ..
-                    }),
-            }) => ret,
-            el => panic!(
-                "received unexpected event: expected {}, actually {:?}",
-                stringify!($ev_pat),
-                el
-            ),
+        loop {
+            let Some(ev) = $stream_var.next().await else {
+                panic!("event stream ended");
+            };
+            match ev {
+                Ok(ListenEventsResponse {
+                    event:
+                        Some(::struckout_proto::Event {
+                            event_data: Some(ret @ $ev_pat),
+                            ..
+                        }),
+                }) => break ret,
+                Ok(ListenEventsResponse {
+                    event:
+                        Some(::struckout_proto::Event {
+                            event_data: Some(EventData::GameWillStart(_)),
+                            ..
+                        }),
+                }) => continue,
+                el => panic!(
+                    "received unexpected event: expected {}, actually {:?}",
+                    stringify!($ev_pat),
+                    el
+                ),
+            }
         }
     }};
 }
@@ -184,6 +193,7 @@ async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMo
     let player_id = PlayerId::new(2);
     let service = GameMasterSessionServiceImpl::new(
         StubDataSource { player_id },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -229,6 +239,7 @@ async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
     let player_id = PlayerId::new(2);
     let service = GameMasterSessionServiceImpl::new(
         StubDataSource { player_id },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -262,6 +273,7 @@ async fn set_game_mode_requires_an_existing_session() {
         StubDataSource {
             player_id: PlayerId::new(2),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -282,8 +294,12 @@ async fn set_session_ready_triggers_game_started_event() {
     };
     let machine_id = MachineId::new(1);
     let difficulty = Difficulty::Normal;
-    let service =
-        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
+    let service = GameMasterSessionServiceImpl::new(
+        ds.clone(),
+        TEST_GAME_START_DELAY_SECS,
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
 
     let stream = service
         .listen_events(Request::new(ListenEventsRequest {
@@ -328,12 +344,56 @@ async fn set_session_ready_triggers_game_started_event() {
     );
 }
 
+#[tokio::test(start_paused = true)]
+async fn game_will_start_counts_down_before_game_started() {
+    let service = GameMasterSessionServiceImpl::new(
+        StubDataSource {
+            player_id: PlayerId::new(1),
+        },
+        NonZeroU32::new(3).expect("3 is nonzero"),
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
+    let mut stream = service
+        .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+        .await
+        .expect("listen")
+        .into_inner();
+    start_game_single(
+        &service,
+        MachineId::new(1),
+        Difficulty::Normal,
+        PlayerId::new(1),
+    )
+    .await;
+    assert_event!(stream, EventData::SessionDifficultyChanged(_));
+    for remaining in (1..=3).rev() {
+        let response = stream
+            .next()
+            .await
+            .expect("countdown event")
+            .expect("event response");
+        let EventData::GameWillStart(event) = response
+            .event
+            .expect("event")
+            .event_data
+            .expect("event data")
+        else {
+            panic!("expected GameWillStart");
+        };
+        assert_eq!(event.secs_until_start, remaining);
+        tokio::time::advance(Duration::from_secs(1)).await;
+    }
+    assert_event!(stream, EventData::GameStarted(_));
+}
+
 #[tokio::test]
 async fn set_session_difficulty_rejects_unspecified() {
     let service = GameMasterSessionServiceImpl::new(
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -354,8 +414,12 @@ async fn event_stream_notifies_in_correct_order() {
     };
     let machine_id = MachineId::new(2);
     let difficulty = Difficulty::Normal;
-    let service =
-        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
+    let service = GameMasterSessionServiceImpl::new(
+        ds.clone(),
+        TEST_GAME_START_DELAY_SECS,
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
 
     let stream = service
         .listen_events(Request::new(ListenEventsRequest {
@@ -526,6 +590,7 @@ async fn add_target_rejects_missing_data() {
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -551,6 +616,7 @@ async fn remove_target_rejects_invalid_ids(#[case] target_id: &str) {
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -573,6 +639,7 @@ async fn target_operations_require_a_running_session() {
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -651,6 +718,7 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -873,6 +941,7 @@ async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -974,6 +1043,7 @@ async fn hit_target_rejects_invalid_ids(#[case] target_id: &str, #[case] code: t
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -1016,6 +1086,7 @@ async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: to
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -1181,8 +1252,12 @@ fn configured_recorded_service(
     mode: GameMode,
     data_source: RecordingDataSource,
 ) -> GameMasterSessionServiceImpl<RecordingDataSource> {
-    let service =
-        GameMasterSessionServiceImpl::new(data_source, TEST_GAME_DURATIONS, test_combo_bonuses());
+    let service = GameMasterSessionServiceImpl::new(
+        data_source,
+        TEST_GAME_START_DELAY_SECS,
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
     let mut sessions = service.sessions.write();
     for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
         let machine_id = MachineId::new(machine_id);
@@ -1286,6 +1361,8 @@ async fn multi_game_started_reaches_both_machines_once(#[case] ready_order: [u32
         }))
         .await
         .expect("second machine starts the shared game");
+    tokio::task::yield_now().await;
+    tokio::time::advance(Duration::from_secs(1)).await;
 
     let player_info = |machine_id| {
         Some(player_info::PlayerItem {
@@ -1321,6 +1398,7 @@ async fn single_game_started_reaches_only_its_machine(
 
     let service = GameMasterSessionServiceImpl::new(
         RecordingDataSource::default(),
+        TEST_GAME_START_DELAY_SECS,
         GameDurations {
             normal: NonZeroU32::new(30).expect("30 is nonzero"),
             ..TEST_GAME_DURATIONS
@@ -1345,6 +1423,8 @@ async fn single_game_started_reaches_only_its_machine(
         PlayerId::new(11),
     )
     .await;
+    tokio::task::yield_now().await;
+    tokio::time::advance(Duration::from_secs(1)).await;
 
     assert_eq!(
         collect_game_started(&mut streams[0]).await,
@@ -1560,7 +1640,12 @@ async fn get_game_result_reads_the_persisted_score_without_a_session() {
         difficulty: Difficulty::Normal,
         score: 123,
     });
-    let service = GameMasterSessionServiceImpl::new(ds, TEST_GAME_DURATIONS, test_combo_bonuses());
+    let service = GameMasterSessionServiceImpl::new(
+        ds,
+        TEST_GAME_START_DELAY_SECS,
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
 
     let result = service
         .get_game_result(Request::new(GetGameResultRequest { game_id: 42 }))
@@ -1575,6 +1660,7 @@ async fn get_game_result_reads_the_persisted_score_without_a_session() {
 async fn get_game_result_returns_not_found_for_an_unknown_game_id() {
     let service = GameMasterSessionServiceImpl::new(
         RecordingDataSource::default(),
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -1594,6 +1680,7 @@ async fn get_game_result_reports_database_errors() {
             fail_get_result: true,
             ..Default::default()
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -1626,6 +1713,16 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
             );
         }
     }
+    tokio::task::yield_now().await;
+    let countdown = events.try_recv().expect("countdown");
+    assert_matches!(
+        countdown.data,
+        Ok(SuccessfulEvent::GameWillStart {
+            secs_until_start: 1
+        })
+    );
+    tokio::time::advance(Duration::from_secs(1)).await;
+    tokio::task::yield_now().await;
     let started = events.try_recv().expect("game started");
     match started.target {
         EventTarget::All => assert!(mode.is_multi()),
@@ -1660,6 +1757,13 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
             .collect::<std::collections::HashSet<_>>()
             .len(),
         count as usize
+    );
+    assert_matches!(
+        events.try_recv(),
+        Ok(Event {
+            data: Ok(SuccessfulEvent::GameTimeLimitNotify { .. }),
+            ..
+        })
     );
     assert_matches!(
         events.try_recv(),
@@ -1785,8 +1889,12 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
         },
         ..Default::default()
     };
-    let service =
-        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
+    let service = GameMasterSessionServiceImpl::new(
+        ds.clone(),
+        TEST_GAME_START_DELAY_SECS,
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
     let ranking = service
         .get_ranking(Request::new(GetRankingRequest {
             max_item_num: 10,
@@ -1845,6 +1953,7 @@ async fn ranking_and_history_report_database_errors() {
             fail_get_result: true,
             ..Default::default()
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -1878,8 +1987,12 @@ async fn ranking_and_history_report_database_errors() {
 #[tokio::test]
 async fn result_queries_reject_invalid_filters(#[case] mode: i32, #[case] difficulty: i32) {
     let ds = RecordingDataSource::default();
-    let service =
-        GameMasterSessionServiceImpl::new(ds.clone(), TEST_GAME_DURATIONS, test_combo_bonuses());
+    let service = GameMasterSessionServiceImpl::new(
+        ds.clone(),
+        TEST_GAME_START_DELAY_SECS,
+        TEST_GAME_DURATIONS,
+        test_combo_bonuses(),
+    );
     let error = service
         .get_ranking(Request::new(GetRankingRequest {
             max_item_num: 0,
@@ -2024,6 +2137,7 @@ async fn home_navigation_can_be_retried_after_subscribing_without_a_session() {
         StubDataSource {
             player_id: PlayerId::new(2),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
@@ -2190,6 +2304,7 @@ async fn reset_combo_rejects_invalid_machine_or_state(
         StubDataSource {
             player_id: PlayerId::new(1),
         },
+        TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );

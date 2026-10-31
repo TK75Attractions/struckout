@@ -13,6 +13,8 @@ use crate::{GamePlayerInfo, PlayerInfo};
 /// to domain type like [`GameId`] or [`time::SignedDuration`] each time.
 #[derive(Debug, Clone)]
 pub enum SuccessfulEvent {
+    /// [`struckout_proto::event::GameWillStart`]
+    GameWillStart { secs_until_start: u32 },
     /// [`struckout_proto::event::GameStarted`]
     GameStarted {
         game_duration_secs: u32,
@@ -67,6 +69,9 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
     fn from(ev: SuccessfulEvent) -> Self {
         use struckout_proto::event::*;
         match ev {
+            SuccessfulEvent::GameWillStart { secs_until_start } => {
+                EventData::GameWillStart(GameWillStart { secs_until_start })
+            }
             SuccessfulEvent::GameStarted {
                 game_duration_secs,
                 difficulty,

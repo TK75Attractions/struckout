@@ -20,6 +20,10 @@ message Event {
     uint32 game_dur_secs = 3;
   }
 
+  message GameWillStart {
+    uint32 secs_until_start = 1;
+  }
+
   message GameTimeLimitNotify {
     google.protobuf.Duration remaining = 1;
   }
@@ -81,6 +85,7 @@ message Event {
 
   oneof event_data {
     GameStarted game_started = 1;
+    GameWillStart game_will_start = 14;
     GameTimeLimitNotify game_time_limit_notify = 2;
     GameFinished game_finished = 3;
     GameScoreChanged game_score_changed = 4;

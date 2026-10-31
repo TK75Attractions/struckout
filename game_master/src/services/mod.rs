@@ -45,6 +45,7 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     #[debug(skip)]
     data_source: D,
     event_tx: broadcast::Sender<Event>,
+    game_start_delay_secs: NonZeroU32,
     game_duration_secs: GameDurations,
     combo_bonuses: ComboBonuses,
 }
@@ -78,6 +79,7 @@ where
 {
     pub fn new(
         data_source: D,
+        game_start_delay_secs: NonZeroU32,
         game_duration_secs: GameDurations,
         combo_bonuses: ComboBonuses,
     ) -> Self {
@@ -86,6 +88,7 @@ where
             sessions: Default::default(),
             data_source,
             event_tx,
+            game_start_delay_secs,
             game_duration_secs,
             combo_bonuses,
         }
@@ -486,6 +489,7 @@ where
         &self,
         req: Request<SetSessionReadyRequest>,
     ) -> Result<Response<SetSessionReadyResponse>, Status> {
+        let countdown_started_at = tokio::time::Instant::now();
         let SetSessionReadyRequest { machine_id } = req.into_inner();
         let machine_id = machine_id.into();
         // Resolve names before changing state so a database failure cannot leave a game running without notifications.
@@ -554,11 +558,13 @@ where
                     player_id,
                 }) => {
                     let game_duration_secs = self.game_duration_secs.for_difficulty(difficulty);
-                    if self
-                        .event_tx
-                        .send(Event {
-                            target: EventTarget::Single(machine_id),
-                            data: Ok(SuccessfulEvent::GameStarted {
+                    let (complete_tx, complete_rx) = mpsc::channel(16);
+                    tokio::spawn(countdown_and_start(
+                        CountdownStart {
+                            ev_target: EventTarget::Single(machine_id),
+                            started_at: countdown_started_at,
+                            delay_secs: self.game_start_delay_secs,
+                            started: SuccessfulEvent::GameStarted {
                                 game_duration_secs: game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Single(PlayerInfo {
@@ -566,31 +572,12 @@ where
                                     player_id,
                                     player_name: first.name,
                                 }),
-                            }),
-                        })
-                        .is_err()
-                    {
-                        warn!("all receiver has been dropped");
-                    };
-
-                    for target in initial_targets {
-                        if self
-                            .event_tx
-                            .send(Event {
-                                target: get_event_target(&target),
-                                data: Ok(SuccessfulEvent::TargetAdded { target }),
-                            })
-                            .is_err()
-                        {
-                            warn!("all event receivers have been dropped");
-                        }
-                    }
-
-                    let (complete_tx, complete_rx) = mpsc::channel(16);
-
-                    tokio::spawn(game_timer(
-                        EventTarget::Single(machine_id),
-                        game_duration_secs,
+                            },
+                            initial_targets,
+                            game_duration_secs,
+                            sessions: self.sessions.clone(),
+                            machine_id,
+                        },
                         self.event_tx.clone(),
                         complete_tx,
                     ));
@@ -609,11 +596,13 @@ where
                     player_2,
                 }) => {
                     let game_duration_secs = self.game_duration_secs.for_difficulty(difficulty);
-                    if self
-                        .event_tx
-                        .send(Event {
-                            target: EventTarget::All,
-                            data: Ok(SuccessfulEvent::GameStarted {
+                    let (complete_tx, complete_rx) = mpsc::channel(16);
+                    tokio::spawn(countdown_and_start(
+                        CountdownStart {
+                            ev_target: EventTarget::All,
+                            started_at: countdown_started_at,
+                            delay_secs: self.game_start_delay_secs,
+                            started: SuccessfulEvent::GameStarted {
                                 game_duration_secs: game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Multi(
@@ -632,31 +621,12 @@ where
                                             .name,
                                     },
                                 ),
-                            }),
-                        })
-                        .is_err()
-                    {
-                        warn!("all receiver has been dropped");
-                    };
-
-                    for target in initial_targets {
-                        if self
-                            .event_tx
-                            .send(Event {
-                                target: get_event_target(&target),
-                                data: Ok(SuccessfulEvent::TargetAdded { target }),
-                            })
-                            .is_err()
-                        {
-                            warn!("all event receivers have been dropped");
-                        }
-                    }
-
-                    let (complete_tx, complete_rx) = mpsc::channel(16);
-
-                    tokio::spawn(game_timer(
-                        EventTarget::All,
-                        game_duration_secs,
+                            },
+                            initial_targets,
+                            game_duration_secs,
+                            sessions: self.sessions.clone(),
+                            machine_id: player_1.0,
+                        },
                         self.event_tx.clone(),
                         complete_tx,
                     ));
@@ -768,7 +738,74 @@ async fn pass_events_through_by_machine_id(
     }
 }
 
-/// Sends remaining-time events every second, then signals game completion.
+struct CountdownStart {
+    ev_target: EventTarget,
+    started_at: tokio::time::Instant,
+    delay_secs: NonZeroU32,
+    started: SuccessfulEvent,
+    initial_targets: Vec<struckout_proto::Target>,
+    game_duration_secs: NonZeroU32,
+    sessions: Arc<RwLock<Sessions>>,
+    machine_id: MachineId,
+}
+
+/// Sends the countdown, starts play, then runs the game timer.
+#[instrument(skip(start, tx, complete_tx))]
+async fn countdown_and_start(
+    start: CountdownStart,
+    tx: broadcast::Sender<Event>,
+    complete_tx: mpsc::Sender<()>,
+) {
+    let CountdownStart {
+        ev_target,
+        started_at,
+        delay_secs,
+        started,
+        initial_targets,
+        game_duration_secs,
+        sessions,
+        machine_id,
+    } = start;
+    let mut interval = tokio::time::interval_at(started_at, Duration::from_secs(1));
+    for remaining in (1..=delay_secs.get()).rev() {
+        interval.tick().await;
+        if tx
+            .send(Event {
+                target: ev_target,
+                data: Ok(SuccessfulEvent::GameWillStart {
+                    secs_until_start: remaining,
+                }),
+            })
+            .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
+    }
+    interval.tick().await;
+    sessions.write().mark_started(machine_id);
+    if tx
+        .send(Event {
+            target: ev_target,
+            data: Ok(started),
+        })
+        .is_err()
+    {
+        warn!("all event receivers have been dropped");
+    }
+    for target in initial_targets {
+        if tx
+            .send(Event {
+                target: get_event_target(&target),
+                data: Ok(SuccessfulEvent::TargetAdded { target }),
+            })
+            .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
+    }
+    game_timer(ev_target, game_duration_secs, tx, complete_tx).await;
+}
+
 #[instrument(skip(tx, complete_tx))]
 async fn game_timer(
     ev_target: EventTarget,
