@@ -46,7 +46,7 @@ macOS では `chmod +x` してから実行する。
 
 ball-tracker か camera を入れると、リポジトリの `scripts/cameras.json` を設定のディレクトリにコピーする (すでにあれば
 上書きしない)。touchpanel を入れると、touchpanel 自身が読む `config.toml` に `address = "127.0.0.1"`、
-`machine-id = 1`、`disable-multiplay = false` を書く。いずれも更新時に既存の設定を上書きしない。
+`machine-id = 1`、`disable-multiplay = false`、`simple-mode = false` を書く。いずれも更新時に既存の設定を上書きしない。
 起動の設定 `launcher.toml` も、無ければ作る。
 
 projector は `<インストール先>.new` に展開し、zip の全エントリの存在とファイルサイズ、各 OS の Unity プレイヤーと
@@ -162,6 +162,7 @@ ball-tracker = "pc1.local"  # PC① の名前か IP
 [projector]
 monitor = 2
 fullscreen = true
+simple-mode = false
 collision-transform = "collision_transform.json"
 ```
 

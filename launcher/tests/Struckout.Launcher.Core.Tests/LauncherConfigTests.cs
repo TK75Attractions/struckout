@@ -19,7 +19,7 @@ public class LauncherConfigTests
         Assert.Equal(CollisionOutput.Network, config.BallTracker.Output);
         Assert.Null(config.BallTracker.CsvPath);
         Assert.Empty(config.BallTracker.ExtraArguments);
-        Assert.Equal(new ProjectorSettings(2, true, null), config.Projector);
+        Assert.Equal(new ProjectorSettings(2, true, null, false), config.Projector);
     }
 
     [Fact]
@@ -36,6 +36,14 @@ public class LauncherConfigTests
 
         Assert.Equal("pc1.local", config.HostOf(ModuleId.BallTracker));
         Assert.Equal("127.0.0.1", config.HostOf(ModuleId.GameMaster));
+    }
+
+    [Fact]
+    public void ProjectorSimpleModeCanBeEnabled()
+    {
+        var config = LauncherConfig.Parse("[projector]\nsimple-mode = true\n", ConfigPath);
+
+        Assert.True(config.Projector.SimpleMode);
     }
 
     [Fact]
