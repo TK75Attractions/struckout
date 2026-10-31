@@ -1,5 +1,5 @@
 mod conversion;
-use conversion::SuccessfulEvent;
+use conversion::{ScoreReason, SuccessfulEvent};
 mod player;
 pub use player::GameMasterPlayerServiceImpl;
 #[cfg(test)]
@@ -8,6 +8,7 @@ mod tests;
 use std::{num::NonZeroU32, pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
+use serde::Deserialize;
 use struckout_proto::{
     self, AddTargetRequest, AddTargetResponse, Difficulty, GameMode, GetGameResultRequest,
     GetGameResultResponse, GetGamesByPlayerRequest, GetGamesByPlayerResponse, GetRankingRequest,
@@ -35,7 +36,7 @@ use uuid::Uuid;
 
 use crate::{
     DataSource, DataSourceImpl, GamePlayerInfo, GetGameResultError, PlayerInfo,
-    session::{HitTargetError, SessionError, Sessions, SetReadyAction},
+    session::{ComboBonuses, HitTargetError, SessionError, Sessions, SetReadyAction},
 };
 
 /// Implementation of [`GameMasterSessionService`].
@@ -45,20 +46,49 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     #[debug(skip)]
     data_source: D,
     event_tx: broadcast::Sender<Event>,
-    game_duration_secs: NonZeroU32,
+    game_duration_secs: GameDurations,
+    combo_bonuses: ComboBonuses,
+}
+
+/// Holds every selectable difficulty's duration so game start never needs a fallback.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GameDurations {
+    pub normal: NonZeroU32,
+    pub hard: NonZeroU32,
+    pub veryhard: NonZeroU32,
+}
+
+impl GameDurations {
+    fn for_difficulty(self, difficulty: Difficulty) -> NonZeroU32 {
+        match difficulty {
+            Difficulty::Normal => self.normal,
+            Difficulty::Hard => self.hard,
+            Difficulty::Veryhard => self.veryhard,
+            Difficulty::Unspecified => {
+                // set_session_difficulty rejects unspecified before a game can start.
+                unreachable!("a running game must have a selectable difficulty")
+            }
+        }
+    }
 }
 
 impl<D> GameMasterSessionServiceImpl<D>
 where
     D: DataSource,
 {
-    pub fn new(data_source: D, game_duration_secs: NonZeroU32) -> Self {
+    pub fn new(
+        data_source: D,
+        game_duration_secs: GameDurations,
+        combo_bonuses: ComboBonuses,
+    ) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
             sessions: Default::default(),
             data_source,
             event_tx,
             game_duration_secs,
+            combo_bonuses,
         }
     }
 
@@ -158,6 +188,9 @@ where
         } = req;
         let difficulty = Difficulty::try_from(difficulty)
             .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        if difficulty == Difficulty::Unspecified {
+            return Err(Status::invalid_argument("difficulty must be specified"));
+        }
         let machine_id: MachineId = machine_id.into();
 
         let ev_target = {
@@ -362,7 +395,7 @@ where
             Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let mut sessions = self.sessions.write();
         let outcome = sessions
-            .hit_target(machine_id.into(), target_id)
+            .hit_target(machine_id.into(), target_id, &self.combo_bonuses)
             .map_err(|e| match e {
                 HitTargetError::Session(SessionError::TargetNotFound { .. }) => {
                     Status::not_found(e.to_string())
@@ -370,17 +403,34 @@ where
                 HitTargetError::ScoreOverflow => Status::out_of_range(e.to_string()),
                 _ => Status::failed_precondition(e.to_string()),
             })?;
-        if self
-            .event_tx
-            .send(Event {
-                target: outcome.event_target,
-                data: Ok(SuccessfulEvent::GameScoreChanged {
-                    total_score: outcome.total_score,
-                }),
-            })
-            .is_err()
+        let score_events = [
+            SuccessfulEvent::GameScoreChanged {
+                total_score: outcome.total_score - outcome.combo_bonus,
+                diff: outcome.target_points,
+                reason: ScoreReason::TargetHit {
+                    target_id: target_id.to_string(),
+                },
+            },
+            SuccessfulEvent::GameScoreChanged {
+                total_score: outcome.total_score,
+                diff: outcome.combo_bonus,
+                reason: ScoreReason::Combo,
+            },
+        ];
+        for event in score_events
+            .into_iter()
+            .take(if outcome.combo_bonus > 0 { 2 } else { 1 })
         {
-            warn!("all event receiver has been dropped");
+            if self
+                .event_tx
+                .send(Event {
+                    target: outcome.event_target,
+                    data: Ok(event),
+                })
+                .is_err()
+            {
+                warn!("all event receiver has been dropped");
+            }
         }
         if self
             .event_tx
@@ -504,12 +554,13 @@ where
                     difficulty,
                     player_id,
                 }) => {
+                    let game_duration_secs = self.game_duration_secs.for_difficulty(difficulty);
                     if self
                         .event_tx
                         .send(Event {
                             target: EventTarget::Single(machine_id),
                             data: Ok(SuccessfulEvent::GameStarted {
-                                game_duration_secs: self.game_duration_secs.get(),
+                                game_duration_secs: game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Single(PlayerInfo {
                                     machine_id,
@@ -540,7 +591,7 @@ where
 
                     tokio::spawn(game_timer(
                         EventTarget::Single(machine_id),
-                        self.game_duration_secs,
+                        game_duration_secs,
                         self.event_tx.clone(),
                         complete_tx,
                     ));
@@ -558,12 +609,13 @@ where
                     player_1,
                     player_2,
                 }) => {
+                    let game_duration_secs = self.game_duration_secs.for_difficulty(difficulty);
                     if self
                         .event_tx
                         .send(Event {
                             target: EventTarget::All,
                             data: Ok(SuccessfulEvent::GameStarted {
-                                game_duration_secs: self.game_duration_secs.get(),
+                                game_duration_secs: game_duration_secs.get(),
                                 difficulty,
                                 players: GamePlayerInfo::Multi(
                                     PlayerInfo {
@@ -605,7 +657,7 @@ where
 
                     tokio::spawn(game_timer(
                         EventTarget::All,
-                        self.game_duration_secs,
+                        game_duration_secs,
                         self.event_tx.clone(),
                         complete_tx,
                     ));

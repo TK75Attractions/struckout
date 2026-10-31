@@ -19,6 +19,7 @@ SIGTERM または Ctrl-C を受けると Slint のイベントループを閉じ
 ## 起動オプション
 
 設定ファイルは `<dirs::config_dir()>/struckout/touchpanel/config.toml` に置く。Linux では通常 `~/.config/struckout/touchpanel/config.toml`。ファイルがなければ CLI 引数だけで起動する。
+launcher からインストールすると、このファイルに初期設定が作られ、更新時も保持される。launcher からの起動時には CLI 引数を渡さないので、このファイルで接続先と筐体番号を設定する。
 
 ```toml
 address = "127.0.0.1"

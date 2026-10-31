@@ -21,7 +21,7 @@ public class GameMasterComposeTests
 
             await gameMaster.StartAsync(new Progress<string>(), CancellationToken.None);
 
-            Assert.Equal("game_duration_secs = 90\n", File.ReadAllText(paths.GameMasterConfigFile));
+            Assert.Equal("[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n\n[[combo_bonuses]]\ncombo = 3\npoints = 500\n\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n", File.ReadAllText(paths.GameMasterConfigFile));
             var mount = File.ReadAllText(Path.Combine(directory, "compose.launcher.yaml"));
             Assert.Contains("source: ${GAME_MASTER_CONFIG_PATH:", mount, StringComparison.Ordinal);
             Assert.Contains("target: /etc/game_master/config.toml", mount, StringComparison.Ordinal);
@@ -30,9 +30,9 @@ public class GameMasterComposeTests
             Assert.Equal(["up", "--detach", "--wait", "db"], runner.Commands[1].Arguments.TakeLast(4));
             Assert.Equal(["up", "--detach", "--force-recreate", "--no-deps", "app"], runner.Commands[2].Arguments.TakeLast(5));
 
-            File.WriteAllText(paths.GameMasterConfigFile, "game_duration_secs = 120\n");
+            File.WriteAllText(paths.GameMasterConfigFile, "[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n");
             await gameMaster.StartAsync(new Progress<string>(), CancellationToken.None);
-            Assert.Equal("game_duration_secs = 120\n", File.ReadAllText(paths.GameMasterConfigFile));
+            Assert.Equal("[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n", File.ReadAllText(paths.GameMasterConfigFile));
         }
         finally
         {

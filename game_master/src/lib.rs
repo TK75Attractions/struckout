@@ -11,8 +11,9 @@ mod data;
 pub use data::DataSourceImpl;
 pub mod health;
 mod services;
-pub use services::{GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
+pub use services::{GameDurations, GameMasterPlayerServiceImpl, GameMasterSessionServiceImpl};
 mod session;
+pub use session::ComboBonuses;
 
 use crate::data::Player;
 

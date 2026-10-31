@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d
         with:
           install_args: protoc mold
       - name: Get commit hash and version of this release
@@ -45,7 +45,7 @@ jobs:
   ball-tracker-build:
     strategy:
       matrix:
-        os: ["windows-2022", "windows-11-arm", "macos-14"]
+        os: ["windows-2022", "windows-11-arm", "macos-15"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -69,7 +69,7 @@ jobs:
             xtask
             macros
       - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d
         with:
           install_args: protoc
       - name: Build ball_tracker
@@ -91,7 +91,7 @@ jobs:
               echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker.exe upload/ball-tracker-arm64-windows
               ;;
-            "macos-14")
+            "macos-15")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker upload/ball-tracker-arm64-macos
               ;;
@@ -107,7 +107,7 @@ jobs:
   touchpanel-build:
     strategy:
       matrix:
-        os: ["windows-2022", "windows-11-arm", "macos-14"]
+        os: ["windows-2022", "windows-11-arm", "macos-15"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -131,7 +131,7 @@ jobs:
             xtask
             macros
       - uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d
         with:
           install_args: protoc
       - name: Build touchpanel
@@ -153,7 +153,7 @@ jobs:
               echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
               mv target/release/touchpanel.exe upload/touchpanel-arm64-windows
               ;;
-            "macos-14")
+            "macos-15")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release/touchpanel upload/touchpanel-arm64-macos
               ;;
@@ -224,7 +224,7 @@ jobs:
             rid: win-arm64
             asset: struckout-launcher-arm64-windows.exe
           # Built on macOS so that the SDK signs the binary (Apple Silicon refuses unsigned ones)
-          - os: macos-14
+          - os: macos-15
             rid: osx-arm64
             asset: struckout-launcher-arm64-macos
     runs-on: ${{ matrix.os }}
@@ -240,7 +240,7 @@ jobs:
             launcher
             mise.toml
             mise.lock
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           working_directory: launcher
           install_args: dotnet
@@ -274,7 +274,7 @@ jobs:
             api/proto
             mise.toml
             mise.lock
-      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           working_directory: camera
           install_args: java protoc python
@@ -289,7 +289,7 @@ jobs:
         run: mise run install-opencv
         env:
           MISE_TASK_RUN_AUTO_INSTALL: '0'
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       # The launcher updates the app with `adb install -r`, which needs the same key in every release.
       # Create the secrets with:
       #   keytool -genkeypair -keystore camera.jks -alias camera -keyalg RSA -keysize 4096 -validity 10000

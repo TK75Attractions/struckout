@@ -8,6 +8,7 @@ using Struckout.Domain.TargetDefinition;
 using VContainer;
 using UnityEngine.UI;
 using System.Globalization;
+using System.Collections;
 using Struckout.Domain.Ranking;
 using UnityEngine.Serialization;
 
@@ -109,6 +110,7 @@ namespace Struckout.Unity
         private GameObject _hud;
         private Text _scoreText;
         private Text _comboText;
+        private RectTransform _comboPanel;
         private Text _remainingTimeText;
         private ProjectorScreen _screen = ProjectorScreen.Home;
         private float _idleOpacity = 1f;
@@ -180,10 +182,13 @@ namespace Struckout.Unity
             root.anchorMax = Vector2.one;
             root.offsetMin = root.offsetMax = Vector2.zero;
 
-            _scoreText = CreateHudLabel("Score", root, false, 800f);
-            _comboText = CreateHudLabel("Combo", root, false, 480f);
-            _comboText.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(48f, -156f);
-            _remainingTimeText = CreateHudLabel("RemainingTime", root, true, 480f);
+            _scoreText = CreateHudLabel("Score", root, new Vector2(0.5f, 1f),
+                new Vector2(0f, -36f), 800f, 64, TextAnchor.MiddleCenter);
+            _comboText = CreateHudLabel("Combo", root, new Vector2(0f, 1f),
+                new Vector2(48f, -156f), 480f, 48, TextAnchor.MiddleLeft);
+            _comboPanel = (RectTransform)_comboText.transform.parent;
+            _remainingTimeText = CreateHudLabel("RemainingTime", root, new Vector2(0.5f, 1f),
+                new Vector2(0f, -152f), 480f, 48, TextAnchor.MiddleCenter);
             SetScore(0);
             SetCombo(0);
             _remainingTimeText.text = "TIME  --:--";
@@ -209,13 +214,14 @@ namespace Struckout.Unity
             label.text = BuildInfo.Display;
         }
 
-        private Text CreateHudLabel(string objectName, RectTransform root, bool right, float width)
+        private Text CreateHudLabel(string objectName, RectTransform root, Vector2 anchor,
+            Vector2 position, float width, int fontSize, TextAnchor alignment)
         {
             var panel = new GameObject(objectName, typeof(RectTransform), typeof(Image));
             var rect = panel.GetComponent<RectTransform>();
             rect.SetParent(root, false);
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(right ? 1f : 0f, 1f);
-            rect.anchoredPosition = new Vector2(right ? -48f : 48f, -36f);
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.anchoredPosition = position;
             rect.sizeDelta = new Vector2(width, 104f);
             var background = panel.GetComponent<Image>();
             background.color = new Color(0.015f, 0.025f, 0.05f, 0.8f);
@@ -230,8 +236,8 @@ namespace Struckout.Unity
             labelRect.offsetMax = new Vector2(-24f, -8f);
             var label = go.GetComponent<Text>();
             label.font = displayFont;
-            label.fontSize = 48;
-            label.alignment = right ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+            label.fontSize = fontSize;
+            label.alignment = alignment;
             label.color = Color.white;
             label.supportRichText = false;
             label.raycastTarget = false;
@@ -264,6 +270,66 @@ namespace Struckout.Unity
         {
             if (_scoreText != null)
                 _scoreText.text = "SCORE  " + totalScore.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public void ShowScoreChange(ScoreChange change)
+        {
+            if (_screen != ProjectorScreen.Playing || change.Difference <= 0 || _hud == null) return;
+            var root = (RectTransform)_hud.transform;
+            Vector2 position;
+            switch (change.Reason)
+            {
+                case ScoreReason.TargetHit:
+                    if (!_targetToTransform.TryGetValue(change.TargetId, out var target) || target == null) return;
+                    var camera = Camera.main;
+                    if (camera == null) return;
+                    var screenPoint = RectTransformUtility.WorldToScreenPoint(camera, target.position);
+                    if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPoint,
+                            hudCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : hudCanvas.worldCamera,
+                            out position)) return;
+                    break;
+                case ScoreReason.Combo:
+                    if (_comboPanel == null) return;
+                    var comboScreenPoint = RectTransformUtility.WorldToScreenPoint(null,
+                        _comboPanel.TransformPoint(new Vector3(0f, -_comboPanel.rect.height, 0f)));
+                    if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(root, comboScreenPoint,
+                            hudCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : hudCanvas.worldCamera,
+                            out position)) return;
+                    break;
+                default:
+                    return;
+            }
+
+            var go = new GameObject("ScoreChange", typeof(RectTransform), typeof(Text), typeof(CanvasGroup));
+            var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(root, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(360f, 90f);
+            var label = go.GetComponent<Text>();
+            label.font = displayFont;
+            label.fontSize = 56;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.color = hitColor;
+            label.raycastTarget = false;
+            label.text = "+" + change.Difference.ToString(CultureInfo.InvariantCulture);
+            StartCoroutine(AnimateScoreChange(rect, go.GetComponent<CanvasGroup>()));
+        }
+
+        private static IEnumerator AnimateScoreChange(RectTransform rect, CanvasGroup group)
+        {
+            const float duration = 1f;
+            var start = rect.anchoredPosition;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var progress = Mathf.Clamp01(elapsed / duration);
+                rect.anchoredPosition = start + Vector2.up * (60f * progress);
+                group.alpha = 1f - progress;
+                yield return null;
+            }
+            Destroy(rect.gameObject);
         }
 
         private void Update()

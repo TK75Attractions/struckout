@@ -1,8 +1,13 @@
 //! Session management
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    num::NonZeroU32,
+    sync::Arc,
+};
 
 use parking_lot::RwLock;
+use serde::Deserialize;
 use struckout_macros::{EnumAsInner, EnumAsInnerMut};
 use struckout_proto::{
     Difficulty, GameMode, Target,
@@ -67,8 +72,41 @@ pub enum HitTargetError {
     ScoreOverflow,
 }
 
-/// Bonuses awarded only when the combo reaches a threshold.
-const COMBO_BONUSES: &[(u32, u32)] = &[(3, 500), (5, 800)];
+/// A score bonus awarded when a combo reaches its configured count.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ComboBonus {
+    combo: NonZeroU32,
+    points: NonZeroU32,
+}
+
+/// Validated bonus rules loaded from the game configuration.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(try_from = "Vec<ComboBonus>")]
+pub struct ComboBonuses(Vec<ComboBonus>);
+
+impl TryFrom<Vec<ComboBonus>> for ComboBonuses {
+    type Error = String;
+
+    fn try_from(bonuses: Vec<ComboBonus>) -> Result<Self, Self::Error> {
+        let mut seen = HashSet::new();
+        for bonus in &bonuses {
+            if !seen.insert(bonus.combo) {
+                return Err(format!("duplicate combo bonus for {}", bonus.combo));
+            }
+        }
+        Ok(Self(bonuses))
+    }
+}
+
+impl ComboBonuses {
+    fn points_for(&self, combo: u32) -> u32 {
+        self.0
+            .iter()
+            .find(|bonus| bonus.combo.get() == combo)
+            .map_or(0, |bonus| bonus.points.get())
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum ResetComboError {
@@ -81,6 +119,8 @@ pub enum ResetComboError {
 pub struct HitTargetOutcome {
     pub combo: u32,
     pub total_score: u32,
+    pub target_points: u32,
+    pub combo_bonus: u32,
     pub event_target: EventTarget,
     pub replacement: Option<(Target, Target)>,
 }
@@ -394,6 +434,7 @@ impl Sessions {
         &mut self,
         machine_id: MachineId,
         target_id: Uuid,
+        combo_bonuses: &ComboBonuses,
     ) -> Result<HitTargetOutcome, HitTargetError> {
         // TODO: スコアの算出を別のモジュールに切り出す
         let ms = self
@@ -433,10 +474,7 @@ impl Sessions {
             return Err(HitTargetError::ScoreOverflow);
         }
         let combo = shared.combo.saturating_add(1);
-        let bonus = COMBO_BONUSES
-            .iter()
-            .find(|&&(threshold, _)| threshold == combo)
-            .map_or(0, |&(_, bonus)| bonus);
+        let bonus = combo_bonuses.points_for(combo);
         let total_score = shared
             .score
             .checked_add(points as u32)
@@ -465,6 +503,8 @@ impl Sessions {
         Ok(HitTargetOutcome {
             combo,
             total_score,
+            target_points: points as u32,
+            combo_bonus: bonus,
             event_target,
             replacement,
         })
@@ -916,6 +956,20 @@ mod tests {
         sessions
     }
 
+    fn test_combo_bonuses() -> ComboBonuses {
+        ComboBonuses::try_from(vec![
+            ComboBonus {
+                combo: NonZeroU32::new(3).expect("nonzero"),
+                points: NonZeroU32::new(500).expect("nonzero"),
+            },
+            ComboBonus {
+                combo: NonZeroU32::new(5).expect("nonzero"),
+                points: NonZeroU32::new(800).expect("nonzero"),
+            },
+        ])
+        .expect("unique combos")
+    }
+
     #[rstest]
     #[case(GameMode::Single)]
     #[case(GameMode::Multi)]
@@ -1031,14 +1085,14 @@ mod tests {
             event_target: target,
             ..
         } = sessions
-            .hit_target(machine_id, target_id)
+            .hit_target(machine_id, target_id, &test_combo_bonuses())
             .expect("registered target");
         assert_eq!(score, points);
         assert_matches!(target, EventTarget::Single(id) if id == machine_id);
         let HitTargetOutcome {
             total_score: score, ..
         } = sessions
-            .hit_target(machine_id, target_id)
+            .hit_target(machine_id, target_id, &test_combo_bonuses())
             .expect("target remains registered");
         assert_eq!(score, 2 * points);
         assert_eq!(sessions.score(machine_id).expect("running"), 2 * points);
@@ -1060,7 +1114,7 @@ mod tests {
             event_target: target,
             ..
         } = sessions
-            .hit_target(MachineId::new(2), target_id)
+            .hit_target(MachineId::new(2), target_id, &test_combo_bonuses())
             .expect("shared target");
         assert_eq!(score, 500);
         assert_matches!(target, EventTarget::All);
@@ -1073,6 +1127,46 @@ mod tests {
             500
         );
         assert_eq!(sessions.score_multi().expect("shared score"), 500);
+    }
+
+    #[test]
+    fn configured_combo_bonuses_apply_at_exact_counts_and_after_reset() {
+        let bonuses = ComboBonuses::try_from(vec![ComboBonus {
+            combo: NonZeroU32::new(2).expect("nonzero"),
+            points: NonZeroU32::new(75).expect("nonzero"),
+        }])
+        .expect("unique combo");
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(
+                compass_target(200.0),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
+            .expect("running game")
+            .0;
+
+        for expected_score in [500, 1075, 1575] {
+            assert_eq!(
+                sessions
+                    .hit_target(machine_id, target_id, &bonuses)
+                    .expect("registered target")
+                    .total_score,
+                expected_score
+            );
+        }
+        sessions.reset_combo(machine_id).expect("running game");
+        for expected_score in [2075, 2650] {
+            assert_eq!(
+                sessions
+                    .hit_target(machine_id, target_id, &bonuses)
+                    .expect("registered target")
+                    .total_score,
+                expected_score
+            );
+        }
     }
 
     #[test]
@@ -1094,7 +1188,7 @@ mod tests {
             )
         };
         assert_matches!(
-            sessions.hit_target(machine_id, target_id),
+            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
             Err(HitTargetError::ScoreOverflow)
         );
         let (state,) = sessions
@@ -1127,7 +1221,7 @@ mod tests {
             .expect("running game")
             .0;
         assert_matches!(
-            sessions.hit_target(machine_id, target_id),
+            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
             Err(HitTargetError::InvalidRadius)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), 0);
@@ -1155,7 +1249,7 @@ mod tests {
             .expect("running");
         state.shared.write().score = score;
         assert_matches!(
-            sessions.hit_target(machine_id, target_id),
+            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
             Err(HitTargetError::ScoreOverflow)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), score);
@@ -1177,7 +1271,7 @@ mod tests {
             (target_id, shared.targets.clone(), shared.started_at)
         };
         assert_matches!(
-            sessions.hit_target(machine_id, target_id),
+            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
             Err(HitTargetError::ScoreOverflow)
         );
         let (state,) = sessions
@@ -1213,7 +1307,7 @@ mod tests {
             .unwrap()
             .target_data = None;
         assert_matches!(
-            sessions.hit_target(machine_id, target_id),
+            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
             Err(HitTargetError::MissingTargetData)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), 0);
@@ -1232,7 +1326,7 @@ mod tests {
             Err(SessionError::NoSession(_))
         );
         assert_matches!(
-            sessions.hit_target(machine_id, Uuid::nil()),
+            sessions.hit_target(machine_id, Uuid::nil(), &test_combo_bonuses()),
             Err(HitTargetError::Session(SessionError::NoSession(_)))
         );
         assert_matches!(
@@ -1273,7 +1367,7 @@ mod tests {
         });
         let mut sessions = Sessions((Some(session), None));
         assert_matches!(
-            sessions.hit_target(machine_id, Uuid::nil()),
+            sessions.hit_target(machine_id, Uuid::nil(), &test_combo_bonuses()),
             Err(HitTargetError::Session(SessionError::InvalidState { .. }))
         );
         assert_matches!(

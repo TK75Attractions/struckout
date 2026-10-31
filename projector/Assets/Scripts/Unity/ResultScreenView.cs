@@ -25,7 +25,7 @@ namespace Struckout.Unity
         private readonly List<GameObject> _rows = new();
         private static readonly Color Cyan = new(0.25f, 0.85f, 1f);
         private static readonly Color Gold = new(1f, 0.84f, 0.3f);
-        private static readonly Color Silver = new(0.78f, 0.84f, 0.9f);
+        private static readonly Color Silver = new(0.55f, 0.63f, 0.7f);
         private static readonly Color Bronze = new(0.85f, 0.55f, 0.32f);
         private static readonly Color PersonalBackground = new(0.04f, 0.18f, 0.25f, 1f);
         private static readonly Color RowBackground = new(0.055f, 0.065f, 0.09f, 1f);
