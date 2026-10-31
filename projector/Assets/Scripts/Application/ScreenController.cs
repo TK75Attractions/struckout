@@ -72,9 +72,9 @@ namespace Struckout.Application
                     : UniTask.FromResult<System.Collections.Generic.IReadOnlyList<RankingEntry>>(null);
                 var (ranking, history) = await UniTask.WhenAll(rankingTask, historyTask);
                 if (token.IsCancellationRequested) return;
-                var entries = (history ?? System.Array.Empty<RankingEntry>())
-                    .Concat(ranking ?? System.Array.Empty<RankingEntry>()).ToArray();
-                _ui.ShowResultContext(_mode, _difficulty, RankingResults.GetRank(entries, gameId));
+                var rank = history?.FirstOrDefault(entry => entry.GameId.Equals(gameId)).Rank
+                    ?? RankingResults.GetRank(ranking ?? System.Array.Empty<RankingEntry>(), gameId);
+                _ui.ShowResultContext(_mode, _difficulty, rank);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         }
