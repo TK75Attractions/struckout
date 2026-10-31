@@ -3,11 +3,13 @@ using Cysharp.Threading.Tasks;
 using System;
 using JetBrains.Annotations;
 using VContainer.Unity;
+using UnityEngine;
 using Struckout.Domain;
+using Struckout.Application;
 
 namespace Struckout.Bootstrap
 {
-    public class RootBootstrap : IStartable, IDisposable
+    public class RootBootstrap : IStartable, ITickable, IDisposable
     {
         private readonly ILogger<RootBootstrap> _logger;
 
@@ -15,11 +17,13 @@ namespace Struckout.Bootstrap
 
         private readonly NetworkBootstrap _networkBootstrap;
         private readonly GameBootstrap _gameBootstrap;
+        private readonly GameRuntime _gameRuntime;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
         public RootBootstrap(
             NetworkBootstrap networkBootstrap,
             GameBootstrap gameBootstrap,
+            GameRuntime gameRuntime,
             RuntimeContext runtimeContext,
             ILogger<RootBootstrap> logger
         )
@@ -27,6 +31,7 @@ namespace Struckout.Bootstrap
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _networkBootstrap = networkBootstrap;
             _gameBootstrap = gameBootstrap;
+            _gameRuntime = gameRuntime;
             _runtimeContext = runtimeContext;
         }
 
@@ -34,6 +39,8 @@ namespace Struckout.Bootstrap
         {
             Initialize().Forget(ex => _logger.LogError(ex, "初期化に失敗しました。"));
         }
+
+        public void Tick() => _gameRuntime.AdvanceTargets(Time.deltaTime);
 
         private async UniTask Initialize()
         {

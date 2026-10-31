@@ -12,12 +12,14 @@ namespace Struckout.Domain.TargetDefinition
         public float Diameter => Size;
         public float Radius => Size / 2f;
         public float RadiusSquared => Radius * Radius;
+        public TargetVelocity Velocity { get; }
 
-        public TargetGeometry(TargetCoordinate coordinate, TargetType type, float size)
+        public TargetGeometry(TargetCoordinate coordinate, TargetType type, float size, TargetVelocity velocity = default)
         {
             Coordinate = coordinate;
             Type = type;
             Size = size;
+            Velocity = velocity;
         }
     }
 }

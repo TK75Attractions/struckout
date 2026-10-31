@@ -81,7 +81,7 @@ namespace Struckout.Application.Interface
         UniTask<bool> ConnectAsync();
 
         /// <summary>円形の的の登録を要求する。状態への追加は TargetAdded の受信時に行う。</summary>
-        UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default);
+        UniTask<bool> AddTargetAsync(TargetGeometry geometry, CancellationToken token = default);
 
         /// <summary>的の削除を要求する。状態からの削除は TargetRemoved の受信時に行う。</summary>
         UniTask<bool> RemoveTargetAsync(Guid targetId, CancellationToken token = default);

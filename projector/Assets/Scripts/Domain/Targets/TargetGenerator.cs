@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Struckout.Domain.TargetDefinition;
+using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Domain.Targets
 {
@@ -24,6 +25,23 @@ namespace Struckout.Domain.Targets
             field ??= new FieldBounds();
             _xSize = field.width;
             _ySize = field.height;
+        }
+
+        /// <summary>Give each newly registered Compass an independent direction at the selected difficulty.</summary>
+        public TargetGeometry WithMovement(TargetGeometry geometry, Difficulty difficulty)
+        {
+            if (geometry.Type != TargetType.Compass) return geometry;
+            var speed = difficulty switch
+            {
+                Difficulty.Normal => 0.0,
+                Difficulty.Hard => 100.0,
+                Difficulty.Veryhard => 200.0,
+                _ => throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, "Unsupported difficulty"),
+            };
+            if (speed == 0) return geometry;
+            var angle = _random.NextDouble() * 2 * Math.PI;
+            return new TargetGeometry(geometry.Coordinate, geometry.Type, geometry.Size,
+                new TargetVelocity(Math.Cos(angle) * speed, Math.Sin(angle) * speed));
         }
         public IReadOnlyList<TargetGeometry> GenerateTargets(int num, TargetType type, IReadOnlyList<TargetGeometry> existTarget)
         {

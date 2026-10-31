@@ -175,16 +175,16 @@ namespace Struckout.Infrastructure.Fake
             }
         }
 
-        public UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        public UniTask<bool> AddTargetAsync(TargetGeometry geometry, CancellationToken token = default)
         {
             lock (_stateLock)
             {
                 if (!_connected || !_started || token.IsCancellationRequested) return UniTask.FromResult(false);
                 var id = Guid.NewGuid();
                 // Match protobuf's float precision before the server calculates in f64.
-                _targetRadii.Add(id, (float)radius);
+                _targetRadii.Add(id, geometry.Radius);
                 TargetAdded?.Invoke(new Target(id,
-                    new TargetGeometry(coordinate, TargetType.Compass, (float)radius * 2f), TargetOwnership.Single));
+                    geometry, TargetOwnership.Single));
                 return UniTask.FromResult(true);
             }
         }

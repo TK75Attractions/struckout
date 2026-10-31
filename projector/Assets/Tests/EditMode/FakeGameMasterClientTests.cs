@@ -21,6 +21,9 @@ namespace Struckout.Tests.Tests.EditMode
     /// </summary>
     public class FakeGameMasterClientTests
     {
+        private static TargetGeometry Compass(double radius, TargetCoordinate coordinate = default) =>
+            new(coordinate, TargetType.Compass, (float)(radius * 2));
+
         [Test]
         public async Task 接続してから購読しても開始を受け取れる()
         {
@@ -121,7 +124,7 @@ namespace Struckout.Tests.Tests.EditMode
                     scores.Add(change.TotalScore);
                     changes.Add(change);
                 };
-                await client.AddTargetAsync(default, 200);
+                await client.AddTargetAsync(Compass(200));
                 Assert.That(await client.ResetComboAsync(), Is.True);
                 for (var i = 0; i < 6; i++) Assert.That(await client.HitTargetAsync(id), Is.True);
                 Assert.That(combos, Is.EqualTo(new uint[] { 1, 2, 3, 4, 5, 6 }));
@@ -152,9 +155,9 @@ namespace Struckout.Tests.Tests.EditMode
             client.TargetRemoved += removed.Add;
             try
             {
-                Assert.That(await client.AddTargetAsync(default, 200), Is.False);
+                Assert.That(await client.AddTargetAsync(Compass(200)), Is.False);
                 await client.ConnectAsync();
-                Assert.That(await client.AddTargetAsync(new TargetCoordinate(100, 200), 200), Is.True);
+                Assert.That(await client.AddTargetAsync(Compass(200, new TargetCoordinate(100, 200))), Is.True);
                 Assert.That(added, Has.Count.EqualTo(1));
                 var id = added[0];
                 Assert.That(await client.HitTargetAsync(id), Is.True);
@@ -189,7 +192,7 @@ namespace Struckout.Tests.Tests.EditMode
                 client.ScoreChanged += change => scores.Add(change.TotalScore);
                 var id = Guid.Empty;
                 client.TargetAdded += target => id = target.Id;
-                Assert.That(await client.AddTargetAsync(default, radius), Is.True);
+                Assert.That(await client.AddTargetAsync(Compass(radius)), Is.True);
                 Assert.That(await client.HitTargetAsync(id), Is.False);
                 Assert.That(scores, Is.Empty);
             }
@@ -207,7 +210,7 @@ namespace Struckout.Tests.Tests.EditMode
             try
             {
                 await client.ConnectAsync();
-                await client.AddTargetAsync(default, 200);
+                await client.AddTargetAsync(Compass(200));
                 events.Clear();
                 await client.DisconnectAsync();
                 Assert.That(events, Is.Empty);
@@ -228,7 +231,7 @@ namespace Struckout.Tests.Tests.EditMode
             try
             {
                 await client.ConnectAsync();
-                Assert.That(await client.AddTargetAsync(default, 200), Is.True);
+                Assert.That(await client.AddTargetAsync(Compass(200)), Is.True);
                 Assert.That(await Task.WhenAny(finished.Task, Task.Delay(TimeSpan.FromSeconds(5))),
                     Is.SameAs(finished.Task));
                 Assert.That(removed, Is.Empty);

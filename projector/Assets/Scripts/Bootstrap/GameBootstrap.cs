@@ -87,7 +87,7 @@ namespace Struckout.Bootstrap
             });
 
         private void OnCollisionDetected(CollisionPoint point) =>
-            ObserveAsync(_runtime.CollisionDetectedAsync(point)).Forget();
+            _dispatcher.Enqueue(() => ObserveAsync(_runtime.CollisionDetectedAsync(point)).Forget());
 
         private void OnTargetAdded(Target target) =>
             _dispatcher.Enqueue(() => _runtime.OnTargetAdded(target));
