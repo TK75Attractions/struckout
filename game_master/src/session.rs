@@ -119,6 +119,8 @@ pub enum ResetComboError {
 pub struct HitTargetOutcome {
     pub combo: u32,
     pub total_score: u32,
+    pub target_points: u32,
+    pub combo_bonus: u32,
     pub event_target: EventTarget,
     pub replacement: Option<(Target, Target)>,
 }
@@ -501,6 +503,8 @@ impl Sessions {
         Ok(HitTargetOutcome {
             combo,
             total_score,
+            target_points: points as u32,
+            combo_bonus: bonus,
             event_target,
             replacement,
         })

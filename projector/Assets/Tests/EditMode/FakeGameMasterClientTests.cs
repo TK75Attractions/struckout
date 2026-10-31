@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Domain.Ranking;
 using Struckout.Infrastructure.Fake;
+using Struckout.Application.Interface;
 using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Tests.Tests.EditMode
@@ -107,6 +108,7 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var combos = new List<uint>();
             var scores = new List<uint>();
+            var changes = new List<ScoreChange>();
             var id = Guid.Empty;
             client.TargetAdded += target => id = target.Id;
             client.ComboChanged += combos.Add;
@@ -114,12 +116,21 @@ namespace Struckout.Tests.Tests.EditMode
             {
                 Assert.That(await client.ResetComboAsync(), Is.False);
                 await client.ConnectAsync();
-                client.ScoreChanged += scores.Add;
+                client.ScoreChanged += change =>
+                {
+                    scores.Add(change.TotalScore);
+                    changes.Add(change);
+                };
                 await client.AddTargetAsync(default, 200);
                 Assert.That(await client.ResetComboAsync(), Is.True);
                 for (var i = 0; i < 6; i++) Assert.That(await client.HitTargetAsync(id), Is.True);
                 Assert.That(combos, Is.EqualTo(new uint[] { 1, 2, 3, 4, 5, 6 }));
-                Assert.That(scores, Is.EqualTo(new uint[] { 500, 1000, 2000, 2500, 3800, 4300 }));
+                Assert.That(scores, Is.EqualTo(new uint[] { 500, 1000, 1500, 2000, 2500, 3000, 3800, 4300 }));
+                Assert.That(changes[3].Reason, Is.EqualTo(ScoreReason.Combo));
+                Assert.That(changes[3].Difference, Is.EqualTo(500));
+                Assert.That(changes[6].Reason, Is.EqualTo(ScoreReason.Combo));
+                Assert.That(changes[6].Difference, Is.EqualTo(800));
+                Assert.That(changes[0].TargetId, Is.EqualTo(id));
                 Assert.That(await client.ResetComboAsync(), Is.True);
                 Assert.That(await client.ResetComboAsync(), Is.True);
                 Assert.That(await client.HitTargetAsync(id), Is.True);
@@ -134,7 +145,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var scores = new List<uint>();
-            client.ScoreChanged += scores.Add;
+            client.ScoreChanged += change => scores.Add(change.TotalScore);
             var added = new List<Guid>();
             var removed = new List<Guid>();
             client.TargetAdded += target => added.Add(target.Id);
@@ -175,7 +186,7 @@ namespace Struckout.Tests.Tests.EditMode
             {
                 await client.ConnectAsync();
                 var scores = new List<uint>();
-                client.ScoreChanged += scores.Add;
+                client.ScoreChanged += change => scores.Add(change.TotalScore);
                 var id = Guid.Empty;
                 client.TargetAdded += target => id = target.Id;
                 Assert.That(await client.AddTargetAsync(default, radius), Is.True);

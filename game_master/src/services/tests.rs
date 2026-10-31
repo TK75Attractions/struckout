@@ -924,8 +924,10 @@ async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
     assert_matches!(
         event.data,
         Ok(SuccessfulEvent::GameScoreChanged {
-            total_score: 100_000
-        })
+            total_score: 100_000,
+            diff: 100_000,
+            reason: super::ScoreReason::TargetHit { target_id: id },
+        }) if id == target_id
     );
     if mode.is_multi() {
         assert_matches!(event.target, EventTarget::All);
@@ -1673,9 +1675,15 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
                 .await
                 .expect("hit watch");
             let score = events.try_recv().expect("score event");
-            assert_matches!(score.data, Ok(SuccessfulEvent::GameScoreChanged { total_score })
-                if total_score == (index as u32 * 2 + hit + 1) * 500
-                    + if index as u32 * 2 + hit + 1 >= 3 { 500 } else { 0 });
+            let hit_number = index as u32 * 2 + hit + 1;
+            let bonus = if hit_number == 3 { 500 } else { 0 };
+            assert_matches!(score.data, Ok(SuccessfulEvent::GameScoreChanged { total_score, diff: 500, reason: super::ScoreReason::TargetHit { target_id: id } })
+                if id == target_id && total_score == hit_number * 500 + if hit_number > 3 { 500 } else { 0 });
+            if bonus > 0 {
+                let bonus_event = events.try_recv().expect("combo bonus event");
+                assert_matches!(bonus_event.data, Ok(SuccessfulEvent::GameScoreChanged { total_score, diff: 500, reason: super::ScoreReason::Combo })
+                    if total_score == hit_number * 500 + bonus);
+            }
             match score.target {
                 EventTarget::All => assert!(mode.is_multi()),
                 EventTarget::Single(id) => assert_eq!(id, machine_id),
@@ -2117,12 +2125,28 @@ async fn combo_events_bonuses_reset_and_saved_result(#[case] mode: GameMode) {
                 5 => 800,
                 _ => 0,
             };
+        let bonus = match combo {
+            3 => 500,
+            5 => 800,
+            _ => 0,
+        };
         let score = assert_event!(first, EventData::GameScoreChanged(_));
-        assert_matches!(score, EventData::GameScoreChanged(event) if event.total_score == total);
+        assert_matches!(score, EventData::GameScoreChanged(event)
+            if event.total_score == total - bonus && event.diff == 100_000
+                && matches!(event.score_reason, Some(struckout_proto::event::game_score_changed::ScoreReason::TargetHit(_))));
+        if bonus > 0 {
+            let score = assert_event!(first, EventData::GameScoreChanged(_));
+            assert_matches!(score, EventData::GameScoreChanged(event)
+                if event.total_score == total && event.diff == i64::from(bonus)
+                    && matches!(event.score_reason, Some(struckout_proto::event::game_score_changed::ScoreReason::Combo(()))));
+        }
         let changed = assert_event!(first, EventData::ComboChanged(_));
         assert_matches!(changed, EventData::ComboChanged(event) if event.combo == combo);
         if mode.is_multi() {
             assert_event!(second, EventData::GameScoreChanged(_));
+            if bonus > 0 {
+                assert_event!(second, EventData::GameScoreChanged(_));
+            }
             let changed = assert_event!(second, EventData::ComboChanged(_));
             assert_matches!(changed, EventData::ComboChanged(event) if event.combo == combo);
         }

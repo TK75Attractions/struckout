@@ -8,6 +8,7 @@ using Struckout.Domain.TargetDefinition;
 using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Infrastructure.Grpc;
+using Struckout.Application.Interface;
 using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;
 using ProtoTarget = Tk75Attractions.Struckout.GameMaster.V1.Target;
 using Target = Struckout.Domain.TargetDefinition.Target;
@@ -34,6 +35,53 @@ namespace Struckout.Tests.Tests.EditMode
             var method = typeof(GrpcGameMasterClient).GetMethod("HandleEvent", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(method, Is.Not.Null);
             method.Invoke(client, new object[] { received });
+        }
+
+        [Test]
+        public void Score_events_preserve_the_increment_and_reason()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
+            var changes = new List<ScoreChange>();
+            client.ScoreChanged += changes.Add;
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    PlayerInfo = new PlayerInfo
+                    {
+                        Single = new PlayerInfo.Types.Single
+                        {
+                            Player = new PlayerInfo.Types.PlayerItem { MachineId = 7, PlayerId = 71 },
+                        },
+                    },
+                },
+            });
+            var targetId = Guid.NewGuid();
+            Dispatch(client, new Event
+            {
+                GameScoreChanged = new Event.Types.GameScoreChanged
+                {
+                    TotalScore = 300,
+                    Diff = 300,
+                    TargetHit = new Event.Types.GameScoreChanged.Types.TargetHit { TargetId = targetId.ToString() },
+                },
+            });
+            Dispatch(client, new Event
+            {
+                GameScoreChanged = new Event.Types.GameScoreChanged
+                {
+                    TotalScore = 800,
+                    Diff = 500,
+                    Combo = new Google.Protobuf.WellKnownTypes.Empty(),
+                },
+            });
+            Assert.That(changes, Has.Count.EqualTo(2));
+            Assert.That(changes[0].Reason, Is.EqualTo(ScoreReason.TargetHit));
+            Assert.That(changes[0].TargetId, Is.EqualTo(targetId));
+            Assert.That(changes[0].Difference, Is.EqualTo(300));
+            Assert.That(changes[1].Reason, Is.EqualTo(ScoreReason.Combo));
+            Assert.That(changes[1].Difference, Is.EqualTo(500));
+            Assert.That(changes[1].TotalScore, Is.EqualTo(800));
         }
 
         [Test]
