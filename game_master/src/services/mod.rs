@@ -490,6 +490,7 @@ where
         &self,
         req: Request<SetSessionReadyRequest>,
     ) -> Result<Response<SetSessionReadyResponse>, Status> {
+        let countdown_started_at = tokio::time::Instant::now();
         let SetSessionReadyRequest { machine_id } = req.into_inner();
         let machine_id = machine_id.into();
         // Resolve names before changing state so a database failure cannot leave a game running without notifications.
@@ -562,6 +563,7 @@ where
                     tokio::spawn(countdown_and_start(
                         CountdownStart {
                             ev_target: EventTarget::Single(machine_id),
+                            started_at: countdown_started_at,
                             delay_secs: self.game_start_delay_secs,
                             started: SuccessfulEvent::GameStarted {
                                 game_duration_secs: game_duration_secs.get(),
@@ -599,6 +601,7 @@ where
                     tokio::spawn(countdown_and_start(
                         CountdownStart {
                             ev_target: EventTarget::All,
+                            started_at: countdown_started_at,
                             delay_secs: self.game_start_delay_secs,
                             started: SuccessfulEvent::GameStarted {
                                 game_duration_secs: game_duration_secs.get(),
@@ -755,6 +758,7 @@ async fn pass_events_through_by_machine_id(
 
 struct CountdownStart {
     ev_target: EventTarget,
+    started_at: tokio::time::Instant,
     delay_secs: NonZeroU32,
     started: SuccessfulEvent,
     initial_targets: Vec<struckout_proto::Target>,
@@ -772,6 +776,7 @@ async fn countdown_and_start(
 ) {
     let CountdownStart {
         ev_target,
+        started_at,
         delay_secs,
         started,
         initial_targets,
@@ -779,7 +784,7 @@ async fn countdown_and_start(
         sessions,
         machine_id,
     } = start;
-    let mut interval = tokio::time::interval(Duration::from_secs(1));
+    let mut interval = tokio::time::interval_at(started_at, Duration::from_secs(1));
     for remaining in (1..=delay_secs.get()).rev() {
         interval.tick().await;
         if tx
