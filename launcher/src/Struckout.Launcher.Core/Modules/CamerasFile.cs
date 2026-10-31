@@ -41,6 +41,9 @@ public sealed class CamerasFile
     /// <summary>The application ID of the camera app.</summary>
     public string Package { get; }
 
+    /// <summary>Where the file is, to tell the user which file the launcher changed.</summary>
+    public string FilePath => path;
+
     /// <summary>In the order ball_tracker assigns camera IDs (0, 1, ...).</summary>
     public IReadOnlyList<CameraEntry> Cameras { get; private set; }
 
@@ -86,10 +89,43 @@ public sealed class CamerasFile
         }
 
         camera["device_id"] = deviceId;
-        File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Save();
         Cameras = Cameras.Select(c => c.Serial == serial ? c with { DeviceId = deviceId } : c).ToList();
         return true;
     }
+
+    /// <summary>
+    /// Makes the phone <paramref name="serial"/> the camera at <paramref name="index"/>, keeping its pose and the rest.
+    /// </summary>
+    /// <remarks>
+    /// The device_id is removed: it belongs to the previous phone, and ball_tracker would give the new phone's
+    /// frames no pose while waiting for that phone. The launcher records the new phone's ID before starting
+    /// ball_tracker.
+    /// </remarks>
+    /// <returns>Whether the file changed.</returns>
+    /// <exception cref="LauncherException">Another camera already has the phone.</exception>
+    public bool AssignSerial(int index, string serial)
+    {
+        if (Cameras.Where((_, i) => i != index).FirstOrDefault(c => c.Serial == serial) is { } other)
+        {
+            throw new LauncherException($"{serial} はすでに {other.Name} のスマホです");
+        }
+
+        if (Cameras[index].Serial == serial)
+        {
+            return false;
+        }
+
+        var camera = (root["cameras"] as JsonArray)!.OfType<JsonObject>().ElementAt(index);
+        camera["serial"] = serial;
+        camera.Remove("device_id");
+        Save();
+        Cameras = Cameras.Select((c, i) => i == index ? c with { Serial = serial, DeviceId = null } : c).ToList();
+        return true;
+    }
+
+    private void Save() =>
+        File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
 
     private CameraEntry ParseCamera(JsonObject camera)
     {

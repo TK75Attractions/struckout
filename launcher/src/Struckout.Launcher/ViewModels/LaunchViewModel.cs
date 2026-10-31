@@ -77,6 +77,7 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
         this.runner = runner;
         timer = new DispatcherTimer { Interval = CheckInterval };
         timer.Tick += async (_, _) => await CheckAsync();
+        CameraAssignment = new CameraAssignmentViewModel(platform, paths, runner, Log);
     }
 
     public ObservableCollection<ModuleStatusViewModel> Modules { get; } = [];
@@ -84,6 +85,8 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
     public ObservableCollection<RemoteStatusViewModel> Remotes { get; } = [];
 
     public LogViewModel Log { get; } = new();
+
+    public CameraAssignmentViewModel CameraAssignment { get; }
 
     public string ConfigPath => paths.LauncherConfigFile;
 
@@ -102,6 +105,10 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
     public partial bool IsRunning { get; private set; }
 
     public bool CanReload => !IsBusy && !IsRunning;
+
+    partial void OnIsBusyChanged(bool value) => CameraAssignment.IsLocked = !CanReload;
+
+    partial void OnIsRunningChanged(bool value) => CameraAssignment.IsLocked = !CanReload;
 
     /// <summary>Reads <c>launcher.toml</c> and the install state again. Not while modules are running.</summary>
     [RelayCommand(CanExecute = nameof(CanReload))]
@@ -126,6 +133,15 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
 
             ConfigError = supervisor.Order.Count == 0 ? "modules にこの PC で起動するモジュールを書いてください" : "";
             timer.Start();
+            if (supervisor.Order.Contains(ModuleId.Camera))
+            {
+                // It handles its own errors.
+                _ = CameraAssignment.RefreshAsync();
+            }
+            else
+            {
+                CameraAssignment.Clear();
+            }
         }
         catch (LauncherException e)
         {
