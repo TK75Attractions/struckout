@@ -72,9 +72,6 @@ public sealed record ApkInstallation : ModuleInstallation
 
     /// <summary>The serials of the phones the app was installed on.</summary>
     public required IReadOnlyList<string> Devices { get; init; }
-
-    /// <summary>Phones using a differently signed existing app, rather than the recorded release. Optional in older state files.</summary>
-    public IReadOnlyList<string> ExistingDevices { get; init; } = [];
 }
 
 /// <summary>What the installer has put on this PC, saved as <c>install-state.json</c>.</summary>

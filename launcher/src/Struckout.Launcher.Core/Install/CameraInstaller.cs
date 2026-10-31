@@ -23,7 +23,6 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
         var adb = new Adb(context.Tools[PrerequisiteId.Adb], runner);
         var connected = await adb.DevicesAsync(context.CancellationToken);
         var installed = new SortedSet<string>((previous as ApkInstallation)?.Devices ?? [], StringComparer.Ordinal);
-        var existing = new SortedSet<string>((previous as ApkInstallation)?.ExistingDevices ?? [], StringComparer.Ordinal);
         foreach (var serial in connected)
         {
             if (cameras.Cameras.All(c => c.Serial != serial))
@@ -33,13 +32,17 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
             }
 
             context.Log.Report($"{slug}: {serial} に入れます");
-            if (await InstallOnDeviceAsync(adb, serial, apk, cameras.Package, context.Log, context.CancellationToken))
+            var result = await adb.RunAsync(serial, ["install", "-r", apk], context.CancellationToken);
+            if (result.Output.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", StringComparison.Ordinal))
             {
-                existing.Add(serial);
+                throw new LauncherException(
+                    $"{serial} には、署名の違うカメラアプリ (Android Studio から入れたものなど) が入っています。"
+                    + $"端末のアプリを消してからやり直してください (adb -s {serial} uninstall {cameras.Package})");
             }
-            else
+
+            if (!result.Succeeded || !result.Output.Contains("Success", StringComparison.Ordinal))
             {
-                existing.Remove(serial);
+                throw new LauncherException($"{serial} にアプリを入れられません:\n{result.Output.Trim()}");
             }
 
             installed.Add(serial);
@@ -59,31 +62,7 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
             Directory = directory,
             Package = cameras.Package,
             Devices = installed.ToList(),
-            ExistingDevices = existing.ToList(),
         };
-    }
-
-    /// <returns>Whether a differently signed existing app was retained to preserve its calibration.</returns>
-    internal static async Task<bool> InstallOnDeviceAsync(
-        Adb adb, string serial, string apk, string package, IProgress<string> log, CancellationToken cancellationToken)
-    {
-        var result = await adb.RunAsync(serial, ["install", "-r", apk], cancellationToken);
-        if (result.Output.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", StringComparison.Ordinal))
-        {
-            var path = await adb.RunAsync(serial, ["shell", "pm", "path", package], cancellationToken);
-            if (path.Succeeded && path.Output.Split('\n').Any(line => line.Trim().StartsWith("package:", StringComparison.Ordinal)))
-            {
-                log.Report($"camera: {serial}: 署名が違う既存のアプリを使います。リリースの版には更新されません");
-                return true;
-            }
-        }
-
-        if (!result.Succeeded || !result.Output.Contains("Success", StringComparison.Ordinal))
-        {
-            throw new LauncherException($"{serial} にアプリを入れられません:\n{result.Output.Trim()}");
-        }
-
-        return false;
     }
 
     public async Task UninstallAsync(
@@ -104,13 +83,6 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
                 if (!connected.Contains(serial))
                 {
                     log.Report($"{slug}: {serial} がつながっていないので、端末のアプリは残ります");
-                    continue;
-                }
-
-                // The launcher didn't install it, and removing it would lose the calibration in the app.
-                if (apk.ExistingDevices.Contains(serial))
-                {
-                    log.Report($"{slug}: {serial} のアプリはランチャーが入れたものではないので残します");
                     continue;
                 }
 
