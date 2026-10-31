@@ -237,6 +237,7 @@ jobs:
           sparse-checkout: |
             api/proto/ball_tracker
             api/spec
+            default_configs
             launcher
             mise.toml
             mise.lock

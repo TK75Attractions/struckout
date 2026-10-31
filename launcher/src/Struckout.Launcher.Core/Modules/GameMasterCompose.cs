@@ -22,17 +22,30 @@ public sealed class GameMasterCompose(
     public const string ProjectName = "struckout-launcher";
 
     private const string OverrideFile = "compose.launcher.yaml";
-    private const string DefaultConfig = "game_start_delay_secs = 3\npocket_watch_bonus_secs = 5\n\n[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n\n[[combo_bonuses]]\ncombo = 3\npoints = 500\n\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n";
+
+    /// <summary>The manifest resource name of <c>default_configs/game_master.toml</c>.</summary>
+    /// <remarks>
+    /// Embedded instead of written out here so that the launcher and a manual install start from the same file,
+    /// and a setting that game_master starts to require (such as <c>pocket_watch_bonus_secs</c>) is added once.
+    /// </remarks>
+    internal const string DefaultConfigResource = "game_master.toml";
 
     public string Directory { get; } = directory;
 
-    /// <summary>Creates editable settings on first install without overwriting later changes.</summary>
+    /// <summary>
+    /// Creates editable settings from <c>default_configs/game_master.toml</c> on first install without overwriting
+    /// later changes.
+    /// </summary>
     public void EnsureConfigFile()
     {
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(configFile)!);
         if (!File.Exists(configFile))
         {
-            File.WriteAllText(configFile, DefaultConfig);
+            using var config = typeof(GameMasterCompose).Assembly.GetManifestResourceStream(DefaultConfigResource)
+                // guaranteed by the EmbeddedResource in Struckout.Launcher.Core.csproj
+                ?? throw new InvalidOperationException($"{DefaultConfigResource} should be embedded");
+            using var file = File.Create(configFile);
+            config.CopyTo(file);
         }
     }
 
