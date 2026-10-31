@@ -7,6 +7,21 @@ global Adopter {
 }
 
 export component GameFinishedScreen {
+    // How long the screen waits before returning home by itself.
+    // Meanwhile the projector shows the ranking (the score in simple mode).
+    // Without it, an unattended machine would keep showing them instead of getting ready for the next player.
+    private property <duration> auto-return-interval: 20s;
+
+    // The screen exists only while it is shown, so leaving it stops the timer.
+    // The timer pauses while a request is in flight and restarts after a failure, so it also retries.
+    Timer {
+        interval: root.auto-return-interval;
+        running: !Adopter.busy;
+        triggered => {
+            Adopter.move-to-start-screen();
+        }
+    }
+
     VerticalLayout {
         alignment: center;
         cross-axis-alignment: center;
