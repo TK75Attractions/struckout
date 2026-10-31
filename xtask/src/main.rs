@@ -12,8 +12,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[cfg(feature = "sqlite")]
-    Sync(xtask::SyncArgs),
     #[command(about = "Create new screen in touchpanel")]
     New(xtask::NewArgs),
     #[command(about = "Utilities around creating GitHub Releases")]
@@ -24,12 +22,6 @@ enum Commands {
 async fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
-        #[cfg(feature = "sqlite")]
-        Commands::Sync(sync) => {
-            if sync.run().await {
-                std::process::exit(1);
-            };
-        }
         Commands::New(new) => {
             if let Err(e) = new.run(cli.verbose) {
                 eprintln!("{:#}", e);

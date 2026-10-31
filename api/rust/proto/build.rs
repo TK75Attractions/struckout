@@ -3,7 +3,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../proto/ball_tracker/camera_status.proto",
         "../../proto/ball-tracker__projector.proto",
         "../../proto/camera__ball-tracker.proto",
-        "../../proto/xtask_sync.proto",
         "../../proto/game_master/session.proto",
         "../../proto/game_master/player.proto",
     ];
