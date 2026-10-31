@@ -75,6 +75,8 @@ namespace Struckout.Infrastructure
                 1,
                 ResolveUInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.connectAttempts));
 
+            settings.simpleMode = ResolveBool(commandLine, "simpleMode", settings.simpleMode);
+
             return settings;
         }
 
@@ -158,6 +160,15 @@ namespace Struckout.Infrastructure
 
             if (uint.TryParse(raw, out var value)) return value;
             
+            _logger.LogWarning("'{Value}' is not a valid value for {Argument}; falling back to {Fallback}", raw, argName, fallback);
+            return fallback;
+        }
+
+        private bool ResolveBool(IReadOnlyDictionary<string, string> commandLine, string argName, bool fallback)
+        {
+            if (!commandLine.TryGetValue(argName, out var raw)) return fallback;
+            if (bool.TryParse(raw, out var value)) return value;
+
             _logger.LogWarning("'{Value}' is not a valid value for {Argument}; falling back to {Fallback}", raw, argName, fallback);
             return fallback;
         }

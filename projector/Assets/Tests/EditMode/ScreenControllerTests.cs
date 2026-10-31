@@ -117,7 +117,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client();
             var ui = new UI { PendingAnimation = new UniTaskCompletionSource() };
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Single, Difficulty.Normal);
             var pending = screens.ShowScoreAsync(new GameId(42));
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Score));
@@ -131,11 +131,28 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public async Task Simple_mode_keeps_score_screen_after_animation()
+        {
+            var client = new Client();
+            var ui = new UI { PendingAnimation = new UniTaskCompletionSource() };
+            using var screens = new ScreenController(client, ui, new NetworkSettings { simpleMode = true });
+            screens.ShowPlaying(new PlayerId(7), GameMode.Single, Difficulty.Normal);
+
+            var pending = screens.ShowScoreAsync(new GameId(42));
+            Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Score));
+            ui.PendingAnimation.TrySetResult();
+            await pending;
+
+            Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Score));
+            Assert.That(client.RequestedPlayer, Is.Null);
+        }
+
+        [Test]
         public async Task Score_is_shown_before_optional_ranking_and_a_late_rank_cannot_overwrite_home()
         {
             var client = new Client { PendingRanking = new UniTaskCompletionSource<IReadOnlyList<RankingEntry>>() };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             var pending = screens.ShowScoreAsync(new GameId(42));
             Assert.That(ui.LastScore, Is.EqualTo(888));
@@ -161,7 +178,7 @@ namespace Struckout.Tests.Tests.EditMode
                 } : null,
             };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Single, Difficulty.Normal);
             await screens.ShowScoreAsync(new GameId(42));
             Assert.That(ui.LastScore, Is.EqualTo(888));
@@ -177,7 +194,7 @@ namespace Struckout.Tests.Tests.EditMode
                 History = new[] { new RankingEntry(new GameId(42), 888, new PlayerId(7), "本人") },
             };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Playing));
             await screens.ShowScoreAsync(new GameId(42));
@@ -202,7 +219,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client { PendingScore = new UniTaskCompletionSource<uint?>() };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             var pending = screens.ShowScoreAsync(new GameId(42));
             screens.ShowHome();
@@ -222,7 +239,7 @@ namespace Struckout.Tests.Tests.EditMode
                 PendingHistory = new UniTaskCompletionSource<IReadOnlyList<RankingEntry>>(),
             };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             var pending = screens.ShowRankingAsync();
             Assert.That(client.RequestedCount, Is.EqualTo(10));
@@ -249,7 +266,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client { History = null };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
             await screens.ShowRankingAsync();
             Assert.That(ui.Rows, Is.Null);
@@ -261,7 +278,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client();
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             await screens.ShowScoreAsync(new GameId(42));
             Assert.That(ui.LastScore, Is.EqualTo(888));
             client.Score = null;
@@ -275,7 +292,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client();
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             await screens.ShowRankingAsync();
             Assert.That(client.RequestedPlayer, Is.Null);
             Assert.That(client.RequestedCount, Is.Null);
@@ -287,7 +304,7 @@ namespace Struckout.Tests.Tests.EditMode
         {
             var client = new Client { Score = 0 };
             var ui = new UI();
-            using var screens = new ScreenController(client, ui);
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
             await screens.ShowScoreAsync(new GameId(42));
             Assert.That(ui.LastScore, Is.EqualTo(0));
         }

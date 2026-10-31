@@ -13,6 +13,7 @@ namespace Struckout.Application
     {
         private readonly IGameMasterClient _master;
         private readonly IUIService _ui;
+        private readonly bool _simpleMode;
         private PlayerId? _playerId;
         private GameId? _gameId;
         private GameMode _mode;
@@ -20,10 +21,11 @@ namespace Struckout.Application
         private CancellationTokenSource _request;
 
         [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        public ScreenController(IGameMasterClient master, IUIService ui)
+        public ScreenController(IGameMasterClient master, IUIService ui, NetworkSettings settings)
         {
             _master = master ?? throw new ArgumentNullException(nameof(master));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
+            _simpleMode = (settings ?? throw new ArgumentNullException(nameof(settings))).simpleMode;
         }
 
         public void ShowPlaying(PlayerId playerId, GameMode mode, Difficulty difficulty)
@@ -52,6 +54,7 @@ namespace Struckout.Application
                 }
                 ShowResultRankAsync(gameId, token).Forget();
                 await _ui.ShowGameResultAsync(score.Value, token);
+                if (_simpleMode) return;
                 await UniTask.Delay(TimeSpan.FromSeconds(1), DelayType.Realtime, cancellationToken: token);
                 if (!token.IsCancellationRequested) await ShowRankingAsync();
             }

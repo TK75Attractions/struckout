@@ -434,6 +434,7 @@ public sealed class Supervisor : IDisposable
                     "-connectAttempts", "100000",
                     "-monitor", config.Projector.Monitor.ToString(CultureInfo.InvariantCulture),
                     "-screen-fullscreen", config.Projector.Fullscreen ? "1" : "0",
+                    "-simpleMode", config.Projector.SimpleMode ? "true" : "false",
                     "-logFile", logFile,
                 ];
                 if (config.Projector.CollisionTransform is { } transform)

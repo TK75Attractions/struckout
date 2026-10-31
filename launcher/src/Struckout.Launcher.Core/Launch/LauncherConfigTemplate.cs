@@ -39,6 +39,8 @@ public static class LauncherConfigTemplate
             # 的を映す画面の番号 (1 から)。PC の画面が 1 なら、プロジェクターはふつう 2
             monitor = 2
             fullscreen = true
+            # 得点表示後もランキングに進まず、その画面で待機する
+            simple-mode = false
             # 着弾位置の係数のファイル (projector の F2 の調整画面で保存したもの)。空なら projector の既定
             collision-transform = ""
 
