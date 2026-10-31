@@ -52,6 +52,8 @@ pub enum SessionError {
     UnspecifiedGameMode,
     #[error("multi-play mode is required to do this operation: {0}")]
     NotMultiPlay(String),
+    #[error("multi-play difficulty does not match between machines")]
+    DifficultyMismatch,
     #[error("target {target_id} does not exist on machine {machine_id}")]
     TargetNotFound {
         machine_id: MachineId,
@@ -257,7 +259,10 @@ impl Sessions {
     ///
     /// Accepts [`GameMode::Single`] or [`GameMode::Multi`] for a session in
     /// [`MachineSession::ConfiguringGameMode`], preserving its machine and player IDs.
-    /// The difficulty starts unset, and other machine sessions are unchanged.
+    /// Multi-play inherits the other multi-play session's difficulty, including
+    /// when it is already ready, so a later participant uses the same configuration.
+    /// Otherwise the difficulty starts unset. Other machine sessions are unchanged.
+    /// Returns the inherited difficulty so the caller can notify this machine.
     ///
     /// # Errors
     ///
@@ -269,10 +274,23 @@ impl Sessions {
         &mut self,
         machine_id: MachineId,
         mode: GameMode,
-    ) -> Result<(), SessionError> {
+    ) -> Result<Option<Difficulty>, SessionError> {
         if mode == GameMode::Unspecified {
             return Err(SessionError::UnspecifiedGameMode);
         }
+        let difficulty = if mode.is_multi() {
+            match self.get_another(machine_id) {
+                Some(MachineSession::ConfiguringDifficulty(state)) if state.mode.is_multi() => {
+                    state.difficulty
+                }
+                Some(MachineSession::WaitingForAnotherMachine(state)) if state.mode.is_multi() => {
+                    Some(state.difficulty)
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
         let ms = self
             .get_mut(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
@@ -289,50 +307,70 @@ impl Sessions {
             machine_id,
             player_id,
             mode,
-            difficulty: None,
+            difficulty,
         });
-        Ok(())
+        Ok(difficulty)
     }
 
-    /// Updates difficulty.
+    /// Updates difficulty after validating both sessions, leaving both unchanged on error.
     ///
-    /// If current session on `machine_id` is single-play mode, it updates only that session's difficulty.
-    /// If it is multi-play mode, it also updates another session's difficulty.
+    /// Multi-play updates both sessions only while the partner is also configuring
+    /// multi-play difficulty. A ready partner rejects changes to preserve its ready
+    /// configuration. An absent, unselected, or single-play partner is unchanged:
+    /// entering multi-play later inherits this difficulty through [`Self::set_game_mode`].
+    /// Running and finished partners reject changes until their game is released.
     pub fn update_difficulty(
         &mut self,
         machine_id: MachineId,
         difficulty: Difficulty,
     ) -> Result<EventTarget, SessionError> {
         let ms = self
-            .get_mut(machine_id)
+            .get(machine_id)
             .ok_or(SessionError::NoSession(machine_id))?;
-        let (state,) = ms.as_configuring_difficulty_mut().map_err(|actual_state| {
-            SessionError::InvalidState {
-                msg: "difficulty can only be updated while configuring difficulty",
-                expected_state: "ConfiguringDifficulty",
-                actual_state,
-                machine_id,
+        let (state,) =
+            ms.as_configuring_difficulty()
+                .map_err(|actual_state| SessionError::InvalidState {
+                    msg: "difficulty can only be updated while configuring difficulty",
+                    expected_state: "ConfiguringDifficulty",
+                    actual_state,
+                    machine_id,
+                })?;
+        let is_multi = state.mode.is_multi();
+        let partner_id = if is_multi {
+            match self.get_another(machine_id) {
+                None | Some(MachineSession::ConfiguringGameMode(_)) => None,
+                Some(MachineSession::ConfiguringDifficulty(state)) => {
+                    state.mode.is_multi().then_some(state.machine_id)
+                }
+                Some(another) => {
+                    return Err(SessionError::InvalidState {
+                        msg: "partner must still be configuring to change difficulty",
+                        expected_state: "ConfiguringDifficulty",
+                        actual_state: another
+                            .as_configuring_difficulty()
+                            .expect_err("configuration states were handled above"),
+                        machine_id: another.machine_id(),
+                    });
+                }
             }
-        })?;
-        state.difficulty = Some(difficulty);
-
-        if !state.mode.is_multi() {
-            return Ok(EventTarget::Single(machine_id));
-        }
-        let Some(another) = self.get_another_mut(machine_id) else {
-            return Ok(EventTarget::All);
+        } else {
+            None
         };
-        let (state,) = another
-            .as_configuring_difficulty_mut()
-            .map_err(|actual_state| SessionError::InvalidState {
-                msg: "difficulty can only be updated while configuring difficulty",
-                expected_state: "ConfiguringDifficulty",
-                actual_state,
-                machine_id,
-            })?;
-        debug_assert!(state.mode.is_multi());
-        state.difficulty = Some(difficulty);
-        Ok(EventTarget::All)
+        for id in std::iter::once(machine_id).chain(partner_id) {
+            let (state,) = self
+                .get_mut(id)
+                .expect("session existence was checked before mutation")
+                .as_configuring_difficulty_mut()
+                .expect("both states were validated before mutation");
+            state.difficulty = Some(difficulty);
+        }
+        Ok(
+            if is_multi && (partner_id.is_some() || self.get_another(machine_id).is_none()) {
+                EventTarget::All
+            } else {
+                EventTarget::Single(machine_id)
+            },
+        )
     }
 
     /// Registers a target in the running game.
@@ -684,6 +722,7 @@ impl Sessions {
     ///
     /// If the session's mode is [`GameMode::Multi`], it checks if another machine's session is waiting for this session
     /// and then starts a game. If not waiting, it sets the session's state to [`MachineSession::WaitingForAnotherMachine`].
+    /// An incompatible ready partner returns an error without changing either session.
     pub fn set_ready(&mut self, machine_id: MachineId) -> Result<SetReadyAction, SessionError> {
         let ms = self
             .get(machine_id)
@@ -761,8 +800,14 @@ impl Sessions {
                 };
                 let another_machine_id = another_state.machine_id;
                 let another_player_id = another_state.player_id;
-                assert!(another_state.mode.is_multi());
-                assert_eq!(difficulty, another_state.difficulty);
+                if !another_state.mode.is_multi() {
+                    return Err(SessionError::NotMultiPlay(
+                        "the ready partner must be in multi-play mode".into(),
+                    ));
+                }
+                if difficulty != another_state.difficulty {
+                    return Err(SessionError::DifficultyMismatch);
+                }
                 let targets = pocket_watches([machine_id, another_machine_id]);
                 let initial_targets = targets.values().cloned().collect();
                 let shared = Arc::new(RwLock::new(SharedRunningState {
@@ -871,6 +916,7 @@ impl Default for Sessions {
 }
 
 /// Returned from [`Sessions::set_ready()`].
+#[derive(Debug)]
 pub enum SetReadyAction {
     RunSingle {
         initial_targets: Vec<Target>,
@@ -981,6 +1027,252 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
+
+    #[rstest]
+    #[case::absent(None, None)]
+    #[case::unselected(Some(GameMode::Unspecified), None)]
+    #[case::single(Some(GameMode::Single), Some(Difficulty::Normal))]
+    #[case::multi(Some(GameMode::Multi), Some(Difficulty::Hard))]
+    fn difficulty_change_updates_only_participating_sessions(
+        #[case] partner_mode: Option<GameMode>,
+        #[case] partner_difficulty: Option<Difficulty>,
+    ) {
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let mut sessions = Sessions::new();
+        if let Some(mode) = partner_mode {
+            sessions.insert(second, PlayerId::new(2)).expect("partner");
+            if mode != GameMode::Unspecified {
+                sessions.set_game_mode(second, mode).expect("partner mode");
+                sessions
+                    .update_difficulty(second, Difficulty::Normal)
+                    .expect("partner difficulty");
+            }
+        }
+        sessions.insert(first, PlayerId::new(1)).expect("requester");
+        sessions
+            .set_game_mode(first, GameMode::Multi)
+            .expect("requester mode");
+        let before_partner = format!("{:?}", sessions.get(second));
+        let target = sessions
+            .update_difficulty(first, Difficulty::Hard)
+            .expect("valid change");
+        assert_matches!(sessions.get(first), Some(MachineSession::ConfiguringDifficulty(state)) if state.difficulty == Some(Difficulty::Hard));
+        match partner_mode {
+            None | Some(GameMode::Multi) => assert_matches!(target, EventTarget::All),
+            _ => assert_matches!(target, EventTarget::Single(id) if id == first),
+        }
+        if partner_mode == Some(GameMode::Multi) {
+            assert_matches!(sessions.get(second), Some(MachineSession::ConfiguringDifficulty(state)) if state.difficulty == partner_difficulty);
+        } else {
+            assert_eq!(format!("{:?}", sessions.get(second)), before_partner);
+        }
+    }
+
+    #[rstest]
+    #[case::absent(false)]
+    #[case::mode_not_selected(true)]
+    fn difficulty_change_requires_requester_configuration(#[case] exists: bool) {
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let mut sessions = Sessions::new();
+        sessions.insert(second, PlayerId::new(2)).expect("partner");
+        sessions
+            .set_game_mode(second, GameMode::Multi)
+            .expect("multi");
+        sessions
+            .update_difficulty(second, Difficulty::Normal)
+            .expect("difficulty");
+        if exists {
+            sessions.insert(first, PlayerId::new(1)).expect("requester");
+        }
+        let before = format!("{sessions:?}");
+        let result = sessions.update_difficulty(first, Difficulty::Hard);
+        if exists {
+            assert_matches!(result, Err(SessionError::InvalidState { machine_id, .. }) if machine_id == first);
+        } else {
+            assert_matches!(result, Err(SessionError::NoSession(id)) if id == first);
+        }
+        assert_eq!(format!("{sessions:?}"), before);
+    }
+
+    #[rstest]
+    #[case::before_ready(false)]
+    #[case::after_ready(true)]
+    fn later_multi_participant_inherits_difficulty(#[case] ready: bool) {
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let mut sessions = Sessions::new();
+        sessions.insert(first, PlayerId::new(1)).expect("first");
+        sessions
+            .insert(second, PlayerId::new(2))
+            .expect("unselected partner");
+        sessions
+            .set_game_mode(first, GameMode::Multi)
+            .expect("multi");
+        sessions
+            .update_difficulty(first, Difficulty::Hard)
+            .expect("only requester changes");
+        if ready {
+            assert_matches!(
+                sessions.set_ready(first),
+                Ok(SetReadyAction::WaitForAnother)
+            );
+        }
+        let before_partner = format!("{:?}", sessions.get(first));
+        let inherited = sessions
+            .set_game_mode(second, GameMode::Multi)
+            .expect("join multi");
+        assert_eq!(inherited, Some(Difficulty::Hard));
+        assert_eq!(format!("{:?}", sessions.get(first)), before_partner);
+        assert_matches!(sessions.get(second), Some(MachineSession::ConfiguringDifficulty(state)) if state.difficulty == Some(Difficulty::Hard));
+        if !ready {
+            assert_matches!(
+                sessions.set_ready(first),
+                Ok(SetReadyAction::WaitForAnother)
+            );
+        }
+        assert_matches!(
+            sessions.set_ready(second),
+            Ok(SetReadyAction::RunMulti {
+                difficulty: Difficulty::Hard,
+                ..
+            })
+        );
+    }
+
+    #[rstest]
+    #[case::absent(None, None, GameMode::Multi)]
+    #[case::single_partner(Some(GameMode::Single), Some(Difficulty::Hard), GameMode::Multi)]
+    #[case::unset_partner(Some(GameMode::Multi), None, GameMode::Multi)]
+    #[case::single_requester(Some(GameMode::Multi), Some(Difficulty::Hard), GameMode::Single)]
+    fn set_game_mode_without_inheritance_returns_none(
+        #[case] partner_mode: Option<GameMode>,
+        #[case] partner_difficulty: Option<Difficulty>,
+        #[case] mode: GameMode,
+    ) {
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let mut sessions = Sessions::new();
+        if let Some(partner_mode) = partner_mode {
+            sessions.insert(first, PlayerId::new(1)).expect("partner");
+            sessions
+                .set_game_mode(first, partner_mode)
+                .expect("partner mode");
+            if let Some(difficulty) = partner_difficulty {
+                sessions
+                    .update_difficulty(first, difficulty)
+                    .expect("partner difficulty");
+            }
+        }
+        sessions
+            .insert(second, PlayerId::new(2))
+            .expect("requester");
+        assert_eq!(
+            sessions.set_game_mode(second, mode).expect("select mode"),
+            None
+        );
+        assert_matches!(sessions.get(second), Some(MachineSession::ConfiguringDifficulty(state)) if state.difficulty.is_none());
+    }
+
+    #[rstest]
+    #[case::mismatched_difficulty(GameMode::Multi, Difficulty::Hard)]
+    #[case::invalid_partner_mode(GameMode::Single, Difficulty::Normal)]
+    fn set_ready_rejects_incompatible_partner_without_mutation(
+        #[case] mode: GameMode,
+        #[case] difficulty: Difficulty,
+    ) {
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let mut sessions = Sessions::new();
+        sessions.insert(first, PlayerId::new(1)).expect("first");
+        sessions
+            .set_game_mode(first, GameMode::Multi)
+            .expect("multi");
+        sessions
+            .update_difficulty(first, Difficulty::Normal)
+            .expect("difficulty");
+        // Inject an incompatible ready configuration to verify the error boundary.
+        sessions.0.1 = Some(MachineSession::WaitingForAnotherMachine(
+            WaitingForAnotherMachineState {
+                machine_id: second,
+                player_id: PlayerId::new(2),
+                mode,
+                difficulty,
+            },
+        ));
+        let before = format!("{sessions:?}");
+        for _ in 0..2 {
+            let result = sessions.set_ready(first);
+            if mode.is_multi() {
+                assert_matches!(result, Err(SessionError::DifficultyMismatch));
+            } else {
+                assert_matches!(result, Err(SessionError::NotMultiPlay(_)));
+            }
+            assert_eq!(format!("{sessions:?}"), before);
+        }
+    }
+
+    #[rstest]
+    #[case::running(false)]
+    #[case::finished(true)]
+    fn difficulty_change_rejects_partner_in_later_states(#[case] finished: bool) {
+        let first = MachineId::new(1);
+        let second = MachineId::new(2);
+        let mut sessions = running_sessions(GameMode::Single);
+        if finished {
+            sessions.finish_game(second).expect("finish partner");
+        }
+        sessions.0.0 = Some(MachineSession::ConfiguringDifficulty(
+            ConfiguringDifficultyState {
+                machine_id: first,
+                player_id: PlayerId::new(1),
+                mode: GameMode::Multi,
+                difficulty: Some(Difficulty::Normal),
+            },
+        ));
+        let before = format!("{sessions:?}");
+        assert_matches!(sessions.update_difficulty(first, Difficulty::Hard), Err(SessionError::InvalidState { machine_id, .. }) if machine_id == second);
+        assert_eq!(format!("{sessions:?}"), before);
+    }
+
+    #[rstest]
+    #[case(MachineId::new(1), MachineId::new(2))]
+    #[case(MachineId::new(2), MachineId::new(1))]
+    fn difficulty_change_after_partner_is_ready_preserves_sessions(
+        #[case] first: MachineId,
+        #[case] second: MachineId,
+    ) {
+        let mut sessions = Sessions::new();
+        for machine_id in [first, second] {
+            sessions
+                .insert(machine_id, PlayerId::new(1))
+                .expect("new session");
+            sessions
+                .set_game_mode(machine_id, GameMode::Multi)
+                .expect("mode selection");
+        }
+        sessions
+            .update_difficulty(first, Difficulty::Normal)
+            .expect("both configuring");
+        assert_matches!(
+            sessions.set_ready(first),
+            Ok(SetReadyAction::WaitForAnother)
+        );
+        let before = format!("{sessions:?}");
+        assert_matches!(
+            sessions.update_difficulty(second, Difficulty::Hard),
+            Err(SessionError::InvalidState { machine_id, .. }) if machine_id == first
+        );
+        assert_eq!(format!("{sessions:?}"), before);
+        assert_matches!(
+            sessions.set_ready(second),
+            Ok(SetReadyAction::RunMulti {
+                difficulty: Difficulty::Normal,
+                ..
+            })
+        );
+    }
 
     fn running_sessions(mode: GameMode) -> Sessions {
         let mut sessions = Sessions::new();
@@ -1588,9 +1880,10 @@ mod tests {
             .insert(machine_id, player_id)
             .expect("should succeed");
 
-        sessions
+        let inherited = sessions
             .set_game_mode(machine_id, mode)
             .expect("should succeed");
+        assert_eq!(inherited, None);
 
         assert_matches!(
             sessions.get(machine_id),

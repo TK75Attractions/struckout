@@ -11,6 +11,12 @@ projector は `ListenEvents(machine_id)` のストリームで開始・残り時
 移動時は `RemoveTarget` の後に新しい位置を登録する。
 詳細は [projector の挙動](projector/projector_behavior.md) を参照。
 
+## game_master と touchpanel の間
+
+`SetGameMode` で Multi を選ぶと、相手の Multi セッションが選択済みの難易度を引き継ぐ（相手が準備完了でも同じ）。
+引き継いだ場合だけ、要求元の筐体へ `SessionDifficultyChanged` を通知し、難易度選択画面とサーバーの状態を同期する。
+引き継ぐ難易度がない場合、この RPC はイベントを通知しない。
+
 ## カメラとball_trackerの間
 定義は `api/proto/camera__ball-tracker.proto`。どちらの接続も TCP で、パケットは「長さ (u32、リトルエンディアン) + Protobuf」。
 アプリは `adb reverse` で PC のポートに繋ぐ (`scripts/adb-reverse.sh`)。
