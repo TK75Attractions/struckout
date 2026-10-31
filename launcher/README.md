@@ -116,7 +116,7 @@ camera は既存のアプリを使い続ける場合などに記録のタグが�
 |---|---|---|
 | ball-tracker | `--input network --cameras cameras.json --ffmpeg ...` で起動し、出力をログに書く | プロセスが動いていて、5080 番の gRPC ヘルスチェックが `SERVING` |
 | game-master | `docker compose up` で DB を起動してから app コンテナを再作成する (Windows と macOS では Docker Desktop も起動する) | 8020 番の gRPC ヘルスチェックが `SERVING` |
-| camera | 各スマホに `adb reverse` (6060、5050、5052)、`cameras.json` の設定を送り、アプリを開く | アプリのプロセスが動いている |
+| camera | 各スマホに `adb reverse` (6060、5050、5052)、`cameras.json` の設定を送り、アプリを開く | 全設定カメラが adb 接続・画面のロック/スリープなし・PID ありで、ball_tracker に接続し、3 秒以内に映像を受信している |
 | projector | `-trackerHost`、`-masterHost`、`-machineId`、`-monitor` などを付けて起動する | プロセスが動いている |
 | touchpanel | 引数を付けずに起動する。接続先や筐体番号は touchpanel の `config.toml` から読む | プロセスが動いている |
 
@@ -133,6 +133,30 @@ app コンテナを再作成して新しい値を読む。
 ので、10 秒待ってから強制終了する。
 
 ログは `<モジュールの置き場所>/logs/<日付>/<モジュール>_<時分秒>.log`。
+
+### カメラの準備完了と対処
+
+`cameras.json` の全カメラを毎回確かめ、1 台でも条件を満たさなければ準備完了にはしない。
+ball_tracker と同じ PC の `ServerPorts.BallTrackerHealth` で `CameraStatusService/ListCameraStatus` を呼び、
+`connected` が true かつ `last_frame_at` が現在から 3 秒以内の場合だけ映像を受信中とする。
+PID があるだけでは準備完了にならない。停止した映像の古い fps は表示しない。
+`dumpsys power` と `dumpsys window` の出力からロック・スリープを確認し、解析できない端末は「不明」としてロック扱いにしない。
+
+| 表示されるメッセージ | 対処 |
+|---|---|
+| 「右カメラ (serial) が USB でつながっていません」 | USB でつなぎ、端末の「USB デバッグを許可」を確かめる |
+| 「左カメラの画面がロックされています」 | 端末のロックを解除する |
+| 「左カメラの画面がスリープしています」 | 画面を点けてロックを解除する |
+| 「左カメラのアプリが動いていません」 | 端末でカメラアプリを開く |
+| 「左カメラの映像が ball_tracker に届いていません」 | 撮影画面と接続設定を確かめる |
+| 「左カメラの映像が止まっています (最後に受信: 14:03:22、12 秒前)」 | 撮影画面と USB 接続を確かめる |
+| 「右カメラが ball_tracker から切断されました (14:03:22)」 | USB 接続とアプリを確かめる |
+| 「ball_tracker からカメラの状態を取れません」 | ball_tracker の起動と接続を確かめる |
+
+名前は `cameras.json` の `name`、時刻は PC のローカル時刻で表示する。
+起動時に未接続のカメラがあっても、接続中の端末は開く。後から USB 接続した設定済みの端末は、監視時に同じ手順で一度だけ開く。
+アプリを開く直前には `KEYCODE_WAKEUP` で画面を点けるが、ロックの解除は端末で行う。
+一度開いたアプリは、PID が消えたり映像が止まったりしても自動再起動しない。Supervisor も状態を更新するだけで、自動再起動しない。
 
 ### `launcher.toml`
 

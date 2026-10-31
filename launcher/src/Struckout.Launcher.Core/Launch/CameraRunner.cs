@@ -1,7 +1,10 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Grpc.Core;
+using Grpc.Net.Client;
 using Struckout.Launcher.Core.Modules;
 using Struckout.Launcher.Core.Spec;
+using Tk75Attractions.Struckout.BallTracker.V1;
 
 namespace Struckout.Launcher.Core.Launch;
 
@@ -17,7 +20,9 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
     private static readonly TimeSpan OpenInterval = TimeSpan.FromSeconds(3);
 
     private CamerasFile? cameras;
-    private List<CameraEntry> started = [];
+    private readonly HashSet<string> opened = new(StringComparer.Ordinal);
+    private IProgress<string>? launchLog;
+    private DateTimeOffset? lastOpenedAt;
 
     public ModuleId Id => ModuleId.Camera;
 
@@ -28,55 +33,24 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
     {
         var file = CamerasFile.Load(camerasFile);
         cameras = file;
+        opened.Clear();
+        launchLog = log;
+        lastOpenedAt = null;
         var connected = await adb.DevicesAsync(cancellationToken);
         foreach (var camera in file.Cameras.Where(c => !connected.Contains(c.Serial)))
         {
             log.Report($"camera: {camera.Name} ({camera.Serial}) がつながっていません");
         }
 
-        started = file.Cameras.Where(c => connected.Contains(c.Serial)).ToList();
+        var started = file.Cameras.Where(c => connected.Contains(c.Serial)).ToList();
         if (started.Count == 0)
         {
             throw new LauncherException($"{camerasFile} のスマホが 1 台もつながっていません");
         }
 
-        for (var i = 0; i < started.Count; i++)
+        foreach (var camera in started)
         {
-            var camera = started[i];
-            await adb.ShellAsync(camera.Serial, ["am", "force-stop", file.Package], cancellationToken);
-            // The phone reaches ball_tracker at its own localhost through adb.
-            foreach (var port in new[] { ports.BallTrackerCameraControl, ports.BallTrackerCameraData, ports.BallTrackerCameraVideo })
-            {
-                var tcp = $"tcp:{port.ToString(CultureInfo.InvariantCulture)}";
-                var reverse = await adb.RunAsync(camera.Serial, ["reverse", tcp, tcp], cancellationToken);
-                if (!reverse.Succeeded)
-                {
-                    throw new LauncherException($"{camera.Name}: adb reverse {tcp} が失敗しました: {reverse.Output.Trim()}");
-                }
-            }
-
-            var result = await BroadcastAsync(file.Package, camera, "SET_CONFIG", ConfigExtras(camera), cancellationToken);
-            if (DeviceIdPattern().Match(result) is { Success: true } match)
-            {
-                if (file.SetDeviceId(camera.Serial, match.Groups[1].Value))
-                {
-                    log.Report($"camera: {camera.Name} の device_id を {camerasFile} に書きました");
-                }
-            }
-            else
-            {
-                log.Report($"camera: {camera.Name} が device_id を返しません (アプリが古い?): {result}");
-            }
-
-            await adb.ShellAsync(
-                camera.Serial,
-                ["am", "start", "-n", $"{file.Package}/com.taichi765.struckoutCameraApp.MainActivity", "--es", "screen", "camera"],
-                cancellationToken);
-            log.Report($"camera: {camera.Name} ({camera.Serial}) を開きました");
-            if (i < started.Count - 1)
-            {
-                await Task.Delay(OpenInterval, cancellationToken);
-            }
+            await OpenAsync(file, camera, log, cancellationToken);
         }
     }
 
@@ -88,21 +62,102 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
         }
 
         var connected = await adb.DevicesAsync(cancellationToken);
-        foreach (var camera in started)
+        foreach (var camera in cameras.Cameras.Where(c => connected.Contains(c.Serial) && !opened.Contains(c.Serial)))
         {
-            if (!connected.Contains(camera.Serial))
+            try
             {
-                return Health.Down($"{camera.Name} ({camera.Serial}) が外れました");
+                await OpenAsync(cameras, camera, launchLog!, cancellationToken);
             }
-
-            var pid = await adb.ShellAsync(camera.Serial, ["pidof", cameras.Package], cancellationToken);
-            if (string.IsNullOrWhiteSpace(pid))
+            catch (LauncherException error)
             {
-                return Health.Down($"{camera.Name} のアプリが動いていません");
+                return Health.Down(error.Message);
             }
         }
 
-        return Health.Up($"{string.Join("、", started.Select(c => c.Name))} で動いています");
+        List<CameraStatus>? statuses = null;
+        try
+        {
+            using var channel = GrpcChannel.ForAddress($"http://127.0.0.1:{ports.BallTrackerHealth}");
+            var client = new CameraStatusService.CameraStatusServiceClient(channel);
+            using var call = client.ListCameraStatusAsync(new ListCameraStatusRequest(),
+                deadline: DateTime.UtcNow.AddSeconds(3), cancellationToken: cancellationToken);
+            var response = await call.ResponseAsync;
+            statuses = response.Cameras.ToList();
+        }
+        catch (RpcException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Do not reuse stale status or restart the app when the probe fails.
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var observations = new List<CameraObservation>();
+        for (var i = 0; i < cameras.Cameras.Count; i++)
+        {
+            var camera = cameras.Cameras[i];
+            var isConnected = connected.Contains(camera.Serial);
+            var pid = isConnected ? await adb.RunAsync(camera.Serial, ["shell", "pidof", cameras.Package], cancellationToken) : null;
+            var pids = pid?.Output.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
+            // IDs follow cameras.json order; device IDs prevent accepting another phone's frames.
+            var status = statuses?.FirstOrDefault(s => s.CameraId == (uint)i
+                && (string.IsNullOrEmpty(camera.DeviceId) || s.DeviceId == camera.DeviceId));
+            // This runs every poll while the phone captures at high speed, and dumpsys window is heavy,
+            // so the screen is only inspected to explain why frames are not arriving.
+            var screen = isConnected && !CameraReadiness.IsReceiving(status, now)
+                ? await adb.ScreenStateAsync(camera.Serial, cancellationToken)
+                : ScreenState.Unknown;
+            observations.Add(new(camera, isConnected, screen, pid is { Succeeded: true } && pids.Length > 0
+                && pids.All(part => uint.TryParse(part, out var value) && value > 0), status));
+        }
+
+        return CameraReadiness.Evaluate(observations, now, statuses is not null);
+    }
+
+    private async Task OpenAsync(CamerasFile file, CameraEntry camera, IProgress<string> log, CancellationToken cancellationToken)
+    {
+        // Preserve the capture startup interval for late USB connections as well.
+        if (lastOpenedAt is { } last)
+        {
+            var remaining = OpenInterval - (DateTimeOffset.UtcNow - last);
+            if (remaining > TimeSpan.Zero)
+            {
+                await Task.Delay(remaining, cancellationToken);
+            }
+        }
+
+        await adb.ShellAsync(camera.Serial, ["am", "force-stop", file.Package], cancellationToken);
+        // The phone reaches ball_tracker at its own localhost through adb.
+        foreach (var port in new[] { ports.BallTrackerCameraControl, ports.BallTrackerCameraData, ports.BallTrackerCameraVideo })
+        {
+            var tcp = $"tcp:{port.ToString(CultureInfo.InvariantCulture)}";
+            var reverse = await adb.RunAsync(camera.Serial, ["reverse", tcp, tcp], cancellationToken);
+            if (!reverse.Succeeded)
+            {
+                throw new LauncherException($"{camera.Name}: adb reverse {tcp} が失敗しました: {reverse.Output.Trim()}");
+            }
+        }
+
+        var result = await BroadcastAsync(file.Package, camera, "SET_CONFIG", ConfigExtras(camera), cancellationToken);
+        if (DeviceIdPattern().Match(result) is { Success: true } match)
+        {
+            if (file.SetDeviceId(camera.Serial, match.Groups[1].Value))
+            {
+                log.Report($"camera: {camera.Name} の device_id を {camerasFile} に書きました");
+            }
+        }
+        else
+        {
+            log.Report($"camera: {camera.Name} が device_id を返しません (アプリが古い?): {result}");
+        }
+
+        await adb.ShellAsync(camera.Serial, ["input", "keyevent", "KEYCODE_WAKEUP"], cancellationToken);
+        await adb.ShellAsync(
+            camera.Serial,
+            ["am", "start", "-n", $"{file.Package}/com.taichi765.struckoutCameraApp.MainActivity", "--es", "screen", "camera"],
+            cancellationToken);
+        log.Report($"camera: {camera.Name} ({camera.Serial}) を開きました");
+        opened.Add(camera.Serial);
+        lastOpenedAt = DateTimeOffset.UtcNow;
     }
 
     public async Task StopAsync(IProgress<string> log, CancellationToken cancellationToken)
@@ -113,14 +168,16 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
         }
 
         var connected = await adb.DevicesAsync(cancellationToken);
-        foreach (var camera in started.Where(c => connected.Contains(c.Serial)))
+        foreach (var camera in cameras.Cameras.Where(c => opened.Contains(c.Serial) && connected.Contains(c.Serial)))
         {
             log.Report($"camera: {camera.Name} のアプリを止めます");
             await adb.ShellAsync(camera.Serial, ["am", "force-stop", cameras.Package], cancellationToken);
         }
 
         cameras = null;
-        started = [];
+        opened.Clear();
+        launchLog = null;
+        lastOpenedAt = null;
     }
 
     internal static IReadOnlyList<string> ConfigExtras(CameraEntry camera)
