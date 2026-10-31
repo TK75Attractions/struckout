@@ -3,9 +3,8 @@ use std::sync::Arc;
 use futures_util::{Stream, StreamExt};
 use struckout_proto::{
     AddPlayerRequest, Difficulty, GameMode, GetPlayerRequest, GoHomeScreenRequest,
-    GoRankingScreenRequest, ListenEventsRequest, ListenEventsResponse, SetGameModeRequest,
-    SetSessionDifficultyRequest, SetSessionReadyRequest, StartSessionRequest,
-    ValidatePlayerNameRequest,
+    ListenEventsRequest, ListenEventsResponse, SetGameModeRequest, SetSessionDifficultyRequest,
+    SetSessionReadyRequest, StartSessionRequest, ValidatePlayerNameRequest,
     game_master_player_service_client::GameMasterPlayerServiceClient,
     game_master_session_service_client::GameMasterSessionServiceClient,
     types::{MachineId, PlayerId},
@@ -173,16 +172,6 @@ impl GameMasterClient {
     }
 
     #[instrument(skip(self))]
-    pub async fn go_ranking_screen(&mut self) -> Result<(), Status> {
-        self.session_client
-            .go_ranking_screen(GoRankingScreenRequest {
-                machine_id: self.machine_id.into_inner(),
-            })
-            .await?;
-        Ok(())
-    }
-
-    #[instrument(skip(self))]
     pub async fn go_home_screen(&mut self) -> Result<(), Status> {
         self.session_client
             .go_home_screen(GoHomeScreenRequest {
@@ -303,7 +292,6 @@ mod tests {
         Mode(u32, i32),
         Difficulty(u32, i32),
         Ready(u32),
-        Ranking(u32),
         Home(u32),
     }
 
@@ -430,18 +418,6 @@ mod tests {
                 .expect("test receiver is alive");
             self.ready_response.notified().await;
             Ok(Response::new(proto::SetSessionReadyResponse {}))
-        }
-        async fn go_ranking_screen(
-            &self,
-            request: Request<GoRankingScreenRequest>,
-        ) -> Result<Response<proto::GoRankingScreenResponse>, Status> {
-            self.commands
-                .send(Command::Ranking(request.into_inner().machine_id))
-                .expect("test receiver is alive");
-            if self.fail_next_navigation.swap(false, Ordering::SeqCst) {
-                return Err(Status::unavailable("event subscribers disconnected"));
-            }
-            Ok(Response::new(proto::GoRankingScreenResponse {}))
         }
         async fn go_home_screen(
             &self,
@@ -792,12 +768,6 @@ mod tests {
             s.phase == SessionPhase::Finished(struckout_proto::types::GameId::new(42))
         })
         .await;
-        fixture
-            .client
-            .go_ranking_screen()
-            .await
-            .expect("show ranking");
-        assert_eq!(fixture.commands.recv().await, Some(Command::Ranking(1)));
         fixture.client.go_home_screen().await.expect("go home");
         assert_eq!(fixture.commands.recv().await, Some(Command::Home(1)));
         fixture.configure(GameMode::Single).await;
@@ -831,21 +801,6 @@ mod tests {
             s.phase == SessionPhase::Finished(struckout_proto::types::GameId::new(42))
         })
         .await;
-
-        fixture.fail_next_navigation.store(true, Ordering::SeqCst);
-        let error = fixture.client.go_ranking_screen().await.expect_err("fails");
-        assert_eq!(error.code(), tonic::Code::Unavailable);
-        assert_eq!(fixture.commands.recv().await, Some(Command::Ranking(1)));
-        assert_eq!(
-            session.borrow().phase,
-            SessionPhase::Finished(struckout_proto::types::GameId::new(42))
-        );
-        fixture
-            .client
-            .go_ranking_screen()
-            .await
-            .expect("retry ranking");
-        assert_eq!(fixture.commands.recv().await, Some(Command::Ranking(1)));
 
         fixture.fail_next_navigation.store(true, Ordering::SeqCst);
         let error = fixture.client.go_home_screen().await.expect_err("fails");

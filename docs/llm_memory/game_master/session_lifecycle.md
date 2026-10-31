@@ -16,8 +16,8 @@
 終了時の一括 `TargetRemoved` は送信せず、projector は `GameFinished` でローカルの的を消す。
 DB 保存後、通知前にセッションを破棄する。マルチプレイでは共有結果を1件保存し、両セッションを破棄する。
 結果を画面に表示し終えるまでセッションを保持する処理や `CompleteSession` RPC は提供しない。
-終了後の `GoRankingScreen` / `GoHomeScreen` はセッションを参照せず、指定マシンだけに
-`NavigateToRankingScreenRequested` / `NavigateToHomeScreenRequested` を配信する。
+終了後の `GoHomeScreen` はセッションを参照せず、指定マシンだけに
+`NavigateToHomeScreenRequested` を配信する。ランキングへの遷移は projector が行う。
 イベント購読者がいなければ `Unavailable` を返し、クライアントは再試行できる。
 
 保存に失敗した場合もセッションを破棄し、イベントストリームで `Internal` を通知する。

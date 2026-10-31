@@ -33,7 +33,7 @@ impl GameFinishedViewModel {
 }
 
 impl GameFinishedViewModelTrait for GameFinishedViewModel {
-    fn on_next_clicked(&mut self) {
+    fn on_move_to_start_screen(&mut self) {
         if self.state.busy.get() {
             return;
         }
@@ -46,20 +46,19 @@ impl GameFinishedViewModelTrait for GameFinishedViewModel {
                 .get()
                 .expect("connection is initialized")
                 .clone();
-            let _ = tx.send(gm.go_ranking_screen().await);
+            let _ = tx.send(gm.go_home_screen().await);
         });
         self.worker.spawn_local({
             let busy = self.state.busy.clone();
             let error_msg = self.state.error_msg.clone();
             let nc = self.nav_controller.clone();
             async move {
-                let result = rx.await.expect("ranking request must complete");
+                let result = rx.await.expect("home request must complete");
                 busy.set(false);
                 match result {
-                    Ok(()) => nc.navigate(NavRoute::RankingControl),
+                    Ok(()) => nc.navigate(NavRoute::Start),
                     Err(error) => error_msg.set(
-                        format!("ランキング画面への切り替えに失敗しました: {error}")
-                            .to_shared_string(),
+                        format!("ホーム画面への切り替えに失敗しました: {error}").to_shared_string(),
                     ),
                 }
             }

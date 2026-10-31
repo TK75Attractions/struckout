@@ -7,7 +7,6 @@ flowchart LR
         Difficulty["難易度選択・準備完了待ち"]
         Playing["プレイ中"]
         Finished["ゲーム終了"]
-        RankingControl["ランキング操作"]
 
         Start -->|初回| NewName
         Start -->|2回目以降| ExistingName
@@ -16,8 +15,7 @@ flowchart LR
         Mode --> Difficulty
         Difficulty -->|GameStarted| Playing
         Playing -->|GameFinished| Finished
-        Finished -->|ランキング表示を要求| RankingControl
-        RankingControl -->|ホーム復帰を要求| Start
+        Finished -->|ホーム復帰を要求| Start
     end
 
     subgraph GameMaster["game-master"]
@@ -31,8 +29,7 @@ flowchart LR
         GameStarted{{"GameStarted"}}
         GameTimeAndScore{{"GameTimeLimitNotify / GameScoreChanged"}}
         GameFinished{{"GameFinished"}}
-        GoRankingScreen(["GoRankingScreen ※未実装"])
-        GoHomeScreen(["GoHomeScreen ※未実装"])
+        GoHomeScreen(["GoHomeScreen"])
     end
 
     subgraph Projector["プロジェクター"]
@@ -44,7 +41,7 @@ flowchart LR
 
         ProjectorWaiting -->|GameStarted| ProjectorPlaying
         ProjectorPlaying -->|GameFinished| ProjectorScore
-        ProjectorScore -->|画面遷移通知| ProjectorRanking
+        ProjectorScore -->|アニメーション終了の1秒後| ProjectorRanking
         ProjectorRanking -->|画面遷移通知| ProjectorHome
     end
 
@@ -63,9 +60,7 @@ flowchart LR
     GameTimeAndScore -.-> ProjectorPlaying
     GameFinished -.-> Finished
     GameFinished -.-> ProjectorScore
-    Finished --> GoRankingScreen
-    RankingControl --> GoHomeScreen
-    GoRankingScreen -.-> ProjectorRanking
+    Finished --> GoHomeScreen
     GoHomeScreen -.-> ProjectorHome
 
     style Touchpanel fill:#FFF7ED,stroke:#FB923C

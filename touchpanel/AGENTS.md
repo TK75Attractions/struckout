@@ -13,12 +13,13 @@
 
 ゲーム中の残り時間と累計得点はサーバーのイベントから表示する。
 `GameFinished` の後、touchpanel には得点・ランキングを表示しない。
-「プロジェクターにランキングを表示」で `GoRankingScreen` を、
-「ホームに戻る」で `GoHomeScreen` を送る。RPC が成功した場合だけ touchpanel も次の画面へ進む。
+終了画面には「ホーム画面に戻る」ボタンだけを表示し、`GoHomeScreen` を送る。
+projector は得点アニメーション終了の1秒後にランキングへ自動遷移する。
+`GoHomeScreen` が成功した場合だけ touchpanel もホーム画面へ進む。
 失敗した場合は画面上にエラーを出し、再試行できる。
 
 現在の API にはセッション取消やモード再選択がないため、モード選択の送信後と準備完了後の戻る操作は無効にする。
-チュートリアル画面は未実装。`game_master` の `GoRankingScreen` と `GoHomeScreen` は、
+チュートリアル画面は未実装。`game_master` の `GoHomeScreen` は、
 セッション破棄後も指定マシンの projector へ画面遷移イベントを配信する。
 
 ## アーキテクチャ
