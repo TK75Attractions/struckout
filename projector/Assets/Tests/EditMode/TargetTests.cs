@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using Struckout.Domain.TargetDefinition;
+using Struckout.Domain;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -67,6 +68,24 @@ namespace Struckout.Tests.Tests.EditMode
         {
             Assert.Throws<ArgumentException>(() => new Target(Guid.Empty,
                 new TargetGeometry(default, TargetType.Compass, 100f), TargetOwnership.Single));
+        }
+
+        [Test]
+        public void Moving_target_reflects_at_both_field_edges_and_keeps_registered_geometry()
+        {
+            var geometry = new TargetGeometry(new TargetCoordinate(70, 70), TargetType.Compass, 20,
+                new TargetVelocity(100, -100));
+            var target = new Target(Guid.NewGuid(), geometry, TargetOwnership.Single);
+            var field = new FieldBounds(100, 100);
+
+            target.Advance(0.5, field);
+            Assert.That(target.Coordinate.X, Is.EqualTo(60).Within(0.001));
+            Assert.That(target.Coordinate.Y, Is.EqualTo(20).Within(0.001));
+            target.Advance(2, field);
+            Assert.That(target.Coordinate.X, Is.EqualTo(20).Within(0.001));
+            Assert.That(target.Coordinate.Y, Is.EqualTo(40).Within(0.001));
+            Assert.That(target.Geometry.Coordinate.X, Is.EqualTo(70));
+            Assert.That(target.Geometry.Coordinate.Y, Is.EqualTo(70));
         }
     }
 }

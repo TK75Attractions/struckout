@@ -10,6 +10,9 @@ message Target {
     float x = 1;
     float y = 2;
     float radius = 3;
+    // Board pixels traveled per second along each axis. Zero keeps the target still.
+    double vx = 4;
+    double vy = 5;
   }
 
   message PocketWatch {}

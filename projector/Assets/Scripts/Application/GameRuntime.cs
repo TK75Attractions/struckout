@@ -23,6 +23,7 @@ namespace Struckout.Application
         private readonly IUIService _uiService;
         private readonly IGameMasterClient _master;
         private readonly GameSettings _settings;
+        private readonly FieldBounds _field;
         private readonly GameRuntimeState _state = new();
         private readonly HashSet<Guid> _pendingTargets = new();
         private IReadOnlyList<TargetGeometry> _initialGeometry;
@@ -35,6 +36,7 @@ namespace Struckout.Application
             IUIService uiService,
             IGameMasterClient master,
             GameSettings settings,
+            FieldBounds field,
             ILogger<GameRuntime> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -43,6 +45,7 @@ namespace Struckout.Application
             _uiService = uiService;
             _master = master;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _field = field ?? throw new ArgumentNullException(nameof(field));
         }
 
         public void GameSetup()
@@ -66,14 +69,14 @@ namespace Struckout.Application
 
             foreach (var geometry in _initialGeometry)
             {
-                await RegisterTargetAsync(geometry, token);
+                await RegisterTargetAsync(_targetGenerator.WithMovement(geometry, difficulty), token);
                 if (token.IsCancellationRequested) return;
             }
         }
 
         private async UniTask RegisterTargetAsync(TargetGeometry geometry, CancellationToken token)
         {
-            var accepted = await _master.AddTargetAsync(geometry.Coordinate, geometry.Radius, token);
+            var accepted = await _master.AddTargetAsync(geometry, token);
             if (!accepted && !token.IsCancellationRequested)
                 _logger.LogWarning("的の登録を要求できませんでした。");
         }
@@ -85,6 +88,13 @@ namespace Struckout.Application
             _uiService.AddTarget(target);
         }
 
+        /// <summary>Move the same registered targets that the UI and collision solver read.</summary>
+        public void AdvanceTargets(double deltaSeconds)
+        {
+            if (_state.Phase != GamePhase.Playing) return;
+            foreach (var target in _state.Targets) target.Advance(deltaSeconds, _field);
+        }
+
         /// <summary>Places a server-created watch locally because its event carries no geometry.</summary>
         public void OnPocketWatchAdded(Guid id, TargetOwnership ownership)
         {
@@ -93,7 +103,7 @@ namespace Struckout.Application
             // Reserve the whole artwork canvas, including the crown above the collision circle.
             var placement = new TargetGeometry(default, TargetType.PocketWatch,
                 diameter * PocketWatchLayout.CanvasToDialRatio);
-            var others = _state.Targets.Select(target => target.Geometry).ToList();
+            var others = _state.Targets.Select(CurrentGeometry).ToList();
             // Watch events can arrive before the initial Compass registration events.
             if (_state.Targets.All(target => target.Type != TargetType.Compass) && _initialGeometry != null)
                 others.AddRange(_initialGeometry);
@@ -190,9 +200,10 @@ namespace Struckout.Application
                     _logger.LogWarning("的の削除を確認できないため、再生成を停止します: {Target}", target);
                     return;
                 }
-                var others = _state.Targets.Where(other => other.Id != target.Id).Select(other => other.Geometry).ToList();
+                var others = _state.Targets.Where(other => other.Id != target.Id).Select(CurrentGeometry).ToList();
                 var coordinate = _targetGenerator.PickRelocation(target.Geometry, others);
-                await RegisterTargetAsync(new TargetGeometry(coordinate, target.Type, target.Size), token);
+                var replacement = new TargetGeometry(coordinate, target.Type, target.Size);
+                await RegisterTargetAsync(_targetGenerator.WithMovement(replacement, _state.Difficulty), token);
             }
             finally
             {
@@ -201,5 +212,8 @@ namespace Struckout.Application
                 if (!token.IsCancellationRequested && !removalRequested) _pendingTargets.Remove(target.Id);
             }
         }
+
+        private static TargetGeometry CurrentGeometry(Target target) =>
+            new(target.Coordinate, target.Type, target.Size);
     }
 }

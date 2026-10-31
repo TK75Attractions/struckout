@@ -116,6 +116,11 @@ namespace Struckout.Unity
             ApplyVisuals();
         }
 
+        private void LateUpdate()
+        {
+            if (_target != null && _world != null) transform.localPosition = ToWorld(_target);
+        }
+
         private void SpawnRipple(Vector3 position, float startScale)
         {
             if (_world == null || _target == null || transform.parent == null) return;

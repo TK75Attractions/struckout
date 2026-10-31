@@ -44,7 +44,7 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action<Guid> TargetRemoved;
             public readonly List<string> Calls = new();
             public readonly List<Guid> Hits = new();
-            public readonly List<(TargetCoordinate Coordinate, double Radius)> Targets = new();
+            public readonly List<TargetGeometry> Targets = new();
             public Guid CurrentId;
             public UniTaskCompletionSource<bool> PendingHit;
             public UniTaskCompletionSource<bool> PendingRegistration;
@@ -53,16 +53,16 @@ namespace Struckout.Tests.Tests.EditMode
             public bool RemovalSucceeds = true;
             public UniTask<bool> ConnectAsync() => UniTask.FromResult(true);
             public UniTask DisconnectAsync() => UniTask.CompletedTask;
-            public async UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+            public async UniTask<bool> AddTargetAsync(TargetGeometry geometry, CancellationToken token = default)
             {
                 Calls.Add("add");
-                Targets.Add((coordinate, radius));
+                Targets.Add(geometry);
                 var id = Guid.NewGuid();
                 CurrentId = id;
                 var accepted = PendingRegistration == null || await PendingRegistration.Task;
                 if (token.IsCancellationRequested) return false;
                 if (accepted && PublishOnAdd)
-                    EmitAdded(new Target(id, new TargetGeometry(coordinate, TargetType.Compass, (float)radius * 2f), TargetOwnership.Single));
+                    EmitAdded(new Target(id, geometry, TargetOwnership.Single));
                 return accepted;
             }
             public UniTask<bool> RemoveTargetAsync(Guid id, CancellationToken token = default)
@@ -122,7 +122,7 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new Client();
             var ui = new UI();
             var runtime = new GameRuntime(new CollisionSolver(new CollisionCoordinateTransform(), NullLogger<CollisionSolver>.Instance), new TargetGenerator(), ui, client,
-                new GameSettings { initialTargetCount = 1 }, NullLogger<GameRuntime>.Instance);
+                new GameSettings { initialTargetCount = 1 }, new FieldBounds(), NullLogger<GameRuntime>.Instance);
             runtime.GameSetup();
             client.TargetAdded += runtime.OnTargetAdded;
             client.TargetRemoved += runtime.OnTargetRemoved;
@@ -134,6 +134,32 @@ namespace Struckout.Tests.Tests.EditMode
             X = ui.Targets[0].Coordinate.X,
             Y = ui.Targets[0].Coordinate.Y,
         };
+
+        [TestCase(Difficulty.Normal, 0.0)]
+        [TestCase(Difficulty.Hard, 100.0)]
+        [TestCase(Difficulty.Veryhard, 200.0)]
+        public async Task Difficulty_controls_registered_speed_and_current_hit_position(Difficulty difficulty, double speed)
+        {
+            var (runtime, master, ui) = Create();
+            await runtime.StartGameAsync(difficulty);
+            var target = ui.Targets[0];
+            var initial = target.Coordinate;
+            var velocity = master.Targets[0].Velocity;
+            Assert.That(Math.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y),
+                Is.EqualTo(speed).Within(0.0001));
+
+            runtime.AdvanceTargets(0.1);
+            if (speed == 0)
+                Assert.That(target.Coordinate, Is.EqualTo(initial));
+            else
+                Assert.That(target.Coordinate, Is.Not.EqualTo(initial));
+
+            await runtime.CollisionDetectedAsync(Center(ui));
+            Assert.That(master.Hits, Is.EqualTo(new[] { target.Id }));
+            Assert.That(master.Targets[1].Velocity.X * master.Targets[1].Velocity.X +
+                master.Targets[1].Velocity.Y * master.Targets[1].Velocity.Y,
+                Is.EqualTo(speed * speed).Within(0.01));
+        }
 
         [Test]
         public async Task Miss_resets_combo_only_while_playing()

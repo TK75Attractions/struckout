@@ -297,13 +297,16 @@ namespace Struckout.Infrastructure.Grpc
                     var compass = data.Compass;
                     if (compass == null || float.IsNaN(compass.X) || float.IsInfinity(compass.X) ||
                         float.IsNaN(compass.Y) || float.IsInfinity(compass.Y) ||
-                        float.IsNaN(compass.Radius) || compass.Radius <= 0 || float.IsInfinity(compass.Radius * 2f))
+                        float.IsNaN(compass.Radius) || compass.Radius <= 0 || float.IsInfinity(compass.Radius * 2f) ||
+                        double.IsNaN(compass.Vx) || double.IsInfinity(compass.Vx) ||
+                        double.IsNaN(compass.Vy) || double.IsInfinity(compass.Vy))
                     {
                         _logger.LogWarning("[GameMaster] 的の追加通知に有効な円の形状がありません。");
                         break;
                     }
                     TargetAdded?.Invoke(new DomainTarget(targetId,
-                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Compass, compass.Radius * 2f),
+                        new TargetGeometry(new TargetCoordinate(compass.X, compass.Y), TargetType.Compass, compass.Radius * 2f,
+                            new TargetVelocity(compass.Vx, compass.Vy)),
                         data.OwnerCase == ProtoTarget.OwnerOneofCase.All ? TargetOwnership.All : TargetOwnership.Single));
                     break;
 
@@ -385,7 +388,7 @@ namespace Struckout.Infrastructure.Grpc
             }
         }
 
-        public async UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default)
+        public async UniTask<bool> AddTargetAsync(TargetGeometry geometry, CancellationToken token = default)
         {
             if (_client == null || !_running || token.IsCancellationRequested) return false;
             try
@@ -395,9 +398,11 @@ namespace Struckout.Infrastructure.Grpc
                     MachineId = _settings.machineId,
                     Compass = new ProtoTarget.Types.Compass
                     {
-                        X = coordinate.X,
-                        Y = coordinate.Y,
-                        Radius = (float)radius,
+                        X = geometry.Coordinate.X,
+                        Y = geometry.Coordinate.Y,
+                        Radius = geometry.Radius,
+                        Vx = geometry.Velocity.X,
+                        Vy = geometry.Velocity.Y,
                     },
                 }, cancellationToken: token);
                 return true;

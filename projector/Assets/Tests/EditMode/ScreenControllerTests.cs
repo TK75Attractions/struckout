@@ -47,7 +47,7 @@ namespace Struckout.Tests.Tests.EditMode
             public CancellationToken RankingToken;
             public UniTask<bool> ConnectAsync() => UniTask.FromResult(true);
             public UniTask DisconnectAsync() => UniTask.CompletedTask;
-            public UniTask<bool> AddTargetAsync(TargetCoordinate coordinate, double radius, CancellationToken token = default) => UniTask.FromResult(true);
+            public UniTask<bool> AddTargetAsync(TargetGeometry geometry, CancellationToken token = default) => UniTask.FromResult(true);
             public UniTask<bool> RemoveTargetAsync(Guid id, CancellationToken token = default) => UniTask.FromResult(true);
             public UniTask<bool> HitTargetAsync(Guid id, CancellationToken token = default) => UniTask.FromResult(true);
             public UniTask<uint?> GetGameResultAsync(GameId id, CancellationToken token = default)

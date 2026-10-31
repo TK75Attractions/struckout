@@ -54,11 +54,11 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
 初期配置の座標・形状・大きさだけを接続前に計算し、`GameStarted` の後で各 projector が
 `AddTarget` を呼ぶ。`TargetAdded` で UUID と形状を受信したときにだけ `Target` を生成し、
 描画・当たり判定に追加する。RPC の成功応答だけでは追加しない。
-`AddTargetRequest` は `machine_id` と `target_data`（円の中心座標と半径）を持ち、
+`AddTargetRequest` は `machine_id` と `target_data`（円の初期中心座標、半径、x/y 方向の移動速度）を持ち、
 projector が要求した的の所有者は、モードを問わず `Single.machine_id = machine_id` になる。
 `All` は game_master が内部で生成する特殊な的に使う。
 座標・半径は当たり判定と同じ盤面ピクセル単位を使い、直径を半径として送らない。
-`Target.Id` は `TargetAdded.target.target_id` の UUID そのもので、座標・形状・大きさとともに変更しない。
+`Target.Id` は `TargetAdded.target.target_id` の UUID そのもので、登録時の座標・速度・形状・大きさは変更しない。
 追加イベントの owner が自分のマシンの `Single` または `All` の場合に描画し、
 ローカルの `Target.Ownership` にも `Single` / `All` を保持する。
 UUID や円の形状が不正な通知は警告して無視する。
@@ -103,8 +103,8 @@ Fake モードもコンボ通知・リセット・ボーナスに対応する。
 4. `TargetAdded` を受信したときにだけ、新しい UUID の別エンティティと GameObject を生成する。
 
 RPC 応答とイベントは別の経路で届く。イベントが先でも後でも、状態と描画の変更元は
-常にイベントとする。元のエンティティの座標変更や同じ GameObject の再利用は行わない。
-受信したイベントはすべて同じメインスレッドのキューで順序を保って適用する。
+常にイベントとする。命中後の再配置に元のエンティティの座標変更や同じ GameObject の再利用は行わない。
+受信したイベントと着弾は同じメインスレッドのキューで順序を保って適用する。
 
 命中通知に失敗した場合は元の的を保持する。削除要求を出した後は、RPC 応答の成否にかかわらず
 `TargetRemoved` を受信するまでその UUID への追加の命中送信を止める。
@@ -117,7 +117,13 @@ RPC 応答とイベントは別の経路で届く。イベントが先でも後�
 切断時は進行中の要求をキャンセルするが、受信済みの的は保持する。
 切断後の購読は再接続するが、次の `GameStarted` までは命中を送信しない。
 
-通常時は的が動かない難易度と的が動き続ける難易度を作るが、労力が足りない場合は前者を優先して作る。
+Compass の初期配置は難易度によらず同じとする。登録時に x/y 方向の速度
+（盤面ピクセル/秒）を付ける。normal は `vx = vy = 0`、hard は合成速度 100 px/秒、
+veryhard は合成速度 200 px/秒とする。hard と veryhard の方向は生成ごとにランダムに選ぶ。
+Compass はゲーム中に動き続け、円の縁が盤面の端に届いたら反射する。
+projector は通知された初期位置と速度から現在位置を計算し、同じ位置を描画と当たり判定で使う。
+game_master は登録時の位置と速度を保存・配信し、移動中の位置は管理しない。
+命中後に再生成する Compass には、その時点の難易度に従って新しい方向と速度を付ける。
 
 ## 懐中時計 (PocketWatch)
 

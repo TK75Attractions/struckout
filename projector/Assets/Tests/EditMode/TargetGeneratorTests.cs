@@ -3,6 +3,8 @@ using NUnit.Framework;
 using Struckout.Domain;
 using Struckout.Domain.TargetDefinition;
 using Struckout.Domain.Targets;
+using System;
+using Difficulty = Tk75Attractions.Struckout.GameMaster.V1.Difficulty;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -18,6 +20,19 @@ namespace Struckout.Tests.Tests.EditMode
     public class TargetGeneratorTests
     {
         private const float Tolerance = 0.1f;
+
+        [TestCase(Difficulty.Normal, 0.0)]
+        [TestCase(Difficulty.Hard, 100.0)]
+        [TestCase(Difficulty.Veryhard, 200.0)]
+        public void Difficulty_sets_compass_speed(Difficulty difficulty, double expectedSpeed)
+        {
+            var geometry = new TargetGeometry(new TargetCoordinate(500, 500), TargetType.Compass, 100);
+            var moving = new TargetGenerator().WithMovement(geometry, difficulty);
+            var velocity = moving.Velocity;
+            Assert.That(Math.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y),
+                Is.EqualTo(expectedSpeed).Within(0.0001));
+            Assert.That(moving.Coordinate, Is.EqualTo(geometry.Coordinate));
+        }
 
         [Test]
         public void 初期配置は毎回同じになる()
