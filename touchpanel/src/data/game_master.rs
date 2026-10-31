@@ -222,6 +222,21 @@ impl GameMasterClient {
             Err(error) => Err(error.into()),
         }
     }
+
+    /// Reuses the named player across games, including when another client creates it concurrently.
+    pub async fn get_or_add_player(&mut self, name: &str) -> Result<PlayerId, RequestError> {
+        if let Some(player_id) = self.get_player(name).await? {
+            return Ok(player_id);
+        }
+        match self.add_player(name).await {
+            Ok(player_id) => Ok(player_id),
+            Err(error) if error.code() == tonic::Code::AlreadyExists => self
+                .get_player(name)
+                .await?
+                .ok_or_else(|| Status::not_found("created player was not found").into()),
+            Err(error) => Err(error.into()),
+        }
+    }
 }
 
 async fn listen_events<S>(
@@ -341,7 +356,7 @@ mod tests {
             self.commands
                 .send(Command::FindPlayer(name.clone()))
                 .expect("test receiver is alive");
-            if name == "missing" {
+            if name == "missing" || name == "NoName403" {
                 return Err(Status::not_found("player does not exist"));
             }
             Ok(Response::new(proto::GetPlayerResponse {
@@ -694,6 +709,32 @@ mod tests {
         assert_eq!(
             fixture.commands.recv().await,
             Some(Command::ValidateName("missing-field".into()))
+        );
+    }
+
+    #[tokio::test]
+    async fn reuses_existing_player_and_adds_missing_player() {
+        let mut fixture = Fixture::new().await;
+        assert_eq!(
+            fixture.client.get_or_add_player("existing").await.unwrap(),
+            PlayerId::new(12)
+        );
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::FindPlayer("existing".into()))
+        );
+
+        assert_eq!(
+            fixture.client.get_or_add_player("NoName403").await.unwrap(),
+            PlayerId::new(12)
+        );
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::FindPlayer("NoName403".into()))
+        );
+        assert_eq!(
+            fixture.commands.recv().await,
+            Some(Command::AddPlayer("NoName403".into()))
         );
     }
 

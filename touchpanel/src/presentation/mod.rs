@@ -9,7 +9,7 @@ use tracing::{debug, warn};
 
 use crate::{
     Application, Config, Context, NavController,
-    data::{GameMasterClient, SessionPhase},
+    data::{GameMasterClient, RequestError, SessionPhase},
     presentation::{
         connecting::ConnectingDestination, connection_failed::ConnectionFailedDestination,
         difficulty_select::DifficultySelectDestination, fallback::FallbackDestination,
@@ -102,6 +102,35 @@ async fn route_after_player<C: SingleSessionStarter>(
     }
 }
 
+const SIMPLE_MODE_PLAYER_NAME: &str = "NoName403";
+
+async fn start_simple_session(gm: &mut GameMasterClient) -> Result<(), RequestError> {
+    let player_id = gm.get_or_add_player(SIMPLE_MODE_PLAYER_NAME).await?;
+    gm.start_session(player_id).await?;
+    gm.set_game_mode(GameMode::Single).await?;
+    Ok(())
+}
+
+pub(super) async fn initial_route<E: ForegroundExecutor>(
+    worker: &WorkerThread<Context, E>,
+    simple_mode: bool,
+) -> Result<NavRoute, RequestError> {
+    if !simple_mode {
+        return Ok(NavRoute::Start);
+    }
+    let (tx, rx) = oneshot::channel();
+    worker.spawn_cx(async move |cx| {
+        let mut gm = cx
+            .game_master
+            .get()
+            .expect("connection is initialized")
+            .clone();
+        let _ = tx.send(start_simple_session(&mut gm).await);
+    });
+    rx.await.expect("simple session request must complete")?;
+    Ok(NavRoute::DifficulitySelect)
+}
+
 /// Connects to game-master's gRPC server. **Must be called within tokio context**.
 ///
 /// When succeeded, it returns a client with its event subscription already active.
@@ -152,6 +181,7 @@ pub fn init_worker_context(application: &Application) {
     let nc = application.nav_controller.clone();
     let worker = application.worker.clone();
     let config = application.config.clone();
+    let simple_mode = config.simple_mode;
     slint::spawn_local(async move {
         debug!("initializing worker context");
         let game_master = match connect_to_game_master(&worker, nc.clone(), config).await {
@@ -169,7 +199,12 @@ pub fn init_worker_context(application: &Application) {
                 .expect("this should be a first successful attempt to connect to game-master");
         }
         observe_session(&worker, nc.clone());
-        nc.navigate(NavRoute::Start);
+        match initial_route(&worker, simple_mode).await {
+            Ok(route) => nc.navigate(route),
+            Err(error) => nc.navigate(NavRoute::Fallback(format!(
+                "シンプルモードの開始に失敗しました: {error}"
+            ))),
+        }
         debug!("worker context initialized successfully");
     })
     .unwrap();
@@ -320,6 +355,7 @@ mod tests {
                 server_addr: "127.0.0.1".to_string(),
                 machine_id: 1,
                 multiplay_availability: touchpanel_ui::MultiPlayAvailability::Enabled,
+                simple_mode: false,
                 monitor: None,
             }),
         };

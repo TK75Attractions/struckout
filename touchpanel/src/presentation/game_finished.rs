@@ -6,7 +6,7 @@ use touchpanel_ui::{
     NavRouteKind,
 };
 
-use crate::{Application, Context, NavController};
+use crate::{Application, Context, NavController, presentation::initial_route};
 
 touchpanel_ui::define_game_finished_mapper! {}
 viewmodel_rc!(GameFinishedViewModel, GameFinishedAdopter);
@@ -15,6 +15,7 @@ struct GameFinishedViewModel {
     worker: WorkerThread<Context, SlintExecutor>,
     nav_controller: NavController,
     state: GameFinishedStates<Mapper>,
+    simple_mode: bool,
 }
 
 impl GameFinishedViewModel {
@@ -28,6 +29,7 @@ impl GameFinishedViewModel {
                     .global::<touchpanel_ui::GameFinishedAdopter>()
                     .as_weak(),
             ),
+            simple_mode: application.config.simple_mode,
         }
     }
 }
@@ -40,6 +42,8 @@ impl GameFinishedViewModelTrait for GameFinishedViewModel {
         self.state.busy.set(true);
         self.state.error_msg.set("".into());
         let (tx, rx) = oneshot::channel();
+        let worker = self.worker.clone();
+        let simple_mode = self.simple_mode;
         self.worker.spawn_cx(async move |cx| {
             let mut gm = cx
                 .game_master
@@ -56,7 +60,13 @@ impl GameFinishedViewModelTrait for GameFinishedViewModel {
                 let result = rx.await.expect("home request must complete");
                 busy.set(false);
                 match result {
-                    Ok(()) => nc.navigate(NavRoute::Start),
+                    Ok(()) => match initial_route(&worker, simple_mode).await {
+                        Ok(route) => nc.navigate(route),
+                        Err(error) => error_msg.set(
+                            format!("シンプルモードの開始に失敗しました: {error}")
+                                .to_shared_string(),
+                        ),
+                    },
                     Err(error) => error_msg.set(
                         format!("ホーム画面への切り替えに失敗しました: {error}").to_shared_string(),
                     ),
