@@ -121,6 +121,10 @@ camera は既存のアプリを使い続ける場合などに記録のタグが�
 | touchpanel | 引数を付けずに起動する。接続先や筐体番号は touchpanel の `config.toml` から読む | プロセスが動いている |
 
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
+ball-tracker と camera が両方この PC のモジュールで、ball-tracker がまだ起動していない場合は、
+ball-tracker の起動前に接続中のスマホへ `STATUS` を送り、`device_id` を記録する。
+ball-tracker は起動時に一度だけこのファイルを読むため、アプリの入れ直しや端末の交換で変わった ID も先に反映する。
+未接続のスマホや ID を返さないアプリはログに出して起動を続け、カメラの設定送信と撮影開始は従来どおり ball-tracker の起動後に行う。
 
 game-master の設定ファイルは、インストール時に無ければ `game_start_delay_secs = 3` と `[game_duration_secs]` の `normal`、`hard`、
 `veryhard` をすべて 90 秒、`pocket_watch_bonus_secs = 5`、`combo_bonuses` を 3 コンボで 500 点、5 コンボで 800 点にして作る。
@@ -215,7 +219,7 @@ CI (`.github/workflows/launcher_ci.yaml`) は、整形 (`dotnet format --verify-
 
 ### camera.apk の署名
 
-ランチャーはカメラアプリを `adb install -r` で更新するので、毎晩同じ鍵で署名しなければならない。鍵はリポジトリの
+ランチャーはカメラアプリを `adb install -r -g` で更新し、カメラなどの実行時権限も付ける。毎晩同じ鍵で署名しなければならない。鍵はリポジトリの
 Secrets (`CAMERA_KEYSTORE_BASE64`、`CAMERA_KEYSTORE_PASSWORD`、`CAMERA_KEY_ALIAS`、`CAMERA_KEY_PASSWORD`) に置く。
 署名が違う既存のアプリがある場合は、`cameras.json` の package が端末に入っていることを `pm path` で確かめ、アンインストールせずに使い続ける。アプリ内の較正設定は保持する。ランチャーで camera をアンインストールしても、この端末のアプリは消さない。ログには「署名が違う既存のアプリを使います。リリースの版には更新されません」と出し、`install-state.json` の `devices` と `existing-devices` に記録する。この場合、記録のリリースタグはダウンロードした APK の版であり、端末の既存アプリの版ではない。package が確認できない場合はインストールエラーになる。
 

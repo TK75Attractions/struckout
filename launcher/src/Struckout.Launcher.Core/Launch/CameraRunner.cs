@@ -27,6 +27,28 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
     public ModuleId Id => ModuleId.Camera;
 
     /// <summary>
+    /// Records the connected phones' IDs before ball_tracker starts: it reads cameras.json only once,
+    /// so an ID changed by reinstalling the app must be saved before it assigns camera IDs and calibration.
+    /// STATUS only queries the app; capture and port forwarding remain part of StartAsync.
+    /// </summary>
+    public async Task RecordDeviceIdsAsync(IProgress<string> log, CancellationToken cancellationToken)
+    {
+        var file = CamerasFile.Load(camerasFile);
+        var connected = await adb.DevicesAsync(cancellationToken);
+        foreach (var camera in file.Cameras)
+        {
+            if (!connected.Contains(camera.Serial))
+            {
+                log.Report($"camera: {camera.Name} ({camera.Serial}) がつながっていません");
+                continue;
+            }
+
+            var result = await BroadcastAsync(file.Package, camera, "STATUS", [], cancellationToken);
+            RecordDeviceId(file, camera, result, log);
+        }
+    }
+
+    /// <summary>
     /// Forwards ball_tracker's ports to each phone, sends its settings, records the ID it reports and opens the app.
     /// </summary>
     public async Task StartAsync(IProgress<string> log, CancellationToken cancellationToken)
@@ -138,6 +160,20 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
         }
 
         var result = await BroadcastAsync(file.Package, camera, "SET_CONFIG", ConfigExtras(camera), cancellationToken);
+        RecordDeviceId(file, camera, result, log);
+
+        await adb.ShellAsync(camera.Serial, ["input", "keyevent", "KEYCODE_WAKEUP"], cancellationToken);
+        await adb.ShellAsync(
+            camera.Serial,
+            ["am", "start", "-n", $"{file.Package}/com.taichi765.struckoutCameraApp.MainActivity", "--es", "screen", "camera"],
+            cancellationToken);
+        log.Report($"camera: {camera.Name} ({camera.Serial}) を開きました");
+        opened.Add(camera.Serial);
+        lastOpenedAt = DateTimeOffset.UtcNow;
+    }
+
+    private void RecordDeviceId(CamerasFile file, CameraEntry camera, string result, IProgress<string> log)
+    {
         if (DeviceIdPattern().Match(result) is { Success: true } match)
         {
             if (file.SetDeviceId(camera.Serial, match.Groups[1].Value))
@@ -149,15 +185,6 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
         {
             log.Report($"camera: {camera.Name} が device_id を返しません (アプリが古い?): {result}");
         }
-
-        await adb.ShellAsync(camera.Serial, ["input", "keyevent", "KEYCODE_WAKEUP"], cancellationToken);
-        await adb.ShellAsync(
-            camera.Serial,
-            ["am", "start", "-n", $"{file.Package}/com.taichi765.struckoutCameraApp.MainActivity", "--es", "screen", "camera"],
-            cancellationToken);
-        log.Report($"camera: {camera.Name} ({camera.Serial}) を開きました");
-        opened.Add(camera.Serial);
-        lastOpenedAt = DateTimeOffset.UtcNow;
     }
 
     public async Task StopAsync(IProgress<string> log, CancellationToken cancellationToken)
