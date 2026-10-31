@@ -45,7 +45,7 @@ jobs:
   ball-tracker-build:
     strategy:
       matrix:
-        os: ["windows-2022", "windows-11-arm", "macos-14"]
+        os: ["windows-2022", "windows-11-arm", "macos-15"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -91,7 +91,7 @@ jobs:
               echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker.exe upload/ball-tracker-arm64-windows
               ;;
-            "macos-14")
+            "macos-15")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release-tracker/ball_tracker upload/ball-tracker-arm64-macos
               ;;
@@ -107,7 +107,7 @@ jobs:
   touchpanel-build:
     strategy:
       matrix:
-        os: ["windows-2022", "windows-11-arm", "macos-14"]
+        os: ["windows-2022", "windows-11-arm", "macos-15"]
     runs-on: ${{ matrix.os }}
     needs: [get-version]
     defaults:
@@ -153,7 +153,7 @@ jobs:
               echo "triple=arm64-windows" >> "$GITHUB_OUTPUT"
               mv target/release/touchpanel.exe upload/touchpanel-arm64-windows
               ;;
-            "macos-14")
+            "macos-15")
               echo "triple=arm64-macos" >> "$GITHUB_OUTPUT"
               mv target/release/touchpanel upload/touchpanel-arm64-macos
               ;;
@@ -224,7 +224,7 @@ jobs:
             rid: win-arm64
             asset: struckout-launcher-arm64-windows.exe
           # Built on macOS so that the SDK signs the binary (Apple Silicon refuses unsigned ones)
-          - os: macos-14
+          - os: macos-15
             rid: osx-arm64
             asset: struckout-launcher-arm64-macos
     runs-on: ${{ matrix.os }}
