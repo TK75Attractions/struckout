@@ -98,6 +98,46 @@ namespace Struckout.Tests.Tests.EditMode
             Assert.That(result.trackerPort, Is.EqualTo(5000));
         }
 
+        [TestCase("trackerPort", "STRUCKOUT_TRACKER_PORT", ServerPorts.BallTrackerProjector)]
+        [TestCase("masterPort", "STRUCKOUT_MASTER_PORT", ServerPorts.GameMasterGrpc)]
+        public void Zero_from_either_override_resolves_to_the_shared_default(string argument, string variable, int expected)
+        {
+            var inspector = new NetworkSettings { trackerPort = 6100, masterPort = 8100 };
+            var cli = Resolve(inspector, Args(argument, "0"), Env(variable, "6500"));
+            var environment = Resolve(inspector, env: Env(variable, "0"));
+            Assert.That(argument == "trackerPort" ? cli.trackerPort : cli.masterPort, Is.EqualTo(expected));
+            Assert.That(argument == "trackerPort" ? environment.trackerPort : environment.masterPort, Is.EqualTo(expected));
+            Assert.That(inspector.trackerPort, Is.EqualTo(6100));
+        }
+
+        [TestCase("trackerPort", "STRUCKOUT_TRACKER_PORT")]
+        [TestCase("masterPort", "STRUCKOUT_MASTER_PORT")]
+        public void Valid_ports_include_both_boundaries_and_cli_wins(string argument, string variable)
+        {
+            foreach (var port in new[] { 1, 65535 })
+            {
+                var result = Resolve(args: Args(argument, port.ToString()), env: Env(variable, "6200"));
+                Assert.That(argument == "trackerPort" ? result.trackerPort : result.masterPort, Is.EqualTo(port));
+            }
+        }
+
+        [TestCase("-1")]
+        [TestCase("65536")]
+        [TestCase("999999999999999999999999999999999999999999")]
+        public void Numeric_ports_outside_the_supported_range_fail_at_startup(string port)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => Resolve(args: Args("trackerPort", port)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Resolve(env: Env("STRUCKOUT_MASTER_PORT", port)));
+        }
+
+        [TestCase(-1)]
+        [TestCase(65536)]
+        public void Invalid_inspector_ports_fail_at_startup(int port)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => Resolve(new NetworkSettings { trackerPort = port }));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Resolve(new NetworkSettings { masterPort = port }));
+        }
+
         [Test]
         public void 試行回数は1未満にならない()
         {
