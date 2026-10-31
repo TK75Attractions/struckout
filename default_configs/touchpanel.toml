@@ -1,0 +1,4 @@
+address = "localhost"
+machine-id = 1
+disable-multiplay = true
+simple-mode = true

@@ -1,0 +1,144 @@
+# <config-dir>/struckout/game_master/config.tomlにコピー
+game_start_delay_secs = 3
+pocket_watch_bonus_secs = 5
+
+[game_duration_secs]
+normal = 45
+hard = 45
+veryhard = 45
+
+[[combo_bonuses]]
+combo = 3
+points = 500
+
+[[combo_bonuses]]
+combo = 5
+points = 800
+
+[[combo_bonuses]]
+combo = 8
+points = 1100
+
+[[combo_bonuses]]
+combo = 11
+points = 1400
+
+[[combo_bonuses]]
+combo = 14
+points = 1700
+
+[[combo_bonuses]]
+combo = 17
+points = 2000
+
+[[combo_bonuses]]
+combo = 20
+points = 2300
+
+[[combo_bonuses]]
+combo = 23
+points = 2600
+
+[[combo_bonuses]]
+combo = 26
+points = 2900
+
+[[combo_bonuses]]
+combo = 29
+points = 3200
+
+[[combo_bonuses]]
+combo = 32
+points = 3500
+
+[[combo_bonuses]]
+combo = 35
+points = 3800
+
+[[combo_bonuses]]
+combo = 38
+points = 4100
+
+[[combo_bonuses]]
+combo = 41
+points = 4400
+
+[[combo_bonuses]]
+combo = 44
+points = 4700
+
+[[combo_bonuses]]
+combo = 47
+points = 5000
+
+[[combo_bonuses]]
+combo = 50
+points = 5300
+
+[[combo_bonuses]]
+combo = 53
+points = 5600
+
+[[combo_bonuses]]
+combo = 56
+points = 5900
+
+[[combo_bonuses]]
+combo = 59
+points = 6200
+
+[[combo_bonuses]]
+combo = 62
+points = 6500
+
+[[combo_bonuses]]
+combo = 65
+points = 6800
+
+[[combo_bonuses]]
+combo = 68
+points = 7100
+
+[[combo_bonuses]]
+combo = 71
+points = 7400
+
+[[combo_bonuses]]
+combo = 74
+points = 7700
+
+[[combo_bonuses]]
+combo = 77
+points = 8000
+
+[[combo_bonuses]]
+combo = 80
+points = 8300
+
+[[combo_bonuses]]
+combo = 83
+points = 8600
+
+[[combo_bonuses]]
+combo = 86
+points = 8900
+
+[[combo_bonuses]]
+combo = 89
+points = 9200
+
+[[combo_bonuses]]
+combo = 92
+points = 9500
+
+[[combo_bonuses]]
+combo = 95
+points = 9800
+
+[[combo_bonuses]]
+combo = 98
+points = 10100
+
+[[combo_bonuses]]
+combo = 101
+points = 10400
