@@ -4,14 +4,8 @@ use struckout_proto::{Detection, DetectionsPacket};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-mod db;
 mod network;
 pub use network::{NetworkDetectionInput, NetworkDetectionInputCreationError};
-
-#[cfg(feature = "input-sqlite")]
-mod sqlite;
-#[cfg(feature = "input-sqlite")]
-pub use sqlite::SqliteDetectionInput;
 
 pub trait DetectionInput {
     fn start(

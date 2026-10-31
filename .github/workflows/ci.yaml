@@ -41,6 +41,7 @@ jobs:
             launcher:
               - 'launcher/**'
               - 'api/spec/**'
+              - 'game_master/docker/config.dev.toml'
               - 'mise.toml'
               - 'mise.lock'
               - '.github/workflows/launcher_ci.yaml'

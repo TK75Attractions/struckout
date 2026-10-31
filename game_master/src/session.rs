@@ -1179,6 +1179,47 @@ mod tests {
     }
 
     #[test]
+    fn shipped_combo_bonuses_extend_through_one_hundred_hits() {
+        #[derive(Deserialize)]
+        struct BonusConfig {
+            combo_bonuses: ComboBonuses,
+        }
+        let config: BonusConfig = toml::from_str(include_str!("../docker/config.dev.toml"))
+            .expect("shipped game configuration should be valid");
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(
+                compass_target(200.0),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
+            .expect("running game")
+            .0;
+        let mut expected_score = 0;
+        for combo in 1..=101 {
+            let bonus = match combo {
+                3 => 500,
+                5 => 800,
+                8..=98 if (combo - 8) % 3 == 0 => 900 + (combo - 8) / 3 * 100,
+                _ => 0,
+            };
+            assert_eq!(
+                config.combo_bonuses.points_for(combo),
+                bonus,
+                "combo={combo}"
+            );
+            expected_score += 500 + bonus;
+            let outcome = sessions
+                .hit_target(machine_id, target_id, &config.combo_bonuses)
+                .expect("registered target");
+            assert_eq!(outcome.total_score, expected_score, "combo={combo}");
+            assert_eq!(outcome.combo, combo);
+        }
+    }
+
+    #[test]
     fn combo_bonus_overflow_preserves_score_combo_and_targets() {
         let mut sessions = running_sessions(GameMode::Single);
         let machine_id = MachineId::new(1);

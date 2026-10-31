@@ -1,6 +1,8 @@
 using Struckout.Launcher.Core.Launch;
 using Struckout.Launcher.Core.Modules;
 using Struckout.Launcher.Core.Platform;
+using Tomlyn;
+using Tomlyn.Model;
 
 namespace Struckout.Launcher.Core.Tests;
 
@@ -21,7 +23,19 @@ public class GameMasterComposeTests
 
             await gameMaster.StartAsync(new Progress<string>(), CancellationToken.None);
 
-            Assert.Equal("game_start_delay_secs = 3\n\n[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n\n[[combo_bonuses]]\ncombo = 3\npoints = 500\n\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n", File.ReadAllText(paths.GameMasterConfigFile));
+            var config = TomlSerializer.Deserialize<TomlTable>(File.ReadAllText(paths.GameMasterConfigFile))!;
+            Assert.Equal(3L, config["game_start_delay_secs"]);
+            var bonuses = Assert.IsType<TomlTableArray>(config["combo_bonuses"]);
+            Assert.Equal(33, bonuses.Count);
+            Assert.Equal(3L, bonuses[0]["combo"]);
+            Assert.Equal(500L, bonuses[0]["points"]);
+            Assert.Equal(5L, bonuses[1]["combo"]);
+            Assert.Equal(800L, bonuses[1]["points"]);
+            for (var index = 2; index < bonuses.Count; index++)
+            {
+                Assert.Equal(8L + (index - 2) * 3, bonuses[index]["combo"]);
+                Assert.Equal(900L + (index - 2) * 100, bonuses[index]["points"]);
+            }
             var mount = File.ReadAllText(Path.Combine(directory, "compose.launcher.yaml"));
             Assert.Contains("source: ${GAME_MASTER_CONFIG_PATH:", mount, StringComparison.Ordinal);
             Assert.Contains("target: /etc/game_master/config.toml", mount, StringComparison.Ordinal);

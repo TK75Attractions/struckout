@@ -22,7 +22,6 @@ public sealed class GameMasterCompose(
     public const string ProjectName = "struckout-launcher";
 
     private const string OverrideFile = "compose.launcher.yaml";
-    private const string DefaultConfig = "game_start_delay_secs = 3\n\n[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n\n[[combo_bonuses]]\ncombo = 3\npoints = 500\n\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n";
 
     public string Directory { get; } = directory;
 
@@ -32,7 +31,10 @@ public sealed class GameMasterCompose(
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(configFile)!);
         if (!File.Exists(configFile))
         {
-            File.WriteAllText(configFile, DefaultConfig);
+            using var stream = typeof(GameMasterCompose).Assembly.GetManifestResourceStream("game-master-config.toml")
+                ?? throw new InvalidOperationException("game-master の既定設定がビルドに含まれていません");
+            using var reader = new StreamReader(stream);
+            File.WriteAllText(configFile, reader.ReadToEnd());
         }
     }
 

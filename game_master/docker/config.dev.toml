@@ -12,3 +12,127 @@ points = 500
 [[combo_bonuses]]
 combo = 5
 points = 800
+
+[[combo_bonuses]]
+combo = 8
+points = 900
+
+[[combo_bonuses]]
+combo = 11
+points = 1000
+
+[[combo_bonuses]]
+combo = 14
+points = 1100
+
+[[combo_bonuses]]
+combo = 17
+points = 1200
+
+[[combo_bonuses]]
+combo = 20
+points = 1300
+
+[[combo_bonuses]]
+combo = 23
+points = 1400
+
+[[combo_bonuses]]
+combo = 26
+points = 1500
+
+[[combo_bonuses]]
+combo = 29
+points = 1600
+
+[[combo_bonuses]]
+combo = 32
+points = 1700
+
+[[combo_bonuses]]
+combo = 35
+points = 1800
+
+[[combo_bonuses]]
+combo = 38
+points = 1900
+
+[[combo_bonuses]]
+combo = 41
+points = 2000
+
+[[combo_bonuses]]
+combo = 44
+points = 2100
+
+[[combo_bonuses]]
+combo = 47
+points = 2200
+
+[[combo_bonuses]]
+combo = 50
+points = 2300
+
+[[combo_bonuses]]
+combo = 53
+points = 2400
+
+[[combo_bonuses]]
+combo = 56
+points = 2500
+
+[[combo_bonuses]]
+combo = 59
+points = 2600
+
+[[combo_bonuses]]
+combo = 62
+points = 2700
+
+[[combo_bonuses]]
+combo = 65
+points = 2800
+
+[[combo_bonuses]]
+combo = 68
+points = 2900
+
+[[combo_bonuses]]
+combo = 71
+points = 3000
+
+[[combo_bonuses]]
+combo = 74
+points = 3100
+
+[[combo_bonuses]]
+combo = 77
+points = 3200
+
+[[combo_bonuses]]
+combo = 80
+points = 3300
+
+[[combo_bonuses]]
+combo = 83
+points = 3400
+
+[[combo_bonuses]]
+combo = 86
+points = 3500
+
+[[combo_bonuses]]
+combo = 89
+points = 3600
+
+[[combo_bonuses]]
+combo = 92
+points = 3700
+
+[[combo_bonuses]]
+combo = 95
+points = 3800
+
+[[combo_bonuses]]
+combo = 98
+points = 3900

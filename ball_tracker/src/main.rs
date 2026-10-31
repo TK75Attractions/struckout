@@ -1,17 +1,13 @@
 use std::{path::PathBuf, sync::Arc};
 
-#[cfg(feature = "input-sqlite")]
-use ball_tracker::detection_input::SqliteDetectionInput;
 use ball_tracker::{
     Application, CameraLocationStore,
     camera_config::CameraConfig,
     camera_status::CameraStatusStore,
     clock_sync::{AutoTimeTrim, ClockSync, ClockSyncOptions},
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
-    detection_input::{CameraFrame, DetectionInput, NetworkDetectionInput},
-    tracking::{
-        EventLogger, FmtEventLogger, JsonEventLogger, SentryEventLogger, TrackingEventsDto,
-    },
+    detection_input::{CameraFrame, NetworkDetectionInput},
+    tracking::{EventLogger, FmtEventLogger, JsonEventLogger, TrackingEventsDto},
     types::{CameraId, CollisionPoint3D},
     video::{self, VideoOptions},
 };
@@ -31,6 +27,7 @@ mod health;
 use crate::config::{Config, ConfigLocation};
 
 mod config;
+mod logging;
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
@@ -44,6 +41,9 @@ struct Cli {
     /// キーは長いオプション名と同じ (README を参照)
     #[arg(long = "config")]
     config: Option<PathBuf>,
+    /// ログと Sentry に付ける筐体番号 [既定: 1]
+    #[arg(long = "machine-id")]
+    machine_id: Option<u32>,
     /// detectionをどこから受け取るか。コマンドラインか設定ファイルのどちらかで必ず指定する
     #[arg(value_enum, long = "input")]
     detection_input: Option<DetectionInputKind>,
@@ -123,9 +123,6 @@ fn millis(value: f64) -> TimeDelta {
 enum DetectionInputKind {
     /// TCP経由 (camera)
     Network,
-    /// ローカルのSQLiteから
-    #[cfg(feature = "input-sqlite")]
-    Sqlite,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Deserialize)]
@@ -135,48 +132,6 @@ enum CollisionOutputKind {
     Network,
     /// CSVファイルに保存
     Csv,
-}
-
-/// [`DetectionInput`] is not dyn compatible, so we need this enum.
-enum DetectionInputImpl {
-    Network(NetworkDetectionInput),
-    #[cfg(feature = "input-sqlite")]
-    Sqlite(SqliteDetectionInput),
-}
-
-impl DetectionInput for DetectionInputImpl {
-    async fn start(
-        self,
-        tx: mpsc::Sender<CameraFrame>,
-        shutdown: tokio_util::sync::CancellationToken,
-    ) -> std::io::Result<()> {
-        match self {
-            DetectionInputImpl::Network(input) => input.start(tx, shutdown).await,
-            #[cfg(feature = "input-sqlite")]
-            DetectionInputImpl::Sqlite(input) => input.start(tx, shutdown).await,
-        }
-    }
-}
-
-impl DetectionInputImpl {
-    async fn new(
-        kind: DetectionInputKind,
-        camera_locs: Arc<CameraLocationStore>,
-        clock: Arc<ClockSync>,
-        video: Option<VideoOptions>,
-        cameras: Option<Arc<CameraConfig>>,
-        camera_status: Arc<CameraStatusStore>,
-    ) -> Self {
-        match kind {
-            DetectionInputKind::Network => DetectionInputImpl::Network(
-                NetworkDetectionInput::new(camera_locs, clock, video, cameras, camera_status)
-                    .await
-                    .unwrap(),
-            ),
-            #[cfg(feature = "input-sqlite")]
-            DetectionInputKind::Sqlite => DetectionInputImpl::Sqlite(SqliteDetectionInput {}),
-        }
-    }
 }
 
 enum CollisionOutputImpl {
@@ -223,8 +178,6 @@ fn csv_path_default() -> PathBuf {
 
 enum EventLoggerImpl {
     Json(JsonEventLogger),
-    #[allow(dead_code)] // 後で追加する
-    Sentry(SentryEventLogger),
     Fmt(FmtEventLogger),
 }
 
@@ -232,8 +185,6 @@ impl EventLoggerImpl {
     fn new(config: &Config) -> Self {
         if config.output_to_json {
             Self::Json(JsonEventLogger::new(json_log_output_dir()))
-        //}else if  {
-        //    Self::Sentry(SentryEventLogger::new())
         } else {
             Self::Fmt(FmtEventLogger)
         }
@@ -244,7 +195,6 @@ impl EventLogger for EventLoggerImpl {
     fn push_events(&mut self, events: TrackingEventsDto) {
         match self {
             EventLoggerImpl::Json(l) => l.push_events(events),
-            EventLoggerImpl::Sentry(l) => l.push_events(events),
             EventLoggerImpl::Fmt(l) => l.push_events(events),
         }
     }
@@ -252,7 +202,6 @@ impl EventLogger for EventLoggerImpl {
     fn push_frame(&mut self, frame: &CameraFrame) {
         match self {
             EventLoggerImpl::Json(l) => l.push_frame(frame),
-            EventLoggerImpl::Sentry(l) => l.push_frame(frame),
             EventLoggerImpl::Fmt(l) => l.push_frame(frame),
         }
     }
@@ -267,6 +216,7 @@ fn json_log_output_dir() -> PathBuf {
 }
 
 fn main() {
+    let config = load_config();
     #[cfg(feature = "sentry")]
     let _guard = sentry::init(
         sentry::ClientOptions::new()
@@ -274,6 +224,9 @@ fn main() {
             .maybe_release(version_option())
             .traces_sample_rate(1.0),
     );
+
+    #[cfg(feature = "sentry")]
+    sentry::configure_scope(|scope| scope.set_tag("machine_id", config.machine_id.to_string()));
 
     // ランチャーは 1 秒ごとにヘルスを問い合わせる。そのたびに HTTP/2 の TRACE のログが大量に出ないよう、通信の層は INFO までにする
     let transport_logs = Targets::new()
@@ -284,8 +237,11 @@ fn main() {
             ("tower", LevelFilter::INFO),
             ("tonic", LevelFilter::INFO),
         ]);
-    let reg = tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_filter(transport_logs));
+    let reg = tracing_subscriber::registry().with(
+        tracing_subscriber::fmt::layer()
+            .event_format(logging::MachineEventFormat(config.machine_id))
+            .with_filter(transport_logs),
+    );
     #[cfg(feature = "sentry")]
     let reg = reg
         .with(sentry::integrations::tracing::SpanLayer::new().with_filter(LevelFilter::TRACE))
@@ -316,7 +272,7 @@ fn main() {
                     .await
                     .expect("Ctrl-C handler should be installed");
             };
-            let fut = run_main(shutdown_signal);
+            let fut = run_main(config, shutdown_signal);
             #[cfg(feature = "sentry")]
             let fut = {
                 use sentry::SentryFutureExt;
@@ -326,9 +282,8 @@ fn main() {
         });
 }
 
-async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send) {
+async fn run_main(config: Config, shutdown_signal: impl std::future::Future<Output = ()> + Send) {
     let shutdown = tokio_util::sync::CancellationToken::new();
-    let config = load_config();
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = config.cameras.as_ref().map(|path| {
@@ -374,17 +329,10 @@ async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send)
         snapshot_dir: config.video_snapshot_dir.clone(),
         record_dir: config.video_record_dir.clone(),
     });
-    let detection_input = DetectionInputImpl::new(
-        config
-            .detection_input
-            .expect("Config::apply_cli() makes sure that it is set"),
-        camera_locs.clone(),
-        clock,
-        video,
-        cameras,
-        camera_status,
-    )
-    .await;
+    let detection_input =
+        NetworkDetectionInput::new(camera_locs.clone(), clock, video, cameras, camera_status)
+            .await
+            .unwrap_or_else(|error| exit_with(&error));
     let collision_output = CollisionOutputImpl::new(&config).await;
     let event_logger = EventLoggerImpl::new(&config);
 

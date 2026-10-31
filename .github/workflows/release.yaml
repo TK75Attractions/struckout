@@ -236,6 +236,7 @@ jobs:
         with:
           sparse-checkout: |
             api/spec
+            game_master/docker
             launcher
             mise.toml
             mise.lock

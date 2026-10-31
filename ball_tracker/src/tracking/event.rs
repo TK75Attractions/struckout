@@ -171,25 +171,6 @@ impl EventLogger for JsonEventLogger {
     }
 }
 
-/// Logs tracking events to sentry.
-pub struct SentryEventLogger {}
-
-impl SentryEventLogger {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl EventLogger for SentryEventLogger {
-    fn push_events(&mut self, _events: TrackingEventsDto) {
-        todo!()
-    }
-
-    fn push_frame(&mut self, _frame: &CameraFrame) {
-        todo!()
-    }
-}
-
 /// [`EventLogger`] to stdout.
 pub struct FmtEventLogger;
 

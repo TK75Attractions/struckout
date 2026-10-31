@@ -7,6 +7,7 @@
   <ItemGroup>
     <!-- Ports are defined once in api/spec/servers.yaml and shared by every module. -->
     <EmbeddedResource Include="../../../api/spec/servers.yaml" LogicalName="servers.yaml" />
+    <EmbeddedResource Include="../../../game_master/docker/config.dev.toml" LogicalName="game-master-config.toml" />
   </ItemGroup>
 
   <ItemGroup>
