@@ -7,11 +7,14 @@
   <ItemGroup>
     <!-- Ports are defined once in api/spec/servers.yaml and shared by every module. -->
     <EmbeddedResource Include="../../../api/spec/servers.yaml" LogicalName="servers.yaml" />
+    <!-- Unlike Unity, the standard .NET SDK generates clients at build time; do not commit generated files. -->
+    <Protobuf Include="../../../api/proto/ball_tracker/camera_status.proto" ProtoRoot="../../../api/proto" GrpcServices="Client" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Grpc.HealthCheck" />
     <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
     <PackageReference Include="Tomlyn" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
