@@ -46,12 +46,13 @@ namespace Struckout.Tests.Tests.EditMode
                 var builder = new ContainerBuilder();
                 builder.RegisterInstance<IHub>(DisabledHub.Instance);
                 builder.RegisterInstance<IExternalScopeProvider>(new LoggerExternalScopeProvider());
+                builder.RegisterInstance(new NetworkSettings { machineId = 3 });
                 builder.Register(typeof(ProjectorLogger<>), Lifetime.Singleton).As(typeof(ILogger<>));
                 builder.RegisterInstance(new WorldCoordinateTransform());
                 builder.RegisterInstance(new UIRoot(root.transform));
                 builder.RegisterComponent(ui).As<IUIService>();
                 builder.RegisterComponent(camera);
-                LogAssert.Expect(LogType.Log, new Regex("\\[Struckout.Unity.FieldCamera\\] \\[Field\\]"));
+                LogAssert.Expect(LogType.Log, new Regex("\\[Struckout.Unity.FieldCamera\\] \\[machine_id=3\\] \\[Field\\]"));
                 using var container = builder.Build();
 
                 var target = new Target(Guid.NewGuid(),

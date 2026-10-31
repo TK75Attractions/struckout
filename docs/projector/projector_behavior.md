@@ -187,3 +187,10 @@ game_master は `GetRanking` / `GetGamesByPlayer` に対応している。取得
 
 現在の API には、再接続後に現在のターゲット一覧やプレイヤー情報を取得する機能がない。
 切断中に取り逃したイベントの復元と状態の再同期は、今回の対象外とする。
+
+## ログと筐体番号
+
+通常のログには、接続に使う設定と同じ `machine_id` を付ける。
+ローカルのログには `[machine_id=N]`、Sentry の構造化ログには数値属性 `machine_id`、
+エラーイベントには検索用タグ `machine_id` を保存する。
+`-machineId` / `STRUCKOUT_MACHINE_ID` による上書き後の値を使う。
