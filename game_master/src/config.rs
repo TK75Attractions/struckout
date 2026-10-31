@@ -104,9 +104,14 @@ points = 800
     #[test]
     fn requires_every_difficulty() {
         assert!(
-            toml::from_str::<FileConfig>("[game_duration_secs]\nnormal = 120\nhard = 90").is_err()
+            toml::from_str::<FileConfig>(&VALID_CONFIG.replace("veryhard = 60\n", "")).is_err()
         );
-        assert!(toml::from_str::<FileConfig>("game_duration_secs = 120").is_err());
+        assert!(
+            toml::from_str::<FileConfig>(
+                "game_start_delay_secs = 3\ncombo_bonuses = []\ngame_duration_secs = 120\n"
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -121,7 +126,7 @@ points = 800
     fn requires_combo_bonuses() {
         assert!(
             toml::from_str::<FileConfig>(
-                "[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
+                "game_start_delay_secs = 3\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
             )
             .is_err()
         );
@@ -155,7 +160,7 @@ points = 800
     fn permits_explicitly_empty_combo_bonuses() {
         assert!(
             toml::from_str::<FileConfig>(
-                "combo_bonuses = []\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
+                "game_start_delay_secs = 3\ncombo_bonuses = []\n[game_duration_secs]\nnormal = 120\nhard = 90\nveryhard = 60\n"
             )
             .is_ok()
         );
