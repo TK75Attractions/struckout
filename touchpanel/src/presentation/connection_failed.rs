@@ -14,7 +14,7 @@ use tracing::{debug, warn};
 
 use crate::{
     Application, Config, Context, NavController,
-    presentation::{connect_to_game_master, observe_session},
+    presentation::{connect_to_game_master, initial_route, observe_session},
 };
 
 touchpanel_ui::define_connection_failed_mapper! {}
@@ -57,6 +57,7 @@ where
         let worker = self.worker.clone();
         slint::spawn_local(async move {
             debug!("retrying connection to game-master");
+            let simple_mode = config.simple_mode;
             let game_master = match connect_to_game_master(&worker, nc.clone(), config).await{
                 Ok(v) => v,
                 Err(_) =>{
@@ -69,7 +70,12 @@ where
                 cx.game_master.set(game_master).expect("this should be a first successful attempt to connect to game-master");
             }
             observe_session(&worker, nc.clone());
-            nc.navigate(NavRoute::Start);
+            match initial_route(&worker, simple_mode).await {
+                Ok(route) => nc.navigate(route),
+                Err(error) => nc.navigate(NavRoute::Fallback(format!(
+                    "シンプルモードの開始に失敗しました: {error}"
+                ))),
+            }
             debug!("connection retry to game-master succeeds and initialized worker context with game-master client");
         })
         .unwrap();

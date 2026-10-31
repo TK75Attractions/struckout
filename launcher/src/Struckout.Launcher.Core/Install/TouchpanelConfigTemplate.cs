@@ -8,6 +8,7 @@ internal static class TouchpanelConfigTemplate
         address = "127.0.0.1"
         machine-id = 1
         disable-multiplay = false
+        simple-mode = false
 
         """;
 

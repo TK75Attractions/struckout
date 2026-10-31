@@ -102,6 +102,8 @@ struct FileConfig {
     machine_id: Option<u32>,
     #[serde(default)]
     disable_multiplay: bool,
+    #[serde(default)]
+    simple_mode: bool,
     monitor: Option<NonZeroUsize>,
 }
 
@@ -155,6 +157,8 @@ struct Config {
     machine_id: u32,
     /// Whether the mode selection screen is available.
     multiplay_availability: touchpanel_ui::MultiPlayAvailability,
+    /// Skip player and mode selection and use the shared simple-mode player.
+    simple_mode: bool,
     /// The display to show on, from 1 in winit's order. `None` for the primary display.
     monitor: Option<NonZeroUsize>,
 }
@@ -176,6 +180,7 @@ impl Config {
             } else {
                 touchpanel_ui::MultiPlayAvailability::Enabled
             },
+            simple_mode: file.simple_mode,
             monitor: cli.monitor.or(file.monitor),
         })
     }
@@ -335,6 +340,15 @@ mod tests {
             config.multiplay_availability,
             touchpanel_ui::MultiPlayAvailability::Enabled
         );
+        assert!(!config.simple_mode);
+    }
+
+    #[test]
+    fn simple_mode_comes_from_config_file() {
+        let file =
+            toml::from_str("address = '127.0.0.1'\nmachine-id = 1\nsimple-mode = true\n").unwrap();
+        let cli = Cli::try_parse_from(["touchpanel"]).unwrap();
+        assert!(Config::from_sources(file, cli).unwrap().simple_mode);
     }
 
     #[test]

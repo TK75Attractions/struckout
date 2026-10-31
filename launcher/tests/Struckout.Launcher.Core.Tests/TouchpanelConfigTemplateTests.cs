@@ -17,6 +17,7 @@ public class TouchpanelConfigTemplateTests
             Assert.True(TouchpanelConfigTemplate.WriteIfMissing(paths.TouchpanelConfigFile));
             Assert.Contains("address = \"127.0.0.1\"", File.ReadAllText(paths.TouchpanelConfigFile), StringComparison.Ordinal);
             Assert.Contains("machine-id = 1", File.ReadAllText(paths.TouchpanelConfigFile), StringComparison.Ordinal);
+            Assert.Contains("simple-mode = false", File.ReadAllText(paths.TouchpanelConfigFile), StringComparison.Ordinal);
 
             File.WriteAllText(paths.TouchpanelConfigFile, "address = \"pc2.local\"\nmachine-id = 2\n");
             Assert.False(TouchpanelConfigTemplate.WriteIfMissing(paths.TouchpanelConfigFile));

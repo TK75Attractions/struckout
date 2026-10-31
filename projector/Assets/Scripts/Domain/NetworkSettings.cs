@@ -35,6 +35,9 @@ namespace Struckout.Domain
         /// <summary>接続を試す回数。1 なら再試行しない。失敗するたびに指数バックオフで待つ。</summary>
         [FormerlySerializedAs("ConnectAttempts")] public uint connectAttempts = 5;
 
+        /// <summary>得点表示後もランキングへ遷移せず、次のホーム要求まで待つ。</summary>
+        public bool simpleMode;
+
         public NetworkSettings Clone() => new()
         {
             mode = mode,
@@ -44,9 +47,10 @@ namespace Struckout.Domain
             masterPort = masterPort,
             machineId = machineId,
             connectAttempts = connectAttempts,
+            simpleMode = simpleMode,
         };
 
         public override string ToString() =>
-            $"mode={mode} tracker={trackerHost}:{trackerPort} master={masterHost}:{masterPort} machine={machineId} attempts={connectAttempts}";
+            $"mode={mode} tracker={trackerHost}:{trackerPort} master={masterHost}:{masterPort} machine={machineId} attempts={connectAttempts} simple={simpleMode}";
     }
 }

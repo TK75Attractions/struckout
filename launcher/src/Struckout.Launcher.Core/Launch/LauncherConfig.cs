@@ -23,7 +23,7 @@ public sealed record BallTrackerSettings(CollisionOutput Output, string? CsvPath
 
 /// <param name="Monitor">The display to show the target on, from 1.</param>
 /// <param name="CollisionTransform">The file saved on the F2 screen of projector. Null for projector's default.</param>
-public sealed record ProjectorSettings(int Monitor, bool Fullscreen, string? CollisionTransform);
+public sealed record ProjectorSettings(int Monitor, bool Fullscreen, string? CollisionTransform, bool SimpleMode);
 
 /// <summary>What to start on this PC and how, read from <c>launcher.toml</c>.</summary>
 /// <remarks>
@@ -147,7 +147,7 @@ public sealed record LauncherConfig(
                 [ModuleId.GameMaster] = document.Hosts.GameMaster,
             },
             new BallTrackerSettings(output!.Value, csvPath, document.BallTracker.ExtraArgs),
-            new ProjectorSettings(document.Projector.Monitor, document.Projector.Fullscreen, Resolve(document.Projector.CollisionTransform)));
+            new ProjectorSettings(document.Projector.Monitor, document.Projector.Fullscreen, Resolve(document.Projector.CollisionTransform), document.Projector.SimpleMode));
 
         void Unknown(Dictionary<string, object?> keys, string prefix) =>
             errors.AddRange(keys.Keys.Select(key => $"{prefix}{key} という設定はありません"));
@@ -200,6 +200,8 @@ public sealed record LauncherConfig(
         public int Monitor { get; set; } = 2;
 
         public bool Fullscreen { get; set; } = true;
+
+        public bool SimpleMode { get; set; }
 
         public string? CollisionTransform { get; set; }
 
