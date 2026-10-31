@@ -1,9 +1,13 @@
 use clap::Parser;
 use serde::Deserialize;
 use slint::ComponentHandle;
+use slint::winit_030::{WinitWindowAccessor, winit::window::Fullscreen};
 use std::{
+    cell::RefCell,
     fs, io,
+    num::NonZeroUsize,
     path::Path,
+    rc::Rc,
     sync::{
         Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
@@ -65,6 +69,12 @@ struct Cli {
     server_addr: Option<String>,
     #[arg(short = 'm', long = "machine-id", help = "the id of this machine")]
     machine_id: Option<u32>,
+    #[arg(
+        long,
+        value_name = "N",
+        help = "the display to show on, counted from 1 in the order winit lists them (may differ from Unity's and Windows' numbers); the primary display if omitted"
+    )]
+    monitor: Option<NonZeroUsize>,
     #[arg(long, help = "skip mode selection and start a single-player session")]
     disable_multiplay: bool,
 }
@@ -92,6 +102,7 @@ struct FileConfig {
     machine_id: Option<u32>,
     #[serde(default)]
     disable_multiplay: bool,
+    monitor: Option<NonZeroUsize>,
 }
 
 #[derive(Debug, Error)]
@@ -144,6 +155,8 @@ struct Config {
     machine_id: u32,
     /// Whether the mode selection screen is available.
     multiplay_availability: touchpanel_ui::MultiPlayAvailability,
+    /// The display to show on, from 1 in winit's order. `None` for the primary display.
+    monitor: Option<NonZeroUsize>,
 }
 
 impl Config {
@@ -163,6 +176,7 @@ impl Config {
             } else {
                 touchpanel_ui::MultiPlayAvailability::Enabled
             },
+            monitor: cli.monitor.or(file.monitor),
         })
     }
 }
@@ -175,10 +189,26 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
     };
     let config = Arc::new(Config::from_sources(file, cli)?);
 
-    let ui = touchpanel_ui::AppWindow::new().unwrap();
+    let ui = touchpanel_ui::AppWindow::new()?;
     ui.set_mode_selection_enabled(
         config.multiplay_availability == touchpanel_ui::MultiPlayAvailability::Enabled,
     );
+
+    let startup_error = Rc::new(RefCell::new(None));
+    if let Some(monitor) = config.monitor {
+        let ui = ui.as_weak();
+        let startup_error = Rc::clone(&startup_error);
+        // Native windows are created only once the event loop is active.
+        slint::spawn_local(async move {
+            let Some(ui) = ui.upgrade() else {
+                return;
+            };
+            if let Err(error) = configure_monitor(ui.window(), monitor).await {
+                *startup_error.borrow_mut() = Some(error);
+                slint::quit_event_loop().expect("Slint event loop should be running");
+            }
+        })?;
+    }
 
     let nav_controller = NavController::new(NavRoute::Connecting, {
         let ui = ui.as_weak();
@@ -221,7 +251,36 @@ pub fn run_main(shutdown_requested: Arc<AtomicBool>) -> anyhow::Result<()> {
             }
         },
     );
-    application.ui.run().unwrap();
+    application.ui.run()?;
+    if let Some(error) = startup_error.take() {
+        return Err(error);
+    }
+    Ok(())
+}
+
+/// Shows `window` full screen on the `number`th display.
+///
+/// The backend is left to Slint's usual selection (e.g. `SLINT_BACKEND`), which is not always winit.
+/// Only the winit backend can choose a display, so on another backend this fails rather than
+/// silently showing on the primary display.
+async fn configure_monitor(window: &slint::Window, number: NonZeroUsize) -> anyhow::Result<()> {
+    let window = window.winit_window().await.map_err(|error| {
+        anyhow::anyhow!(
+            "monitor は Slint の winit バックエンドでしか使えません。SLINT_BACKEND で別のバックエンドを選んでいないか確かめてください: {error}"
+        )
+    })?;
+    let monitors: Vec<_> = window.available_monitors().collect();
+    for (index, monitor) in monitors.iter().enumerate() {
+        info!(number = index + 1, name = ?monitor.name(), position = ?monitor.position(), "available display");
+    }
+    let monitor = monitors.get(number.get() - 1).ok_or_else(|| {
+        anyhow::anyhow!(
+            "ディスプレイ {} がありません。{} 台見つかりました",
+            number,
+            monitors.len()
+        )
+    })?;
+    window.set_fullscreen(Some(Fullscreen::Borderless(Some(monitor.clone()))));
     Ok(())
 }
 
@@ -275,6 +334,41 @@ mod tests {
         assert_eq!(
             config.multiplay_availability,
             touchpanel_ui::MultiPlayAvailability::Enabled
+        );
+    }
+
+    #[test]
+    fn monitor_comes_from_cli_or_config_file() {
+        let file = toml::from_str(
+            "address = 'a'
+machine-id = 1
+monitor = 2
+",
+        )
+        .unwrap();
+        let config =
+            Config::from_sources(file, Cli::try_parse_from(["touchpanel"]).unwrap()).unwrap();
+        assert_eq!(config.monitor, NonZeroUsize::new(2));
+
+        let file = toml::from_str(
+            "address = 'a'
+machine-id = 1
+monitor = 2
+",
+        )
+        .unwrap();
+        let cli = Cli::try_parse_from(["touchpanel", "--monitor", "3"]).unwrap();
+        assert_eq!(
+            Config::from_sources(file, cli).unwrap().monitor,
+            NonZeroUsize::new(3)
+        );
+
+        assert!(
+            toml::from_str::<FileConfig>(
+                "monitor = 0
+"
+            )
+            .is_err()
         );
     }
 
