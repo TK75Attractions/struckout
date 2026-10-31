@@ -21,6 +21,7 @@ sentry = { workspace = true, optional = true }
 tokio = {
   workspace = true,
   features = [
+    "fs",
     "io-util",
     "macros",
     "net",
