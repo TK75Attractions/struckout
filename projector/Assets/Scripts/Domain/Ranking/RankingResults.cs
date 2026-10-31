@@ -32,9 +32,11 @@ namespace Struckout.Domain.Ranking
             return rows;
         }
 
-        /// <summary>Finds a game's competition rank within the top rows shown on the score screen.</summary>
+        /// <summary>Uses a server rank when available, including games outside the displayed rows.</summary>
         public static uint? GetRank(IReadOnlyList<RankingEntry> ranking, GameId gameId)
         {
+            foreach (var entry in ranking)
+                if (entry.GameId.Equals(gameId) && entry.Rank.HasValue) return entry.Rank;
             return Merge(ranking.Take((int)TopItemCount).ToArray(), System.Array.Empty<RankingEntry>(), default, gameId)
                 .FirstOrDefault(row => row.GameId.Equals(gameId)).Rank;
         }

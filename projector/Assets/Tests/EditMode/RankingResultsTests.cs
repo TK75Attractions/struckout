@@ -33,8 +33,17 @@ namespace Struckout.Tests.Tests.EditMode
             var rows = RankingResults.Merge(ranking, history, new PlayerId(7), new GameId(11));
             Assert.That(rows.Take(10).Select(row => row.Rank), Is.EqualTo(Enumerable.Range(1, 10)));
             Assert.That(rows.Skip(10).Select(row => row.Rank), Is.EqualTo(new uint?[] { 11, 12 }));
-            Assert.That(RankingResults.GetRank(ranking.Concat(history).ToArray(), new GameId(11)), Is.Null);
+            Assert.That(RankingResults.GetRank(ranking.Concat(history).ToArray(), new GameId(11)), Is.EqualTo(11));
             Assert.That(RankingResults.GetRank(Array.Empty<RankingEntry>(), new GameId(1)), Is.Null);
+        }
+
+        [Test]
+        public void Score_rank_is_not_limited_to_the_twelve_display_rows()
+        {
+            var history = Enumerable.Range(1, 30).Select(i =>
+                new RankingEntry(new GameId((uint)i), (uint)(100 - i), (uint)i,
+                    new RankingParticipant(1, new PlayerId(7), "本人"))).ToArray();
+            Assert.That(RankingResults.GetRank(history, new GameId(30)), Is.EqualTo(30));
         }
 
         [Test]
