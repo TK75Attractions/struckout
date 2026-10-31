@@ -51,7 +51,6 @@ namespace Struckout.Application.Interface
         /// </summary>
         event Action<GameId> GameFinished;
 
-        event Action RankingScreenRequested;
         event Action HomeScreenRequested;
 
         /// <summary>サーバーの残り時間。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>

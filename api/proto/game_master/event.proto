@@ -8,6 +8,8 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
 
 message Event {
+  reserved 9;
+  reserved "navigate_to_ranking_screen_requested";
   message SessionDifficultyChanged {
     Difficulty difficulty = 1;
   }
@@ -65,10 +67,6 @@ message Event {
     uint32 machine_id = 1;
   }
 
-  message NavigateToRankingScreenRequested {
-    uint32 machine_id = 1;
-  }
-
   message NavigateToHomeScreenRequested {
     uint32 machine_id = 1;
   }
@@ -97,7 +95,6 @@ message Event {
     StartTutorialRequested start_tutorial_requested = 6;
     NavigateToPreviousTutorialRequested navigate_to_previous_tutorial_requested = 7;
     NavigateToNextTutorialRequested navigate_to_next_tutorial_requested = 8;
-    NavigateToRankingScreenRequested navigate_to_ranking_screen_requested = 9;
     NavigateToHomeScreenRequested navigate_to_home_screen_requsted = 10;
 
     /* ----- Targets ----- */

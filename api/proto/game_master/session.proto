@@ -53,7 +53,6 @@ service GameMasterSessionService {
   rpc GoNextTutorial(GoNextTutorialRequest) returns (GoNextTutorialResponse);
 
   // Navigates to the ranking screen. Used by `touchpanel`.
-  rpc GoRankingScreen(GoRankingScreenRequest) returns (GoRankingScreenResponse);
 
   // Navigates to the home screen. Used by `touchpanel`.
   rpc GoHomeScreen(GoHomeScreenRequest) returns (GoHomeScreenResponse);

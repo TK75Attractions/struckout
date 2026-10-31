@@ -18,10 +18,10 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
    `GetGameResult(game_id)` で DB 保存済みの確定得点を取得して表示する。
    プレイ中の HUD の値を確定結果として流用しない。
    モード・難易度と SCORE ラベルを表示し、確定得点を約1秒で0から数え上げる。
-   得点の表示後、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
+   得点の表示中に、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
    今回のゲームが上位に含まれるときは「ランキング N 位！」を表示する。
    ランキングを取得できなくても得点表示は維持する。
-3. 自分のマシンの `NavigateToRankingScreenRequested` を受信すると RankingScreen に切り替える。
+3. 得点の数え上げアニメーションが終わった1秒後に RankingScreen に切り替える。
    `GetRanking(max_item_num = 10, mode, difficulty)` と `GetGamesByPlayer(player_id, mode, difficulty)` を並行して取得し、
    `game_id` で重複を除いて得点の降順に統合する。同点の場合は `game_id` の昇順とする。
 4. 自分のマシンの `NavigateToHomeScreenRequested` を受信すると HomeScreen に切り替え、
@@ -156,8 +156,8 @@ Fake は開始時に懐中時計を 1 個生成し、命中時には削除・再
 90 秒のゲーム終了時には、全ターゲットを Fake 内で破棄し、削除通知なしで `GameFinished` を送る。
 切断時は削除通知を送らず、再接続時に前回のターゲットの削除通知を開始通知より先に送る。
 終了時には Fake 内で結果とゲーム ID を保持し、取得 RPC も提供する。
-結果画面を 5 秒表示した後にランキング遷移通知、その 5 秒後にホーム遷移通知を送る。
-これは Fake が送る通知で、実通信時の画面遷移は常にサーバーの通知に従う。
+結果表示からランキングへの遷移は実通信時と同様に projector が行う。
+Fake はゲーム終了後、設定された待ち時間を経てホーム遷移通知を送る。
 実通信・マルチプレイの確認には本物の game_master を使う。
 
 ## 配信側との契約と実装範囲
@@ -170,7 +170,7 @@ UUID を通知する。`Single` の的は所有マシンに、`All` の的は両
 
 game_master は `GetRanking` / `GetGamesByPlayer` に対応している。取得順と協力プレイの扱いは
 [ランキングとプレイヤー別履歴](../llm_memory/game_master/ranking.md) を参照。
-`GoRankingScreen` / `GoHomeScreen` はセッション破棄後も指定マシンに画面遷移イベントを配信する。
+`GoHomeScreen` はセッション破棄後も指定マシンに画面遷移イベントを配信する。
 
 現在の API には、再接続後に現在のターゲット一覧やプレイヤー情報を取得する機能がない。
 切断中に取り逃したイベントの復元と状態の再同期は、今回の対象外とする。

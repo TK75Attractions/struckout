@@ -3,7 +3,7 @@ import { TwoColorOutlinedButton } from "../components/button.slint";
 global Adopter {
     in property <bool> busy;
     in property <string> error-msg;
-    callback next-clicked();
+    callback move-to-start-screen();
 }
 
 export component GameFinishedScreen {
@@ -18,10 +18,10 @@ export component GameFinishedScreen {
         }
 
         TwoColorOutlinedButton {
-            text: "ランキング画面へ";
+            text: "ホーム画面に戻る";
             font-size: 28px;
             enabled: !Adopter.busy;
-            clicked => { Adopter.next-clicked(); }
+            clicked => { Adopter.move-to-start-screen(); }
         }
 
         Text {

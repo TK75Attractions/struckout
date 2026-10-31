@@ -2086,7 +2086,7 @@ async fn ready_rejects_configuration_changes_during_player_lookup() {
 #[case::single(GameMode::Single, EventTarget::Single(MachineId::new(1)))]
 #[case::multi(GameMode::Multi, EventTarget::All)]
 #[tokio::test]
-async fn screen_navigation_after_completion_only_notifies_the_requested_machine(
+async fn home_navigation_after_completion_only_notifies_the_requested_machine(
     #[case] mode: GameMode,
     #[case] target: EventTarget,
 ) {
@@ -2112,21 +2112,11 @@ async fn screen_navigation_after_completion_only_notifies_the_requested_machine(
 
     for machine_id in [1, 2] {
         service
-            .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id }))
-            .await
-            .expect("request ranking after session disposal");
-        service
             .go_home_screen(Request::new(GoHomeScreenRequest { machine_id }))
             .await
             .expect("request home after session disposal");
     }
     for (machine_id, mut stream) in [(1, first), (2, second)] {
-        let EventData::NavigateToRankingScreenRequested(event) =
-            assert_event!(stream, EventData::NavigateToRankingScreenRequested(_))
-        else {
-            unreachable!("event pattern was checked above")
-        };
-        assert_eq!(event.machine_id, machine_id);
         let EventData::NavigateToHomeScreenRequsted(event) =
             assert_event!(stream, EventData::NavigateToHomeScreenRequsted(_))
         else {
@@ -2142,7 +2132,7 @@ async fn screen_navigation_after_completion_only_notifies_the_requested_machine(
 }
 
 #[tokio::test]
-async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() {
+async fn home_navigation_can_be_retried_after_subscribing_without_a_session() {
     let service = GameMasterSessionServiceImpl::new(
         StubDataSource {
             player_id: PlayerId::new(2),
@@ -2151,11 +2141,6 @@ async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() 
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
     );
-    let error = service
-        .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id: 1 }))
-        .await
-        .expect_err("no event subscribers");
-    assert_eq!(error.code(), tonic::Code::Unavailable);
     let error = service
         .go_home_screen(Request::new(GoHomeScreenRequest { machine_id: 1 }))
         .await
@@ -2168,16 +2153,6 @@ async fn screen_navigation_can_be_retried_after_subscribing_without_a_session() 
         .expect("subscribe before retrying")
         .into_inner();
     for _ in 0..2 {
-        service
-            .go_ranking_screen(Request::new(GoRankingScreenRequest { machine_id: 1 }))
-            .await
-            .expect("retry ranking without a session");
-        assert_event!(
-            stream,
-            EventData::NavigateToRankingScreenRequested(
-                struckout_proto::event::NavigateToRankingScreenRequested { machine_id: 1 }
-            )
-        );
         service
             .go_home_screen(Request::new(GoHomeScreenRequest { machine_id: 1 }))
             .await

@@ -269,18 +269,16 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
-        public void Navigation_events_are_filtered_by_machine_id()
+        public void Home_navigation_event_is_filtered_by_machine_id()
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
             var events = new List<string>();
-            client.RankingScreenRequested += () => events.Add("ranking");
             client.HomeScreenRequested += () => events.Add("home");
             foreach (var machine in new uint[] { 8, 7 })
             {
-                Dispatch(client, new Event { NavigateToRankingScreenRequested = new Event.Types.NavigateToRankingScreenRequested { MachineId = machine } });
                 Dispatch(client, new Event { NavigateToHomeScreenRequsted = new Event.Types.NavigateToHomeScreenRequested { MachineId = machine } });
             }
-            Assert.That(events, Is.EqualTo(new[] { "ranking", "home" }));
+            Assert.That(events, Is.EqualTo(new[] { "home" }));
         }
 
         [Test]

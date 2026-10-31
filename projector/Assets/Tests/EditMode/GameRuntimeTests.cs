@@ -33,7 +33,6 @@ namespace Struckout.Tests.Tests.EditMode
                 Calls.Add("reset");
                 return UniTask.FromResult(true);
             }
-            public event Action RankingScreenRequested { add { } remove { } }
             public event Action HomeScreenRequested { add { } remove { } }
             public UniTask<uint?> GetGameResultAsync(GameId gameId, CancellationToken token = default) => UniTask.FromResult<uint?>(null);
             public UniTask<IReadOnlyList<RankingEntry>> GetRankingAsync(uint count, GameMode mode, Difficulty difficulty, CancellationToken token = default) => UniTask.FromResult<IReadOnlyList<RankingEntry>>(null);
@@ -91,7 +90,7 @@ namespace Struckout.Tests.Tests.EditMode
             public ProjectorScreen Screen;
             public CollisionResult LastCollision;
             public void SetScreen(ProjectorScreen screen) => Screen = screen;
-            public void ShowGameResult(uint score) { }
+            public UniTask ShowGameResultAsync(uint score, CancellationToken token) => UniTask.CompletedTask;
             public void ShowRanking(IReadOnlyList<RankingRow> rows) { }
             public void ShowScreenMessage(string message) { }
             public void SetRemainingTime(TimeSpan remaining) { }

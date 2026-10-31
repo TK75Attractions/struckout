@@ -69,7 +69,6 @@ namespace Struckout.Bootstrap
             _master.TargetAdded += OnTargetAdded;
             _master.PocketWatchAdded += OnPocketWatchAdded;
             _master.TargetRemoved += OnTargetRemoved;
-            _master.RankingScreenRequested += OnRankingScreenRequested;
             _master.HomeScreenRequested += OnHomeScreenRequested;
         }
 
@@ -110,12 +109,6 @@ namespace Struckout.Bootstrap
             ObserveAsync(_screens.ShowScoreAsync(gameId)).Forget();
         });
 
-        private void OnRankingScreenRequested() => _dispatcher.Enqueue(() =>
-        {
-            _runtime.FinishGame();
-            ObserveAsync(_screens.ShowRankingAsync()).Forget();
-        });
-
         private void OnHomeScreenRequested() => _dispatcher.Enqueue(() =>
         {
             _runtime.SuspendGame();
@@ -149,7 +142,6 @@ namespace Struckout.Bootstrap
             _master.TargetAdded -= OnTargetAdded;
             _master.PocketWatchAdded -= OnPocketWatchAdded;
             _master.TargetRemoved -= OnTargetRemoved;
-            _master.RankingScreenRequested -= OnRankingScreenRequested;
             _master.HomeScreenRequested -= OnHomeScreenRequested;
             _master.RemainingTimeChanged -= OnRemainingTimeChanged;
             _master.ScoreChanged -= OnScoreChanged;

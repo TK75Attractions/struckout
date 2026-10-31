@@ -76,7 +76,6 @@ namespace Struckout.Infrastructure.Fake
 
         public event Action<uint> GameWillStart;
         public event Action<GameId> GameFinished;
-        public event Action RankingScreenRequested;
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
         public event Action<ScoreChange> ScoreChanged;
@@ -158,13 +157,6 @@ namespace Struckout.Infrastructure.Fake
 
                         RemainingTimeChanged?.Invoke(remaining);
                     }
-                }
-                if (_screenDuration > TimeSpan.Zero)
-                    await UniTask.Delay(_screenDuration, DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
-                lock (_stateLock)
-                {
-                    if (token.IsCancellationRequested) return;
-                    RankingScreenRequested?.Invoke();
                 }
                 if (_screenDuration > TimeSpan.Zero)
                     await UniTask.Delay(_screenDuration, DelayType.Realtime, cancellationToken: token, cancelImmediately: true);

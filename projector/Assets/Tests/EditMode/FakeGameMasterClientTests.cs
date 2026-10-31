@@ -245,12 +245,11 @@ namespace Struckout.Tests.Tests.EditMode
             var gameId = default(GameId);
             client.GameStarted += (_, mode, player, duration) => { playerId = player; events.Add("started"); };
             client.GameFinished += game => { gameId = game; events.Add("finished"); };
-            client.RankingScreenRequested += () => events.Add("ranking");
             client.HomeScreenRequested += () => events.Add("home");
             try
             {
                 await client.ConnectAsync();
-                Assert.That(events, Is.EqualTo(new[] { "started", "finished", "ranking", "home" }));
+                Assert.That(events, Is.EqualTo(new[] { "started", "finished", "home" }));
                 Assert.That(gameId.Value, Is.GreaterThan(0));
                 Assert.That(await client.GetGameResultAsync(gameId), Is.EqualTo(0));
                 var ranking = await client.GetRankingAsync(10, GameMode.Single, Difficulty.Normal);

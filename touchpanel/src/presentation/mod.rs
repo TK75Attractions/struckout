@@ -16,7 +16,7 @@ use crate::{
         game_finished::GameFinishedDestination, mode_select::ModeSelectDestination,
         name_input_first::NameInputFirstDestination,
         name_input_non_first::NameInputNonFirstDestination, playing::PlayingDestination,
-        ranking_control::RankingControlDestination, start::StartScreenDestination,
+        start::StartScreenDestination,
     },
 };
 
@@ -67,7 +67,6 @@ pub mod mode_select;
 pub mod name_input_first;
 pub mod name_input_non_first;
 pub mod playing;
-pub mod ranking_control;
 pub mod start;
 //@xtask-pub-mod
 
@@ -222,7 +221,6 @@ pub fn attach_navhost(application: &Application) {
         .register(PlayingDestination::new(application))
         .register(GameFinishedDestination::new(application))
         .register(ConnectingDestination::new(application))
-        .register(RankingControlDestination::new(application))
         .register(NameInputNonFirstDestination::new(application))
         //@xtask-register
         .finish()

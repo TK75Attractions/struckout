@@ -14,12 +14,11 @@ use struckout_proto::{
     GetGameResultResponse, GetGamesByPlayerRequest, GetGamesByPlayerResponse, GetRankingRequest,
     GetRankingResponse, GoHomeScreenRequest, GoHomeScreenResponse, GoNextTutorialRequest,
     GoNextTutorialResponse, GoPreviousTutorialRequest, GoPreviousTutorialResponse,
-    GoRankingScreenRequest, GoRankingScreenResponse, HitTargetRequest, HitTargetResponse,
-    ListenEventsRequest, ListenEventsResponse, RemoveTargetRequest, RemoveTargetResponse,
-    ResetComboRequest, ResetComboResponse, SetGameModeRequest, SetGameModeResponse,
-    SetSessionDifficultyRequest, SetSessionDifficultyResponse, SetSessionReadyRequest,
-    SetSessionReadyResponse, StartSessionRequest, StartSessionResponse, StartTutorialRequest,
-    StartTutorialResponse,
+    HitTargetRequest, HitTargetResponse, ListenEventsRequest, ListenEventsResponse,
+    RemoveTargetRequest, RemoveTargetResponse, ResetComboRequest, ResetComboResponse,
+    SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
+    SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
+    StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
     target::Owner,
     types::{MachineId, PlayerId},
@@ -697,23 +696,6 @@ where
                 )
                 .collect(),
         }))
-    }
-
-    #[instrument]
-    async fn go_ranking_screen(
-        &self,
-        req: Request<GoRankingScreenRequest>,
-    ) -> Result<Response<GoRankingScreenResponse>, Status> {
-        let machine_id = MachineId::new(req.into_inner().machine_id);
-        self.event_tx
-            .send(Event {
-                target: EventTarget::Single(machine_id),
-                data: Ok(SuccessfulEvent::NavigateToRankingScreenRequested(
-                    machine_id,
-                )),
-            })
-            .map_err(|_| Status::unavailable("no event subscribers"))?;
-        Ok(Response::new(GoRankingScreenResponse {}))
     }
 
     #[instrument]

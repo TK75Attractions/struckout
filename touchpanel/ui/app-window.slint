@@ -11,7 +11,6 @@ import {
 } from "./screens/difficulity-select-screen.slint";
 import { PlayingScreen } from "./screens/playing-screen.slint";
 import { GameFinishedScreen } from "./screens/game-finished-screen.slint";
-import { RankingControlScreen } from "./screens/ranking-control-screen.slint";
 import { FallbackScreen } from "./screens/fallback-screen.slint";
 import {
     ConnectionFailedScreen,
@@ -41,7 +40,6 @@ export {
 } from "./screens/connection-failed-screen.slint";
 export { PlayingAdopter } from "./screens/playing-screen.slint";
 export { GameFinishedAdopter } from "./screens/game-finished-screen.slint";
-export { RankingControlAdopter } from "./screens/ranking-control-screen.slint";
 export { ConnectingAdopter } from "./screens/connecting-screen.slint";
 export {
     NameInputNonFirstAdopter,
@@ -55,7 +53,6 @@ enum UiNavRoute {
     DifficulitySelect,
     Playing,
     GameFinished,
-    RankingControl,
     Fallback,
     ConnectionFailed,
     Connecting,
@@ -87,8 +84,6 @@ export component AppWindow inherits Window {
             return [];
         } else if route == UiNavRoute.GameFinished {
             return [];
-        } else if route == UiNavRoute.RankingControl {
-            return [];
         } else if route == UiNavRoute.Fallback {
             return [];
         } else if route == UiNavRoute.ConnectionFailed {
@@ -114,8 +109,6 @@ export component AppWindow inherits Window {
             return 0;
         } else if route == UiNavRoute.GameFinished {
             return 0;
-        } else if route == UiNavRoute.RankingControl {
-            return 1;
         } else if route == UiNavRoute.Fallback {
             return 0;
         } else if route == UiNavRoute.ConnectionFailed {
@@ -138,8 +131,6 @@ export component AppWindow inherits Window {
         } else if route == UiNavRoute.Playing {
             return false;
         } else if route == UiNavRoute.GameFinished {
-            return false;
-        } else if route == UiNavRoute.RankingControl {
             return false;
         } else if route == UiNavRoute.Fallback {
             return false;
@@ -166,7 +157,6 @@ export component AppWindow inherits Window {
         if nav-route == UiNavRoute.DifficulitySelect:DifficulitySelectScreen { }
         if nav-route == UiNavRoute.Playing: PlayingScreen { }
         if nav-route == UiNavRoute.GameFinished: GameFinishedScreen { }
-        if nav-route == UiNavRoute.RankingControl: RankingControlScreen { }
         if nav-route == UiNavRoute.Fallback: FallbackScreen { }
         if nav-route == UiNavRoute.ConnectionFailed: ConnectionFailedScreen { }
         if nav-route == UiNavRoute.Connecting: ConnectingScreen { }

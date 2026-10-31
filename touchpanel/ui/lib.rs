@@ -12,7 +12,6 @@ mod ui {
         DifficulitySelect,
         Playing,
         GameFinished,
-        RankingControl,
         Fallback(String),
         ConnectionFailed(String),
         Connecting,

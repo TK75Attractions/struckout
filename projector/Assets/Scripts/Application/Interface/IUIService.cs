@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Struckout.Domain;
 using Struckout.Domain.Ranking;
 using Struckout.Domain.TargetDefinition;
@@ -11,7 +13,7 @@ namespace Struckout.Application.Interface
         /// <summary>サーバーからの通知に対応する画面を表示する。</summary>
         void SetScreen(ProjectorScreen screen);
         void ShowCountdown(uint seconds);
-        void ShowGameResult(uint score);
+        UniTask ShowGameResultAsync(uint score, CancellationToken token);
         void ShowResultContext(Tk75Attractions.Struckout.GameMaster.V1.GameMode mode,
             Tk75Attractions.Struckout.GameMaster.V1.Difficulty difficulty, uint? rank = null);
         void ShowRanking(IReadOnlyList<RankingRow> rows);
