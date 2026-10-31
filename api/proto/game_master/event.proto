@@ -28,6 +28,11 @@ message Event {
     google.protobuf.Duration remaining = 1;
   }
 
+  // Total game duration after a PocketWatch hit, including the initial duration.
+  message TotalDurationChanged {
+    google.protobuf.Duration total_duration = 1;
+  }
+
   message GameScoreChanged {
     // Total after this increment. Combo bonuses have their own event.
     uint32 total_score = 1;
@@ -101,6 +106,7 @@ message Event {
     TargetAdded target_added = 11;
     TargetRemoved target_removed = 12;
     ComboChanged combo_changed = 13;
+    TotalDurationChanged total_duration_changed = 15;
   }
 }
 

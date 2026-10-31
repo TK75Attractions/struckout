@@ -114,6 +114,9 @@ namespace Struckout.Unity
         private Text _comboText;
         private RectTransform _comboPanel;
         private Text _remainingTimeText;
+        private string _remainingTimeValue = "TIME  --:--";
+        private string _timeBonusText;
+        private double _timeBonusUntil;
         private GameObject _countdown;
         private Text _countdownText;
         private ProjectorScreen _screen = ProjectorScreen.Home;
@@ -283,16 +286,34 @@ namespace Struckout.Unity
         public void StartGameClock(TimeSpan duration)
         {
             _gameClock.Start(duration, Time.realtimeSinceStartupAsDouble);
+            _timeBonusText = null;
             SetRemainingTime(duration);
+        }
+
+        public void SetTotalDuration(TimeSpan duration)
+        {
+            var added = _gameClock.ChangeTotalDuration(duration, Time.realtimeSinceStartupAsDouble);
+            if (added <= TimeSpan.Zero || _screen != ProjectorScreen.Playing) return;
+            _timeBonusText = "+" + added.TotalSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s";
+            _timeBonusUntil = Time.realtimeSinceStartupAsDouble + 1;
+            UpdateRemainingTimeLabel();
         }
 
         public void SetRemainingTime(TimeSpan remaining)
         {
             _gameClock.Correct(remaining, Time.realtimeSinceStartupAsDouble);
-            if (_remainingTimeText == null) return;
             var seconds = Math.Max(0L, remaining.Ticks / TimeSpan.TicksPerSecond);
-            _remainingTimeText.text = string.Format(CultureInfo.InvariantCulture,
+            _remainingTimeValue = string.Format(CultureInfo.InvariantCulture,
                 "TIME  {0:00}:{1:00}", seconds / 60, seconds % 60);
+            UpdateRemainingTimeLabel();
+        }
+
+        private void UpdateRemainingTimeLabel()
+        {
+            if (_remainingTimeText == null) return;
+            _remainingTimeText.text = _timeBonusText == null
+                ? _remainingTimeValue
+                : _remainingTimeValue + "  " + _timeBonusText;
         }
 
         public void SetCombo(uint combo)
@@ -370,6 +391,11 @@ namespace Struckout.Unity
 
         private void Update()
         {
+            if (_timeBonusText != null && Time.realtimeSinceStartupAsDouble >= _timeBonusUntil)
+            {
+                _timeBonusText = null;
+                UpdateRemainingTimeLabel();
+            }
             if (_world == null) return;
 
             var step = screenFadeSeconds <= 0f
@@ -400,6 +426,7 @@ namespace Struckout.Unity
                 _hud.SetActive(screen == ProjectorScreen.Playing);
                 if (screen == ProjectorScreen.Playing)
                 {
+                    _timeBonusText = null;
                     SetScore(0);
                     SetCombo(0);
                     _remainingTimeText.text = "TIME  --:--";

@@ -70,6 +70,8 @@ pub enum HitTargetError {
     InvalidRadius,
     #[error("score exceeds the range of u32")]
     ScoreOverflow,
+    #[error("total duration exceeds the range of u32")]
+    DurationOverflow,
 }
 
 /// A score bonus awarded when a combo reaches its configured count.
@@ -121,6 +123,7 @@ pub struct HitTargetOutcome {
     pub total_score: u32,
     pub target_points: u32,
     pub combo_bonus: u32,
+    pub total_duration_secs: Option<u32>,
     pub event_target: EventTarget,
     pub replacement: Option<(Target, Target)>,
 }
@@ -435,6 +438,7 @@ impl Sessions {
         machine_id: MachineId,
         target_id: Uuid,
         combo_bonuses: &ComboBonuses,
+        pocket_watch_bonus_secs: NonZeroU32,
     ) -> Result<HitTargetOutcome, HitTargetError> {
         // TODO: スコアの算出を別のモジュールに切り出す
         let ms = self
@@ -480,6 +484,17 @@ impl Sessions {
             .checked_add(points as u32)
             .and_then(|score| score.checked_add(bonus))
             .ok_or(HitTargetError::ScoreOverflow)?;
+        let total_duration_secs = if matches!(target.target_data, Some(TargetData::PocketWatch(_)))
+        {
+            Some(
+                shared
+                    .total_duration_secs
+                    .checked_add(pocket_watch_bonus_secs.get())
+                    .ok_or(HitTargetError::DurationOverflow)?,
+            )
+        } else {
+            None
+        };
         let replacement = if matches!(target.target_data, Some(TargetData::PocketWatch(_))) {
             let removed = target.clone();
             let new_id = Uuid::new_v4();
@@ -495,6 +510,9 @@ impl Sessions {
         };
         shared.score = total_score;
         shared.combo = combo;
+        if let Some(total_duration_secs) = total_duration_secs {
+            shared.total_duration_secs = total_duration_secs;
+        }
         let event_target = if shared.mode.is_multi() {
             EventTarget::All
         } else {
@@ -505,6 +523,7 @@ impl Sessions {
             total_score,
             target_points: points as u32,
             combo_bonus: bonus,
+            total_duration_secs,
             event_target,
             replacement,
         })
@@ -700,6 +719,7 @@ impl Sessions {
                         difficulty,
                         score: 0,
                         combo: 0,
+                        total_duration_secs: 0,
                         targets,
                     })),
                 });
@@ -751,6 +771,7 @@ impl Sessions {
                     difficulty,
                     score: 0,
                     combo: 0,
+                    total_duration_secs: 0,
                     targets,
                 }));
                 {
@@ -783,12 +804,30 @@ impl Sessions {
     }
 
     /// Records when the countdown ended and play actually began.
-    pub fn mark_started(&mut self, machine_id: MachineId) {
+    pub fn mark_started(&mut self, machine_id: MachineId, duration_secs: NonZeroU32) {
         let session = self
             .get(machine_id)
             .expect("countdown session still exists");
         let (running,) = session.as_running().expect("countdown session is running");
-        running.shared.write().started_at = UtcDateTime::now();
+        let mut shared = running.shared.write();
+        shared.started_at = UtcDateTime::now();
+        shared.total_duration_secs = duration_secs.get();
+    }
+
+    /// Returns the game duration shared by its timer and participating machines.
+    pub fn total_duration_secs(&self, machine_id: MachineId) -> Result<u32, SessionError> {
+        let ms = self
+            .get(machine_id)
+            .ok_or(SessionError::NoSession(machine_id))?;
+        let (running,) = ms
+            .as_running()
+            .map_err(|actual_state| SessionError::InvalidState {
+                msg: "total duration is only available while running",
+                expected_state: "Running",
+                actual_state,
+                machine_id,
+            })?;
+        Ok(running.shared.read().total_duration_secs)
     }
 
     /// Returns machine ids registered to the session.
@@ -907,6 +946,7 @@ pub struct SharedRunningState {
     pub difficulty: Difficulty,
     pub score: u32,
     pub combo: u32,
+    pub total_duration_secs: u32,
     pub targets: HashMap<Uuid, Target>,
 }
 
@@ -1094,14 +1134,24 @@ mod tests {
             event_target: target,
             ..
         } = sessions
-            .hit_target(machine_id, target_id, &test_combo_bonuses())
+            .hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero"),
+            )
             .expect("registered target");
         assert_eq!(score, points);
         assert_matches!(target, EventTarget::Single(id) if id == machine_id);
         let HitTargetOutcome {
             total_score: score, ..
         } = sessions
-            .hit_target(machine_id, target_id, &test_combo_bonuses())
+            .hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero"),
+            )
             .expect("target remains registered");
         assert_eq!(score, 2 * points);
         assert_eq!(sessions.score(machine_id).expect("running"), 2 * points);
@@ -1123,7 +1173,12 @@ mod tests {
             event_target: target,
             ..
         } = sessions
-            .hit_target(MachineId::new(2), target_id, &test_combo_bonuses())
+            .hit_target(
+                MachineId::new(2),
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero"),
+            )
             .expect("shared target");
         assert_eq!(score, 500);
         assert_matches!(target, EventTarget::All);
@@ -1160,7 +1215,12 @@ mod tests {
         for expected_score in [500, 1075, 1575] {
             assert_eq!(
                 sessions
-                    .hit_target(machine_id, target_id, &bonuses)
+                    .hit_target(
+                        machine_id,
+                        target_id,
+                        &bonuses,
+                        NonZeroU32::new(5).expect("nonzero")
+                    )
                     .expect("registered target")
                     .total_score,
                 expected_score
@@ -1170,7 +1230,12 @@ mod tests {
         for expected_score in [2075, 2650] {
             assert_eq!(
                 sessions
-                    .hit_target(machine_id, target_id, &bonuses)
+                    .hit_target(
+                        machine_id,
+                        target_id,
+                        &bonuses,
+                        NonZeroU32::new(5).expect("nonzero")
+                    )
                     .expect("registered target")
                     .total_score,
                 expected_score
@@ -1197,7 +1262,12 @@ mod tests {
             )
         };
         assert_matches!(
-            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::ScoreOverflow)
         );
         let (state,) = sessions
@@ -1230,7 +1300,12 @@ mod tests {
             .expect("running game")
             .0;
         assert_matches!(
-            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::InvalidRadius)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), 0);
@@ -1258,7 +1333,12 @@ mod tests {
             .expect("running");
         state.shared.write().score = score;
         assert_matches!(
-            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::ScoreOverflow)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), score);
@@ -1280,7 +1360,12 @@ mod tests {
             (target_id, shared.targets.clone(), shared.started_at)
         };
         assert_matches!(
-            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::ScoreOverflow)
         );
         let (state,) = sessions
@@ -1292,6 +1377,44 @@ mod tests {
         assert_eq!(shared.score, u32::MAX - 499);
         assert_eq!(shared.targets, targets);
         assert_eq!(shared.started_at, started_at);
+    }
+
+    #[test]
+    fn pocket_watch_duration_overflow_preserves_score_combo_and_target() {
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let (target_id, targets) = {
+            let (state,) = sessions
+                .get(machine_id)
+                .expect("session")
+                .as_running()
+                .expect("running");
+            let mut shared = state.shared.write();
+            shared.total_duration_secs = u32::MAX - 4;
+            (
+                *shared.targets.keys().next().expect("watch"),
+                shared.targets.clone(),
+            )
+        };
+        assert_matches!(
+            sessions.hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
+            Err(HitTargetError::DurationOverflow)
+        );
+        let (state,) = sessions
+            .get(machine_id)
+            .expect("session")
+            .as_running()
+            .expect("running");
+        let shared = state.shared.read();
+        assert_eq!(shared.score, 0);
+        assert_eq!(shared.combo, 0);
+        assert_eq!(shared.total_duration_secs, u32::MAX - 4);
+        assert_eq!(shared.targets, targets);
     }
 
     #[test]
@@ -1316,7 +1439,12 @@ mod tests {
             .unwrap()
             .target_data = None;
         assert_matches!(
-            sessions.hit_target(machine_id, target_id, &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                target_id,
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::MissingTargetData)
         );
         assert_eq!(sessions.score(machine_id).expect("running"), 0);
@@ -1335,7 +1463,12 @@ mod tests {
             Err(SessionError::NoSession(_))
         );
         assert_matches!(
-            sessions.hit_target(machine_id, Uuid::nil(), &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                Uuid::nil(),
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::Session(SessionError::NoSession(_)))
         );
         assert_matches!(
@@ -1376,7 +1509,12 @@ mod tests {
         });
         let mut sessions = Sessions((Some(session), None));
         assert_matches!(
-            sessions.hit_target(machine_id, Uuid::nil(), &test_combo_bonuses()),
+            sessions.hit_target(
+                machine_id,
+                Uuid::nil(),
+                &test_combo_bonuses(),
+                NonZeroU32::new(5).expect("nonzero")
+            ),
             Err(HitTargetError::Session(SessionError::InvalidState { .. }))
         );
         assert_matches!(
@@ -1528,6 +1666,7 @@ mod tests {
                 difficulty: Difficulty::Hard,
                 score: 10,
                 combo: 0,
+                total_duration_secs: 90,
                 targets: HashMap::new(),
             })),
         })

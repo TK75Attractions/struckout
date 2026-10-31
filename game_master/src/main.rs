@@ -156,6 +156,7 @@ async fn run_main() -> u8 {
                 config.game_start_delay_secs,
                 config.game_duration_secs,
                 config.combo_bonuses,
+                config.pocket_watch_bonus_secs,
             ),
         ))
         .add_service(GameMasterPlayerServiceServer::new(

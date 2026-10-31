@@ -68,6 +68,7 @@ service GameMasterSessionService {
   // Ball is hit to the target. Used by `projector`.
   //
   // Causes `GameScoreChanged` and `ComboChanged` events, including combo bonuses.
+  // A PocketWatch hit also causes `TotalDurationChanged`.
   rpc HitTarget(HitTargetRequest) returns (HitTargetResponse);
 
   // projector が、球が的に当たらなかったときに呼ぶ。

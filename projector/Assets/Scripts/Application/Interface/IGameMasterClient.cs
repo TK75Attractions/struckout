@@ -56,6 +56,9 @@ namespace Struckout.Application.Interface
         /// <summary>サーバーの残り時間。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
         event Action<TimeSpan> RemainingTimeChanged;
 
+        /// <summary>追加時間を含むゲーム全体の制限時間。受信スレッドから通知される。</summary>
+        event Action<TimeSpan> TotalDurationChanged;
+
         /// <summary>サーバーの累計得点。受信スレッドから通知されるため、UI 更新はマーシャリングする。</summary>
         event Action<ScoreChange> ScoreChanged;
 

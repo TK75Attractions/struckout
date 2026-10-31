@@ -3,13 +3,17 @@
 ゲームの制限時間は難易度ごとに秒単位で指定する。`normal`、`hard`、`veryhard` はすべて必須で、
 それぞれ 1 以上の整数を指定する。コンボ到達時のボーナスも `combo_bonuses` で必ず指定する。
 `game_start_delay_secs` は準備完了から `GameStarted` までの秒数で、1 以上の整数を必ず指定する。
+`pocket_watch_bonus_secs` は懐中時計への命中 1 回で加える秒数で、1 以上の整数を必ず指定する。
 設定ファイルがない場合、必須項目がない場合、値が不正な場合は起動時にエラーにする。
-開始イベントの `game_dur_secs`、残り時間の通知、ゲーム終了までの時間には、開始時に選択された難易度の値を使う。
+開始イベントの `game_dur_secs` には、開始時に選択された難易度の値を使う。
+懐中時計への命中後は、残り時間と終了時刻を設定された秒数だけ延ばし、
+開始時の時間を含む総制限時間を `TotalDurationChanged` で通知する。
 
 設定ファイルはコンテナ内の `/etc/game_master/config.toml` に置く。
 
 ```toml
 game_start_delay_secs = 3
+pocket_watch_bonus_secs = 5
 
 [game_duration_secs]
 normal = 120
@@ -33,7 +37,7 @@ points = 800
 指定したコンボ数に到達したときだけ、その `points` を命中得点に加算する。
 リセット後に再び到達した場合も加算する。ボーナスを無効にする場合も
 `combo_bonuses = []` を明示する。設定を変更したら game-master を再起動する。
-既存の設定ファイルに `combo_bonuses` がない場合は、追記するまで起動できない。
+既存の設定ファイルに `combo_bonuses` や `pocket_watch_bonus_secs` がない場合は、追記するまで起動できない。
 
 CLI 引数で制限時間は指定できない。以前の `game_duration_secs = 90` 形式の設定ファイルは、
 上記のテーブル形式に変更する必要がある。
@@ -43,7 +47,7 @@ CLI 引数で制限時間は指定できない。以前の `game_duration_secs =
 Compose の `app` サービスから `/etc/game_master/config.toml` に読み取り専用でマウントする。
 
 ランチャーを使う場合は `<dirs::config_dir()>/struckout/game_master/config.toml` を編集する。
-ランチャーは初回インストール時に開始待ち時間を 3 秒、3 つの難易度をすべて 90 秒、コンボボーナスを
+ランチャーは初回インストール時に開始待ち時間を 3 秒、3 つの難易度をすべて 90 秒、懐中時計の追加時間を 5 秒、コンボボーナスを
 3 コンボで 500 点と 5 コンボで 800 点にしたファイルを作成し、
-コンテナ内へバインドマウントする。既存の設定は上書きしないため、`game_start_delay_secs` がないファイルや旧形式のファイルは手で更新する。
+コンテナ内へバインドマウントする。既存の設定は上書きしないため、`game_start_delay_secs` や `pocket_watch_bonus_secs` がないファイルや旧形式のファイルは手で更新する。
 変更後はランチャーで game-master を再起動すると、新しい制限時間が適用される。

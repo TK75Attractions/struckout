@@ -11,6 +11,7 @@ use crate::{
     session::{ConfiguringDifficultyState, ConfiguringGameModeState},
 };
 
+const TEST_POCKET_WATCH_BONUS_SECS: NonZeroU32 = NonZeroU32::new(5).expect("5 is nonzero");
 const TEST_GAME_START_DELAY_SECS: NonZeroU32 = NonZeroU32::new(1).expect("1 is nonzero");
 const TEST_GAME_DURATION_SECS: NonZeroU32 = NonZeroU32::new(90).expect("90 is nonzero");
 const TEST_GAME_DURATIONS: GameDurations = GameDurations {
@@ -196,6 +197,7 @@ async fn set_game_mode_advances_to_difficulty_configuration(#[case] mode: GameMo
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     service
         .start_session(Request::new(StartSessionRequest {
@@ -242,6 +244,7 @@ async fn set_game_mode_rejects_invalid_modes(#[case] mode: i32) {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     service
         .start_session(Request::new(StartSessionRequest {
@@ -276,6 +279,7 @@ async fn set_game_mode_requires_an_existing_session() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let error = service
         .set_game_mode(Request::new(SetGameModeRequest {
@@ -299,6 +303,7 @@ async fn set_session_ready_triggers_game_started_event() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
 
     let stream = service
@@ -353,6 +358,7 @@ async fn game_will_start_counts_down_before_game_started() {
         NonZeroU32::new(3).expect("3 is nonzero"),
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let mut stream = service
         .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
@@ -396,6 +402,7 @@ async fn set_session_difficulty_rejects_unspecified() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let error = service
         .set_session_difficulty(Request::new(SetSessionDifficultyRequest {
@@ -419,6 +426,7 @@ async fn event_stream_notifies_in_correct_order() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
 
     let stream = service
@@ -455,12 +463,18 @@ async fn event_stream_notifies_in_correct_order() {
 
 #[tokio::test(start_paused = true)]
 async fn game_timer_uses_configured_duration() {
+    let service = running_recorded_service(GameMode::Single, RecordingDataSource::default());
+    service
+        .sessions
+        .write()
+        .mark_started(MachineId::new(1), NonZeroU32::new(3).expect("nonzero"));
     let (event_tx, _) = broadcast::channel(32);
     let mut events = event_tx.subscribe();
     let (complete_tx, mut complete_rx) = mpsc::channel(1);
     let timer = tokio::spawn(game_timer(
         EventTarget::Single(MachineId::new(1)),
-        NonZeroU32::new(3).expect("3 is nonzero"),
+        service.sessions.clone(),
+        MachineId::new(1),
         event_tx,
         complete_tx,
     ));
@@ -496,6 +510,74 @@ async fn game_timer_uses_configured_duration() {
         .recv()
         .await
         .expect("game completes at 3 seconds");
+}
+
+#[tokio::test(start_paused = true)]
+async fn pocket_watch_hit_extends_the_running_timer() {
+    let service = running_recorded_service(GameMode::Single, RecordingDataSource::default());
+    service
+        .sessions
+        .write()
+        .mark_started(MachineId::new(1), NonZeroU32::new(3).expect("nonzero"));
+    let target_id = {
+        let sessions = service.sessions.read();
+        let (running,) = sessions
+            .get(MachineId::new(1))
+            .expect("session")
+            .as_running()
+            .expect("running");
+        running
+            .shared
+            .read()
+            .targets
+            .keys()
+            .next()
+            .expect("watch")
+            .to_string()
+    };
+    let (event_tx, _) = broadcast::channel(32);
+    let mut events = event_tx.subscribe();
+    let (complete_tx, mut complete_rx) = mpsc::channel(1);
+    let timer = tokio::spawn(game_timer(
+        EventTarget::Single(MachineId::new(1)),
+        service.sessions.clone(),
+        MachineId::new(1),
+        event_tx,
+        complete_tx,
+    ));
+    tokio::task::yield_now().await;
+    assert_eq!(next_remaining_time(&mut events), 3);
+
+    service
+        .hit_target(Request::new(HitTargetRequest {
+            machine_id: 1,
+            target_id,
+        }))
+        .await
+        .expect("watch hit");
+    assert_eq!(
+        service
+            .sessions
+            .read()
+            .total_duration_secs(MachineId::new(1))
+            .expect("running"),
+        8
+    );
+    for remaining in (1..=7).rev() {
+        tokio::time::advance(Duration::from_secs(1)).await;
+        tokio::task::yield_now().await;
+        assert_eq!(next_remaining_time(&mut events), remaining);
+        assert_matches!(
+            complete_rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        );
+    }
+    tokio::time::advance(Duration::from_secs(1)).await;
+    timer.await.expect("timer completes after added time");
+    complete_rx
+        .recv()
+        .await
+        .expect("game completes after eight seconds");
 }
 
 #[rstest]
@@ -593,6 +675,7 @@ async fn add_target_rejects_missing_data() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     assert_eq!(
         service
@@ -619,6 +702,7 @@ async fn remove_target_rejects_invalid_ids(#[case] target_id: &str) {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     assert_eq!(
         service
@@ -642,6 +726,7 @@ async fn target_operations_require_a_running_session() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     assert_eq!(
         service
@@ -721,6 +806,7 @@ async fn targets_can_be_added_and_removed_without_event_subscribers() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     start_game_single(
         &service,
@@ -944,6 +1030,7 @@ async fn hit_target_emits_the_updated_score(#[case] mode: GameMode) {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let machine_count = if mode.is_multi() { 2 } else { 1 };
     for machine_id in 1..=machine_count {
@@ -1046,6 +1133,7 @@ async fn hit_target_rejects_invalid_ids(#[case] target_id: &str, #[case] code: t
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     start_game_single(
         &service,
@@ -1089,6 +1177,7 @@ async fn hit_target_rejects_invalid_scores(#[case] radius: f32, #[case] code: to
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     start_game_single(
         &service,
@@ -1257,6 +1346,7 @@ fn configured_recorded_service(
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let mut sessions = service.sessions.write();
     for machine_id in 1..=if mode.is_multi() { 2 } else { 1 } {
@@ -1287,6 +1377,7 @@ fn running_recorded_service(
             .set_ready(MachineId::new(machine_id))
             .expect("start game");
     }
+    sessions.mark_started(MachineId::new(1), TEST_GAME_DURATION_SECS);
     let (state,) = sessions
         .get(MachineId::new(1))
         .expect("session exists")
@@ -1404,6 +1495,7 @@ async fn single_game_started_reaches_only_its_machine(
             ..TEST_GAME_DURATIONS
         },
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let mut streams = Vec::new();
     for machine_id in [machine_id, other_machine_id] {
@@ -1645,6 +1737,7 @@ async fn get_game_result_reads_the_persisted_score_without_a_session() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
 
     let result = service
@@ -1663,6 +1756,7 @@ async fn get_game_result_returns_not_found_for_an_unknown_game_id() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
 
     let error = service
@@ -1683,6 +1777,7 @@ async fn get_game_result_reports_database_errors() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
 
     let error = service
@@ -1795,6 +1890,13 @@ async fn pocket_watches_are_created_and_replaced_per_machine(#[case] mode: GameM
             let combo = events.try_recv().expect("combo event");
             assert_matches!(combo.data, Ok(SuccessfulEvent::ComboChanged { combo })
                 if combo == index as u32 * 2 + hit + 1);
+            let duration = events.try_recv().expect("total duration event");
+            match duration.target {
+                EventTarget::All => assert!(mode.is_multi()),
+                EventTarget::Single(id) => assert_eq!(id, machine_id),
+            }
+            assert_matches!(duration.data, Ok(SuccessfulEvent::TotalDurationChanged { total_duration_secs })
+                if total_duration_secs == TEST_GAME_DURATION_SECS.get() + hit_number * TEST_POCKET_WATCH_BONUS_SECS.get());
             let removed = events.try_recv().expect("remove event");
             assert_matches!(removed.target, EventTarget::Single(id) if id == machine_id);
             assert_matches!(removed.data, Ok(SuccessfulEvent::TargetRemoved { target_id: id }) if id == target_id);
@@ -1894,6 +1996,7 @@ async fn ranking_and_history_read_persisted_data_without_a_session(
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let ranking = service
         .get_ranking(Request::new(GetRankingRequest {
@@ -1956,6 +2059,7 @@ async fn ranking_and_history_report_database_errors() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let error = service
         .get_ranking(Request::new(GetRankingRequest {
@@ -1992,6 +2096,7 @@ async fn result_queries_reject_invalid_filters(#[case] mode: i32, #[case] diffic
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let error = service
         .get_ranking(Request::new(GetRankingRequest {
@@ -2140,6 +2245,7 @@ async fn home_navigation_can_be_retried_after_subscribing_without_a_session() {
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     let error = service
         .go_home_screen(Request::new(GoHomeScreenRequest { machine_id: 1 }))
@@ -2307,6 +2413,7 @@ async fn reset_combo_rejects_invalid_machine_or_state(
         TEST_GAME_START_DELAY_SECS,
         TEST_GAME_DURATIONS,
         test_combo_bonuses(),
+        TEST_POCKET_WATCH_BONUS_SECS,
     );
     if configure {
         service

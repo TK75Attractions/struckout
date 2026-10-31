@@ -48,6 +48,7 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     game_start_delay_secs: NonZeroU32,
     game_duration_secs: GameDurations,
     combo_bonuses: ComboBonuses,
+    pocket_watch_bonus_secs: NonZeroU32,
 }
 
 /// Holds every selectable difficulty's duration so game start never needs a fallback.
@@ -82,6 +83,7 @@ where
         game_start_delay_secs: NonZeroU32,
         game_duration_secs: GameDurations,
         combo_bonuses: ComboBonuses,
+        pocket_watch_bonus_secs: NonZeroU32,
     ) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
@@ -91,6 +93,7 @@ where
             game_start_delay_secs,
             game_duration_secs,
             combo_bonuses,
+            pocket_watch_bonus_secs,
         }
     }
 
@@ -397,12 +400,19 @@ where
             Uuid::parse_str(&target_id).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let mut sessions = self.sessions.write();
         let outcome = sessions
-            .hit_target(machine_id.into(), target_id, &self.combo_bonuses)
+            .hit_target(
+                machine_id.into(),
+                target_id,
+                &self.combo_bonuses,
+                self.pocket_watch_bonus_secs,
+            )
             .map_err(|e| match e {
                 HitTargetError::Session(SessionError::TargetNotFound { .. }) => {
                     Status::not_found(e.to_string())
                 }
-                HitTargetError::ScoreOverflow => Status::out_of_range(e.to_string()),
+                HitTargetError::ScoreOverflow | HitTargetError::DurationOverflow => {
+                    Status::out_of_range(e.to_string())
+                }
                 _ => Status::failed_precondition(e.to_string()),
             })?;
         let score_events = [
@@ -443,6 +453,19 @@ where
                 }),
             })
             .is_err()
+        {
+            warn!("all event receivers have been dropped");
+        }
+        if let Some(total_duration_secs) = outcome.total_duration_secs
+            && self
+                .event_tx
+                .send(Event {
+                    target: outcome.event_target,
+                    data: Ok(SuccessfulEvent::TotalDurationChanged {
+                        total_duration_secs,
+                    }),
+                })
+                .is_err()
         {
             warn!("all event receivers have been dropped");
         }
@@ -782,7 +805,9 @@ async fn countdown_and_start(
         }
     }
     interval.tick().await;
-    sessions.write().mark_started(machine_id);
+    sessions
+        .write()
+        .mark_started(machine_id, game_duration_secs);
     if tx
         .send(Event {
             target: ev_target,
@@ -803,31 +828,40 @@ async fn countdown_and_start(
             warn!("all event receivers have been dropped");
         }
     }
-    game_timer(ev_target, game_duration_secs, tx, complete_tx).await;
+    game_timer(ev_target, sessions, machine_id, tx, complete_tx).await;
 }
 
 #[instrument(skip(tx, complete_tx))]
 async fn game_timer(
     ev_target: EventTarget,
-    game_duration_secs: NonZeroU32,
+    sessions: Arc<RwLock<Sessions>>,
+    machine_id: MachineId,
     tx: broadcast::Sender<Event>,
     complete_tx: mpsc::Sender<()>,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(1));
     interval.tick().await;
-    let duration_secs = i64::from(game_duration_secs.get());
-    for i in 0..duration_secs {
+    let mut i = 0;
+    loop {
+        let duration_secs = sessions
+            .read()
+            .total_duration_secs(machine_id)
+            .expect("the game remains running until its completion timer ends");
+        if i >= duration_secs {
+            break;
+        }
         trace!(secs_elapsed = i, "timer tick");
         let res = tx.send(Event {
             target: ev_target,
             data: Ok(SuccessfulEvent::GameTimeLimitNotify {
-                remaining: (duration_secs - i).seconds(),
+                remaining: i64::from(duration_secs - i).seconds(),
             }),
         });
         if res.is_err() {
             warn!("all event receiver has been dropped");
         }
         interval.tick().await;
+        i += 1;
     }
     complete_tx.send(()).await.expect("complete channel closed");
 }

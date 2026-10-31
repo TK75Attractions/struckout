@@ -123,8 +123,8 @@ camera は既存のアプリを使い続ける場合などに記録のタグが�
 camera は、スマホが返した `device_id` を `cameras.json` に書き込む (`scripts/camera_remote.py config` と同じ)。
 
 game-master の設定ファイルは、インストール時に無ければ `game_start_delay_secs = 3` と `[game_duration_secs]` の `normal`、`hard`、
-`veryhard` をすべて 90 秒、`combo_bonuses` を 3 コンボで 500 点、5 コンボで 800 点にして作る。
-既存の設定は上書きしない。`game_start_delay_secs` がない設定、以前の `game_duration_secs = 90` 形式や `combo_bonuses` がない設定は
+`veryhard` をすべて 90 秒、`pocket_watch_bonus_secs = 5`、`combo_bonuses` を 3 コンボで 500 点、5 コンボで 800 点にして作る。
+既存の設定は上書きしない。`game_start_delay_secs` や `pocket_watch_bonus_secs` がない設定、以前の `game_duration_secs = 90` 形式や `combo_bonuses` がない設定は
 [新しい形式](../docs/game_master/configuration.md)に手で変更する。コンテナの `/etc/game_master/config.toml` に
 バインドマウントするので、設定を変えたらランチャーで game-master を止めて起動し直す。
 app コンテナを再作成して新しい値を読む。

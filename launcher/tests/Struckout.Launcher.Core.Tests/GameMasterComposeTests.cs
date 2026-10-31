@@ -21,7 +21,7 @@ public class GameMasterComposeTests
 
             await gameMaster.StartAsync(new Progress<string>(), CancellationToken.None);
 
-            Assert.Equal("game_start_delay_secs = 3\n\n[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n\n[[combo_bonuses]]\ncombo = 3\npoints = 500\n\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n", File.ReadAllText(paths.GameMasterConfigFile));
+            Assert.Equal("game_start_delay_secs = 3\npocket_watch_bonus_secs = 5\n\n[game_duration_secs]\nnormal = 90\nhard = 90\nveryhard = 90\n\n[[combo_bonuses]]\ncombo = 3\npoints = 500\n\n[[combo_bonuses]]\ncombo = 5\npoints = 800\n", File.ReadAllText(paths.GameMasterConfigFile));
             var mount = File.ReadAllText(Path.Combine(directory, "compose.launcher.yaml"));
             Assert.Contains("source: ${GAME_MASTER_CONFIG_PATH:", mount, StringComparison.Ordinal);
             Assert.Contains("target: /etc/game_master/config.toml", mount, StringComparison.Ordinal);
