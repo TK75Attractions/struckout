@@ -16,8 +16,7 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
             ?? throw new LauncherException($"リリース {context.Release.Tag} に {AssetName} がありません");
         var directory = paths.ModuleDirectory(slug);
         var apk = Path.Combine(directory, AssetName);
-        context.Log.Report($"{slug}: {AssetName} をダウンロードします");
-        await ReleaseAssets.DownloadAsync(downloader, asset, apk, context);
+        await ReleaseAssets.DownloadAsync(downloader, slug, asset, apk, context);
 
         var cameras = CamerasFile.Load(paths.CamerasFile);
         var adb = new Adb(context.Tools[PrerequisiteId.Adb], runner);

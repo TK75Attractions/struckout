@@ -28,8 +28,7 @@ internal sealed class ProjectorInstaller(HostPlatform platform, AppPaths paths, 
         var asset = ReleaseAssets.Pick(context.Release, platform, slug, ".zip");
         var archive = directory + ".zip";
         var extracting = directory + ".new";
-        context.Log.Report($"{slug}: {asset.Name} をダウンロードします");
-        await ReleaseAssets.DownloadAsync(downloader, asset, archive, context);
+        await ReleaseAssets.DownloadAsync(downloader, slug, asset, archive, context);
 
         context.Log.Report($"{slug}: 展開します");
         await ProjectorFiles.ExtractAsync(archive, extracting, platform.Os, context.CancellationToken);

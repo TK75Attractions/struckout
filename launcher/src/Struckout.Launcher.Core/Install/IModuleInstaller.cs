@@ -56,13 +56,29 @@ internal static class ReleaseAssets
     /// Downloads <paramref name="asset"/> and checks that it has the hash GitHub reported, so that a broken or
     /// tampered file is never installed.
     /// </summary>
+    /// <remarks>
+    /// A <paramref name="destination"/> that already has the hash is kept instead. The install may fail after the
+    /// download, as camera.apk does when a phone is not authorized, and the retry then needn't download the same
+    /// file again. A file of another release has another hash, so it is replaced.
+    /// </remarks>
+    /// <param name="slug">The module, to prefix the messages with.</param>
     /// <exception cref="LauncherException">GitHub reports no hash, or the download failed or doesn't match.</exception>
-    public static Task DownloadAsync(
-        HttpDownloader downloader, ReleaseAsset asset, string destination, InstallContext context)
+    public static async Task DownloadAsync(
+        HttpDownloader downloader, string slug, ReleaseAsset asset, string destination, InstallContext context)
     {
         var digest = asset.Digest ?? throw new LauncherException(
             $"リリース {context.Release.Tag} の {asset.Name} にハッシュが無いので、壊れていないか確かめられません");
-        return downloader.DownloadAsync(
+        if (File.Exists(destination) && await Sha256Digest.OfFileAsync(destination, context.CancellationToken) == digest)
+        {
+            context.Log.Report($"{slug}: ダウンロード済みの {asset.Name} を使います");
+            // The progress bar shows the total only when every download has reported its size.
+            var size = new FileInfo(destination).Length;
+            context.Download?.Report(new DownloadProgress(size, size));
+            return;
+        }
+
+        context.Log.Report($"{slug}: {asset.Name} をダウンロードします");
+        await downloader.DownloadAsync(
             asset.DownloadUrl, destination, digest, context.Download, context.Log, context.CancellationToken);
     }
 }
