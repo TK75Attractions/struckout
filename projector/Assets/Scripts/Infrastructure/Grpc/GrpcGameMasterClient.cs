@@ -51,6 +51,7 @@ namespace Struckout.Infrastructure.Grpc
         public event Action<GameId> GameFinished;
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
+        public event Action<TimeSpan> TotalDurationChanged;
         public event Action<ScoreChange> ScoreChanged;
         public event Action<uint> ComboChanged;
         public event Action ConnectionLost;
@@ -227,6 +228,20 @@ namespace Struckout.Infrastructure.Grpc
                         break;
                     }
                     RemainingTimeChanged?.Invoke(remainingTime);
+                    break;
+
+                case Event.EventDataOneofCase.TotalDurationChanged:
+                    if (!_running) break;
+                    var totalDuration = received.TotalDurationChanged.TotalDuration;
+                    if (totalDuration == null) break;
+                    try
+                    {
+                        TotalDurationChanged?.Invoke(totalDuration.ToTimeSpan());
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        _logger.LogWarning("[GameMaster] received an invalid total duration; ignored.");
+                    }
                     break;
 
                 case Event.EventDataOneofCase.ComboChanged:

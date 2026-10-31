@@ -26,6 +26,7 @@ namespace Struckout.Tests.Tests.EditMode
             public event Action<uint> GameWillStart { add { } remove { } }
             public event Action<GameId> GameFinished { add { } remove { } }
             public event Action<TimeSpan> RemainingTimeChanged { add { } remove { } }
+            public event Action<TimeSpan> TotalDurationChanged { add { } remove { } }
             public event Action<ScoreChange> ScoreChanged { add { } remove { } }
             public event Action<uint> ComboChanged { add { } remove { } }
             public UniTask<bool> ResetComboAsync(CancellationToken token = default)
@@ -95,6 +96,7 @@ namespace Struckout.Tests.Tests.EditMode
             public void ShowScreenMessage(string message) { }
             public void SetRemainingTime(TimeSpan remaining) { }
             public void StartGameClock(TimeSpan duration) { }
+            public void SetTotalDuration(TimeSpan duration) { }
             public void ShowCountdown(uint seconds) { }
             public float PocketWatchDiameter => 200f;
             public void SetScore(uint score) { }

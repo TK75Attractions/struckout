@@ -41,5 +41,20 @@ namespace Struckout.Tests
             clock.Correct(TimeSpan.FromSeconds(20), 1);
             Assert.That(clock.ClockwiseDegrees(10), Is.Zero);
         }
+
+        [Test]
+        public void Added_duration_preserves_elapsed_time_and_recalculates_one_turn()
+        {
+            var clock = new GameClock();
+            clock.Start(TimeSpan.FromSeconds(90), 100);
+            clock.Correct(TimeSpan.FromSeconds(70), 120);
+
+            Assert.That(clock.ChangeTotalDuration(TimeSpan.FromSeconds(100), 120),
+                Is.EqualTo(TimeSpan.FromSeconds(10)));
+            Assert.That(clock.ClockwiseDegrees(120), Is.EqualTo(72).Within(0.001));
+            Assert.That(clock.ClockwiseDegrees(160), Is.EqualTo(216).Within(0.001));
+            Assert.That(clock.ClockwiseDegrees(200), Is.EqualTo(360));
+            Assert.That(clock.ChangeTotalDuration(TimeSpan.FromSeconds(100), 200), Is.EqualTo(TimeSpan.Zero));
+        }
     }
 }

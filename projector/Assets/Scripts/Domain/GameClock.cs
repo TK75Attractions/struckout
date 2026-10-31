@@ -25,6 +25,18 @@ namespace Struckout.Domain
             _notifiedAt = now;
         }
 
+        /// <summary>Applies the server's new whole-game duration while preserving elapsed play time.</summary>
+        public TimeSpan ChangeTotalDuration(TimeSpan duration, double now)
+        {
+            var next = Math.Max(0, duration.TotalSeconds);
+            var added = next - _durationSeconds;
+            var remaining = Math.Max(0, _remainingSeconds - Math.Max(0, now - _notifiedAt));
+            _durationSeconds = next;
+            _remainingSeconds = Math.Clamp(remaining + added, 0, next);
+            _notifiedAt = now;
+            return TimeSpan.FromSeconds(Math.Max(0, added));
+        }
+
         public double ClockwiseDegrees(double now)
         {
             if (_durationSeconds <= 0) return 0;

@@ -53,6 +53,38 @@ namespace Struckout.Tests.Tests.EditMode
         }
 
         [Test]
+        public void Total_duration_is_forwarded_during_play()
+        {
+            var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);
+            var durations = new List<TimeSpan>();
+            client.TotalDurationChanged += durations.Add;
+            var changed = new Event
+            {
+                TotalDurationChanged = new Event.Types.TotalDurationChanged
+                {
+                    TotalDuration = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(TimeSpan.FromSeconds(100)),
+                },
+            };
+            Dispatch(client, changed);
+            Assert.That(durations, Is.Empty);
+            Dispatch(client, new Event
+            {
+                GameStarted = new Event.Types.GameStarted
+                {
+                    PlayerInfo = new PlayerInfo
+                    {
+                        Single = new PlayerInfo.Types.Single
+                        {
+                            Player = new PlayerInfo.Types.PlayerItem { MachineId = 7, PlayerId = 71 },
+                        },
+                    },
+                },
+            });
+            Dispatch(client, changed);
+            Assert.That(durations, Is.EqualTo(new[] { TimeSpan.FromSeconds(100) }));
+        }
+
+        [Test]
         public void Score_events_preserve_the_increment_and_reason()
         {
             var client = new GrpcGameMasterClient(new NetworkSettings { machineId = 7 }, NullLogger<GrpcGameMasterClient>.Instance);

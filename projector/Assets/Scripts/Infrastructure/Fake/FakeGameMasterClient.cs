@@ -78,6 +78,7 @@ namespace Struckout.Infrastructure.Fake
         public event Action<GameId> GameFinished;
         public event Action HomeScreenRequested;
         public event Action<TimeSpan> RemainingTimeChanged;
+        public event Action<TimeSpan> TotalDurationChanged;
         public event Action<ScoreChange> ScoreChanged;
         public event Action<uint> ComboChanged;
         public event Action<Target> TargetAdded;
@@ -92,6 +93,8 @@ namespace Struckout.Infrastructure.Fake
         private readonly object _stateLock = new();
         private uint _totalScore;
         private uint _combo;
+        private TimeSpan _totalDuration;
+        private static readonly TimeSpan PocketWatchBonus = TimeSpan.FromSeconds(5);
         private static readonly (uint Combo, uint Bonus)[] ComboBonuses = { (3, 500), (5, 800) };
         private readonly Dictionary<Guid, double> _targetRadii = new();
         private bool _connected;
@@ -111,6 +114,7 @@ namespace Struckout.Infrastructure.Fake
                 _started = true;
                 _totalScore = 0;
                 _combo = 0;
+                _totalDuration = _gameDuration;
                 _startedDifficulty = Difficulty.Normal;
                 _gameCancellation = new CancellationTokenSource();
                 var elapsed = Stopwatch.StartNew();
@@ -135,14 +139,14 @@ namespace Struckout.Infrastructure.Fake
             {
                 while (true)
                 {
-                    var remaining = _gameDuration - elapsed.Elapsed;
+                    var remaining = _totalDuration - elapsed.Elapsed;
                     if (remaining > TimeSpan.Zero)
                         await UniTask.Delay(remaining < TimeSpan.FromSeconds(1) ? remaining : TimeSpan.FromSeconds(1), DelayType.Realtime, cancellationToken: token, cancelImmediately: true);
 
                     lock (_stateLock)
                     {
                         if (token.IsCancellationRequested) return;
-                        remaining = _gameDuration - elapsed.Elapsed;
+                        remaining = _totalDuration - elapsed.Elapsed;
                         if (remaining <= TimeSpan.Zero)
                         {
                             _started = false;
@@ -252,6 +256,8 @@ namespace Struckout.Infrastructure.Fake
                 ComboChanged?.Invoke(_combo);
                 if (watch)
                 {
+                    _totalDuration += PocketWatchBonus;
+                    TotalDurationChanged?.Invoke(_totalDuration);
                     _pocketWatchId = null;
                     TargetRemoved?.Invoke(targetId);
                     AddPocketWatch();

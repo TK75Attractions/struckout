@@ -25,6 +25,9 @@ namespace Struckout.Application.Interface
         /// <summary>Starts the shared watch clock before targets can appear.</summary>
         void StartGameClock(TimeSpan duration);
 
+        /// <summary>サーバーの総制限時間を針に反映し、増加分を残り時間の近くに表示する。</summary>
+        void SetTotalDuration(TimeSpan duration);
+
         /// <summary>Watch dial diameter in board pixels, shared by placement and rendering.</summary>
         float PocketWatchDiameter { get; }
 

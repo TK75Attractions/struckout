@@ -1,5 +1,7 @@
+using System;
 using System.Reflection;
 using NUnit.Framework;
+using Struckout.Domain;
 using Struckout.Unity;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +11,35 @@ namespace Struckout.Tests
 {
     public class ComboHudTests
     {
+        [Test]
+        public void Added_duration_is_shown_in_the_remaining_time_label_for_score_popup_duration()
+        {
+            var root = new GameObject("UI");
+            var label = new GameObject("RemainingTime", typeof(RectTransform), typeof(Text));
+            try
+            {
+                label.transform.SetParent(root.transform, false);
+                var service = root.AddComponent<UIService>();
+                var text = label.GetComponent<Text>();
+                typeof(UIService).GetField("_remainingTimeText", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(service, text);
+                typeof(UIService).GetField("_screen", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(service, ProjectorScreen.Playing);
+                service.StartGameClock(TimeSpan.FromSeconds(90));
+                service.SetRemainingTime(TimeSpan.FromSeconds(70));
+                service.SetTotalDuration(TimeSpan.FromSeconds(100));
+                Assert.That(text.text, Is.EqualTo("TIME  01:10  +10s"));
+                service.SetRemainingTime(TimeSpan.FromSeconds(80));
+                Assert.That(text.text, Is.EqualTo("TIME  01:20  +10s"));
+                typeof(UIService).GetField("_timeBonusUntil", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(service, Time.realtimeSinceStartupAsDouble - 1);
+                typeof(UIService).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.Invoke(service, null);
+                Assert.That(text.text, Is.EqualTo("TIME  01:20"));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
         [TestCase(0u, false)]
         [TestCase(1u, false)]
         [TestCase(2u, true)]

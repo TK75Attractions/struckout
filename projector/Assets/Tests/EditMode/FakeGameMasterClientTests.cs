@@ -267,8 +267,10 @@ namespace Struckout.Tests.Tests.EditMode
             var client = new FakeGameMasterClient(NullLogger<FakeGameMasterClient>.Instance);
             var watches = new List<Guid>();
             var removed = new List<Guid>();
+            var durations = new List<TimeSpan>();
             client.PocketWatchAdded += (id, owner) => watches.Add(id);
             client.TargetRemoved += removed.Add;
+            client.TotalDurationChanged += durations.Add;
             try
             {
                 await client.ConnectAsync();
@@ -278,6 +280,7 @@ namespace Struckout.Tests.Tests.EditMode
                 Assert.That(removed, Is.EqualTo(new[] { original }));
                 Assert.That(watches, Has.Count.EqualTo(2));
                 Assert.That(watches[1], Is.Not.EqualTo(original));
+                Assert.That(durations, Is.EqualTo(new[] { TimeSpan.FromSeconds(95) }));
                 Assert.That(await client.HitTargetAsync(original), Is.False);
             }
             finally { await client.DisconnectAsync(); }
