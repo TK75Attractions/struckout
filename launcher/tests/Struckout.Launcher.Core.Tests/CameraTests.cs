@@ -73,6 +73,21 @@ public sealed class CameraTests : IDisposable
     }
 
     [Fact]
+    public void ReadsTheModels()
+    {
+        const string output = "List of devices attached\r\n"
+            + "166810122536           device usb:1-1 product:KYV45 model:KYV45 device:KYV45 transport_id:1\r\n"
+            + "emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_arm64 device:emu64a transport_id:2\r\n"
+            + "166810131208           unauthorized usb:1-2 transport_id:3\r\n\r\n";
+
+        var models = Adb.ParseModels(output);
+
+        Assert.Equal(2, models.Count);
+        Assert.Equal("KYV45", models["166810122536"]);
+        Assert.Equal("sdk gphone64 arm64", models["emulator-5554"]);
+    }
+
+    [Fact]
     public void ListsOnlyAuthorizedDevices()
     {
         const string output = "List of devices attached\r\n166810122536\tdevice\r\n166810131208\tunauthorized\r\nemulator-5554\toffline\r\n\r\n";
