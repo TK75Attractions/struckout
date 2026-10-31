@@ -122,8 +122,12 @@ namespace Struckout.Bootstrap
         private void OnComboChanged(uint combo) =>
             _dispatcher.Enqueue(() => _service.SetCombo(combo));
 
-        private void OnScoreChanged(uint totalScore) =>
-            _dispatcher.Enqueue(() => _service.SetScore(totalScore));
+        private void OnScoreChanged(ScoreChange change) =>
+            _dispatcher.Enqueue(() =>
+            {
+                _service.SetScore(change.TotalScore);
+                _service.ShowScoreChange(change);
+            });
 
         public UniTask DisposeAsync()
         {

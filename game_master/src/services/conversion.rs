@@ -22,7 +22,11 @@ pub enum SuccessfulEvent {
     /// [`struckout_proto::event::GameTimeLimitNotify`]
     GameTimeLimitNotify { remaining: time::SignedDuration },
     /// [`struckout_proto::event::GameScoreChanged`]
-    GameScoreChanged { total_score: u32 },
+    GameScoreChanged {
+        total_score: u32,
+        diff: u32,
+        reason: ScoreReason,
+    },
     /// [`struckout_proto::event::ComboChanged`]
     ComboChanged { combo: u32 },
     /// [`struckout_proto::event::GameFinished`]
@@ -43,6 +47,12 @@ pub enum SuccessfulEvent {
     NavigateToRankingScreenRequested(MachineId),
     /// [`struckout_proto::event::NavigateToHomeScreenRequested`]
     NavigateToHomeScreenRequested(MachineId),
+}
+
+#[derive(Debug, Clone)]
+pub enum ScoreReason {
+    TargetHit { target_id: String },
+    Combo,
 }
 
 impl SuccessfulEvent {
@@ -68,8 +78,24 @@ impl From<SuccessfulEvent> for struckout_proto::event::EventData {
                 difficulty: difficulty.into(),
                 player_info: Some(players.into()),
             }),
-            SuccessfulEvent::GameScoreChanged { total_score } => {
-                EventData::GameScoreChanged(GameScoreChanged { total_score })
+            SuccessfulEvent::GameScoreChanged {
+                total_score,
+                diff,
+                reason,
+            } => {
+                let score_reason = match reason {
+                    ScoreReason::TargetHit { target_id } => {
+                        Some(game_score_changed::ScoreReason::TargetHit(
+                            game_score_changed::TargetHit { target_id },
+                        ))
+                    }
+                    ScoreReason::Combo => Some(game_score_changed::ScoreReason::Combo(())),
+                };
+                EventData::GameScoreChanged(GameScoreChanged {
+                    total_score,
+                    diff: i64::from(diff),
+                    score_reason,
+                })
             }
             SuccessfulEvent::ComboChanged { combo } => {
                 EventData::ComboChanged(ComboChanged { combo })

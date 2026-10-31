@@ -5,6 +5,7 @@ package tk75attractions.struckout.game_master.v1;
 import "game_master/target.proto";
 import "game_master/types.proto";
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 
 message Event {
   message SessionDifficultyChanged {
@@ -22,7 +23,20 @@ message Event {
   }
 
   message GameScoreChanged {
+    // Total after this increment. Combo bonuses have their own event.
     uint32 total_score = 1;
+
+    // Points added by this event.
+    int64 diff = 2;
+
+    message TargetHit {
+      string target_id = 1;
+    }
+
+    oneof score_reason {
+      TargetHit target_hit = 3;
+      google.protobuf.Empty combo = 4;
+    }
   }
 
   // Consecutive successful hits in the session; reset to zero after a miss.
