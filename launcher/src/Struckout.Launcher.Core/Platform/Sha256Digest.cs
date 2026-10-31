@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 
 namespace Struckout.Launcher.Core.Platform;
 
@@ -16,6 +17,12 @@ public sealed record Sha256Digest
         hash.Length == 32
             ? new Sha256Digest(Convert.ToHexStringLower(hash))
             : throw new ArgumentException("a SHA-256 hash is 32 bytes", nameof(hash));
+
+    public static async Task<Sha256Digest> OfFileAsync(string path, CancellationToken cancellationToken)
+    {
+        await using var file = File.OpenRead(path);
+        return FromHash(await SHA256.HashDataAsync(file, cancellationToken));
+    }
 
     /// <summary>
     /// Reads the <c>digest</c> GitHub reports for a release asset (<c>sha256:&lt;hex&gt;</c>).

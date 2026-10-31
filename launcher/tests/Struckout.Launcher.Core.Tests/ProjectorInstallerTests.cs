@@ -91,12 +91,15 @@ public sealed class ProjectorInstallerTests : IDisposable
 
         WriteFile(installed + ".old", "previous", "original");
         WriteFile(installed + ".new", "partial", "partial");
+        var partialDownload = HttpDownloader.PartialPath(installed + ".zip", release.Assets[0].Digest);
+        File.WriteAllText(partialDownload, "partial");
         await installer.UninstallAsync(installation, new Dictionary<PrerequisiteId, string>(), new UninstallOptions(),
             new Progress<string>(), TestContext.Current.CancellationToken);
 
         Assert.False(Directory.Exists(installed));
         Assert.False(Directory.Exists(installed + ".old"));
         Assert.False(Directory.Exists(installed + ".new"));
+        Assert.False(File.Exists(partialDownload));
     }
 
     [Theory]
