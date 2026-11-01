@@ -1245,6 +1245,54 @@ mod tests {
         }
     }
 
+    /// `default_configs/game_master.toml` adds 300 points every 3 combos from combo 8 up to combo 101 (#423).
+    #[test]
+    fn default_combo_bonuses_extend_through_combo_101() {
+        #[derive(Deserialize)]
+        struct BonusConfig {
+            combo_bonuses: ComboBonuses,
+        }
+        let config: BonusConfig =
+            toml::from_str(include_str!("../../default_configs/game_master.toml"))
+                .expect("default config should be valid");
+        let mut sessions = running_sessions(GameMode::Single);
+        let machine_id = MachineId::new(1);
+        let target_id = sessions
+            .add_target(
+                compass_target(200.0),
+                Owner::Single(OwnerSingle {
+                    machine_id: machine_id.into(),
+                }),
+            )
+            .expect("running game")
+            .0;
+        let mut expected_score = 0;
+        for combo in 1..=104 {
+            let bonus = match combo {
+                3 => 500,
+                5 => 800,
+                8..=101 if (combo - 8) % 3 == 0 => 1100 + (combo - 8) / 3 * 300,
+                _ => 0,
+            };
+            assert_eq!(
+                config.combo_bonuses.points_for(combo),
+                bonus,
+                "combo={combo}"
+            );
+            expected_score += 500 + bonus;
+            let outcome = sessions
+                .hit_target(
+                    machine_id,
+                    target_id,
+                    &config.combo_bonuses,
+                    NonZeroU32::new(5).expect("nonzero"),
+                )
+                .expect("registered target");
+            assert_eq!(outcome.total_score, expected_score, "combo={combo}");
+            assert_eq!(outcome.combo, combo);
+        }
+    }
+
     #[test]
     fn combo_bonus_overflow_preserves_score_combo_and_targets() {
         let mut sessions = running_sessions(GameMode::Single);

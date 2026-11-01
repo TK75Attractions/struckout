@@ -84,6 +84,12 @@ points = 800
 ";
 
     #[test]
+    fn default_config_file_is_valid() {
+        toml::from_str::<FileConfig>(include_str!("../../default_configs/game_master.toml"))
+            .expect("default_configs/game_master.toml should be a complete game_master config");
+    }
+
+    #[test]
     fn reads_all_durations() {
         let file: FileConfig = toml::from_str(VALID_CONFIG).unwrap();
         assert_eq!(file.game_duration_secs.normal.get(), 120);

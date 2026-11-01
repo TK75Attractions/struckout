@@ -61,6 +61,7 @@ jobs:
               - 'api/rust/**'
               - 'api/spec/**'
               - 'ball_tracker/**'
+              - 'default_configs/game_master.toml'
               - 'game_master/**'
               - 'migrations/mysql/**'
               - 'touchpanel/**'
