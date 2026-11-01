@@ -22,6 +22,8 @@ internal sealed class CameraInstaller(AppPaths paths, HttpDownloader downloader,
         var cameras = CamerasFile.Load(paths.CamerasFile);
         var adb = new Adb(context.Tools[PrerequisiteId.Adb], runner);
         var connected = await adb.DevicesAsync(context.CancellationToken);
+        // A replaced phone gets the app too.
+        CameraSerials.AssignAutomatically(cameras, connected, context.Log);
         var installed = new SortedSet<string>((previous as ApkInstallation)?.Devices ?? [], StringComparer.Ordinal);
         foreach (var serial in connected)
         {

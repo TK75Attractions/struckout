@@ -35,7 +35,7 @@ macOS では `chmod +x` してから実行する。
 | touchpanel | リリースの `touchpanel-<OS>` | |
 | projector | リリースの `projector-<OS>.zip` を展開したもの | |
 | game-master | リリースの `game_master/docker/compose.yaml` と `compose.prod.yaml`、リリースと同じタグの ghcr.io のイメージ (`docker compose pull`) | Docker |
-| camera | リリースの `camera.apk` を、`cameras.json` にある接続中のスマホに `adb install` | Android Platform Tools |
+| camera | リリースの `camera.apk` を、`cameras.json` にある接続中のスマホ ([替えたスマホ](#スマホを替えたとき)も) に `adb install` | Android Platform Tools |
 
 要るツールが見つからなければ入れる。Windows は winget、macOS は Homebrew、Android Platform Tools はどの OS でも Google から
 ダウンロードする。Linux の Docker と FFmpeg は root が要るので、ディストリビューションの手順で先に入れておく。
@@ -133,6 +133,15 @@ app コンテナを再作成して新しい値を読む。
 ので、10 秒待ってから強制終了する。
 
 ログは `<モジュールの置き場所>/logs/<日付>/<モジュール>_<時分秒>.log`。
+
+### スマホを替えたとき
+
+camera のインストールと起動の前に、`adb devices` の端末と `cameras.json` の `serial` を照らし合わせる。
+`cameras.json` にない端末が 1 台で、端末がつながっていないカメラも 1 台のときだけ、その端末をそのカメラの `serial` に書き、
+前の端末の `device_id` を消す (位置と向きなどはそのまま)。つながっているカメラの `serial` は書き換えない。
+どの位置のスマホかは adb からわからない (同じ機種が多い) ので、新しい端末が 2 台以上あるなど決められないときは、
+起動の画面の「カメラの割り当て」に端末 (シリアルと機種) が並ぶ。それぞれのカメラを選んで「割り当てる」を押す。
+どれがどのスマホかわからなければ、1 台だけつないで「探し直す」を押す。モジュールの動作中は割り当てられない。
 
 ### カメラの準備完了と対処
 

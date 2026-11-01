@@ -3,7 +3,7 @@
              xmlns:vm="using:Struckout.Launcher.ViewModels"
              x:Class="Struckout.Launcher.Views.LaunchView"
              x:DataType="vm:LaunchViewModel">
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8" Margin="8">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8" Margin="8">
     <WrapPanel Grid.Row="0" ItemSpacing="8" LineSpacing="8">
       <Button Content="すべて起動" Command="{Binding StartCommand}" Classes="accent" />
       <Button Content="すべて止める" Command="{Binding StopCommand}" />
@@ -16,7 +16,39 @@
     <TextBlock Grid.Row="2" Classes="error" Text="{Binding ConfigError}" TextWrapping="Wrap"
                IsVisible="{Binding !!ConfigError.Length}" />
 
-    <StackPanel Grid.Row="3" Spacing="2">
+    <Border Grid.Row="3" BorderBrush="#C62828" BorderThickness="1" CornerRadius="4" Padding="8"
+            IsVisible="{Binding CameraAssignment.IsVisible}">
+      <StackPanel Spacing="4">
+        <TextBlock Text="カメラの割り当て" FontWeight="SemiBold" />
+        <TextBlock TextWrapping="Wrap"
+                   Text="cameras.json にないスマホがつながっています。それぞれ、どのカメラの位置に取り付けたかを選んでください。わからないときは、1 台だけつないで「探し直す」を押してください。" />
+        <ItemsControl ItemsSource="{Binding CameraAssignment.Phones}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:UnknownPhoneViewModel">
+              <Grid ColumnDefinitions="240,*" Margin="0,2">
+                <TextBlock Grid.Column="0" Text="{Binding Label}" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Cameras}" SelectedItem="{Binding Camera}"
+                          PlaceholderText="カメラを選ぶ" MinWidth="200">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CameraChoice">
+                      <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <WrapPanel ItemSpacing="8" LineSpacing="8">
+          <Button Content="割り当てる" Command="{Binding CameraAssignment.AssignCommand}" Classes="accent" />
+          <Button Content="探し直す" Command="{Binding CameraAssignment.RefreshCommand}" />
+        </WrapPanel>
+        <TextBlock Classes="error" Text="{Binding CameraAssignment.Error}" TextWrapping="Wrap"
+                   IsVisible="{Binding !!CameraAssignment.Error.Length}" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Grid.Row="4" Spacing="2">
       <TextBlock Text="この PC のモジュール" FontWeight="SemiBold" />
       <ItemsControl ItemsSource="{Binding Modules}">
         <ItemsControl.ItemTemplate>
@@ -32,7 +64,7 @@
       </ItemsControl>
     </StackPanel>
 
-    <StackPanel Grid.Row="4" Spacing="2" IsVisible="{Binding !!Remotes.Count}">
+    <StackPanel Grid.Row="5" Spacing="2" IsVisible="{Binding !!Remotes.Count}">
       <TextBlock Text="ほかの PC のモジュール" FontWeight="SemiBold" />
       <ItemsControl ItemsSource="{Binding Remotes}">
         <ItemsControl.ItemTemplate>
@@ -48,6 +80,6 @@
       </ItemsControl>
     </StackPanel>
 
-    <TextBox Grid.Row="5" Classes="log" Text="{Binding Log.Text}" x:Name="LogBox" />
+    <TextBox Grid.Row="6" Classes="log" Text="{Binding Log.Text}" x:Name="LogBox" />
   </Grid>
 </UserControl>
