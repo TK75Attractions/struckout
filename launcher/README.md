@@ -51,6 +51,11 @@ HTTP の `Range` で続きを取る。サーバーが `Range` を無視したと
 名前にハッシュを入れているので、別の版の途中までのファイルは続きに使わず、消す。ハッシュの無い Android Platform Tools は、
 つないだファイルを確かめられないので、毎回最初から取り直す。
 
+ダウンロード先に同じハッシュのファイルがすでにあれば、ダウンロードせずにそれを使う。camera.apk はインストールのあとも
+`modules/camera/camera.apk` に残すので、スマホの USB デバッグを許可していなかったり、`cameras.json` のシリアルが違っていたり、
+`adb install` が失敗したりしてインストールし直すときも、同じリリースならダウンロードし直さない。別のリリースのものや壊れたものは
+ハッシュが違うので、ダウンロードして置き換える。アンインストールすると消える。
+
 ball-tracker か camera を入れると、リポジトリの `scripts/cameras.json` を設定のディレクトリにコピーする (すでにあれば
 上書きしない)。touchpanel を入れると、touchpanel 自身が読む `config.toml` に `address = "127.0.0.1"`、
 `machine-id = 1`、`disable-multiplay = false`、`simple-mode = false` を書く。いずれも更新時に既存の設定を上書きしない。
