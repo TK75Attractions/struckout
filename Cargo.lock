@@ -8141,6 +8141,7 @@ name = "touchpanel-ui"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "i-slint-backend-testing",
  "slint",
  "slint-build",
  "stern",
