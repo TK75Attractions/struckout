@@ -76,6 +76,8 @@ internal sealed class ProjectorInstaller(HostPlatform platform, AppPaths paths, 
         }
 
         File.Delete(installation.Directory + ".zip");
+        // An unfinished download is kept to be continued by the next install, which won't come.
+        HttpDownloader.DeletePartials(installation.Directory + ".zip");
         return Task.CompletedTask;
     }
 }

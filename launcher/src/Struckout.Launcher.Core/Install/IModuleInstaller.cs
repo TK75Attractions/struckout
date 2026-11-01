@@ -62,6 +62,7 @@ internal static class ReleaseAssets
     {
         var digest = asset.Digest ?? throw new LauncherException(
             $"リリース {context.Release.Tag} の {asset.Name} にハッシュが無いので、壊れていないか確かめられません");
-        return downloader.DownloadAsync(asset.DownloadUrl, destination, digest, context.Download, context.CancellationToken);
+        return downloader.DownloadAsync(
+            asset.DownloadUrl, destination, digest, context.Download, context.Log, context.CancellationToken);
     }
 }
