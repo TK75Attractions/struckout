@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Sentry;
+using Struckout.Domain;
 
 namespace Struckout.Unity.Logging
 {
@@ -15,11 +16,27 @@ namespace Struckout.Unity.Logging
         private static readonly string Category = typeof(T).FullName;
         private readonly IHub _hub;
         private readonly IExternalScopeProvider _scopes;
+        private readonly NetworkSettings _settings;
 
+        /// <summary>
+        /// Creates a logger without machine identity, only for the composition root
+        /// before <see cref="NetworkSettings"/> has been resolved.
+        /// </summary>
         public ProjectorLogger(IHub hub, IExternalScopeProvider scopes)
         {
             _hub = hub ?? throw new ArgumentNullException(nameof(hub));
             _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        }
+
+        /// <summary>
+        /// Creates a logger that tags every output with the machine identity.
+        /// VContainer ignores default parameter values and uses the constructor with the most parameters,
+        /// so container-resolved loggers always come here and need <see cref="NetworkSettings"/> registered.
+        /// </summary>
+        public ProjectorLogger(IHub hub, IExternalScopeProvider scopes, NetworkSettings settings)
+            : this(hub, scopes)
+        {
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         public IDisposable BeginScope<TState>(TState state) => _scopes.Push(state);
@@ -33,7 +50,7 @@ namespace Struckout.Unity.Logging
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
 
             var message = formatter(state, exception);
-            UnityLogOutput.Write(logLevel, Category, message, exception);
+            UnityLogOutput.Write(logLevel, Category, message, exception, _settings?.machineId);
             if (!_hub.IsEnabled) return;
 
             var attributes = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -41,6 +58,7 @@ namespace Struckout.Unity.Logging
             AddProperties(state, attributes);
             var template = state is IEnumerable<KeyValuePair<string, object>> properties
                 ? OriginalFormat(properties) : null;
+            if (_settings != null) attributes["machine_id"] = _settings.machineId;
             attributes["logger.category"] = Category;
             attributes["event.id"] = eventId.Id;
             if (eventId.Name != null) attributes["event.name"] = eventId.Name;
@@ -76,6 +94,7 @@ namespace Struckout.Unity.Logging
             sentryEvent.Logger = Category;
             sentryEvent.Level = logLevel == LogLevel.Critical ? SentryLevel.Fatal : SentryLevel.Error;
             foreach (var attribute in attributes) sentryEvent.SetExtra(attribute.Key, attribute.Value);
+            if (_settings != null) sentryEvent.SetTag("machine_id", _settings.machineId.ToString(CultureInfo.InvariantCulture));
             _hub.CaptureEvent(sentryEvent);
         }
 
