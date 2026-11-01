@@ -1,0 +1,34 @@
+# ローカル専用のデバッグ道具。リポジトリでは追跡していない (.gitignore)。
+#
+# ルートの cargo ワークスペースには入れていない。members に載せると、
+# この中身を持っていない環境で cargo がメンバ不在で落ちるため。
+# [workspace] を自分で持つことで独立したワークスペースになる。
+#
+# その代わり workspace.dependencies が使えないので、バージョンはここに書く。
+# ルートの Cargo.toml と揃えてあるので、あちらを上げたらここも合わせること。
+[workspace]
+
+[package]
+name = "fake_game_master"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+prost = "0.14.3"
+prost-types = "0.14.4"
+tonic = "0.14.6"
+tonic-prost = "0.14.6"
+tokio = { version = "1.52.3", features = [
+    "rt-multi-thread",
+    "macros",
+    "io-std",
+    "io-util",
+    "time",
+    "signal",
+] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+parking_lot = "0.12.5"
+
+[build-dependencies]
+tonic-prost-build = "0.14.6"
+struckout-yaml = { path = "../../api/rust/yaml" }
