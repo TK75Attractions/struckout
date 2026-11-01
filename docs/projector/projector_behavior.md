@@ -18,8 +18,10 @@ projector は `GameMasterSessionService.ListenEvents` を自分の `machine_id` 
    `GetGameResult(game_id)` で DB 保存済みの確定得点を取得して表示する。
    プレイ中の HUD の値を確定結果として流用しない。
    モード・難易度と SCORE ラベルを表示し、確定得点を約1秒で0から数え上げる。
-   得点の表示中に、同じモード・難易度の `GetRanking(max_item_num = 10)` を取得し、
-   今回のゲームが上位に含まれるときは「ランキング N 位！」を表示する。
+   得点の表示中に、同じモード・難易度の `GetRanking(max_item_num = 10)` と
+   `GetGamesByPlayer(player_id, mode, difficulty)` を並行して取得する。
+   本人履歴が返す今回のゲームの全体順位を使い、トップ10圏外でも「ランキング N 位！」を表示する。
+   本人履歴を取得できない場合は、上位10件に含まれるゲームだけ順位を表示する。
    ランキングを取得できなくても得点表示は維持する。
 3. 通常モードでは、得点の数え上げアニメーションが終わった1秒後に RankingScreen に切り替える。
    `GetRanking(max_item_num = 10, mode, difficulty)` と `GetGamesByPlayer(player_id, mode, difficulty)` を並行して取得し、

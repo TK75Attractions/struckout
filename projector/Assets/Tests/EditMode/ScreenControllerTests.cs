@@ -146,7 +146,7 @@ namespace Struckout.Tests.Tests.EditMode
             await pending;
 
             Assert.That(ui.Screen, Is.EqualTo(ProjectorScreen.Score));
-            Assert.That(client.RequestedPlayer, Is.Null);
+            Assert.That(ui.Rows, Is.Null);
         }
 
         [Test]
@@ -185,6 +185,28 @@ namespace Struckout.Tests.Tests.EditMode
             await screens.ShowScoreAsync(new GameId(42));
             Assert.That(ui.LastScore, Is.EqualTo(888));
             Assert.That(ui.LastRank, Is.EqualTo(available ? (uint?)2 : null));
+        }
+
+        [Test]
+        public async Task Score_screen_uses_the_server_rank_of_a_game_outside_the_top_ten()
+        {
+            var client = new Client
+            {
+                History = new[] { new RankingEntry(new GameId(42), 888, 73,
+                    new RankingParticipant(1, new PlayerId(7), "本人")) },
+            };
+            var ui = new UI { PendingAnimation = new UniTaskCompletionSource() };
+            using var screens = new ScreenController(client, ui, new NetworkSettings());
+            screens.ShowPlaying(new PlayerId(7), GameMode.Multi, Difficulty.Hard);
+            var pending = screens.ShowScoreAsync(new GameId(42));
+            Assert.That(ui.LastScore, Is.EqualTo(888));
+            Assert.That(ui.Rank, Is.EqualTo(73));
+            Assert.That(client.RequestedPlayer, Is.EqualTo(new PlayerId(7)));
+            Assert.That(client.HistoryMode, Is.EqualTo(GameMode.Multi));
+            Assert.That(client.HistoryDifficulty, Is.EqualTo(Difficulty.Hard));
+            screens.ShowHome();
+            ui.PendingAnimation.TrySetResult();
+            await pending;
         }
 
         [Test]
