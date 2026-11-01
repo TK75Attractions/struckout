@@ -12,7 +12,9 @@ namespace Struckout.Launcher.Core.Launch;
 /// <remarks>
 /// The app is controlled with the broadcasts of <c>remote/RemoteControl.kt</c>, like <c>scripts/camera_remote.py</c>.
 /// </remarks>
-internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPorts ports) : IModuleRunner
+/// <param name="videoAlarm">Fed the camera status of every check, to sound while a camera's video stops.</param>
+internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPorts ports, CameraVideoAlarm? videoAlarm = null)
+    : IModuleRunner
 {
     private const string ActionPrefix = "com.taichi765.struckoutCameraApp.remote.";
 
@@ -91,6 +93,7 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
         }
 
         var now = DateTimeOffset.UtcNow;
+        videoAlarm?.Update(statuses, now);
         var observations = new List<CameraObservation>();
         for (var i = 0; i < cameras.Cameras.Count; i++)
         {
@@ -162,6 +165,8 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
 
     public async Task StopAsync(IProgress<string> log, CancellationToken cancellationToken)
     {
+        // Stopping the apps stops the video, which must not sound the alarm.
+        videoAlarm?.Reset();
         if (cameras is null)
         {
             return;

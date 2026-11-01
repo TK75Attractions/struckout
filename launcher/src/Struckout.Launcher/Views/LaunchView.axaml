@@ -3,7 +3,7 @@
              xmlns:vm="using:Struckout.Launcher.ViewModels"
              x:Class="Struckout.Launcher.Views.LaunchView"
              x:DataType="vm:LaunchViewModel">
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8" Margin="8">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8" Margin="8">
     <WrapPanel Grid.Row="0" ItemSpacing="8" LineSpacing="8">
       <Button Content="すべて起動" Command="{Binding StartCommand}" Classes="accent" />
       <Button Content="すべて止める" Command="{Binding StopCommand}" />
@@ -16,7 +16,19 @@
     <TextBlock Grid.Row="2" Classes="error" Text="{Binding ConfigError}" TextWrapping="Wrap"
                IsVisible="{Binding !!ConfigError.Length}" />
 
-    <StackPanel Grid.Row="3" Spacing="2">
+    <Border Grid.Row="3" BorderBrush="#C62828" BorderThickness="2" CornerRadius="4" Padding="8"
+            IsVisible="{Binding HasCameraAlarm}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <StackPanel Grid.Column="0" Spacing="2">
+          <TextBlock Classes="error" Text="カメラの映像が止まっています" FontWeight="SemiBold" />
+          <TextBlock Classes="error" Text="{Binding CameraAlarm}" TextWrapping="Wrap" />
+        </StackPanel>
+        <Button Grid.Column="1" Content="警告音を止める" Command="{Binding MuteCameraAlarmCommand}"
+                VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+
+    <StackPanel Grid.Row="4" Spacing="2">
       <TextBlock Text="この PC のモジュール" FontWeight="SemiBold" />
       <ItemsControl ItemsSource="{Binding Modules}">
         <ItemsControl.ItemTemplate>
@@ -32,7 +44,7 @@
       </ItemsControl>
     </StackPanel>
 
-    <StackPanel Grid.Row="4" Spacing="2" IsVisible="{Binding !!Remotes.Count}">
+    <StackPanel Grid.Row="5" Spacing="2" IsVisible="{Binding !!Remotes.Count}">
       <TextBlock Text="ほかの PC のモジュール" FontWeight="SemiBold" />
       <ItemsControl ItemsSource="{Binding Remotes}">
         <ItemsControl.ItemTemplate>
@@ -48,6 +60,6 @@
       </ItemsControl>
     </StackPanel>
 
-    <TextBox Grid.Row="5" Classes="log" Text="{Binding Log.Text}" x:Name="LogBox" />
+    <TextBox Grid.Row="6" Classes="log" Text="{Binding Log.Text}" x:Name="LogBox" />
   </Grid>
 </UserControl>
