@@ -220,6 +220,16 @@ mod tests {
     }
 
     #[test]
+    fn rejects_removed_sqlite_input() {
+        let (_dir, location) = write_config("input: sqlite\noutput: network\n");
+        assert!(matches!(
+            Config::from_file(&location),
+            Err(LoadConfigError::Parse { .. })
+        ));
+        assert!(Cli::try_parse_from(["ball_tracker", "--input", "sqlite"]).is_err());
+    }
+
+    #[test]
     fn missing_explicit_file_is_error_but_missing_default_file_is_not() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.yaml");

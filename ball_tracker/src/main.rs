@@ -1,17 +1,13 @@
 use std::{path::PathBuf, sync::Arc};
 
-#[cfg(feature = "input-sqlite")]
-use ball_tracker::detection_input::SqliteDetectionInput;
 use ball_tracker::{
     Application, CameraLocationStore,
     camera_config::CameraConfig,
     camera_status::CameraStatusStore,
     clock_sync::{AutoTimeTrim, ClockSync, ClockSyncOptions},
     collision_output::{CollisionOutput, CsvCollisionOutput, NetworkCollisionOutput},
-    detection_input::{CameraFrame, DetectionInput, NetworkDetectionInput},
-    tracking::{
-        EventLogger, FmtEventLogger, JsonEventLogger, SentryEventLogger, TrackingEventsDto,
-    },
+    detection_input::{CameraFrame, NetworkDetectionInput},
+    tracking::{EventLogger, FmtEventLogger, JsonEventLogger, TrackingEventsDto},
     types::{CameraId, CollisionPoint3D},
     video::{self, VideoOptions},
 };
@@ -123,9 +119,6 @@ fn millis(value: f64) -> TimeDelta {
 enum DetectionInputKind {
     /// TCP経由 (camera)
     Network,
-    /// ローカルのSQLiteから
-    #[cfg(feature = "input-sqlite")]
-    Sqlite,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Deserialize)]
@@ -135,48 +128,6 @@ enum CollisionOutputKind {
     Network,
     /// CSVファイルに保存
     Csv,
-}
-
-/// [`DetectionInput`] is not dyn compatible, so we need this enum.
-enum DetectionInputImpl {
-    Network(NetworkDetectionInput),
-    #[cfg(feature = "input-sqlite")]
-    Sqlite(SqliteDetectionInput),
-}
-
-impl DetectionInput for DetectionInputImpl {
-    async fn start(
-        self,
-        tx: mpsc::Sender<CameraFrame>,
-        shutdown: tokio_util::sync::CancellationToken,
-    ) -> std::io::Result<()> {
-        match self {
-            DetectionInputImpl::Network(input) => input.start(tx, shutdown).await,
-            #[cfg(feature = "input-sqlite")]
-            DetectionInputImpl::Sqlite(input) => input.start(tx, shutdown).await,
-        }
-    }
-}
-
-impl DetectionInputImpl {
-    async fn new(
-        kind: DetectionInputKind,
-        camera_locs: Arc<CameraLocationStore>,
-        clock: Arc<ClockSync>,
-        video: Option<VideoOptions>,
-        cameras: Option<Arc<CameraConfig>>,
-        camera_status: Arc<CameraStatusStore>,
-    ) -> Self {
-        match kind {
-            DetectionInputKind::Network => DetectionInputImpl::Network(
-                NetworkDetectionInput::new(camera_locs, clock, video, cameras, camera_status)
-                    .await
-                    .unwrap(),
-            ),
-            #[cfg(feature = "input-sqlite")]
-            DetectionInputKind::Sqlite => DetectionInputImpl::Sqlite(SqliteDetectionInput {}),
-        }
-    }
 }
 
 enum CollisionOutputImpl {
@@ -223,8 +174,6 @@ fn csv_path_default() -> PathBuf {
 
 enum EventLoggerImpl {
     Json(JsonEventLogger),
-    #[allow(dead_code)] // 後で追加する
-    Sentry(SentryEventLogger),
     Fmt(FmtEventLogger),
 }
 
@@ -232,8 +181,6 @@ impl EventLoggerImpl {
     fn new(config: &Config) -> Self {
         if config.output_to_json {
             Self::Json(JsonEventLogger::new(json_log_output_dir()))
-        //}else if  {
-        //    Self::Sentry(SentryEventLogger::new())
         } else {
             Self::Fmt(FmtEventLogger)
         }
@@ -244,7 +191,6 @@ impl EventLogger for EventLoggerImpl {
     fn push_events(&mut self, events: TrackingEventsDto) {
         match self {
             EventLoggerImpl::Json(l) => l.push_events(events),
-            EventLoggerImpl::Sentry(l) => l.push_events(events),
             EventLoggerImpl::Fmt(l) => l.push_events(events),
         }
     }
@@ -252,7 +198,6 @@ impl EventLogger for EventLoggerImpl {
     fn push_frame(&mut self, frame: &CameraFrame) {
         match self {
             EventLoggerImpl::Json(l) => l.push_frame(frame),
-            EventLoggerImpl::Sentry(l) => l.push_frame(frame),
             EventLoggerImpl::Fmt(l) => l.push_frame(frame),
         }
     }
@@ -374,17 +319,10 @@ async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send)
         snapshot_dir: config.video_snapshot_dir.clone(),
         record_dir: config.video_record_dir.clone(),
     });
-    let detection_input = DetectionInputImpl::new(
-        config
-            .detection_input
-            .expect("Config::apply_cli() makes sure that it is set"),
-        camera_locs.clone(),
-        clock,
-        video,
-        cameras,
-        camera_status,
-    )
-    .await;
+    let detection_input =
+        NetworkDetectionInput::new(camera_locs.clone(), clock, video, cameras, camera_status)
+            .await
+            .unwrap_or_else(|error| exit_with(&error));
     let collision_output = CollisionOutputImpl::new(&config).await;
     let event_logger = EventLoggerImpl::new(&config);
 

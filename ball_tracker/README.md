@@ -27,6 +27,9 @@ json: true
 設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
 ただし、設定ファイルで `true` にしたフラグを、コマンドラインから無効にすることはできません。
 
+検出の入力は `input: network` (カメラからの TCP) だけ。以前の SQLite 入力 (`input-sqlite` feature) は #298 で廃止した。
+録画を解析し直すときは `replay_video` や `scripts/recording_analysis/` を使う。
+
 ## ヘルスチェック
 ランチャーが状態を確かめられるように、5080 番 (`api/spec/servers.yaml` の `ball-tracker.health`) で gRPC の health checking protocol に答える。
 入出力の準備が終わり、処理を始める直前に `SERVING` になる。それまでは `NOT_SERVING`。
@@ -51,7 +54,7 @@ grpcurl -plaintext -import-path api/proto -proto ball_tracker/camera_status.prot
 `disconnected_at` は最後の接続が切れた UTC 時刻で、再接続後も直前の切断時刻を残す。
 `fps` は直近に完了した 1 秒の集計区間で処理したフレーム数。検出入力は受信パケット、動画入力は解析を終えたフレームを数える。
 最初の区間の完了前、処理がなかった区間、切断後は 0 になる。起動完了を判定する側は `connected` と併せて
-`last_frame_at` の新しさや `fps` を確かめる。sqlite 入力では設定どおりの未接続を返し、設定がなければ空のリストを返す。
+`last_frame_at` の新しさや `fps` を確かめる。
 
 SIGTERM または Ctrl-C を受けると、新しい接続を止めてから受信中のフレームを処理し、CSV と動画の記録を閉じて終了する。
 動画記録の終了時は、受け付け済みのデータが書き終わるまで待つ。

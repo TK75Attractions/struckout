@@ -21,6 +21,7 @@ sentry = { workspace = true, optional = true }
 tokio = {
   workspace = true,
   features = [
+    "fs",
     "io-util",
     "macros",
     "net",
@@ -50,22 +51,12 @@ thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 
 clap = { workspace = true, features = ["derive", "string"] }
-sqlx = {
-  workspace = true,
-  features = [
-    "migrate",
-    "runtime-tokio",
-    "sqlite",
-    "sqlx-toml",
-  ]
-}
 
 [build-dependencies]
 prost-build = { workspace = true }
 struckout-utils = { workspace = true }
 
 [features]
-input-sqlite = []
 sentry = ["dep:sentry"]
 
 [dev-dependencies]

@@ -476,7 +476,7 @@ pub struct ThrowRay { pub camera_id: CameraId, pub time: DateTime<Utc>, pub orig
 
 - ① (端末側の検出): `camera/CameraRepository.kt` を ① も変える。K-1〜K-3 は ① の後に行う。① の後は色の判定が変わるだけで検出の位置は変わらない見込みだが、時刻のずれの推定 (U-4) は ① を入れた状態で測る。
 - ② (追跡と組み合わせ): `detection_input/`、`lib.rs`、`main.rs`、`tracking/` は ② が大きく書き換える。R の作業は ② の完了後に、その状態を基準にして行う。② の前にできるのは段階 0・1 と P の作業、proto の番号の確定まで。
-- `input-sqlite` の経路 (`detection_input/sqlite.rs`) は `PairedFrames::new` の引数が合っておらず、すでにビルドできない。この計画では触らない。
+- 調査時点では SQLite 入力が `PairedFrames` の変更に追従していなかった。この入力経路は #298 で廃止した。
 
 リスク:
 

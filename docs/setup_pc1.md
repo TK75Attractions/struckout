@@ -537,6 +537,5 @@ ball_tracker が起動していないか `adb reverse` が張れていない。�
 - **切れているあいだに終わったゲームは、projector に伝わらない。** projector は ball_tracker とも game_master とも
   自分でつなぎ直すが、game_master と切れているあいだに終わったゲームの終了は届かないので、次のゲームが始まるまで
   遊んでいる状態のまま残る。
-- **`input-sqlite` 機能 (`--input sqlite`) はビルドできない。** 付けない (既定では無効)。
 - **Nightly Release にバイナリは出ていない。** 公開条件が `main` ブランチのままで、
   `master` への改名後は動いていない。当面は各 PC でビルドする

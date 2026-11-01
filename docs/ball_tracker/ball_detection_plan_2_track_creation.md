@@ -78,7 +78,7 @@
 - projector は届いた `CollisionPoint` をそのまま 1 回の着弾として扱う。重複と誤報は `ball_tracker` で止めるしかない。
 - `tracking/event.rs` のイベントは projector には送られない。`-j` を付けたときにこの PC の JSON に書くだけで、読んでいるコードはリポジトリにない (検索で確認)。
 - `-j` を付けないと、`FmtEventLogger::push_pair` の `todo!()` (`tracking/event.rs:138-140`) で最初の組が来たときに落ちる (`main.rs:126-134`, `tracking/mod.rs:242`)。
-- `detection_input/sqlite.rs` は feature `input-sqlite` の中にあり、いまの `PairedFrames::new` (引数 4 つ) と合っておらずビルドできない (`sqlite.rs:37`)。CI は既定の feature しか見ない (`.github/workflows/rust_check.yaml`)。
+- 調査時点では SQLite 入力が `PairedFrames` の変更に追従していなかった。この入力経路は #298 で廃止した。
 - テストは依頼があったときだけ実行し、新しいテストは依頼があったときだけ追加する (プロジェクトの方針)。
 
 ## 3. 検討した方式と採用する方式
@@ -340,6 +340,6 @@
 
 - カメラの接続が切れたときの panic (`detection_input/network.rs:207` の `res.unwrap()`)。計画 ③ の R-3 が `network.rs` を直すときに扱う。
 - `collision_output/csv.rs` の改行欠落は #336 で修正した。着弾ごとに `x,y,z` の一行を書き、複数件の行数・列数・座標値を回帰テストで確認する。過去に記録した改行のない CSV は自動では復元しないため、その再生結果の確認には JSON を使う。
-- `detection_input/sqlite.rs` がビルドできないこと。
+- `detection_input/sqlite.rs` がビルドできないこと。#298 で SQLite 入力ごと廃止した。
 - 使わなくなる `tracktor` への依存と `tracking/triangulate.rs` の整理。
 - 撮影から PC に届くまでの遅れの計測 (`REPORT_LEAD` の決め直し)。
