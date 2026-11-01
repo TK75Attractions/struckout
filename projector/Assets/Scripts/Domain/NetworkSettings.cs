@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Struckout.Domain
@@ -6,8 +7,10 @@ namespace Struckout.Domain
     /// <summary>
     /// 接続先と、実機かダミーかの切り替え。
     ///
-    /// 既定のポートは api/spec/servers.yaml に合わせている
-    /// (tracker.projector = 5000、game-master.grpc = 8020)。
+    /// port が 0 の場合は api/spec/servers.yaml から生成した既定値を使う。
+    ///
+    /// Inspector で編集できるほか、コマンドライン引数と環境変数で上書きできる。
+    /// 詳しくは <see cref="Struckout.Infrastructure.NetworkSettingsResolver"/> を参照。
     /// </summary>
     [Serializable]
     public class NetworkSettings
@@ -16,11 +19,13 @@ namespace Struckout.Domain
 
         /// <summary>ball_tracker (collision の送り元)。</summary>
         [FormerlySerializedAs("TrackerHost")] public string trackerHost = "127.0.0.1";
-        [FormerlySerializedAs("TrackerPort")] public ushort trackerPort = 5000;
+        [Tooltip("0 の場合は api/spec/servers.yaml の既定値を使用します。")]
+        [FormerlySerializedAs("TrackerPort")] public int trackerPort;
 
         /// <summary>game_master。gRPC (h2c) でつなぐ。</summary>
         [FormerlySerializedAs("MasterHost")] public string masterHost = "127.0.0.1";
-        [FormerlySerializedAs("MasterPort")] public ushort masterPort = 8020;
+        [Tooltip("0 の場合は api/spec/servers.yaml の既定値を使用します。")]
+        [FormerlySerializedAs("MasterPort")] public int masterPort;
 
         /// <summary>
         /// この筐体の号機番号。的の登録・命中通知と ListenEvents に必要。

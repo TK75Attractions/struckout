@@ -14,12 +14,16 @@ import argparse
 import json
 import socket
 import struct
+import sys
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
 
 from replay_to_tracker import encode_camera_pose, field_varint, receive_camera_id, send_packet
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from struckout_common import server_port
 
 
 def read_varint(data, pos):
@@ -105,10 +109,10 @@ def read_vsp(path, start_ns, end_ns):
 
 
 def stream(packets, host, pose, epoch, label):
-    control = socket.create_connection((host, 6060))
+    control = socket.create_connection((host, server_port("ball-tracker", "camera-ctrl")))
     camera_id = receive_camera_id(control)
     send_packet(control, encode_camera_pose(camera_id, pose["position_m"], pose["rotation_deg"]))
-    video = socket.create_connection((host, 5052))
+    video = socket.create_connection((host, server_port("ball-tracker", "camera-video")))
     video.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     (length,) = struct.unpack("<I", video.recv(4, socket.MSG_WAITALL))
     answer = video.recv(length, socket.MSG_WAITALL) if length else b""

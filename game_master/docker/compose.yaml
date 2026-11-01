@@ -9,7 +9,9 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     ports:
-      - 8020:8020
+      # BEGIN GENERATED SERVER PORTS
+      - "8020:8020"
+      # END GENERATED SERVER PORTS
 
   db:
     image: mysql@sha256:893418c8a7a34c60d2d961cc30ef136095da141478562ed2101ae3f5faba9c3f # 26.7.0

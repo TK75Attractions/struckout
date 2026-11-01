@@ -31,6 +31,8 @@
 ## ビルド
 
 `protoc` と JDK が要る (`camera`ディレクトリで `mise install`)。
+送受信ポートの既定値と、spec を変更した後の生成手順は [サーバーポートの定義](../docs/server_ports.md) を参照してください。
+Android の Gradle ビルドは、build 時に spec から Kotlin 定数を生成します。
 
 ```bash
 ./gradlew :app:assembleDebug
