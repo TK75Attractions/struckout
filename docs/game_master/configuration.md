@@ -46,8 +46,10 @@ CLI 引数で制限時間は指定できない。以前の `game_duration_secs =
 リリース版をランチャーなしで起動する場合は、同じ形式の設定ファイルを用意し、
 Compose の `app` サービスから `/etc/game_master/config.toml` に読み取り専用でマウントする。
 
+本番で使う既定の設定は [`default_configs/game_master.toml`](../../default_configs/game_master.toml) に置く。
+ランチャーなしで起動する場合も、このファイルをコピーして使う。
+
 ランチャーを使う場合は `<dirs::config_dir()>/struckout/game_master/config.toml` を編集する。
-ランチャーは初回インストール時に開始待ち時間を 3 秒、3 つの難易度をすべて 90 秒、懐中時計の追加時間を 5 秒、コンボボーナスを
-3 コンボで 500 点と 5 コンボで 800 点にしたファイルを作成し、
+ランチャーは初回インストール時に `default_configs/game_master.toml` と同じ内容のファイルを作成し、
 コンテナ内へバインドマウントする。既存の設定は上書きしないため、`game_start_delay_secs` や `pocket_watch_bonus_secs` がないファイルや旧形式のファイルは手で更新する。
 変更後はランチャーで game-master を再起動すると、新しい制限時間が適用される。

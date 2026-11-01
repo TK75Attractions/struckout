@@ -7,6 +7,8 @@
   <ItemGroup>
     <!-- Ports are defined once in api/spec/servers.yaml and shared by every module. -->
     <EmbeddedResource Include="../../../api/spec/servers.yaml" LogicalName="servers.yaml" />
+    <!-- The game_master settings a new install starts from; maintained in default_configs/ for every way of running it. -->
+    <EmbeddedResource Include="../../../default_configs/game_master.toml" LogicalName="game_master.toml" />
     <!-- Unlike Unity, the standard .NET SDK generates clients at build time; do not commit generated files. -->
     <Protobuf Include="../../../api/proto/ball_tracker/camera_status.proto" ProtoRoot="../../../api/proto" GrpcServices="Client" />
   </ItemGroup>
