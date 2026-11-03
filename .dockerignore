@@ -12,9 +12,16 @@ target
 
 # Non-Rust directoris
 projector
+camera
+launcher
 struckoutCameraApp
 struckoutCameraAppHighSpeed
 sandbox
+
+# Local worktrees and generated artifacts are not server build inputs.
+.claude
+output
+tmp
 
 # docs
 docs

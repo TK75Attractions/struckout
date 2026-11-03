@@ -1,3 +1,10 @@
+## ビルド
+
+配布と `scripts/run_pc1.py` には tracker 専用の `release-tracker` プロファイルを使う。
+`mise exec rust protoc -- cargo build --locked --profile release-tracker -p ball_tracker` でビルドし、
+`target/release-tracker/ball_tracker`（Windows は `.exe` 付き）を起動する。
+設定の目的と検証状況は [ビルドプロファイル](../docs/ball_tracker/ball_tracker_build_profiles.md) を参照。
+
 ## 設定ファイル
 
 既定では、次の場所にある `config.yaml` を読み込みます。`--config PATH` または `--config=PATH` で別のファイルを指定できます。
@@ -29,6 +36,9 @@ reflection には対応していないので、grpcurl で確かめるときは 
 ```sh
 grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto health.proto localhost:5080 grpc.health.v1.Health/Check
 ```
+
+SIGTERM または Ctrl-C を受けると、新しい接続を止めてから受信中のフレームを処理し、CSV と動画の記録を閉じて終了する。
+動画記録の終了時は、受け付け済みのデータが書き終わるまで待つ。
 
 ## アルゴリズムの説明
 ### フレームの時刻をそろえる
@@ -148,6 +158,25 @@ grpcurl -plaintext -import-path <health.proto のあるフォルダ> -proto heal
   見送った報告 (`SuppressedCollision`)、新しいトラックを探した結果 (`SeedDiagnostics`)、報告した投球の
   時刻合わせの手がかり (`ThrowDiagnostics`)
 - `frames_*`: 受け取ったフレーム。1 行に 1 フレーム
+
+`scripts/run_pc1.py` は通常これらを記録しない。診断には `--json`、動画を含めて `replay_video` で解析し直す実験には
+`--record --json` を指定する。動画記録 (`--record`) と JSON 記録 (`--json`) は別の指定で、通常のログ・解析統計・着弾の表示は残る。
+ball_tracker の `config.yaml` で `json: true` にしている場合は、その設定でも有効になる。
+
+`--video-record-dir` の記録待ちは、カメラごとに書き込み中を含むデータ量 8 MiB と、キューの 240 件を上限にする。
+遅いディスクで上限に達するか書き込みに失敗した場合は、一度警告してその接続の録画を停止する。欠けたパケットを
+間引きながら録画を続けず、受理済みの先頭部分だけを可能な範囲で書く。以降の検出・追跡は続き、自動で録画は再開しない。
+上限は protobuf と複製した H.264 の待ちデータに対するもので、ファイルのバッファなどを含む総プロセスメモリではない。
+終了時は受理済みの書き込みを待つため、OS のディスク書き込み自体が無期限に停止する場合の終了待ちは別に残る。
+
+通常の標準出力のログは INFO 以上で、着弾ごとの `detected collision`、解析統計、警告は残る。フレームごとの
+詳細な追跡イベントは TRACE に置き、通常はその文字列化と出力をしない。JSON 記録の有無とログレベルは独立している。
+調査するときは `RUST_LOG=info,ball_tracker::tracking=trace` のように、
+[tracing-subscriber の Targets](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/targets/struct.Targets.html)
+の target と level の指定を使う。未設定、空文字、target だけのレベル指定では、それ以外のログは INFO のままにする。
+`h2`、`hyper`、`tower`、`tonic` は通常 INFO までで、詳細も必要なら `RUST_LOG=info,h2=trace` のように明示する。
+より長い target の指定が優先される。EnvFilter の span の値による指定には対応しない。
+解釈できない指定や Unicode として読めない環境変数は、通信の準備前に日本語の理由を標準エラーへ出し、終了コード 2 で終える。
 
 `ThrowDiagnostics` の `residual_rms` (視線と軌道の距離) が大きい投球が続くときは、2 台の時刻か、カメラの位置と
 向きがずれている。直近 10 球の中央値が 3cm を超えると警告を出す。

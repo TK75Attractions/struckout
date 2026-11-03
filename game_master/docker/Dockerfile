@@ -23,30 +23,34 @@ WORKDIR /build/
 COPY mise.toml mise.toml
 COPY mise.lock mise.lock
 COPY game_master/mise.toml game_master/mise.toml
-RUN mise install --locked protoc mold
+RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then \
+        mise install --locked protoc; \
+    else \
+        mise install --locked protoc mold; \
+    fi
 
 COPY ./ ./
 RUN --mount=type=cache,uid=1000,gid=1000,id=cargo-registry,target=/home/builder/.cargo/registry \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-git,target=/home/builder/.cargo/git \
     --mount=type=cache,uid=1000,gid=1000,id=cargo-target,target=/build/target \
+    FLAGS=""; \
     if [ "$RELEASE_MODE" = "true" ]; then \
-        if [ "${SENTRY_DSN}" = "" ]; then \
-            echo "RELEASE_MODE is set to true, but SENTRY_DSN is not supplied"; \
-            exit 1; \
-        fi &&\
-        FLAGS="--release --features=sentry"; \
+        FLAGS="--release"; \
         TARGET_DIR="release"; \
     else \
-        if [ "${SENTRY_DSN}" != "" ]; then \
-            FLAGS="--features=sentry"; \
-        else \
-            FLAGS=""; \
-        fi &&\
         TARGET_DIR="debug"; \
     fi &&\
-    SQLX_OFFLINE=true ST_VERSION=${ST_VERSION} ST_COMMIT_SHORT_HASH=${ST_COMMIT_SHORT_HASH} \
-    mise exec protoc mold -- cargo build ${FLAGS} -p game_master \
-    && mkdir -p /build/bin/ \
+    if [ "${SENTRY_DSN}" != "" ]; then \
+        FLAGS="${FLAGS} --features=sentry"; \
+    fi &&\
+    if [ "$(dpkg --print-architecture)" = "arm64" ]; then \
+        SQLX_OFFLINE=true ST_VERSION=${ST_VERSION} ST_COMMIT_SHORT_HASH=${ST_COMMIT_SHORT_HASH} \
+        mise exec protoc -- cargo build ${FLAGS} -p game_master; \
+    else \
+        SQLX_OFFLINE=true ST_VERSION=${ST_VERSION} ST_COMMIT_SHORT_HASH=${ST_COMMIT_SHORT_HASH} \
+        mise exec protoc mold -- cargo build ${FLAGS} -p game_master; \
+    fi && \
+    mkdir -p /build/bin/ \
     && cp /build/target/${TARGET_DIR}/game_master /build/bin/game_master
 
 FROM debian:trixie

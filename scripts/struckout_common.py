@@ -13,7 +13,10 @@ import shutil
 import socket
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
+
+from generate_server_ports import ServerPortsError, get_server_port
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -69,6 +72,15 @@ def note(text: str) -> None:
 
 class Failure(Exception):
     """続けられない。メッセージを NG として表示して終わる。"""
+
+
+@lru_cache
+def server_port(module_name: str, endpoint: str) -> int:
+    """ビルド済みモジュールと同じ spec から接続先の既定ポートを読む。"""
+    try:
+        return get_server_port(module_name, endpoint)
+    except (OSError, ServerPortsError) as error:
+        raise Failure(f"サーバーポートの定義を読めません: {error}") from error
 
 
 def fail(text: str):
@@ -262,3 +274,172 @@ def local_ipv4() -> list[str]:
     except OSError:
         pass
     return sorted(a for a in addresses if not a.startswith(("127.", "169.254.")))
+
+
+# --- 稼働時の計測 ---
+
+
+@lru_cache(maxsize=1)
+def _windows_runtime_api():
+    """型を指定して Win32 API を呼ぶ。64 bit のハンドルを切り詰めないために必要。"""
+    from ctypes import wintypes
+
+    class ProcessEntry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD), ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD), ("szExeFile", wintypes.WCHAR * 260)]
+
+    class MemoryCounters(ctypes.Structure):
+        _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
+            (name, ctypes.c_size_t) for name in (
+                "PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage", "QuotaPagedPoolUsage",
+                "QuotaPeakNonPagedPoolUsage", "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
+                "PrivateUsage")]
+
+    class MemoryStatus(ctypes.Structure):
+        _fields_ = [("dwLength", wintypes.DWORD), ("dwMemoryLoad", wintypes.DWORD)] + [
+            (name, ctypes.c_ulonglong) for name in (
+                "ullTotalPhys", "ullAvailPhys", "ullTotalPageFile", "ullAvailPageFile",
+                "ullTotalVirtual", "ullAvailVirtual", "ullAvailExtendedVirtual")]
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    psapi = ctypes.WinDLL("psapi", use_last_error=True)
+    signatures = [
+        (kernel.CreateToolhelp32Snapshot, [wintypes.DWORD, wintypes.DWORD], wintypes.HANDLE),
+        (kernel.Process32FirstW, [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)], wintypes.BOOL),
+        (kernel.Process32NextW, [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)], wintypes.BOOL),
+        (kernel.OpenProcess, [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD], wintypes.HANDLE),
+        (kernel.CloseHandle, [wintypes.HANDLE], wintypes.BOOL),
+        (kernel.GetProcessTimes, [wintypes.HANDLE] + [ctypes.POINTER(wintypes.FILETIME)] * 4, wintypes.BOOL),
+        (kernel.GetSystemTimes, [ctypes.POINTER(wintypes.FILETIME)] * 3, wintypes.BOOL),
+        (kernel.GlobalMemoryStatusEx, [ctypes.POINTER(MemoryStatus)], wintypes.BOOL),
+        (psapi.GetProcessMemoryInfo, [wintypes.HANDLE, ctypes.POINTER(MemoryCounters), wintypes.DWORD], wintypes.BOOL),
+    ]
+    for function, arguments, result in signatures:
+        function.argtypes = arguments
+        function.restype = result
+    return kernel, psapi, ProcessEntry, MemoryCounters, MemoryStatus, wintypes.FILETIME
+
+
+def _process_name(name: str) -> str:
+    return name.lower().removesuffix(".exe")
+
+
+def _windows_runtime_snapshot(names: set[str]) -> tuple[dict, list[dict]]:
+    # https://learn.microsoft.com/windows/win32/psapi/process-memory-usage-information
+    kernel, psapi, entry_type, counters_type, status_type, filetime = _windows_runtime_api()
+
+    def ticks(value) -> int:
+        return (value.dwHighDateTime << 32) | value.dwLowDateTime
+
+    memory = status_type()
+    memory.dwLength = ctypes.sizeof(memory)
+    if not kernel.GlobalMemoryStatusEx(ctypes.byref(memory)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    idle, system_kernel, system_user = filetime(), filetime(), filetime()
+    if not kernel.GetSystemTimes(ctypes.byref(idle), ctypes.byref(system_kernel), ctypes.byref(system_user)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    system = {"total_memory_bytes": memory.ullTotalPhys, "available_memory_bytes": memory.ullAvailPhys,
+              "system_cpu_seconds": (ticks(system_kernel) + ticks(system_user)) / 1e7,
+              "system_idle_seconds": ticks(idle) / 1e7}
+    snapshot = kernel.CreateToolhelp32Snapshot(2, 0)  # TH32CS_SNAPPROCESS
+    if snapshot == ctypes.c_void_p(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    processes = []
+    try:
+        entry = entry_type()
+        entry.dwSize = ctypes.sizeof(entry)
+        present = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
+        while present:
+            name = entry.szExeFile
+            if _process_name(name) in names:
+                row = {"name": name, "pid": entry.th32ProcessID, "status": "unavailable",
+                       "private_kind": "commit"}
+                handle = kernel.OpenProcess(0x1000 | 0x0010, False, entry.th32ProcessID)
+                if not handle:
+                    # VM_READ を許可しないプロセスでも CPU 時間だけ読めることがある。
+                    handle = kernel.OpenProcess(0x1000, False, entry.th32ProcessID)
+                if handle:
+                    try:
+                        created, exited, used_kernel, used_user = filetime(), filetime(), filetime(), filetime()
+                        if kernel.GetProcessTimes(handle, ctypes.byref(created), ctypes.byref(exited),
+                                                  ctypes.byref(used_kernel), ctypes.byref(used_user)):
+                            row.update(started_at=ticks(created),
+                                       cpu_seconds=(ticks(used_kernel) + ticks(used_user)) / 1e7,
+                                       status="ok")
+                        counters = counters_type()
+                        counters.cb = ctypes.sizeof(counters)
+                        if psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
+                            row.update(rss_bytes=counters.WorkingSetSize, private_bytes=counters.PrivateUsage)
+                        else:
+                            row["status"] = "memory_unavailable"
+                    finally:
+                        kernel.CloseHandle(handle)
+                processes.append(row)
+            present = kernel.Process32NextW(snapshot, ctypes.byref(entry))
+    finally:
+        kernel.CloseHandle(snapshot)
+    return system, processes
+
+
+def _linux_runtime_snapshot(names: set[str]) -> tuple[dict, list[dict]]:
+    proc = Path("/proc")
+    clock_ticks = os.sysconf("SC_CLK_TCK")
+    page_size = os.sysconf("SC_PAGE_SIZE")
+    memory = {line.split(":", 1)[0]: int(line.split()[1]) * 1024
+              for line in (proc / "meminfo").read_text().splitlines() if ":" in line}
+    # guest と guest_nice は user/nice に含まれるので二重に足さない。
+    cpu = [int(value) for value in (proc / "stat").read_text().splitlines()[0].split()[1:9]]
+    system = {"total_memory_bytes": memory["MemTotal"], "available_memory_bytes": memory.get("MemAvailable"),
+              "system_cpu_seconds": sum(cpu) / clock_ticks,
+              "system_idle_seconds": (cpu[3] + cpu[4]) / clock_ticks}
+    processes = []
+    for directory in proc.iterdir():
+        if not directory.name.isdecimal():
+            continue
+        try:
+            # comm は空白・括弧を含められるので、stat 全体を単純に split しない。
+            stat = (directory / "stat").read_text()
+            closing = stat.rfind(")")
+            fields = stat[closing + 2:].split()
+            name = stat[stat.find("(") + 1:closing]
+            # comm は 15 bytes に切られる。対象の長い名前は cmdline の実行ファイルから補う。
+            command = (directory / "cmdline").read_bytes().split(b"\0", 1)[0]
+            executable = Path(os.fsdecode(command)).name if command else name
+            if _process_name(executable) not in names and _process_name(name) not in names:
+                continue
+            row = {"name": executable, "pid": int(directory.name), "status": "ok",
+                   "started_at": fields[19], "cpu_seconds": (int(fields[11]) + int(fields[12])) / clock_ticks,
+                   "rss_bytes": int(fields[21]) * page_size, "private_kind": "resident"}
+            try:
+                private_lines = (directory / "smaps_rollup").read_text().splitlines()
+                row["private_bytes"] = sum(int(line.split()[1]) * 1024 for line in private_lines
+                                           if line.startswith(("Private_Clean:", "Private_Dirty:")))
+            except (FileNotFoundError, ProcessLookupError, PermissionError):
+                row["status"] = "private_unavailable"
+            processes.append(row)
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            # 列挙してから読むまでに終了したプロセスや、他ユーザーの非公開情報。
+            continue
+    return system, processes
+
+
+def runtime_snapshot(names: list[str]) -> tuple[dict, list[dict]]:
+    """外部コマンドを起動せず、CPU 累積秒とメモリを読む。取得不能値は 0 と区別する。
+
+    private_bytes は Windows では private commit、Linux では private resident。
+    この違いは private_kind に残し、OS をまたぐ比較で同一指標として扱わない。
+    """
+    normalized = {_process_name(name) for name in names}
+    if IS_WINDOWS:
+        system, processes = _windows_runtime_snapshot(normalized)
+    elif not IS_MACOS and Path("/proc/stat").exists():
+        system, processes = _linux_runtime_snapshot(normalized)
+    else:
+        raise OSError("稼働計測は Windows と /proc のある Linux に対応しています")
+    present = {_process_name(row["name"]) for row in processes}
+    processes.extend({"name": name, "status": "missing"} for name in sorted(normalized - present))
+    system.update(logical_cpus=os.cpu_count(), on_battery=on_battery())
+    return system, processes

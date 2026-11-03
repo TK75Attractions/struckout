@@ -6,13 +6,17 @@
 //!   設定 (途中で変わったものも)、SPS/PPS、フレームとそのセンサー時刻がすべて入る。[`read_recording`] で読む
 //! - `camera<番号>_<時刻>.h264`: 動画だけを並べたもの (Annex B)。VLC や ffplay で見られる
 //!
-//! 書き込みは専用のスレッドで行い、受信を止めない。
+//! 書き込みは専用のスレッドで行い、受信を止めない。待ちデータが上限を超えると、その接続の録画だけを停止する。
 
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
-    sync::mpsc::{self as std_mpsc, Sender},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        mpsc::{self as std_mpsc, SyncSender, TrySendError},
+    },
     thread,
 };
 
@@ -21,15 +25,34 @@ use prost::Message;
 use struckout_proto::{VideoStreamPacket, video_stream_packet};
 use tracing::{info, warn};
 
+/// 遅いディスクに合わせてメモリが増え続けないよう、書き込み中を含むデータ量を制限する。
+const MAX_PENDING_BYTES: usize = 8 << 20;
+/// 小さいパケットが続いても、キュー自体の管理領域を増やし続けない。
+const MAX_PENDING_PACKETS: usize = 240;
+
 pub struct Recorder {
-    tx: Option<Sender<RecorderPacketData>>,
+    camera_id: u32,
+    tx: Option<SyncSender<RecorderPacketData>>,
+    state: Arc<RecordingState>,
     worker: Option<thread::JoinHandle<()>>,
+}
+
+#[derive(Default)]
+struct RecordingState {
+    pending_bytes: AtomicUsize,
+    stopped: AtomicBool,
 }
 
 struct RecorderPacketData {
     received_ns: i64,
     video_packet: Vec<u8>,
     h264: Option<Vec<u8>>,
+}
+
+impl RecorderPacketData {
+    fn byte_size(&self) -> usize {
+        12 + self.video_packet.len() + self.h264.as_ref().map_or(0, Vec::len)
+    }
 }
 
 impl Recorder {
@@ -42,47 +65,99 @@ impl Recorder {
         let mut packets = BufWriter::with_capacity(1 << 20, File::create(&packets_path)?);
         let mut video = BufWriter::with_capacity(1 << 20, File::create(&video_path)?);
         info!(camera_id, path = %packets_path.display(), "recording the video stream");
-        let (tx, rx) = std_mpsc::channel::<RecorderPacketData>();
+        let (tx, rx) = std_mpsc::sync_channel::<RecorderPacketData>(MAX_PENDING_PACKETS);
+        let state = Arc::new(RecordingState::default());
+        let worker_state = Arc::clone(&state);
         let worker = thread::Builder::new().name(format!("video-record-{camera_id}")).spawn(move || {
-            let mut failed = false;
-            while let Ok(RecorderPacketData{received_ns, video_packet:bytes, h264}) = rx.recv() {
-                if failed {
-                    continue;
-                }
+            while let Ok(data) = rx.recv() {
+                let byte_size = data.byte_size();
+                let RecorderPacketData { received_ns, video_packet: bytes, h264 } = data;
                 let length = u32::try_from(bytes.len()).unwrap_or(u32::MAX);
                 let result = packets
                     .write_all(&received_ns.to_le_bytes())
                     .and_then(|()| packets.write_all(&length.to_le_bytes()))
                     .and_then(|()| packets.write_all(&bytes))
                     .and_then(|()| h264.map_or(Ok(()), |data| video.write_all(&data)));
+                // 書き込み中のデータも予算に含め、書き終えたら受信側に返す。
+                drop(bytes);
+                worker_state.pending_bytes.fetch_sub(byte_size, Ordering::AcqRel);
                 if let Err(e) = result {
-                    warn!(camera_id, error = ?e, "failed to record the video stream; stopped recording");
-                    failed = true;
+                    if !worker_state.stopped.swap(true, Ordering::AcqRel) {
+                        warn!(camera_id, error = ?e, "failed to record the video stream; stopped recording");
+                    }
+                    break;
                 }
             }
-            let _ = packets.flush();
-            let _ = video.flush();
+            let packets_result = packets.flush();
+            let video_result = video.flush();
+            if let Err(e) = packets_result.and(video_result)
+                && !worker_state.stopped.swap(true, Ordering::AcqRel)
+            {
+                warn!(camera_id, error = ?e, "failed to flush the video stream; stopped recording");
+            }
             info!(camera_id, path = %packets_path.display(), "finished recording the video stream");
         })?;
         Ok(Self {
+            camera_id,
             tx: Some(tx),
+            state,
             worker: Some(worker),
         })
     }
 
-    /// 受け取ったパケットを 1 件書く。
-    pub fn record(&self, received_at: DateTime<Utc>, packet: &VideoStreamPacket) {
+    /// 受け取ったパケットを待たずに記録へ渡す。上限を超えた後も解析を続けられるよう、録画だけを停止する。
+    pub fn record(&mut self, received_at: DateTime<Utc>, packet: &VideoStreamPacket) {
+        if self.state.stopped.load(Ordering::Acquire) {
+            self.tx = None;
+            return;
+        }
+        let Some(tx) = &self.tx else { return };
         let h264 = match &packet.data {
-            Some(video_stream_packet::Data::Frame(frame)) => Some(frame.data.clone()),
+            Some(video_stream_packet::Data::Frame(frame)) => Some(&frame.data),
             _ => None,
         };
+        // 複製・符号化の前に予算を確保する。上限より大きな単独パケットも受け付けない。
+        let byte_size = 12 + packet.encoded_len() + h264.map_or(0, Vec::len);
+        if self
+            .state
+            .pending_bytes
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |pending| {
+                pending
+                    .checked_add(byte_size)
+                    .filter(|total| *total <= MAX_PENDING_BYTES)
+            })
+            .is_err()
+        {
+            self.stop("recording byte limit reached");
+            return;
+        }
         let received_ns = received_at.timestamp_nanos_opt().unwrap_or_default();
-        if let Some(tx) = &self.tx {
-            let _ = tx.send(RecorderPacketData {
-                received_ns,
-                video_packet: packet.encode_to_vec(),
-                h264,
+        let result = tx.try_send(RecorderPacketData {
+            received_ns,
+            video_packet: packet.encode_to_vec(),
+            h264: h264.cloned(),
+        });
+        if let Err(error) = result {
+            self.state
+                .pending_bytes
+                .fetch_sub(byte_size, Ordering::AcqRel);
+            self.stop(match error {
+                TrySendError::Full(_) => "recording packet limit reached",
+                TrySendError::Disconnected(_) => "recording worker disconnected",
             });
+        }
+    }
+
+    fn stop(&mut self, reason: &'static str) {
+        // 受理済みの連続した先頭部分だけを書き切る。欠けた H.264 を黙って記録し続けない。
+        self.tx = None;
+        if !self.state.stopped.swap(true, Ordering::AcqRel) {
+            warn!(
+                camera_id = self.camera_id,
+                reason,
+                max_pending_bytes = MAX_PENDING_BYTES,
+                "stopped recording the video stream; analysis continues"
+            );
         }
     }
 }
@@ -173,7 +248,7 @@ mod tests {
             })),
         };
         {
-            let recorder = Recorder::create(dir.path(), 3, t0).unwrap();
+            let mut recorder = Recorder::create(dir.path(), 3, t0).unwrap();
             recorder.record(t0, &config);
             recorder.record(t0 + chrono::TimeDelta::milliseconds(8), &frame);
         }

@@ -137,7 +137,7 @@ public sealed class Supervisor : IDisposable
         }
     }
 
-    /// <summary>Stops the modules in the reverse order they were started.</summary>
+    /// <summary>Stops independent modules together and stops their dependencies afterward.</summary>
     public async Task StopAllAsync(IProgress<string> log, CancellationToken cancellationToken)
     {
         await gate.WaitAsync(cancellationToken);
@@ -153,22 +153,64 @@ public sealed class Supervisor : IDisposable
 
     private async Task StopAllUnlockedAsync(IProgress<string> log, CancellationToken cancellationToken)
     {
-        foreach (var id in Order.Reverse())
+        var remaining = launched.ToHashSet();
+        while (remaining.Count > 0)
         {
-            if (!launched.Contains(id))
+            var ready = Order.Reverse()
+                .Where(id => remaining.Contains(id))
+                .Where(id => !remaining.Any(dependent =>
+                    ModuleGraph.DependenciesOf(dependent, ports).Any(dependency => dependency.Target == id)))
+                .ToList();
+
+            // guaranteed by ModuleGraph: the fixed dependency graph is a DAG
+            if (ready.Count == 0)
             {
-                continue;
+                throw new InvalidOperationException("module dependencies should not have a cycle");
             }
 
-            try
+            var results = await Task.WhenAll(ready.Select(async id =>
             {
-                await runners[id].StopAsync(log, cancellationToken);
-                launched.Remove(id);
-                Update(id, ModuleState.Stopped, "止まっています");
+                try
+                {
+                    await runners[id].StopAsync(log, cancellationToken);
+                    return (Id: id, Error: (LauncherException?)null, Cancelled: false);
+                }
+                catch (LauncherException error)
+                {
+                    return (Id: id, Error: error, Cancelled: false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return (Id: id, Error: (LauncherException?)null, Cancelled: true);
+                }
+            }));
+
+            var cancelled = false;
+            foreach (var (id, error, wasCancelled) in results)
+            {
+                if (error is null)
+                {
+                    if (wasCancelled)
+                    {
+                        cancelled = true;
+                    }
+                    else
+                    {
+                        remaining.Remove(id);
+                        launched.Remove(id);
+                        Update(id, ModuleState.Stopped, "止まっています");
+                    }
+                }
+                else
+                {
+                    remaining.Remove(id);
+                    Update(id, ModuleState.Unhealthy, error.Message);
+                }
             }
-            catch (LauncherException e)
+
+            if (cancelled)
             {
-                Update(id, ModuleState.Unhealthy, e.Message);
+                throw new OperationCanceledException(cancellationToken);
             }
         }
     }

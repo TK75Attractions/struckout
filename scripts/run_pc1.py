@@ -3,7 +3,8 @@
 
     python scripts/run_pc1.py
     python scripts/run_pc1.py --output csv --name test
-    python scripts/run_pc1.py --record                          # 受け取った動画も残す (実験用)
+    python scripts/run_pc1.py --json                            # 追跡の詳細と全フレームを残す (診断用)
+    python scripts/run_pc1.py --record --json                   # 動画と、再解析に必要な時刻対応を残す
     python scripts/run_pc1.py -- --time-trim-ms 3               # ball_tracker にオプションを足す
 
 次の順に進め、それぞれ ball_tracker のログで済んだことを確かめてから次へ進む。
@@ -22,8 +23,9 @@
 スマホのアプリと projector は、ball_tracker が止まっても自分でつなぎ直すので、ball_tracker だけを起動し直してもよい
 (このスクリプトをもう一度実行する)。
 
-記録は recordings/<日付>_<時分>[_<name>] に残す (ball_tracker のログ、-j の記録、Save frame。--record のときは
-受け取った動画も)。動画は 2 台で 1 時間に約 45 GB になるので、稼働中は残さない。ディスクの空きは起動時と 1 分おきに確かめる。
+記録は recordings/<日付>_<時分>[_<name>] に残す (ball_tracker のログ、Save frame。--json のときは追跡と全フレーム、
+--record のときは受け取った動画も)。詳細な記録は通常は残さない。動画は 2 台で 1 時間に約 45 GB になるので、稼働中は
+残さない。ディスクの空きは起動時と 1 分おきに確かめる。
 """
 
 from __future__ import annotations
@@ -42,7 +44,7 @@ from pathlib import Path
 
 from camera_remote import CameraRemote
 from struckout_common import (ROOT, SCRIPTS, Failure, exe, fail, find_ffmpeg, free_gb, load_json, local_ipv4,
-                              note, ok, on_battery, report_failure, setup_console, step, tracker_data_dir, warn)
+                              note, ok, on_battery, report_failure, server_port, setup_console, step, tracker_data_dir, warn)
 
 # 動画は 2 台で 1 時間に約 45 GB (2026-10-16 の実測: 8.5 分で 6.4 GB)
 VIDEO_GB_PER_HOUR = 45
@@ -110,7 +112,7 @@ class TrackerLog:
 
 def precheck(record_video: bool):
     step("前提を確かめる")
-    tracker = ROOT / "target" / "release" / exe("ball_tracker")
+    tracker = ROOT / "target" / "release-tracker" / exe("ball_tracker")
     if not tracker.exists():
         fail(f"ball_tracker がビルドされていません: {tracker} (docs/setup_pc1.md の 3 章)")
     ok(f"ball_tracker: {tracker}")
@@ -145,12 +147,13 @@ def precheck(record_video: bool):
 
 def prepare_phones(remote: CameraRemote) -> None:
     step("スマホのアプリを止め、adb reverse を張り、設定を入れる")
+    ports = [server_port("ball-tracker", endpoint) for endpoint in ("camera-ctrl", "camera-data", "camera-video")]
     for camera in remote.cameras:
         remote.stop_one(camera)
-        for port in (6060, 5050, 5052):
+        for port in ports:
             subprocess.run([remote.adb, "-s", camera["serial"], "reverse", f"tcp:{port}", f"tcp:{port}"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        ok(f"{camera['name']}: 6060、5050、5052")
+        ok(f"{camera['name']}: {'、'.join(map(str, ports))}")
     # 端末の識別子 (device_id) も cameras.json に記録される。ball_tracker はこれで端末を見分ける
     for line in remote.set_config():
         print(f"  {line}")
@@ -159,8 +162,9 @@ def prepare_phones(remote: CameraRemote) -> None:
             warn(f"{camera['name']} の device_id が分かりません。ball_tracker はこの端末をつないだ順の番号で扱います")
 
 
-def tracker_arguments(settings, output: str, ffmpeg: str, run_dir: Path, record_video: bool, extra: list[str]):
-    args = ["--input", "network", "--output", output, "-j",
+def tracker_arguments(settings, output: str, ffmpeg: str, run_dir: Path, record_video: bool, extra: list[str],
+                      record_json: bool = False):
+    args = ["--input", "network", "--output", output,
             "--cameras", SCRIPTS / "cameras.json",
             "--ffmpeg", ffmpeg,
             "--video-hwaccel", settings["video_hwaccel"],
@@ -172,6 +176,8 @@ def tracker_arguments(settings, output: str, ffmpeg: str, run_dir: Path, record_
             "--video-snapshot-dir", run_dir / "snapshots"]
     if settings.get("auto_time_trim"):
         args.append("--auto-time-trim")
+    if record_json:
+        args.append("-j")
     if record_video:
         args += ["--video-record-dir", run_dir / "video"]
     if output == "csv":
@@ -280,6 +286,8 @@ def main() -> int:
                         help="pc1.json の output を上書きする。csv は projector なしで試すとき (着弾は CSV に書く)")
     parser.add_argument("--name", help="記録フォルダーの名前に付ける言葉")
     parser.add_argument("--no-save-frame", action="store_true", help="Save frame を撮らない")
+    parser.add_argument("--json", action="store_true",
+                        help="追跡の詳細と全フレームを JSON で残す (pc1.json の record_json より優先。診断用)")
     parser.add_argument("--record", action="store_true",
                         help="受け取った動画を残す (pc1.json の record_video より優先)。2 台で 1 時間に約 45 GB")
     parser.add_argument("extra", nargs="*", help="-- のあとに書いたものは、そのまま ball_tracker に渡す")
@@ -288,6 +296,7 @@ def main() -> int:
     settings = load_json(SCRIPTS / "pc1.json")
     output = args.output or settings["output"]
     record_video = args.record or bool(settings.get("record_video"))
+    record_json = args.json or bool(settings.get("record_json"))
 
     process = None
     remote = None
@@ -303,7 +312,8 @@ def main() -> int:
         run_dir.mkdir(parents=True, exist_ok=True)
         log_path = run_dir / "tracker.log"
         env = dict(os.environ, NO_COLOR="1")
-        command = [str(tracker)] + tracker_arguments(settings, output, ffmpeg, run_dir, record_video, args.extra)
+        command = [str(tracker)] + tracker_arguments(settings, output, ffmpeg, run_dir, record_video, args.extra,
+                                                    record_json=record_json)
         # Ctrl+C はこのスクリプトだけが受け取り、ball_tracker は後片付けで止める (記録を写す前に落ちないように)
         group = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
                  else {"start_new_session": True})

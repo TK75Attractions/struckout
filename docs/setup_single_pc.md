@@ -203,12 +203,13 @@ touchpanel の `--machine-id` は `pc2.json` の `machine_id` と同じにする
 
 2 台の構成と同じ症状は、`docs/setup_pc1.md` 10 章と `docs/setup_pc2.md` を見る。
 
-### 既知の問題 (2026-10-24)
+### Compose の配置 (2026-10-27)
 
-- **master の `scripts/run_pc2.py` は game_master を起動できない。** compose のファイルが `game_master/docker/` に移った
-  (`d92cd44`) が、`run_pc2.py` (`COMPOSE`)、`game_master/mise.toml` のタスク、`compose.yaml` の `build` の `context` と
-  `dockerfile` が前の場所を指したまま (#321)。ランチャーも、リリースの `game_master/compose.yaml` を取りに行く (#307)。
-  リリース `2026-10-22.0` まではもとの場所にあるので、ランチャーで動かせる (5 章)
+Compose は `game_master/docker/` にある。`run_pc2.py` と mise のタスク、および Docker のビルド参照を
+この配置にそろえた (#321)。手で操作するときも、リポジトリのルートから
+`docker compose -f game_master/docker/compose.yaml -f game_master/docker/compose.dev.yaml ...` とする。
+既存の `game-master-dev` プロジェクト名と DB ボリュームは変わらない。
+ランチャーのリリース取得先の問題 (#307) は残っているため、移動後のリリースを使う場合は取得先の対応が必要。
 
 ## 9. 確かめたこと (2026-10-24)
 

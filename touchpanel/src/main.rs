@@ -1,3 +1,12 @@
+use std::{
+    process::ExitCode,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+};
+
 use touchpanel::run_main;
 use tracing::Level;
 use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
@@ -5,7 +14,7 @@ use tracing_subscriber::{Layer, filter, fmt, layer::SubscriberExt, util::Subscri
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
-fn main() -> std::process::ExitCode {
+fn main() -> ExitCode {
     let fmt_layer = fmt::layer().with_filter(filter::filter_fn(|meta| {
         meta.module_path()
             .map(|p| {
@@ -33,6 +42,47 @@ fn main() -> std::process::ExitCode {
     #[cfg(feature = "sentry")]
     tracing::info!("initialized tracing with sentry layer");
 
-    run_main();
-    std::process::ExitCode::SUCCESS
+    let shutdown_requested = Arc::new(AtomicBool::new(false));
+    let signal_shutdown = Arc::clone(&shutdown_requested);
+    let (done_tx, done_rx) = tokio::sync::oneshot::channel();
+    let signal_thread = thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("signal runtime should be created");
+        runtime.block_on(async move {
+            tokio::select! {
+                _ = shutdown_signal() => signal_shutdown.store(true, Ordering::Release),
+                _ = done_rx => {}
+            }
+        });
+    });
+
+    run_main(shutdown_requested);
+    let _ = done_tx.send(());
+    if signal_thread.join().is_err() {
+        eprintln!("終了シグナルの待機スレッドが異常終了しました");
+        return ExitCode::FAILURE;
+    }
+
+    ExitCode::SUCCESS
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::SignalKind;
+
+        let mut terminate = tokio::signal::unix::signal(SignalKind::terminate())
+            .expect("SIGTERM handler should be installed");
+        tokio::select! {
+            result = tokio::signal::ctrl_c() => result.expect("Ctrl-C handler should be installed"),
+            _ = terminate.recv() => {}
+        }
+    }
+
+    #[cfg(not(unix))]
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Ctrl-C handler should be installed");
 }

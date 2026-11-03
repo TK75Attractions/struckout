@@ -16,27 +16,26 @@ projector (Unity) は ball_tracker と game_master の 2 つにつながって�
 TCP のフレーミングは LE u32 の長さ + protobuf で、実装は
 `api/rust/src/lib.rs` の `write_packet` / `read_packet`。
 
-## デバッグ用の対向は 2 つある
+## デバッグ時の構成
 
 | 対向 | プログラム | 立て方 |
 |---|---|---|
 | ball_tracker | `sandbox/testTcpCLI` (C#) | `dotnet run --project sandbox/testTcpCLI` |
-| game_master | `sandbox/fake_game_master` (Rust) | `cargo run` (**リポジトリには入っていない**。下記) |
+| game_master | 実際の `game_master` + MySQL | `python scripts/run_pc2.py` |
 
-2 つとも立てれば、projector は **Fake モードではなく本物の通信経路のまま**動く。
-シリアライズや gRPC のストリームまで含めて確かめたいときはこちら。
-描画やアニメーションだけを触るなら Fake モード (後述) のほうが早い。
+`sandbox/testTcpCLI` は ball_tracker の TCP 接続を試すためのもの。
+描画だけを試す場合は後述の Unity Fake モードを使う。Fake モードは game_master の
+gRPC API を検証しない。Session / Player API を含めた通信確認には実際の game_master と MySQL を起動する。
 
 ## 座標系と得点の約束事
 
 - `CollisionPoint` は**物理座標 (m)**。ball_tracker は的の面の上での着弾位置を送る。
   `x` が面に沿った横方向 (世界座標の y)、`y` が高さ (世界座標の z)
   (`ball_tracker/src/collision_output/network.rs`: `x = coll.y, y = coll.z`)。
-- **得点は差分**。game_master (`game_master/src/service.rs`) が `game.score += score_to_add`
-  としているので、projector は累計ではなく的に当たったぶんだけを送る。
-- `AddScore` には `game_id` が要る。projector は `GameStarted` を受け取ったときに
-  `Event.game_id` を覚える。**ゲームが始まっていないと得点は送れない**
-  (本物は `NotFound` を返す。偽物も同じ)。
+- **得点は差分**。game_master (`game_master/src/services/mod.rs`) が累計へ加算するため、
+  projector は的に当たったぶんだけを送る。
+- `AddScore` には `machine_id` と `game_id` が要る。projector は `GameStarted` payload の
+  `game_id` を使う。**開始前、終了後、または切断中は得点を送り続けない**。
 
 ### 物理座標 → 盤面座標の変換
 
@@ -122,75 +121,32 @@ Collision Transform の係数しだいで、既定値なら `hit 0 1` が画面�
 
 ポートを変えたいときは `listen sensor 6000` のように第 2 引数で指定する。
 
-## 3. 偽 game_master につなぐ (fake_game_master)
+## game_master の API
 
-本物は MySQL を要求するので、イベント処理を触るたびに Docker を立てるのは重い。
-こちらは DB を持たず、`GameMasterService` のうち対向が実際に使うところだけを喋る。
+現在は `GameMasterSessionService` と `GameMasterPlayerService` を使う。
+契約は `api/proto/game_master/session.proto` と `player.proto` にある。
 
-> **これはリポジトリに入っていない。** projector (Unity) を触る人だけが使う道具なので、
-> `sandbox/fake_game_master/` は `.gitignore` で追跡から外してある。
-> 手元に無ければ作り直しが要る。ルートの cargo ワークスペースには属さない
-> 独立クレートなので、ルートのビルドはこれが無くても壊れない。
-
-```bash
-cd sandbox/fake_game_master
-cargo run
-```
-
-```
-> start                  # NORMAL で開始。GameStarted が飛ぶ
-> start hard 20          # HARD で 20 秒だけのゲーム
-> finish                 # 時間を待たずに終わらせる
-> status                 # 進行中のゲームと購読者の数
-> exit
-```
-
-| 起動オプション | 意味 | 既定 |
+| API | 使う側 | 役割 |
 |---|---|---|
-| `--port` | gRPC のポート | `api/spec/servers.yaml` の 8020 |
-| `--machine-id` | 対話コマンドが対象にする号機 | 1 |
-| `--duration` | ゲームの長さ (秒) | 150 (本物と同じ) |
+| `ListenEvents` | projector / touchpanel | 号機のイベント購読。再購読時に稼働中なら開始・残り時間・累計得点の snapshot を受け取る |
+| `StartSession` → `SetGameMode(SINGLE)` → `SetSessionDifficulty` → `SetSessionReady` | touchpanel | single game を設定して開始。Ready 応答の `game_id` と一致する `GameStarted` を待って Playing へ進む |
+| `AddScore` | projector | `machine_id`、payload の `game_id`、得点差分を送る |
+| `GetGameResult` | touchpanel | 終了済みゲームの保存得点を取得する |
+| `AddPlayer` / `ValidatePlayerName` / `GetPlayer` | touchpanel | プレイヤー登録・名前確認・既存プレイヤー検索 |
 
-projector が送ってきた `AddScore` はその場で表示される。送信側が実装できたかの
-確認はここを見るのが早い。
+projector は `GameStarted` payload の `game_id` で後続イベントを選別する。同じゲームの再送 snapshot では
+盤面を再初期化せず、別ゲーム ID の通知を無視する。切断中は得点送信を止め、再接続後に stream の
+snapshot から稼働状態を復元する。チュートリアルと MULTI mode は未対応で、server が `UNIMPLEMENTED` を返す。
 
-### 号機番号がずれていると何も起きない
+実際の PC② と同じ server・DB・projector を起動するには:
 
-game_master は `machine_id` でイベントを絞る (`pass_events_through_by_machine_id`)。
-**繋がってはいるのにイベントが一件も来ない**ときは、まずここを疑うこと。
-
-- projector 側: `GameLifetimeScope` の `Network Settings > Machine Id`
-  (シーンに値が無ければ既定の 1)
-- 偽 game_master 側: `--machine-id`
-
-`status` が `listeners : 0` のままなら、そもそも projector が繋がっていない。
-
-### 実装している RPC
-
-| RPC | 使う側 | 偽物の挙動 |
-|---|---|---|
-| `ListenEvents` | projector | 号機で絞ってイベントを流す |
-| `AddScore` | projector | 加算して表示。ゲームが無ければ `NotFound` (本物と同じ) |
-| `StartGame` | touchpanel | ゲームを開始し、そのゲームのイベントを返す |
-| `AddPlayer` | touchpanel | 通し番号を返すだけ。名前は覚えない |
-
-`GameTimeLimitNotify` は本物と同じく毎秒流れる。projector は今これを捨てているが、
-ストリームが生きているかの確認にはなる。
-
-**本物と違うところ**: 偽物は `ListenEvents` で繋いできた相手に、既に始まっている
-ゲームがあれば `GameStarted` を流し直す。本物は流さないので、touchpanel が
-start したあとに projector を繋ぐと開始を取りこぼす。
-先に projector を立ち上げておけば本物でも問題ない。
-
-## 4. 本物の game_master を使う
-
-```bash
-mise run //game_master:dev   # docker compose (app + MySQL)
+```powershell
+python scripts/run_pc2.py
 ```
 
-> **既知の問題**: `game_master/compose.yaml` が公開しているのは `8080:8080` だが、
-> バイナリが listen するのは `api/spec/servers.yaml` 由来の **8020**。
-> このままではホストから届かない。
+開発中に server と MySQL だけを起動する場合は `game_master/docker/compose.yaml` と
+`compose.dev.yaml` を使う (`mise run //game_master:dev`)。Compose の gRPC port は
+`api/spec/servers.yaml` の **8020** と一致する。DB は `mysql_data` volume に保持される。
 
 ## 5. 別マシンの ball_tracker につなぐ
 

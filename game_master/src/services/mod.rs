@@ -5,29 +5,32 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 
 use parking_lot::RwLock;
 use struckout_proto::{
-    self, AddScoreRequest, AddScoreResponse, Difficulty, GetGameResultRequest,
+    self, AddScoreRequest, AddScoreResponse, Difficulty, GameMode, GetGameResultRequest,
     GetGameResultResponse, GoNextTutorialRequest, GoNextTutorialResponse,
     GoPreviousTutorialRequest, GoPreviousTutorialResponse, ListenEventsRequest,
     ListenEventsResponse, SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
     SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
     StartSessionRequest, StartSessionResponse, StartTutorialRequest, StartTutorialResponse,
     game_master_session_service_server::GameMasterSessionService,
-    types::{GameId, MachineId, PlayerId},
+    types::{GameId, MachineId},
 };
-use time::{SignedDuration, UtcDateTime, ext::NumericalDuration};
-use tokio::sync::{broadcast, mpsc};
-use tokio_stream::{
-    Stream, StreamExt,
-    wrappers::{BroadcastStream, ReceiverStream},
+use time::UtcDateTime;
+use tokio::{
+    sync::{broadcast, mpsc},
+    time::Instant,
 };
+use tokio_stream::{Stream, wrappers::ReceiverStream};
 use tonic::{Request, Response, Status};
-use tracing::{instrument, trace, warn};
+use tracing::{instrument, warn};
 
-use crate::{DataSource, DataSourceImpl, GetGameResultError, session::Sessions};
+use crate::{
+    DataSource, DataSourceImpl, GetGameResultError,
+    session::{MachineSession, ReadyConfiguration, SessionError, Sessions},
+};
 
-const GAME_DURATION: SignedDuration = SignedDuration::seconds(90);
+const GAME_DURATION: Duration = Duration::from_secs(90);
 
-/// Implementation of [`GameMasterSessionService`].
+/// The session state orders database transitions and events so reconnecting clients see a consistent game.
 #[derive(derive_more::Debug, Clone)]
 pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     sessions: Arc<RwLock<Sessions>>,
@@ -36,176 +39,308 @@ pub struct GameMasterSessionServiceImpl<D = DataSourceImpl> {
     event_tx: broadcast::Sender<Event>,
 }
 
-impl<D> GameMasterSessionServiceImpl<D>
-where
-    D: DataSource,
-{
+impl<D: DataSource> GameMasterSessionServiceImpl<D> {
     pub fn new(data_source: D) -> Self {
         let (event_tx, _) = broadcast::channel(32);
         Self {
-            sessions: Default::default(),
+            sessions: Arc::new(RwLock::new(Sessions::new())),
             data_source,
             event_tx,
         }
     }
 
-    /// Handles completion of game when notified via `complete_rx`.
-    async fn handle_game_completion(
-        self,
-        game_id: GameId,
-        machine_id: MachineId,
-        mut complete_rx: mpsc::Receiver<()>,
-    ) {
-        complete_rx.recv().await.expect("complete channel closed");
-        let score = {
-            let sessions = self.sessions.read();
-            sessions
-                .score(machine_id)
-                .expect("it is guaranteed the session exist and is in right state")
-        };
-        let res = self.data_source.complete_game(game_id, score).await;
-        if let Err(e) = res {
-            self.event_tx
-                .send(Event {
-                    game_id,
-                    machine_id,
-                    data: Err(Status::unknown(e.to_string())), // TODO: more detailed error
-                })
-                .expect("all event receiver has been dropped");
-        };
+    /// Startup owns the reservation even if the Ready RPC is cancelled while the database is responding.
+    async fn start_game(self, configuration: ReadyConfiguration) -> Result<GameId, Status> {
+        let game_id = match self
+            .data_source
+            .insert_game_single(
+                configuration.machine_id,
+                configuration.player_id,
+                UtcDateTime::now(),
+                configuration.difficulty,
+            )
+            .await
         {
-            let mut guard = self.running_games.write();
-            guard.remove(&game_id);
-        }
-        self.event_tx
-            .send(Event {
+            Ok(game_id) => game_id,
+            Err(error) => {
+                self.sessions.write().rollback_start(configuration);
+                warn!(?error, machine_id = %configuration.machine_id, "failed to insert game");
+                return Err(Status::internal("failed to create game"));
+            }
+        };
+        let deadline = Instant::now() + GAME_DURATION;
+        {
+            let mut sessions = self.sessions.write();
+            sessions.start(configuration, game_id, deadline);
+            self.publish(
+                configuration.machine_id,
                 game_id,
+                SuccessfulEvent::GameStarted {
+                    difficulty: configuration.difficulty,
+                },
+            );
+            self.publish(
+                configuration.machine_id,
+                game_id,
+                SuccessfulEvent::GameTimeLimitNotify {
+                    remaining: GAME_DURATION,
+                },
+            );
+            self.publish(
+                configuration.machine_id,
+                game_id,
+                SuccessfulEvent::GameScoreChanged { total_score: 0 },
+            );
+        }
+        tokio::spawn(self.run_game(configuration.machine_id, game_id, deadline));
+        Ok(game_id)
+    }
+
+    /// A deadline rather than a tick count prevents long frames from extending the game's scoring window.
+    async fn run_game(self, machine_id: MachineId, game_id: GameId, deadline: Instant) {
+        let mut next_tick = Instant::now() + Duration::from_secs(1);
+        let final_score = loop {
+            tokio::time::sleep_until(next_tick.min(deadline)).await;
+            let now = Instant::now();
+            let remaining = deadline.saturating_duration_since(now);
+            let mut sessions = self.sessions.write();
+            let Some(session) = sessions.get_mut(machine_id) else {
+                return;
+            };
+            let MachineSession::Running {
+                configuration,
+                game_id: current_id,
+                score,
+                ..
+            } = session
+            else {
+                return;
+            };
+            if *current_id != game_id {
+                return;
+            }
+            self.publish(
                 machine_id,
-                data: Ok(SuccessfulEvent::GameFinished),
-            })
-            .expect("all event receiver has been dropped");
+                game_id,
+                SuccessfulEvent::GameTimeLimitNotify { remaining },
+            );
+            if remaining.is_zero() {
+                let final_score = *score;
+                *session = MachineSession::Finishing {
+                    configuration: *configuration,
+                    game_id,
+                };
+                break final_score;
+            }
+            // Do not emit a burst of old ticks after the executor was delayed.
+            next_tick = now + Duration::from_secs(1);
+        };
+        let result = self.data_source.complete_game(game_id, final_score).await;
+        {
+            let mut sessions = self.sessions.write();
+            sessions.remove_finished(machine_id, game_id);
+            let data = match result {
+                Ok(()) => Ok(SuccessfulEvent::GameFinished),
+                Err(error) => {
+                    warn!(?error, %game_id, %machine_id, final_score, "failed to save final game score");
+                    Err(Status::internal("failed to save final game score"))
+                }
+            };
+            // A failed save is observable as a stream error, never as a successful GameFinished.
+            let _ = self.event_tx.send(Event {
+                machine_id,
+                game_id,
+                data,
+            });
+        }
+    }
+
+    // Called while holding the state lock so subscription snapshots cannot be followed by older state.
+    fn publish(&self, machine_id: MachineId, game_id: GameId, data: SuccessfulEvent) {
+        // No subscribers is normal while the projector or touchpanel reconnects.
+        let _ = self.event_tx.send(Event {
+            machine_id,
+            game_id,
+            data: Ok(data),
+        });
+    }
+}
+
+fn session_status(error: SessionError) -> Status {
+    match error {
+        SessionError::Capacity => Status::resource_exhausted(error.to_string()),
+        _ => Status::failed_precondition(error.to_string()),
     }
 }
 
 #[tonic::async_trait]
-impl<D> GameMasterSessionService for GameMasterSessionServiceImpl<D>
-where
-    D: DataSource,
-{
-    #[instrument]
+impl<D: DataSource> GameMasterSessionService for GameMasterSessionServiceImpl<D> {
+    #[instrument(skip(self))]
     async fn start_session(
         &self,
         req: Request<StartSessionRequest>,
     ) -> Result<Response<StartSessionResponse>, Status> {
-        trace!(
-            remote_addr = ?req.remote_addr(),
-            "received start_session request"
-        );
         let req = req.into_inner();
-        let machine_id: MachineId = req.machine_id.into();
-        let player_id: PlayerId = req.player_id.into();
-        {
-            let mut sessions = self.sessions.write();
-            sessions
-                .insert(machine_id, player_id)
-                .map_err(|e| Status::failed_precondition(e.to_string()))?;
-        }
-
+        self.sessions
+            .write()
+            .insert(req.machine_id.into(), req.player_id.into())
+            .map_err(session_status)?;
         Ok(Response::new(StartSessionResponse {}))
     }
 
+    #[instrument(skip(self))]
     async fn set_session_difficulty(
         &self,
         req: Request<SetSessionDifficultyRequest>,
     ) -> Result<Response<SetSessionDifficultyResponse>, Status> {
         let req = req.into_inner();
-        let SetSessionDifficultyRequest {
-            difficulty,
-            machine_id,
-        } = req;
-        let difficulty: Difficulty = difficulty.try_into().map_err();
-        let machine_id = machine_id.into();
-
-        {
-            let mut sessions = self.sessions.write();
+        let difficulty = Difficulty::try_from(req.difficulty)
+            .map_err(|_| Status::invalid_argument("unknown difficulty"))?;
+        if difficulty == Difficulty::Unspecified {
+            return Err(Status::invalid_argument("difficulty must be specified"));
         }
-        todo!()
+        self.sessions
+            .write()
+            .update_difficulty(req.machine_id.into(), difficulty)
+            .map_err(session_status)?;
+        Ok(Response::new(SetSessionDifficultyResponse {}))
     }
 
+    #[instrument(skip(self))]
     async fn set_game_mode(
         &self,
-        _req: Request<SetGameModeRequest>,
+        req: Request<SetGameModeRequest>,
     ) -> Result<Response<SetGameModeResponse>, Status> {
-        todo!()
+        let req = req.into_inner();
+        match GameMode::try_from(req.mode)
+            .map_err(|_| Status::invalid_argument("unknown game mode"))?
+        {
+            GameMode::Single => (),
+            GameMode::Multi => return Err(Status::unimplemented("multiplayer is not implemented")),
+            GameMode::Unspecified => {
+                return Err(Status::invalid_argument("game mode must be specified"));
+            }
+        }
+        self.sessions
+            .write()
+            .set_single_mode(req.machine_id.into())
+            .map_err(session_status)?;
+        Ok(Response::new(SetGameModeResponse {}))
     }
 
     async fn start_tutorial(
         &self,
         _req: Request<StartTutorialRequest>,
     ) -> Result<Response<StartTutorialResponse>, Status> {
-        todo!()
+        Err(Status::unimplemented(
+            "tutorial navigation is not implemented",
+        ))
     }
 
     async fn go_previous_tutorial(
         &self,
         _req: Request<GoPreviousTutorialRequest>,
     ) -> Result<Response<GoPreviousTutorialResponse>, Status> {
-        todo!()
+        Err(Status::unimplemented(
+            "tutorial navigation is not implemented",
+        ))
     }
 
     async fn go_next_tutorial(
         &self,
         _req: Request<GoNextTutorialRequest>,
     ) -> Result<Response<GoNextTutorialResponse>, Status> {
-        todo!()
+        Err(Status::unimplemented(
+            "tutorial navigation is not implemented",
+        ))
     }
 
     type ListenEventsStream =
         Pin<Box<dyn Stream<Item = Result<ListenEventsResponse, Status>> + Send>>;
 
+    #[instrument(skip(self))]
     async fn listen_events(
         &self,
         req: Request<ListenEventsRequest>,
     ) -> Result<Response<Self::ListenEventsStream>, Status> {
-        let req = req.into_inner();
-        let machine_id: MachineId = req.machine_id.into();
-        let (stream_tx, stream_rx) = mpsc::channel(32);
-        let event_rx = self.event_tx.subscribe();
+        let machine_id = req.into_inner().machine_id.into();
+        let (receiver, initial) = {
+            let sessions = self.sessions.read();
+            let receiver = self.event_tx.subscribe();
+            let initial = match sessions.get(machine_id) {
+                Some(MachineSession::Running {
+                    configuration,
+                    game_id,
+                    score,
+                    deadline,
+                }) => vec![
+                    Event {
+                        machine_id,
+                        game_id: *game_id,
+                        data: Ok(SuccessfulEvent::GameStarted {
+                            difficulty: configuration.difficulty,
+                        }),
+                    },
+                    Event {
+                        machine_id,
+                        game_id: *game_id,
+                        data: Ok(SuccessfulEvent::GameTimeLimitNotify {
+                            remaining: deadline.saturating_duration_since(Instant::now()),
+                        }),
+                    },
+                    Event {
+                        machine_id,
+                        game_id: *game_id,
+                        data: Ok(SuccessfulEvent::GameScoreChanged {
+                            total_score: *score,
+                        }),
+                    },
+                ],
+                _ => Vec::new(),
+            };
+            (receiver, initial)
+        };
+        let (tx, rx) = mpsc::channel(32);
         tokio::spawn(pass_events_through_by_machine_id(
-            machine_id, event_rx, stream_tx,
+            machine_id, receiver, tx, initial,
         ));
-
-        let out_stream = ReceiverStream::new(stream_rx);
-        Ok(Response::new(
-            Box::pin(out_stream) as Self::ListenEventsStream
-        ))
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
 
+    #[instrument(skip(self))]
     async fn add_score(
         &self,
         req: Request<AddScoreRequest>,
     ) -> Result<Response<AddScoreResponse>, Status> {
         let req = req.into_inner();
-        let game_id = req.game_id.into();
         let machine_id = req.machine_id.into();
-        let total_score = {
-            let mut guard = self.running_games.write();
-            let Some(game) = guard.get_mut(&game_id) else {
-                return Err(Status::not_found(format!(
-                    "game with id {} does not exist or is not running",
-                    game_id.into_inner()
-                )));
-            };
-            game.score += req.score_to_add;
-            game.score
+        let game_id = req.game_id.into();
+        let mut sessions = self.sessions.write();
+        let Some(MachineSession::Running {
+            game_id: current_id,
+            score,
+            deadline,
+            ..
+        }) = sessions.get_mut(machine_id)
+        else {
+            return Err(Status::failed_precondition("machine has no running game"));
         };
-        self.event_tx
-            .send(Event {
-                game_id,
-                machine_id,
-                data: Ok(SuccessfulEvent::GameScoreChanged { total_score }),
-            })
-            .unwrap();
+        if *current_id != game_id {
+            return Err(Status::not_found("game does not belong to this machine"));
+        }
+        if Instant::now() >= *deadline {
+            return Err(Status::failed_precondition("game has finished"));
+        }
+        *score = score
+            .checked_add(req.score_to_add)
+            .ok_or_else(|| Status::out_of_range("score overflow"))?;
+        self.publish(
+            machine_id,
+            game_id,
+            SuccessfulEvent::GameScoreChanged {
+                total_score: *score,
+            },
+        );
         Ok(Response::new(AddScoreResponse {}))
     }
 
@@ -213,178 +348,155 @@ where
         &self,
         req: Request<GetGameResultRequest>,
     ) -> Result<Response<GetGameResultResponse>, Status> {
-        let req = req.into_inner();
-        let game_id = req.game_id.into();
-        match self.data_source.get_game_result(game_id).await {
+        match self
+            .data_source
+            .get_game_result(req.into_inner().game_id.into())
+            .await
+        {
             Ok(record) => Ok(Response::new(GetGameResultResponse {
                 total_score: record.score,
             })),
             Err(e @ GetGameResultError::GameNotFound) => Err(Status::not_found(e.to_string())),
             Err(e @ GetGameResultError::NotYetCompleted) => Err(Status::aborted(e.to_string())),
-            Err(GetGameResultError::Sqlx(e)) => Err(Status::internal(e.to_string())),
+            Err(GetGameResultError::Sqlx(error)) => {
+                warn!(?error, "failed to fetch game result");
+                Err(Status::internal("failed to fetch game result"))
+            }
         }
     }
 
+    #[instrument(skip(self))]
     async fn set_session_ready(
         &self,
         req: Request<SetSessionReadyRequest>,
     ) -> Result<Response<SetSessionReadyResponse>, Status> {
-        let req = req.into_inner();
-
-        let started_at = UtcDateTime::now();
-
-        // TODO: more detailed error
-        let game_id = self
-            .data_source
-            .insert_game_single(machine_id, req.player_id.into(), started_at, difficulty)
+        let configuration = self
+            .sessions
+            .write()
+            .reserve_start(req.into_inner().machine_id.into())
+            .map_err(session_status)?;
+        let service = self.clone();
+        let game_id = tokio::spawn(service.start_game(configuration))
             .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        self.running_games.write().insert(game_id, Game::new());
-
-        if self
-            .event_tx
-            .send(Event {
-                game_id,
-                machine_id,
-                data: Ok(SuccessfulEvent::GameStarted { difficulty }),
-            })
-            .is_err()
-        {
-            warn!("all receiver has been dropped");
-        };
-
-        let (complete_tx, complete_rx) = mpsc::channel(16);
-
-        tokio::spawn(game_timer(
-            machine_id,
-            game_id,
-            self.event_tx.clone(),
-            complete_tx,
-        ));
-
-        // handle game completion
-        tokio::spawn(
-            self.clone()
-                .handle_game_completion(game_id, machine_id, complete_rx),
-        );
-        todo!()
+            .map_err(|error| {
+                warn!(?error, "game startup task failed");
+                Status::internal("game startup failed")
+            })??;
+        Ok(Response::new(SetSessionReadyResponse {
+            game_id: game_id.into_inner(),
+        }))
     }
 }
 
-/// Filters events from `event_rx` by `machine_id` and pass it through the response stream.
-#[instrument(skip(event_rx, stream_tx))]
+/// Each subscription owns a bounded forwarder and ends as soon as its response stream is dropped.
 async fn pass_events_through_by_machine_id(
     machine_id: MachineId,
-    event_rx: broadcast::Receiver<Event>,
-    stream_tx: mpsc::Sender<Result<ListenEventsResponse, Status>>,
+    mut receiver: broadcast::Receiver<Event>,
+    tx: mpsc::Sender<Result<ListenEventsResponse, Status>>,
+    initial: Vec<Event>,
 ) {
-    let events = BroadcastStream::new(event_rx);
-    let mut events = events
-        .map(|v| v.expect("broadcast channel lagged"))
-        .filter(|ev| ev.machine_id == machine_id);
-    while let Some(ev) = events.next().await {
-        let data = ev.data.map(|v| ListenEventsResponse {
-            event: Some(struckout_proto::Event {
-                game_id: ev.game_id.into_inner(),
-                event_data: Some(v.into()),
-            }),
-        });
-        stream_tx.send(data).await.expect("receiver dropped");
-    }
-}
-
-/// Sends event to broadcast channel every secounds until the game finishes, then sends the [`Event::GameFinished`].
-#[instrument(skip(tx, complete_tx))]
-async fn game_timer(
-    machine_id: MachineId,
-    game_id: GameId,
-    tx: broadcast::Sender<Event>,
-    complete_tx: mpsc::Sender<()>,
-) {
-    let mut interval = tokio::time::interval(Duration::from_secs(1));
-    let duration_secs = GAME_DURATION.whole_seconds();
-    for i in 0..duration_secs {
-        trace!(secs_elapsed = i, "timer tick");
-        let res = tx.send(Event {
-            game_id,
-            machine_id,
-            data: Ok(SuccessfulEvent::GameTimeLimitNotify {
-                remaining: (duration_secs - i).seconds(),
-            }),
-        });
-        if res.is_err() {
-            warn!("all event receiver has been dropped");
+    for event in initial {
+        if tx.send(event.into_response()).await.is_err() {
+            return;
         }
-        interval.tick().await;
     }
-    complete_tx.send(()).await.expect("complete channel closed");
+    loop {
+        tokio::select! {
+            _ = tx.closed() => return,
+            received = receiver.recv() => match received {
+                Ok(event) if event.machine_id == machine_id => {
+                    if tx.send(event.into_response()).await.is_err() { return; }
+                }
+                Ok(_) => (),
+                Err(broadcast::error::RecvError::Closed) => return,
+                Err(broadcast::error::RecvError::Lagged(_)) => {
+                    let _ = tx.send(Err(Status::resource_exhausted("event stream lagged; reconnect to resynchronize"))).await;
+                    return;
+                }
+            }
+        }
+    }
 }
 
-// Events which occur in the service, including errors.
 #[derive(Debug, Clone)]
-pub struct Event {
+struct Event {
     game_id: GameId,
     machine_id: MachineId,
     data: Result<SuccessfulEvent, Status>,
 }
 
-/// Events which occur in the service. This can be converted to [`struckout_proto::Event`].
-///
-/// With this type, you don't need to convert proto types like `u32` or [`prost_types::Duration`]
-/// to domain type like [`GameId`] or [`time::SignedDuration`] each time.
 #[derive(Debug, Clone)]
-pub enum SuccessfulEvent {
-    /// [`struckout_proto::event::GameStarted`]
+enum SuccessfulEvent {
     GameStarted { difficulty: Difficulty },
-    /// [`struckout_proto::event::GameTimeLimitNotify`]
-    GameTimeLimitNotify { remaining: time::SignedDuration },
-    /// [`struckout_proto::event::GameScoreChanged`]
+    GameTimeLimitNotify { remaining: Duration },
     GameScoreChanged { total_score: u32 },
-    /// [`struckout_proto::event::GameFinished`]
     GameFinished,
 }
 
-impl From<SuccessfulEvent> for struckout_proto::event::EventData {
-    fn from(ev: SuccessfulEvent) -> Self {
+impl Event {
+    fn into_response(self) -> Result<ListenEventsResponse, Status> {
         use struckout_proto::event::{
             EventData, GameFinished, GameScoreChanged, GameStarted, GameTimeLimitNotify,
         };
-
-        match ev {
+        let game_id = self.game_id.into_inner();
+        let event_data = match self.data? {
             SuccessfulEvent::GameStarted { difficulty } => EventData::GameStarted(GameStarted {
+                game_id,
                 difficulty: difficulty.into(),
             }),
-            SuccessfulEvent::GameScoreChanged { total_score } => {
-                EventData::GameScoreChanged(GameScoreChanged { total_score })
-            }
             SuccessfulEvent::GameTimeLimitNotify { remaining } => {
                 EventData::GameTimeLimitNotify(GameTimeLimitNotify {
+                    game_id,
                     remaining: Some(prost_types::Duration {
-                        seconds: remaining.whole_seconds(),
-                        nanos: remaining.subsec_nanoseconds(),
+                        seconds: remaining.as_secs() as i64,
+                        nanos: remaining.subsec_nanos() as i32,
                     }),
                 })
             }
-            SuccessfulEvent::GameFinished => EventData::GameFinished(GameFinished {}),
-        }
+            SuccessfulEvent::GameScoreChanged { total_score } => {
+                EventData::GameScoreChanged(GameScoreChanged {
+                    game_id,
+                    total_score,
+                })
+            }
+            SuccessfulEvent::GameFinished => EventData::GameFinished(GameFinished { game_id }),
+        };
+        Ok(ListenEventsResponse {
+            event: Some(struckout_proto::Event {
+                event_data: Some(event_data),
+            }),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches;
-
-    use struckout_proto::event::EventData;
-
-    use crate::{AddPlayerError, PlayerId};
-
     use super::*;
+    use crate::{
+        AddPlayerError, GetPlayerError, ValidatePlayerNameError,
+        data::{GameRecord, Player},
+    };
+    use std::sync::atomic::{AtomicU32, Ordering};
+    use struckout_proto::{event::EventData, types::PlayerId};
+    use tokio_stream::StreamExt;
 
     #[derive(Clone)]
     struct StubDataSource {
         game_id: GameId,
         player_id: PlayerId,
+        inserted: Arc<AtomicU32>,
+        completed_score: Arc<AtomicU32>,
+    }
+
+    impl StubDataSource {
+        fn new(game_id: u32, player_id: u32) -> Self {
+            Self {
+                game_id: game_id.into(),
+                player_id: player_id.into(),
+                inserted: Arc::new(AtomicU32::new(0)),
+                completed_score: Arc::new(AtomicU32::new(0)),
+            }
+        }
     }
 
     impl DataSource for StubDataSource {
@@ -395,240 +507,292 @@ mod tests {
             _started_at: UtcDateTime,
             _difficulty: Difficulty,
         ) -> Result<GameId, sqlx::Error> {
+            self.inserted.fetch_add(1, Ordering::SeqCst);
             Ok(self.game_id)
         }
-
         async fn insert_game_multi(
             &self,
             _player_ids: [PlayerId; 2],
             _started_at: UtcDateTime,
             _difficulty: Difficulty,
         ) -> Result<GameId, sqlx::Error> {
-            todo!()
+            Err(sqlx::Error::Protocol("multiplayer is not supported".into()))
         }
-
-        async fn complete_game(&self, _game_id: GameId, _score: u32) -> Result<(), sqlx::Error> {
+        async fn complete_game(&self, _game_id: GameId, score: u32) -> Result<(), sqlx::Error> {
+            self.completed_score.store(score, Ordering::SeqCst);
             Ok(())
         }
-
         async fn add_player(&self, _name: impl Into<String>) -> Result<PlayerId, AddPlayerError> {
             Ok(self.player_id)
         }
-
         async fn get_game_result(
             &self,
             _game_id: GameId,
-        ) -> Result<crate::data::GameRecord, crate::GetGameResultError> {
-            unimplemented!()
+        ) -> Result<GameRecord, GetGameResultError> {
+            Err(GetGameResultError::GameNotFound)
         }
-
         async fn validate_player_name(
             &self,
             _name: impl Into<String>,
         ) -> Result<(), ValidatePlayerNameError> {
-            unimplemented!()
+            Ok(())
         }
-
         async fn get_player(
             &self,
-            _name: impl Into<String> + Send,
+            name: impl Into<String> + Send,
         ) -> Result<Player, GetPlayerError> {
-            unimplemented!()
+            Ok(Player {
+                player_id: self.player_id,
+                name: name.into(),
+            })
         }
     }
 
-    /// Waits for event matching `ev_pat`. Returns when a event from stream matches pattern, or panics when stream ends.
-    macro_rules! wait_event {
-        ($stream_var:ident, $ev_pat:pat) => {
-            loop {
-                use tokio_stream::StreamExt;
-                let Some(ev) = $stream_var.next().await else {
-                    panic!("event stream ended");
-                };
-                match ev {
-                    Ok(StartSessionResponse {
-                        event:
-                            Some(::struckout_proto::Event {
-                                event_data: Some(ret @ $ev_pat),
-                                ..
-                            }),
-                    }) => break Some(ret),
-                    _ => (),
-                }
-            }
-        };
+    async fn configure(
+        service: &GameMasterSessionServiceImpl<StubDataSource>,
+        machine: u32,
+        player: u32,
+    ) {
+        service
+            .start_session(Request::new(StartSessionRequest {
+                machine_id: machine,
+                player_id: player,
+            }))
+            .await
+            .unwrap();
+        service
+            .set_game_mode(Request::new(SetGameModeRequest {
+                machine_id: machine,
+                mode: GameMode::Single.into(),
+            }))
+            .await
+            .unwrap();
+        service
+            .set_session_difficulty(Request::new(SetSessionDifficultyRequest {
+                machine_id: machine,
+                difficulty: Difficulty::Normal.into(),
+            }))
+            .await
+            .unwrap();
+    }
+
+    async fn next_event(
+        stream: &mut <GameMasterSessionServiceImpl<StubDataSource> as GameMasterSessionService>::ListenEventsStream,
+    ) -> EventData {
+        stream
+            .next()
+            .await
+            .unwrap()
+            .unwrap()
+            .event
+            .unwrap()
+            .event_data
+            .unwrap()
     }
 
     #[tokio::test]
     async fn start_session_triggers_game_started_event() {
-        let ds = StubDataSource {
-            game_id: GameId::new(14),
-            player_id: PlayerId::new(334),
-        };
-        let machine_id = MachineId::new(1);
-        let difficulty = Difficulty::Normal;
+        let ds = StubDataSource::new(14, 334);
         let service = GameMasterSessionServiceImpl::new(ds.clone());
-        let mut rx = service.event_tx.subscribe();
-
-        let req = Request::new(StartSessionRequest {
-            machine_id: machine_id.into(),
-            player_id: ds.player_id.into(),
-            difficulty: difficulty.into(),
-            mode: GameMode::Single.into(),
-        });
-        service.start_session(req).await.expect("should succeed");
-
-        let ev = rx.recv().await.unwrap();
-        let Ok(SuccessfulEvent::GameStarted {
-            difficulty: ev_difficulty,
-        }) = &ev.data
-        else {
-            panic!("should not be other events: {:?}", ev);
-        };
-        assert_eq!(ds.game_id, ev.game_id,);
-        assert_eq!(machine_id, ev.machine_id);
-        assert_eq!(difficulty, *ev_difficulty);
+        let mut stream = service
+            .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
+            .await
+            .unwrap()
+            .into_inner();
+        configure(&service, 1, 334).await;
+        let (first, second) = tokio::join!(
+            service.set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 })),
+            service.set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 })),
+        );
+        assert_eq!(first.unwrap().into_inner().game_id, 14);
+        assert_eq!(second.unwrap_err().code(), tonic::Code::FailedPrecondition);
+        assert_eq!(ds.inserted.load(Ordering::SeqCst), 1);
+        assert!(
+            matches!(next_event(&mut stream).await, EventData::GameStarted(started) if started.game_id == 14 && started.difficulty == Difficulty::Normal as i32)
+        );
+        assert_eq!(
+            service
+                .set_game_mode(Request::new(SetGameModeRequest {
+                    machine_id: 1,
+                    mode: GameMode::Multi.into()
+                }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::Unimplemented
+        );
+        assert_eq!(
+            service
+                .start_tutorial(Request::new(StartTutorialRequest { machine_id: 1 }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::Unimplemented
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn start_session_stream_notifies_in_correct_order() {
-        let ds = StubDataSource {
-            game_id: GameId::new(20),
-            player_id: PlayerId::new(13),
-        };
-        let machine_id = MachineId::new(2);
-        let difficulty = Difficulty::Normal;
+        let ds = StubDataSource::new(20, 13);
         let service = GameMasterSessionServiceImpl::new(ds.clone());
-
-        let req = {
-            let difficulty: i32 = difficulty.into();
-
-            Request::new(StartSessionRequest {
-                machine_id: machine_id.into_inner(),
-                player_id: ds.player_id.into_inner(),
-                difficulty,
-                mode: GameMode::Single.into(),
-            })
-        };
-        let stream = service.start_session(req).await.expect("should succeed");
-        let mut stream = stream.into_inner();
-
-        // Assert: Started
-        let Some(Ok(started)) = stream.next().await else {
-            panic!("stream shouldn't finish nor have error");
-        };
-        let Some(struckout_proto::Event {
-            game_id: ev_game_id,
-            event_data: Some(EventData::GameStarted(started)),
-        }) = started.event
-        else {
-            panic!("event data didn't match: {:?}", started.event)
-        };
-        assert_eq!(ev_game_id, ds.game_id.into_inner());
-        {
-            let difficulty: i32 = difficulty.into();
-            assert_eq!(started.difficulty, difficulty);
+        let mut stream = service
+            .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+            .await
+            .unwrap()
+            .into_inner();
+        configure(&service, 2, 13).await;
+        service
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 2 }))
+            .await
+            .unwrap();
+        assert!(matches!(
+            next_event(&mut stream).await,
+            EventData::GameStarted(_)
+        ));
+        assert!(
+            matches!(next_event(&mut stream).await, EventData::GameTimeLimitNotify(notify) if notify.remaining.unwrap().seconds == 90)
+        );
+        assert!(
+            matches!(next_event(&mut stream).await, EventData::GameScoreChanged(score) if score.total_score == 0)
+        );
+        service
+            .add_score(Request::new(AddScoreRequest {
+                machine_id: 2,
+                game_id: 20,
+                score_to_add: 7,
+            }))
+            .await
+            .unwrap();
+        assert!(
+            matches!(next_event(&mut stream).await, EventData::GameScoreChanged(score) if score.total_score == 7)
+        );
+        assert_eq!(
+            service
+                .add_score(Request::new(AddScoreRequest {
+                    machine_id: 1,
+                    game_id: 20,
+                    score_to_add: 1
+                }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::FailedPrecondition
+        );
+        assert_eq!(
+            service
+                .add_score(Request::new(AddScoreRequest {
+                    machine_id: 2,
+                    game_id: 99,
+                    score_to_add: 1
+                }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::NotFound
+        );
+        assert_eq!(
+            service
+                .add_score(Request::new(AddScoreRequest {
+                    machine_id: 2,
+                    game_id: 20,
+                    score_to_add: u32::MAX
+                }))
+                .await
+                .unwrap_err()
+                .code(),
+            tonic::Code::OutOfRange
+        );
+        let mut snapshot = service
+            .listen_events(Request::new(ListenEventsRequest { machine_id: 2 }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert!(
+            matches!(next_event(&mut snapshot).await, EventData::GameStarted(started) if started.game_id == 20)
+        );
+        assert!(matches!(
+            next_event(&mut snapshot).await,
+            EventData::GameTimeLimitNotify(_)
+        ));
+        assert!(
+            matches!(next_event(&mut snapshot).await, EventData::GameScoreChanged(score) if score.total_score == 7)
+        );
+        let mut remaining = 90;
+        loop {
+            match next_event(&mut stream).await {
+                EventData::GameTimeLimitNotify(notify) => {
+                    let value = notify.remaining.unwrap().seconds;
+                    assert!(value <= remaining);
+                    remaining = value;
+                }
+                EventData::GameFinished(finished) => {
+                    assert_eq!(finished.game_id, 20);
+                    break;
+                }
+                other => panic!("unexpected event: {other:?}"),
+            }
         }
-
-        // Assert: TimeLimitNotify
-        let finished = loop {
-            let resp = stream.next().await.unwrap();
-            let resp = resp.expect("should not have error");
-            let ev = resp.event.unwrap();
-            assert_eq!(ev.game_id, ds.game_id.into_inner());
-            let ev = ev.event_data.unwrap();
-            let EventData::GameTimeLimitNotify(notify) = ev else {
-                break ev;
-            };
-            let _rem = notify.remaining.unwrap();
-        };
-
-        // Assert: Finished
-        assert_matches!(finished, EventData::GameFinished(_));
+        assert_eq!(remaining, 0);
+        assert_eq!(ds.completed_score.load(Ordering::SeqCst), 7);
     }
 
     #[tokio::test(start_paused = true)]
     async fn start_session_adds_to_and_removes_from_running_games() {
-        let ds = StubDataSource {
-            game_id: GameId::new(20),
-            player_id: PlayerId::new(13),
-        };
-        let machine_id = MachineId::new(2);
-        let difficulty = Difficulty::Normal;
-        let service = GameMasterSessionServiceImpl::new(ds.clone());
-
-        let req = {
-            let difficulty: i32 = difficulty.into();
-
-            Request::new(StartSessionRequest {
-                machine_id: machine_id.into_inner(),
-                player_id: ds.player_id.into_inner(),
-                difficulty,
-                mode: GameMode::Single.into(),
-            })
-        };
-        let stream = service.start_session(req).await.expect("should succeed");
-        let mut stream = stream.into_inner();
-
-        wait_event!(stream, EventData::GameStarted(_));
-        {
-            let guard = service.running_games.read();
-            guard.get(&ds.game_id).expect("should exist");
+        let service = GameMasterSessionServiceImpl::new(StubDataSource::new(20, 13));
+        configure(&service, 2, 13).await;
+        service
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 2 }))
+            .await
+            .unwrap();
+        assert!(matches!(
+            service.sessions.read().get(2.into()),
+            Some(MachineSession::Running { .. })
+        ));
+        tokio::time::advance(GAME_DURATION).await;
+        // Completion includes a database future, so yield until its detached timer finishes.
+        for _ in 0..10 {
+            tokio::task::yield_now().await;
         }
-
-        wait_event!(stream, EventData::GameFinished(_));
-        {
-            let guard = service.running_games.read();
-            let opt = guard.get(&ds.game_id);
-            assert!(opt.is_none());
-        }
+        assert!(service.sessions.read().get(2.into()).is_none());
+        configure(&service, 2, 13).await;
+        assert!(
+            service
+                .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 2 }))
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test(start_paused = true)]
     async fn listen_events_filters_events_by_machine_id() {
-        let ds = StubDataSource {
-            game_id: GameId::new(14),
-            player_id: PlayerId::new(334),
-        };
-        let machine_id_to_listen = MachineId::new(1);
-        let machine_id_to_ignore = MachineId::new(2);
-        let difficulty = Difficulty::Normal;
-        let service = GameMasterSessionServiceImpl::new(ds.clone());
-
-        let stream = service
-            .listen_events(Request::new(ListenEventsRequest {
-                machine_id: machine_id_to_listen.into_inner(),
-            }))
+        let service = GameMasterSessionServiceImpl::new(StubDataSource::new(14, 334));
+        let mut stream = service
+            .listen_events(Request::new(ListenEventsRequest { machine_id: 1 }))
             .await
-            .expect("should succeed");
-        let mut stream = stream.into_inner();
-
+            .unwrap()
+            .into_inner();
+        configure(&service, 2, 334).await;
         service
-            .start_session(Request::new(StartSessionRequest {
-                machine_id: machine_id_to_listen.into_inner(),
-                difficulty: difficulty.into(),
-                player_id: ds.player_id.into_inner(),
-                mode: GameMode::Single.into(),
-            }))
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 2 }))
             .await
             .unwrap();
+        configure(&service, 1, 334).await;
         service
-            .start_session(Request::new(StartSessionRequest {
-                machine_id: machine_id_to_ignore.into_inner(),
-                difficulty: difficulty.into(),
-                player_id: ds.player_id.into_inner(),
-                mode: GameMode::Single.into(),
-            }))
+            .set_session_ready(Request::new(SetSessionReadyRequest { machine_id: 1 }))
             .await
             .unwrap();
-
         loop {
-            let resp = stream.next().await.unwrap();
-            let resp = resp.expect("should not have error");
-            let ev = resp.event.unwrap();
-            if let EventData::GameFinished(_) = ev.event_data.unwrap() {
-                break;
+            match next_event(&mut stream).await {
+                EventData::GameStarted(ev) => assert_eq!(ev.game_id, 14),
+                EventData::GameFinished(ev) => {
+                    assert_eq!(ev.game_id, 14);
+                    break;
+                }
+                _ => (),
             }
         }
+        drop(stream);
+        tokio::task::yield_now().await;
+        assert_eq!(service.event_tx.receiver_count(), 0);
     }
 }

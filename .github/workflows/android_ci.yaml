@@ -6,6 +6,8 @@ on:
     paths:
       - camera/**
       - api/proto/**
+      - api/spec/**
+      - scripts/generate_server_ports.py
       - .github/workflows/android_ci.yaml
       - mise.toml
       - mise.lock
@@ -14,6 +16,8 @@ on:
     paths:
       - camera/**
       - api/proto/**
+      - api/spec/**
+      - scripts/generate_server_ports.py
       - .github/workflows/android_ci.yaml
       - mise.toml
       - mise.lock
@@ -32,6 +36,8 @@ jobs:
           sparse-checkout: |
             camera
             api/proto
+            api/spec
+            scripts/generate_server_ports.py
             mise.toml
             mise.lock
       - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2

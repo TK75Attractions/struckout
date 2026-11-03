@@ -145,16 +145,16 @@ mise -C camera install java protoc
 
 ```powershell
 $env:SQLX_OFFLINE = 'true'
-mise -C ball_tracker exec rust protoc -- cargo build --release --locked -p ball_tracker
+mise -C ball_tracker exec rust protoc -- cargo build --profile release-tracker --locked -p ball_tracker
 ```
 
 初回は依存クレートの取得で時間がかかる。成功すると
-`target\release\ball_tracker.exe` ができる。
+`target\release-tracker\ball_tracker.exe` ができる。tracker 専用の最適化設定は [ビルドプロファイル](ball_tracker/ball_tracker_build_profiles.md) を参照。
 
 単体で起動できるか確かめる (projector もカメラも要らない):
 
 ```powershell
-.\target\release\ball_tracker.exe --input network --output csv
+.\target\release-tracker\ball_tracker.exe --input network --output csv
 ```
 
 次のログが出て止まらずに待ち続ければよい。Ctrl+C で終了する。
@@ -179,7 +179,7 @@ starting TCP listener
 | `--ffmpeg <path>` | カメラから受け取った動画のデコードに使う ffmpeg。既定は `ffmpeg` (PATH から探す) |
 | `--no-video-analysis` | 動画を受け付けない (5052 番で待ち受けない)。カメラは自分で解析して検出を送る |
 | `--video-snapshot-dir <dir>` | カメラごとに、PC で解析し始めた最初の画像を BMP で保存する。向きの確認用 (9 章) |
-| `--video-record-dir <dir>` | カメラから受け取った動画を保存する。`replay_video` で解析と追跡をやり直せる (`scripts/run_pc1.py --record` で保存する) |
+| `--video-record-dir <dir>` | カメラから受け取った動画を保存する。`replay_video` で解析と追跡をやり直すには `-j` の時刻対応も必要 (`scripts/run_pc1.py --record --json` で両方保存する) |
 | `--report-delay-ms <ms>` | 着弾を、予測した着弾時刻の何 ms 後に報告するか (負なら前、既定 -30)。撮影から届くまでの遅れ以上にすると、着弾の直前の視線を使えて精度が上がる。描画はそのぶん遅れる (`recordings/2026-10-16_experiment/notes.md`) |
 | `--cameras` | スマホごとの設定 (`scripts/cameras.json`)。`device_id` で端末を見分け、つないだ順によらず書いた順の camera_id (0, 1, ...) を振る。位置と向きは、スマホが送る値ではなくここに書いた値を使い、焦点距離などと一緒にスマホにも送る (6.1) |
 | `--auto-time-trim` | 右のカメラの時刻の補正を、報告した投球 (直近 9 球の中央値) から自動で決めて `--time-trim-ms` に足す。付けないときは決めた値をログに出すだけ。カメラの向きを較正してから使う (向きがずれていると、その誤差まで時刻で吸収する) |
@@ -408,7 +408,15 @@ python scripts/run_pc1.py
 起動し直すときは、`run_pc1.py` をもう一度実行するだけでよい (projector は起動し直さなくてよい)。
 
 記録は `recordings\<日付>_<時分>` に残る。projector なしで試すときは `--output csv` を付ける。
-受け取った動画は、既定では残さない (2 台で 1 時間に約 45 GB になる)。あとで解析し直す実験のときは `--record` を付ける。
+追跡の詳細 JSON と全フレームは、既定では残さない (`pc1.json` の `record_json: false`)。診断に使うときは `--json` を付ける。
+標準出力も通常は INFO 以上だけにし、着弾ごとの通知と解析統計は残す。詳細な追跡ログが必要なときは、環境変数
+`RUST_LOG=info,ball_tracker::tracking=trace` を指定する (`Targets` の target/level 構文。未設定や空文字は INFO)。
+通信ライブラリも詳しく出す場合は `h2=trace` などを明示する。指定を解釈できない場合は通信前に理由を出して終了する。
+受け取った動画も、既定では残さない (2 台で 1 時間に約 45 GB になる)。動画だけを残すときは `--record`、
+`replay_video` で解析と追跡をやり直す実験のときは、時刻対応も残すため `--record --json` を付ける。両方の指定は独立している。
+動画の記録待ちはカメラごとにデータ量 8 MiB・240 件までで、超えるか書き込みに失敗すると、その接続の録画だけを停止して
+警告する。受理済みの先頭部分を書き終えて閉じ、後続フレームの解析は続ける。自動で録画を再開しないので、警告後の動画を
+完全な記録として扱わない。なお、OS のディスク書き込み自体が無期限に止まった場合の終了待ちは、この上限では解消しない。
 ball_tracker にオプションを足すときは `--` のあとに書く (`python scripts/run_pc1.py -- --time-trim-ms 3`)。
 ディスクの空きは起動時と 1 分おきに確かめ、足りなくなりそうなら知らせる。
 設定を変えるときは `scripts\pc1.json` (ball_tracker) と `scripts\cameras.json` (スマホ) を書き換える。
@@ -422,12 +430,12 @@ ball_tracker にオプションを足すときは `--` のあとに書く (`pyth
 2. **PC①: ball_tracker を起動する**
 
    ```powershell
-   .\target\release\ball_tracker.exe --input network --output network
+   .\target\release-tracker\ball_tracker.exe --input network --output network
    ```
 
    `listening for projector` で止まるのが正常。
 
-   `adb reverse` (4)、ffmpeg の場所、ログと `-j` の記録の保存をまとめて行いたいときは、`scripts/run_pc1.py` を使う
+   `adb reverse` (4)、ffmpeg の場所、ログの保存をまとめて行いたいときは、`scripts/run_pc1.py` を使う (詳細 JSON は `--json`)
    (スマホを開くところまで行う。ball_tracker のオプションは `--` のあとに足せる)。
    スマホをあとからつないだときは、`adb reverse` だけ張り直す (6 章)。
 3. **PC②: projector を起動する。** `TrackerHost` に PC① の IP を入れておく。

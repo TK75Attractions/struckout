@@ -80,9 +80,13 @@ message SetGameModeRequest {
 
 message SetGameModeResponse {}
 
-message SetSessionReadyRequest {}
+message SetSessionReadyRequest {
+  uint32 machine_id = 1;
+}
 
-message SetSessionReadyResponse {}
+message SetSessionReadyResponse {
+  uint32 game_id = 1;
+}
 
 message Event {
   message TutorialStarted {}
@@ -122,17 +126,14 @@ message Event {
 
 // Service provided by `game_master`.
 //
-// ## Single-play
-// | game-master |
-// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready |
-//
-// ## Multi-play
-// | game-master | ------------------------------------------------------------------------------------------------ GameStarted |
-// |  machine 1  | StartTutorial -- GoPreviousTutorial/GoNextTutorial -- StartSession ----- SetSessionPlayer -- SetSessionDifficulty ------ Ready ----- |
-// |  machine 2  | ----- StartSession -- SetSessionPlayer -- SetSessionDifficulty -- Ready
+// Single-play: subscribe to ListenEvents, then call StartSession, SetGameMode
+// (SINGLE), SetSessionDifficulty, and SetSessionReady on the same machine.
+// GameStarted and the following events carry their game_id in the event payload.
+// A new ListenEvents subscription receives the currently running game's state.
+// Tutorial navigation and MULTI mode are not implemented and return UNIMPLEMENTED.
 service GameMasterSessionService {
   // Used by `touchpanel`.
-  // GameFinishedをtouchpanelが受け取ったらそちらから切断する。
+  // Configures the player for a new session. It does not start the game yet.
   rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
 
   // Sets difficulty to the session. Used by `touchpanel`.

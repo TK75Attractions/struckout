@@ -129,6 +129,33 @@ Prefab が存在しない。`UIService._collisionMarkerUI` が未設定のため
 | ウィンドウリサイズ | 不可 | |
 | Canvas Scaler | Scale With Screen Size、参照 1920x1080 | **HUD にのみ効く** |
 
+### ビルド済みプレイヤーの描画上限
+
+`RuntimeRenderingSettings` がシーンの起動前に描画を **60 fps** に制限する。
+カメラの解析と同じ PC で動かすときに、表示に必要な分を超える描画で CPU・GPU を占有しないため。
+カメラ入力の 120 fps と着弾の計算は変更しない。Unity Editor の描画設定も変更しない。
+
+起動引数 `-targetFps <正の整数>` で上限を変更できる。比較測定では `-targetFps 0` で無制限にする。
+引数の省略時は 60。値の省略、負数、整数以外は起動エラーにして終了する。
+
+`QualitySettings.vSyncCount = 0` と `Application.targetFrameRate` を使うので、90/120/144 Hz の画面でも
+上限は 60 のままになる。Unity の[公式資料](https://docs.unity3d.com/6000.5/Documentation/ScriptReference/Application-targetFrameRate.html)
+はデスクトップでは描画間隔を安定させる VSync を推奨しているが、ここでは画面の更新頻度にかかわらず
+解析側の処理時間を確保することを優先する。ソフトウェアによる制限なので描画間隔は完全に一定にはならない。
+外部プロジェクターでの動きと命中表示の遅れも、運用前に確認する。
+
+プレイヤーのログには起動時の `target_fps` と、約 30 秒ごとの次の統計を出す。
+毎フレームのログや文字列生成は行わない。
+
+```text
+[Rendering] target_fps=60 vsync=0
+[Rendering] window_s=30.012 frames=1798 fps=59.91 max_frame_interval_ms=24.50
+```
+
+`fps` はその区間の描画フレーム数を実時間で割ったもの、`max_frame_interval_ms` は
+`Update` 間隔の最大値で、GPU 単体の処理時間ではない。最初の区間にはシーンの読み込みも含む。
+負荷比較では同じ解像度・同じゲーム状態を使い、起動直後と定常区間を区別する。
+
 ### アスペクト比の扱い
 
 **盤面の比率と投影面の比率が違っても、盤面全体が必ず映る。**

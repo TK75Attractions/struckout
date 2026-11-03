@@ -140,11 +140,15 @@ enum DetectionInputImpl {
 }
 
 impl DetectionInput for DetectionInputImpl {
-    async fn start(self, tx: mpsc::Sender<CameraFrame>) -> std::io::Result<()> {
+    async fn start(
+        self,
+        tx: mpsc::Sender<CameraFrame>,
+        shutdown: tokio_util::sync::CancellationToken,
+    ) -> std::io::Result<()> {
         match self {
-            DetectionInputImpl::Network(input) => input.start(tx).await,
+            DetectionInputImpl::Network(input) => input.start(tx, shutdown).await,
             #[cfg(feature = "input-sqlite")]
-            DetectionInputImpl::Sqlite(input) => input.start(tx).await,
+            DetectionInputImpl::Sqlite(input) => input.start(tx, shutdown).await,
         }
     }
 }
@@ -256,7 +260,39 @@ fn json_log_output_dir() -> PathBuf {
     ret
 }
 
+#[derive(Debug, thiserror::Error)]
+enum LogFilterError {
+    #[error("RUST_LOG を Unicode として読み取れません")]
+    NonUnicode,
+    #[error("RUST_LOG のログ設定を解釈できません: {0}")]
+    Invalid(#[from] tracing_subscriber::filter::ParseError),
+}
+
+/// 通常は INFO までにし、詳細なフレームや追跡イベントの整形・書き込みを避ける。
+/// 調査時だけ Targets の構文で対象を指定する。通信の詳細も明示した target で上書きできる。
+fn log_filter() -> Result<Targets, LogFilterError> {
+    let overrides = match std::env::var("RUST_LOG") {
+        Ok(value) if value.trim().is_empty() => Targets::new(),
+        Ok(value) => value.parse::<Targets>()?,
+        Err(std::env::VarError::NotPresent) => Targets::new(),
+        Err(std::env::VarError::NotUnicode(_)) => return Err(LogFilterError::NonUnicode),
+    };
+    Ok(Targets::new()
+        .with_default(overrides.default_level().unwrap_or(LevelFilter::INFO))
+        // ランチャーのヘルス問い合わせごとに HTTP/2 の TRACE を出さない。
+        .with_targets([
+            ("h2", LevelFilter::INFO),
+            ("hyper", LevelFilter::INFO),
+            ("tower", LevelFilter::INFO),
+            ("tonic", LevelFilter::INFO),
+        ])
+        .with_targets(overrides))
+}
+
 fn main() {
+    // 誤った環境変数は、Sentry を含む通信の準備より前に検出する。
+    let transport_logs = log_filter().unwrap_or_else(|error| exit_with(&error));
+
     #[cfg(feature = "sentry")]
     let _guard = sentry::init(
         sentry::ClientOptions::new()
@@ -265,15 +301,6 @@ fn main() {
             .traces_sample_rate(1.0),
     );
 
-    // ランチャーは 1 秒ごとにヘルスを問い合わせる。そのたびに HTTP/2 の TRACE のログが大量に出ないよう、通信の層は INFO までにする
-    let transport_logs = Targets::new()
-        .with_default(LevelFilter::TRACE)
-        .with_targets([
-            ("h2", LevelFilter::INFO),
-            ("hyper", LevelFilter::INFO),
-            ("tower", LevelFilter::INFO),
-            ("tonic", LevelFilter::INFO),
-        ]);
     let reg = tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().with_filter(transport_logs));
     #[cfg(feature = "sentry")]
@@ -288,7 +315,23 @@ fn main() {
         .build()
         .unwrap()
         .block_on(async {
-            let fut = run_main();
+            #[cfg(unix)]
+            let mut terminate = tokio::signal::unix::signal(
+                tokio::signal::unix::SignalKind::terminate(),
+            )
+            .expect("SIGTERM handler should be installed");
+            let shutdown_signal = async move {
+                #[cfg(unix)]
+                tokio::select! {
+                    result = tokio::signal::ctrl_c() => result.expect("Ctrl-C handler should be installed"),
+                    _ = terminate.recv() => {}
+                }
+                #[cfg(not(unix))]
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("Ctrl-C handler should be installed");
+            };
+            let fut = run_main(shutdown_signal);
             #[cfg(feature = "sentry")]
             let fut = {
                 use sentry::SentryFutureExt;
@@ -298,10 +341,12 @@ fn main() {
         });
 }
 
-async fn run_main() {
+async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send) {
+    let shutdown = tokio_util::sync::CancellationToken::new();
     let config = load_config();
 
-    let health_reporter = health::start().await;
+    let health_server = health::start(shutdown.clone()).await;
+    let health_reporter = health_server.as_ref().map(|(reporter, _)| reporter);
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = config.cameras.as_ref().map(|path| {
@@ -370,7 +415,20 @@ async fn run_main() {
             .set_service_status("", tonic_health::ServingStatus::Serving)
             .await;
     }
-    app.run().await.unwrap();
+    let run = app.run(shutdown.clone());
+    tokio::pin!(run);
+    tokio::select! {
+        result = &mut run => result.unwrap(),
+        _ = shutdown_signal => {
+            tracing::info!("received shutdown signal; stopping the application");
+            shutdown.cancel();
+            run.await.unwrap();
+        }
+    }
+    shutdown.cancel();
+    if let Some((_, server)) = health_server {
+        server.await.expect("health server exits after shutdown");
+    }
 }
 
 /// 設定ファイルを読み、コマンドライン引数で上書きする。誤りがあれば、理由を出して終える

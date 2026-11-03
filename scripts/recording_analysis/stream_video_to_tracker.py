@@ -36,6 +36,7 @@ from pathlib import Path
 
 from replay_to_tracker import (encode_camera_pose, field_bytes, field_double, field_varint, receive_camera_id,
                                send_packet)
+from struckout_common import server_port
 
 FFMPEG = os.environ.get("FFMPEG", "ffmpeg")
 FFPROBE = os.environ.get("FFPROBE", "ffprobe")
@@ -139,10 +140,10 @@ def prepare(camera, base, start, end, video_size):
 
 def run_camera(camera, host, config, frames, frame_rate, args, epoch):
     session_id = str(uuid.uuid4())
-    control = socket.create_connection((host, 6060))
+    control = socket.create_connection((host, server_port("ball-tracker", "camera-ctrl")))
     camera_id = receive_camera_id(control)
     send_packet(control, encode_camera_pose(camera_id, camera["position_m"], camera["rotation_deg"]))
-    video = socket.create_connection((host, 5052))
+    video = socket.create_connection((host, server_port("ball-tracker", "camera-video")))
     video.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     (length,) = struct.unpack("<I", video.recv(4, socket.MSG_WAITALL))
     answer = video.recv(length, socket.MSG_WAITALL) if length else b""

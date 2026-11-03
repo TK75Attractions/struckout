@@ -9,4 +9,5 @@ sandbox/testTcpCLI/Network/Protocol/Generated/*.cs text eol=lf
 
 projector/Assets/Scripts/ProtoBuf/Generated/** linguist-generated
 sandbox/testTcpCLI/Network/Protocol/Generated/** linguist-generated
+projector/Assets/Scripts/Domain/ServerPorts.Generated.cs text eol=lf linguist-generated
 struckoutCameraApp/opencv/** linguist-vendored

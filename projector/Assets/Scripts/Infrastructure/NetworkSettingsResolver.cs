@@ -49,16 +49,20 @@ namespace Struckout.Infrastructure
             var defaults = new NetworkSettings();
             if (string.IsNullOrWhiteSpace(settings.trackerHost)) settings.trackerHost = defaults.trackerHost;
             if (string.IsNullOrWhiteSpace(settings.masterHost)) settings.masterHost = defaults.masterHost;
-            if (settings.trackerPort <= 0) settings.trackerPort = defaults.trackerPort;
-            if (settings.masterPort <= 0) settings.masterPort = defaults.masterPort;
+            settings.trackerPort = ResolvePort(settings.trackerPort, ServerPorts.BallTrackerProjector);
+            settings.masterPort = ResolvePort(settings.masterPort, ServerPorts.GameMasterGrpc);
 
             settings.mode = ResolveMode(commandLine, environment, settings.mode);
 
             settings.trackerHost = ResolveString(commandLine, environment, "trackerHost", "STRUCKOUT_TRACKER_HOST", settings.trackerHost);
-            settings.trackerPort = ResolveInt(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.trackerPort);
+            settings.trackerPort = ResolvePort(
+                ResolveInt(commandLine, environment, "trackerPort", "STRUCKOUT_TRACKER_PORT", settings.trackerPort),
+                ServerPorts.BallTrackerProjector);
 
             settings.masterHost = ResolveString(commandLine, environment, "masterHost", "STRUCKOUT_MASTER_HOST", settings.masterHost);
-            settings.masterPort = ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.masterPort);
+            settings.masterPort = ResolvePort(
+                ResolveInt(commandLine, environment, "masterPort", "STRUCKOUT_MASTER_PORT", settings.masterPort),
+                ServerPorts.GameMasterGrpc);
 
             // 号機番号は ListenEvents の絞り込みキーになったので、筐体ごとに
             // 別ビルドを作らずに変えられる必要がある。負の値は uint に載らないので弾く。
@@ -71,6 +75,15 @@ namespace Struckout.Infrastructure
                 ResolveInt(commandLine, environment, "connectAttempts", "STRUCKOUT_CONNECT_ATTEMPTS", settings.connectAttempts));
 
             return settings;
+        }
+
+        private static int ResolvePort(int port, int defaultPort)
+        {
+            if (port < 0 || port > 65535)
+            {
+                throw new ArgumentOutOfRangeException(nameof(port), port, "ポート番号は0〜65535で指定してください。");
+            }
+            return port == 0 ? defaultPort : port;
         }
 
         private static string ReadEnvironmentVariable(string name)
@@ -107,7 +120,11 @@ namespace Struckout.Infrastructure
                 if (!args[i].StartsWith("-", StringComparison.Ordinal)) continue;
 
                 var value = args[i + 1];
-                if (value.StartsWith("-", StringComparison.Ordinal)) continue;
+                if (value.StartsWith("-", StringComparison.Ordinal)
+                    && !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+                {
+                    continue;
+                }
 
                 result[args[i].TrimStart('-')] = value;
             }

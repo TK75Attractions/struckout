@@ -6,6 +6,7 @@ include = [
 [alias]
 xtask = "run -p xtask --"
 
-[target.'cfg(target_os = "linux")']
+# mold is configured only for x86_64 because the locked tool does not provide a Linux ARM64 build.
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))']
 linker = "clang"
-rustflags = ["-C","link-arg=-fuse-ld=mold"]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]

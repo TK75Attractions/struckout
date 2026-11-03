@@ -3,6 +3,7 @@ use prost::Message as _;
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 use struckout_proto::DetectionsPacket;
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
 use crate::detection_input::{DetectionInput, db::FrameEntity};
@@ -13,7 +14,11 @@ use itertools::Itertools as _;
 pub struct SqliteDetectionInput {}
 
 impl DetectionInput for SqliteDetectionInput {
-    async fn start(self, tx: mpsc::Sender<PairedFrames>) -> std::io::Result<()> {
+    async fn start(
+        self,
+        tx: mpsc::Sender<PairedFrames>,
+        shutdown: CancellationToken,
+    ) -> std::io::Result<()> {
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
             .connect("~/.config/struckout/dev.db") // TODO: 差し替え可能にする
@@ -22,6 +27,9 @@ impl DetectionInput for SqliteDetectionInput {
         let frames = fetch_frames(&pool).await.unwrap();
 
         for (a, b) in frames.into_iter().tuples() {
+            if shutdown.is_cancelled() {
+                break;
+            }
             let data: &[u8] = &a.data;
             let a_packet = DetectionsPacket::decode(data).unwrap(); // TODO: handle error
             let data: &[u8] = &b.data;
@@ -35,10 +43,14 @@ impl DetectionInput for SqliteDetectionInput {
                 continue;
             }
             let p = PairedFrames::new(a_packet, b_packet);
-            tx.send(p)
-                .await
-                .with_context(|| "frame channel has been unexpectedly closed")
-                .unwrap();
+            tokio::select! {
+                _ = shutdown.cancelled() => break,
+                result = tx.send(p) => {
+                    result
+                        .with_context(|| "frame channel has been unexpectedly closed")
+                        .unwrap();
+                }
+            }
         }
         Ok(())
     }

@@ -7,10 +7,10 @@ using Grpc.Net.Client;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
 using Struckout.Domain;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
 // UnityEngine.Event と名前が衝突するので、proto 側を明示する。
-using Event = Tk75Attractions.Struckout.V1.Event;
+using Event = Tk75Attractions.Struckout.GameMaster.V1.Event;
 
 namespace Struckout.Infrastructure.Grpc
 {
@@ -27,13 +27,14 @@ namespace Struckout.Infrastructure.Grpc
 
         private YetAnotherHttpHandler _handler;
         private GrpcChannel _channel;
-        private GameMasterService.GameMasterServiceClient _client;
+        private GameMasterSessionService.GameMasterSessionServiceClient _client;
 
         private CancellationTokenSource _listenCancellation;
         private Task _listenTask;
 
         /// <summary>進行中のゲーム。GameStarted を受け取るまでは無い。</summary>
         private uint? _gameId;
+        private readonly object _stateLock = new();
 
         /// <summary>game_master と切れたとき、購読をやり直す間隔。</summary>
         private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(2);
@@ -64,7 +65,7 @@ namespace Struckout.Infrastructure.Grpc
                     HttpHandler = _handler,
                     DisposeHttpClient = true,
                 });
-                _client = new GameMasterService.GameMasterServiceClient(_channel);
+                _client = new GameMasterSessionService.GameMasterSessionServiceClient(_channel);
             }
             catch (Exception ex)
             {
@@ -86,14 +87,13 @@ namespace Struckout.Infrastructure.Grpc
         /// 接続できるかどうかはこのストリームを読み始めて初めて分かる。
         /// gRPC のチャネルは遅延接続なので、ConnectAsync の時点では失敗しない。
         ///
-        /// machine_id での絞り込みは game_master 側が行う
-        /// (service.rs の pass_events_through_by_machine_id)。
+        /// machine_id での絞り込みは game_master の Session service が行う。
         /// 号機番号を間違えると、繋がってはいるのにイベントが一件も来ない。
         ///
         /// 切れたら (game_master の再起動、まだ起動していないなど) <see cref="ReconnectInterval"/> おきに
         /// 購読をやり直す。projector を起動し直さなくてよい。切れたことは最初の 1 回だけ知らせる。
-        /// 切れているあいだに終わったゲームの GameFinished は届かないので、次の GameStarted までは
-        /// 遊んでいる状態のまま残る。
+        /// 切れたら加点を止める。再購読の初期状態 (開始・残り時間・得点) で稼働中のゲームに復帰する。
+        /// サーバーに稼働中のゲームがなければ、停止したまま次の開始を待つ。
         /// </summary>
         private async Task ListenEventsAsync(CancellationToken token)
         {
@@ -148,6 +148,7 @@ namespace Struckout.Infrastructure.Grpc
                 if (!lost)
                 {
                     lost = true;
+                    lock (_stateLock) _gameId = null;
                     try
                     {
                         ConnectionLost?.Invoke();
@@ -174,21 +175,30 @@ namespace Struckout.Infrastructure.Grpc
             switch (received.EventDataCase)
             {
                 case Event.EventDataOneofCase.GameStarted:
-                    // game_id は Event 直下にある。得点を送るのに要るのはこれだけ。
-                    _gameId = received.GameId;
+                    var started = received.GameStarted;
+                    lock (_stateLock)
+                    {
+                        // Repeated snapshots in the same subscription must not restart the board.
+                        if (_gameId == started.GameId) break;
+                        _gameId = started.GameId;
+                    }
                     GameStarted?.Invoke(received.GameStarted.Difficulty);
                     break;
 
                 case Event.EventDataOneofCase.GameFinished:
-                    if (_gameId != received.GameId) break;
-                    // これ以降 game_master は running_games から外すので、
-                    // 得点を送っても NotFound で弾かれる。手元でも送信を止める。
-                    _gameId = null;
+                    lock (_stateLock)
+                    {
+                        if (_gameId != received.GameFinished.GameId) break;
+                        _gameId = null;
+                    }
                     GameFinished?.Invoke();
                     break;
 
                 case Event.EventDataOneofCase.GameTimeLimitNotify:
-                    if (_gameId != received.GameId) break;
+                    lock (_stateLock)
+                    {
+                        if (_gameId != received.GameTimeLimitNotify.GameId) break;
+                    }
                     var remaining = received.GameTimeLimitNotify.Remaining;
                     if (remaining == null) break;
 
@@ -206,7 +216,10 @@ namespace Struckout.Infrastructure.Grpc
                     break;
 
                 case Event.EventDataOneofCase.GameScoreChanged:
-                    if (_gameId != received.GameId) break;
+                    lock (_stateLock)
+                    {
+                        if (_gameId != received.GameScoreChanged.GameId) break;
+                    }
                     ScoreChanged?.Invoke(received.GameScoreChanged.TotalScore);
                     break;
 
@@ -224,10 +237,15 @@ namespace Struckout.Infrastructure.Grpc
                 return false;
             }
 
-            if (_gameId is not uint gameId)
+            uint gameId;
+            lock (_stateLock)
             {
-                Debug.LogWarning("[GameMaster] no game is running; the score was not sent.");
-                return false;
+                if (_gameId is not uint runningGameId)
+                {
+                    Debug.LogWarning("[GameMaster] no game is running; the score was not sent.");
+                    return false;
+                }
+                gameId = runningGameId;
             }
 
             if (scoreToAdd < 0)
@@ -243,12 +261,16 @@ namespace Struckout.Infrastructure.Grpc
                     MachineId = (uint)_settings.machineId,
                     GameId = gameId,
                     ScoreToAdd = (uint)scoreToAdd,
-                });
+                }, cancellationToken: _listenCancellation?.Token ?? CancellationToken.None);
                 return true;
             }
             catch (RpcException ex)
             {
                 Debug.LogWarning($"[GameMaster] AddScore failed: {ex.Status.StatusCode} {ex.Status.Detail}");
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
                 return false;
             }
         }
@@ -257,6 +279,7 @@ namespace Struckout.Infrastructure.Grpc
         {
             if (_channel == null) return;
 
+            lock (_stateLock) _gameId = null;
             _listenCancellation?.Cancel();
 
             if (_listenTask != null)
@@ -288,7 +311,7 @@ namespace Struckout.Infrastructure.Grpc
             _handler = null;
 
             _client = null;
-            _gameId = null;
+            lock (_stateLock) _gameId = null;
         }
     }
 }

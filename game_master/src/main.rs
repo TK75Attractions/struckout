@@ -32,7 +32,7 @@ const GRPC_PORT: &str = env!("GAME_MASTER_GRPC_PORT");
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
 
 type SessionServer = GameMasterSessionServiceServer<GameMasterSessionServiceImpl>;
-type PlayerServer = GameMasterSessionServiceServer<GameMasterPlayerServiceImpl>;
+type PlayerServer = GameMasterPlayerServiceServer<GameMasterPlayerServiceImpl>;
 
 #[derive(Parser)]
 #[command(version = version())]

@@ -225,7 +225,7 @@ class PcVideoStreamer(
         private const val REMOTE_ADDRESS = "127.0.0.1"
 
         /** ball_tracker が動画を受け付けるポート。adb reverse で PC につなぐ */
-        const val REMOTE_PORT = 5052
+        const val REMOTE_PORT = ServerPorts.BALL_TRACKER_CAMERA_VIDEO
 
         private const val CONNECT_TIMEOUT_MILLIS = 1000
         private const val ANSWER_TIMEOUT_MILLIS = 2000

@@ -1,6 +1,12 @@
 use clap::Parser;
 use slint::ComponentHandle;
-use std::sync::{Arc, OnceLock};
+use std::{
+    sync::{
+        Arc, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 use stern::{WorkerThread, worker::SlintExecutor};
 use tracing::info;
 
@@ -90,7 +96,7 @@ impl Config {
     }
 }
 
-pub fn run_main() {
+pub fn run_main(shutdown_requested: Arc<AtomicBool>) {
     let cli = Cli::parse();
 
     let config = Arc::new(Config::from_cli(cli));
@@ -128,5 +134,15 @@ pub fn run_main() {
     init_worker_context(&application);
 
     info!("starting event loop");
+    let shutdown_timer = slint::Timer::default();
+    shutdown_timer.start(
+        slint::TimerMode::Repeated,
+        Duration::from_millis(50),
+        move || {
+            if shutdown_requested.swap(false, Ordering::AcqRel) {
+                slint::quit_event_loop().expect("Slint event loop should be running");
+            }
+        },
+    );
     application.ui.run().unwrap();
 }

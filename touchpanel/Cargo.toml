@@ -22,6 +22,7 @@ tokio = {
     "macros",
     "net",
     "rt-multi-thread",
+    "signal",
     "sync",
     "test-util",
     "time",

@@ -18,8 +18,9 @@ use thiserror::Error;
 use tokio::{
     net::{TcpListener, TcpStream, tcp},
     sync::mpsc,
-    task::JoinHandle,
+    task::{JoinHandle, JoinSet},
 };
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, trace_span, warn};
 
 use crate::{
@@ -89,20 +90,22 @@ impl NetworkDetectionInput {
 }
 
 impl DetectionInput for NetworkDetectionInput {
-    async fn start(mut self, frame_tx: mpsc::Sender<CameraFrame>) -> std::io::Result<()> {
+    async fn start(
+        mut self,
+        frame_tx: mpsc::Sender<CameraFrame>,
+        shutdown: CancellationToken,
+    ) -> std::io::Result<()> {
         let (packet_tx, mut packet_rx) = mpsc::channel(PAKCET_CHANNEL_BUF);
+        let mut tasks = JoinSet::new();
         if let Some(video_transport) = self.video_transport {
             let packet_tx = packet_tx.clone();
-            tokio::spawn(async move { video_transport.listen(packet_tx).await });
+            let video_shutdown = shutdown.clone();
+            tasks.spawn(async move { video_transport.listen(packet_tx, video_shutdown).await });
         }
-        tokio::spawn(async move { self.data_transport.listen(packet_tx).await });
-        tokio::spawn(async move {
-            loop {
-                let (received_at, packet) = packet_rx
-                    .recv()
-                    .await
-                    .with_context(|| "packet channel has been unexpectedly closed")
-                    .unwrap();
+        let data_shutdown = shutdown.clone();
+        tasks.spawn(async move { self.data_transport.listen(packet_tx, data_shutdown).await });
+        tasks.spawn(async move {
+            while let Some((received_at, packet)) = packet_rx.recv().await {
                 // フレームの時刻を決めるのはここだけ。
                 if let Some(frame) = self.clock.frame(received_at, packet) {
                     frame_tx
@@ -114,7 +117,17 @@ impl DetectionInput for NetworkDetectionInput {
             }
         });
         info!("starting TCP listener");
-        tokio::spawn(async move { self.tcp_transport.listen().await });
+        let control_shutdown = shutdown.clone();
+        tasks.spawn(async move { self.tcp_transport.listen(control_shutdown).await });
+
+        shutdown.cancelled().await;
+        while let Some(result) = tasks.join_next().await {
+            if let Err(error) = result
+                && !error.is_cancelled()
+            {
+                warn!(?error, "a network input task failed while shutting down");
+            }
+        }
         Ok(())
     }
 }
@@ -149,16 +162,30 @@ impl DataTransport {
         })
     }
 
-    pub async fn listen(&mut self, packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>) {
+    pub async fn listen(
+        &mut self,
+        packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
+        shutdown: CancellationToken,
+    ) {
         let mut writers = Vec::new();
         loop {
-            match self.listener.accept().await {
+            let accepted = tokio::select! {
+                _ = shutdown.cancelled() => break,
+                result = self.listener.accept() => result,
+            };
+            match accepted {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection in DataTransport");
                     let (reader, writer) = stream.into_split();
 
                     writers.push(writer);
-                    let join = tokio::spawn(Self::handle_input(packet_tx.clone(), reader));
+                    let connection_shutdown = shutdown.clone();
+                    let connection_packet_tx = packet_tx.clone();
+                    let join = tokio::spawn(Self::handle_input(
+                        connection_packet_tx,
+                        reader,
+                        connection_shutdown,
+                    ));
                     self.join_handles.push(join);
                 }
                 Err(e) => {
@@ -166,14 +193,29 @@ impl DataTransport {
                 }
             }
         }
+        drop(writers);
+        for handle in self.join_handles.drain(..) {
+            if let Err(error) = handle.await
+                && !error.is_cancelled()
+            {
+                warn!(
+                    ?error,
+                    "a camera data connection failed while shutting down"
+                );
+            }
+        }
     }
 
     pub async fn handle_input(
         packet_tx: mpsc::Sender<(DateTime<Utc>, DetectionsPacket)>,
         mut reader: tcp::OwnedReadHalf,
+        shutdown: CancellationToken,
     ) -> Result<(), ReadPacketError> {
         loop {
-            let packet: DetectionsPacket = read_packet(&mut reader).await?;
+            let packet: DetectionsPacket = tokio::select! {
+                _ = shutdown.cancelled() => return Ok(()),
+                packet = read_packet(&mut reader) => packet?,
+            };
 
             if packet_tx.send((Utc::now(), packet)).await.is_err() {
                 return Ok(());
@@ -221,25 +263,41 @@ impl TcpTransport {
         })
     }
 
-    pub async fn listen(&mut self) {
+    pub async fn listen(&mut self, shutdown: CancellationToken) {
         loop {
             let _span = trace_span!("TcpTransport_listen");
             debug!("TcpTransport listening...");
-            match self.listener.accept().await {
+            let accepted = tokio::select! {
+                _ = shutdown.cancelled() => break,
+                result = self.listener.accept() => result,
+            };
+            match accepted {
                 Ok((stream, addr)) => {
                     info!(?addr, "accepted new connection for TcpTransport");
+                    let connection_shutdown = shutdown.clone();
                     let join = tokio::spawn(Self::handle_connection(
                         stream,
                         self.cameras.clone(),
                         Arc::clone(&self.next_camera_id),
                         Arc::clone(&self.camera_locs),
                         Arc::clone(&self.clock),
+                        connection_shutdown,
                     ));
                     self.join_handles.push(join);
                 }
                 Err(e) => {
                     warn!(error = ?e, "failed to accept a connection in TcpTransport");
                 }
+            }
+        }
+        for handle in self.join_handles.drain(..) {
+            if let Err(error) = handle.await
+                && !error.is_cancelled()
+            {
+                warn!(
+                    ?error,
+                    "a camera control connection failed while shutting down"
+                );
             }
         }
     }
@@ -250,6 +308,7 @@ impl TcpTransport {
         next_camera_id: Arc<AtomicU32>,
         camera_locs: Arc<CameraLocationStore>,
         clock: Arc<ClockSync>,
+        shutdown: CancellationToken,
     ) {
         // 時刻合わせは往復時間で精度が決まるので、小さなパケットをためずに送る。
         if let Err(e) = stream.set_nodelay(true) {
@@ -258,12 +317,14 @@ impl TcpTransport {
         let (mut reader, mut writer) = stream.into_split();
 
         // 端末が名乗るのを待つ。名乗らない送信元は camera_id を待っているので、こちらからは何も届かない
-        let hello = match tokio::time::timeout(
-            HELLO_TIMEOUT,
-            read_packet::<TcpClientPacket, _>(&mut reader),
-        )
-        .await
-        {
+        let hello_result = tokio::select! {
+            _ = shutdown.cancelled() => return,
+            result = tokio::time::timeout(
+                HELLO_TIMEOUT,
+                read_packet::<TcpClientPacket, _>(&mut reader),
+            ) => result,
+        };
+        let hello = match hello_result {
             Ok(Ok(TcpClientPacket {
                 data: Some(tcp_client_packet::Data::Hello(hello)),
             })) => Some(hello),
@@ -329,15 +390,20 @@ impl TcpTransport {
         // 返事を待っている要求の、送った時刻。
         let pending = Arc::new(Mutex::new(HashMap::<u64, DateTime<Utc>>::new()));
         let last_response = Arc::new(Mutex::new(Instant::now()));
+        let request_shutdown = shutdown.clone();
         let requests = tokio::spawn(Self::request_time_sync(
             writer,
             camera_id,
             Arc::clone(&pending),
             Arc::clone(&last_response),
+            request_shutdown,
         ));
 
         loop {
-            let packet = match read_packet::<TcpClientPacket, _>(&mut reader).await {
+            let packet = match tokio::select! {
+                _ = shutdown.cancelled() => break,
+                packet = read_packet::<TcpClientPacket, _>(&mut reader) => packet,
+            } {
                 Ok(packet) => packet,
                 Err(ReadPacketError::ReadFailed(e)) => {
                     info!(camera_id, error = ?e, "camera disconnected");
@@ -384,6 +450,7 @@ impl TcpTransport {
             };
         }
         requests.abort();
+        let _ = requests.await;
     }
 
     /// 時刻合わせの要求を送り続ける。
@@ -392,6 +459,7 @@ impl TcpTransport {
         camera_id: u32,
         pending: Arc<Mutex<HashMap<u64, DateTime<Utc>>>>,
         last_response: Arc<Mutex<Instant>>,
+        shutdown: CancellationToken,
     ) {
         let mut sequence = 0;
         loop {
@@ -421,12 +489,14 @@ impl TcpTransport {
                 return;
             }
             sequence += 1;
-            tokio::time::sleep(if sequence < TIME_SYNC_BURST {
-                TIME_SYNC_BURST_INTERVAL
-            } else {
-                TIME_SYNC_INTERVAL
-            })
-            .await;
+            tokio::select! {
+                _ = shutdown.cancelled() => return,
+                _ = tokio::time::sleep(if sequence < TIME_SYNC_BURST {
+                    TIME_SYNC_BURST_INTERVAL
+                } else {
+                    TIME_SYNC_INTERVAL
+                }) => {}
+            }
         }
         // 書き込み側を閉じると、端末によっては接続全体が切れたとみなす。接続が終わるまで持っておく。
         std::future::pending::<()>().await;

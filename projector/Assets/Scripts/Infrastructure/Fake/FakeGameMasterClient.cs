@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Struckout.Application.Interface;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
@@ -14,8 +14,8 @@ namespace Struckout.Infrastructure.Fake
     /// </summary>
     public class FakeGameMasterClient : IGameMasterClient
     {
-        /// <summary>game_master の GAME_DURATION (service.rs) に合わせてある。</summary>
-        private static readonly TimeSpan GameDuration = TimeSpan.FromSeconds(150);
+        /// <summary>game_master の GAME_DURATION (session.rs) に合わせてある。</summary>
+        private static readonly TimeSpan GameDuration = TimeSpan.FromSeconds(90);
 
         /// <summary>
         /// 購読が始まる前に開始してしまった場合に備えて、開始したことを覚えておく。

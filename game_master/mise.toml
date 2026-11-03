@@ -7,14 +7,14 @@ SENTRY_DSN = { default = "", redact = true }
 
 [tasks.dev]
 shell = "bash -c"
-run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up"
+run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up"
 dir = "{{ config_root }}"
 description = "Start a dev server of game-master using docker-compose"
 env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
 raw = true
 
 [tasks.prod]
-run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_PROD docker compose -f compose.yaml -f compose.prod.yaml up"
+run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_PROD docker compose -f docker/compose.yaml -f docker/compose.prod.yaml up"
 dir = "{{ config_root }}"
 description = "Start a production server of game-master with the image of a release (GAME_MASTER_VERSION)"
 env.MYSQL_ROOT_PASSWORD_PROD = { required = true, redact = true }
@@ -22,7 +22,7 @@ env.GAME_MASTER_VERSION = { required = true }
 raw = true
 
 [tasks.db]
-run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f compose.yaml -f compose.dev.yaml up db"
+run = "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD_DEV docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up db"
 dir = "{{ config_root }}"
 description = "Start a MySQL service for game-master."
 env.MYSQL_ROOT_PASSWORD_DEV = { required = true, redact = true }
@@ -35,17 +35,21 @@ run = '''
   FLAGS=""
   if [ ${usage_release:-false} = "true" ]; then
     FLAGS="${FLAGS} --build-arg RELEASE_MODE=true";
-    FLAGS="${FLAGS} --build-arg SENTRY_DSN=${SENTRY_DSN}";
-  elif [ ${usage_sentry:-false} = "true" ]; then
-    FLAGS="${FLAGS} --build-arg SENTRY_DSN=${SENTRY_DSN}";
   fi
-  docker compose -f compose.yaml -f compose.dev.yaml build ${FLAGS}
+  if [ ${usage_sentry:-false} = "true" ]; then
+    if [ -z "${SENTRY_DSN}" ]; then
+      echo "--sentry には SENTRY_DSN の設定が必要です" >&2
+      exit 1
+    fi
+    FLAGS="${FLAGS} --build-arg SENTRY_DSN";
+  fi
+  docker compose -f docker/compose.yaml -f docker/compose.dev.yaml build ${FLAGS}
 '''
 dir = "{{ config_root }}"
 description = "game-masterのDockerイメージをビルドする"
 usage = '''
   flag "--release" help="releaseプロファイルでビルドする"
-  flag "--sentry" help="sentryを有効にする (--releaseがついている場合既定で有効)"
+  flag "--sentry" help="sentryを有効にする (SENTRY_DSN の設定が必要)"
 '''
 
 [tasks.prepare]
@@ -55,7 +59,7 @@ description = "game-masterのクエリ検証用メタデータを生成する"
 raw = true
 
 [tasks.compose]
-run = "docker compose -f compose.yaml -f compose.dev.yaml"
+run = "docker compose -f docker/compose.yaml -f docker/compose.dev.yaml"
 dir = "{{ config_root }}"
 description = "game-master-devのサービスを操作する"
 raw = true

@@ -3,7 +3,13 @@
 撮影した動画を PC 上で解析し、ball_tracker の検証に使うデータを作るスクリプト。
 動画そのものは `recordings/` に置く (サイズが大きいので git では追跡しない)。
 
-必要なもの: Python 3、`numpy`、`opencv-python`、PATH 上の `ffmpeg` と `ffprobe`。
+依存パッケージは `pyproject.toml` と `uv.lock` で管理する。実行環境は `mise` が用意した `uv` と Python を使い、
+スクリプトはリポジトリのルートから `mise run //:recording-analysis <スクリプト> [引数...]` で実行する。
+最初の実行時に `uv` がロックファイルに沿って環境を作る。`ffmpeg` と `ffprobe` は引き続き PATH 上に必要。
+
+```bash
+mise run //:recording-analysis scripts/recording_analysis/measure_runtime.py --help
+```
 
 | スクリプト | 役割 |
 |---|---|
@@ -18,15 +24,63 @@
 | `downscale_vsp.py` | ball_tracker の録画 (`.vsp`) の動画を小さい大きさの H.264 に再エンコードし、時刻と順番を保った `.vsp` と `.h264` を作る。スマホが小さい大きさで送った場合の PC 側の処理を実機なしで確かめる |
 | `stream_video_to_tracker.py` | 普通の動画を H.264 にして、カメラアプリと同じ手順で ball_tracker に流す |
 | `bench_ffmpeg.py` | ball_tracker と同じ設定で ffmpeg に録画 (`.h264`) をデコードさせ、GPU の方式と出力 (`full`、`decode`、`yuv`、`nv12`、`gpuscale`)、同時に動かす本数ごとに CPU の時間を測る。`gpuscale` は d3d11va / d3d12va 用。`numpy` と `opencv-python` は要らない |
+| `measure_runtime.py` | 起動済みのプロセスの CPU 累積秒、RSS、private memory、システムの空きメモリを CSV に記録する。Windows / Linux 対応、標準ライブラリだけで動く |
 | `calibrate_camera.py` | 筐体の線が映った解析画像から、カメラの向き (診断用に位置と焦点距離も) を求める |
 | `calibrate_intrinsics.py` | チェッカーボードを撮った解析画像から、焦点距離を求める |
 
 カメラアプリの「Save frame」で保存した画像は、`scripts/pull-calibration-frames.sh` で PC に取り込む。
 
+## 同時起動と連続運転の計測
+
+先にビルド済みの ball_tracker、projector、touchpanel と game_master を起動する。
+実機がないときは `.vsp` を受信したときの間隔で送信し、同じ区間を条件ごとに比較する。
+
+```bash
+mise run //:recording-analysis scripts/recording_analysis/replay_stream_to_tracker.py recordings/2026-10-16_experiment_3 \
+  --poses recordings/2026-10-16_experiment_3/poses_live.json --from 15:46:50 --seconds 100 --repeat 10
+```
+
+録画を 1 パケットずつ読むので、送信する動画全体をメモリに載せない。範囲より前にある設定と SPS/PPS は、
+ファイル内の位置だけを覚えて範囲の先頭に送る。`--repeat` は毎回動画と制御の接続を作り直す。
+tracker や projector は起動したままだが、実機の動画が途切れず届く試験とは異なる。
+送信や応答に失敗した回は終了コードが 0 以外になる。
+
+別の端末で、同時にプロセスを計測する。出力ファイルは既存のものを上書きしない。
+
+```bash
+mise run //:recording-analysis scripts/recording_analysis/measure_runtime.py --seconds 1200 --interval 5 \
+  --out recordings/runtime_comparison/processes.csv
+```
+
+`--names ball_tracker ffmpeg StruckOut touchpanel python` のように対象を指定できる。
+既定では tracker、ffmpeg、projector、touchpanel、Docker の backend / VM を探す。
+実行ファイル名は大文字・小文字と `.exe` の有無を区別せず、同名の全 PID を記録する。
+計測対象の起動や終了、設定変更は行わない。macOS には対応していない。
+
+CSV の主な列は次のとおり。
+
+| 列 | 意味 |
+|---|---|
+| `timestamp_utc`, `elapsed_seconds` | 採取した UTC 時刻と開始からの秒数 |
+| `name`, `pid`, `started_at` | プロセス名と識別子。PID が再利用された場合は `started_at` が変わる |
+| `cpu_seconds` | プロセスの累積 CPU 秒。2 点間の増分を壁時計秒で割ると使用コア数 (1.0 が 1 コア)。全体に対する % はさらに `logical_cpus` で割る |
+| `rss_bytes` | Windows の working set、Linux の resident set。共有ページを含むため全プロセスを足して実 RAM とみなさない |
+| `private_bytes`, `private_kind` | Windows は `commit` (private commit)、Linux は `resident` (Private_Clean + Private_Dirty)。OS をまたいで同じ値として比較しない |
+| `status` | `ok`、`missing` (該当プロセスなし)、`unavailable` / `memory_unavailable` / `private_unavailable` (権限や取得時の終了など)。取得できない値は空欄で、0 と区別する |
+| `total_memory_bytes`, `available_memory_bytes` | システム全体の物理メモリと利用可能な量。各プロセス行で同じサンプルの値を共有する |
+| `system_cpu_seconds`, `system_idle_seconds` | システム全体の累積 CPU / idle 秒。CPU 増分から idle 増分を引き CPU 増分で割ると全体の使用率。Linux の idle は iowait を含む |
+| `logical_cpus`, `on_battery` | 論理 CPU 数とバッテリー駆動の有無。不明な値は空欄 |
+
+Windows は Tool Help / GetProcessTimes / GetProcessMemoryInfo / GlobalMemoryStatusEx を直接呼び、
+Linux は `/proc` を読む。採取のたびに PowerShell などを起動しない。保護された Docker VM の値は
+取得できないことがあるので、空欄のまま報告し、必要なら Docker 側の計測を併用する。
+測定プロセス自身も見たいときは `--names` に `python` (Linux では `python3` など実際の実行ファイル名) を足す。
+CPU の能力や冷却、AC 電源、他アプリの負荷、表示解像度も条件として別に記録する。
+
 ## landing_truth.py
 
 ```bash
-python scripts/recording_analysis/landing_truth.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/landing_truth.json --out recordings/2026-10-07/impacts.csv --debug-dir recordings/2026-10-07/landing_truth_debug
+mise run //:recording-analysis scripts/recording_analysis/landing_truth.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/landing_truth.json --out recordings/2026-10-07/impacts.csv --debug-dir recordings/2026-10-07/landing_truth_debug
 ```
 
 奥面の上にある位置の分かった点を 4 点以上使って、画像の座標を奥面上の座標に直す。
@@ -58,7 +112,7 @@ python scripts/recording_analysis/landing_truth.py recordings/2026-10-07/IMG_704
 ## sync_audio.py
 
 ```bash
-python scripts/recording_analysis/sync_audio.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/cam_131208/KVID0003.mp4
+mise run //:recording-analysis scripts/recording_analysis/sync_audio.py recordings/2026-10-07/IMG_7044.MOV recordings/2026-10-07/cam_131208/KVID0003.mp4
 ```
 
 基準の動画 (短いほう) の 0 秒が、ほかの動画の何秒にあたるかを表示する。
@@ -67,7 +121,7 @@ python scripts/recording_analysis/sync_audio.py recordings/2026-10-07/IMG_7044.M
 ## detect_objects.py
 
 ```bash
-python scripts/recording_analysis/detect_objects.py recordings/2026-10-07/cam_131208/KVID0003.mp4 --start 224 --duration 26 --out detections.csv
+mise run //:recording-analysis scripts/recording_analysis/detect_objects.py recordings/2026-10-07/cam_131208/KVID0003.mp4 --start 224 --duration 26 --out detections.csv
 ```
 
 処理の手順と既定値は `struckoutCameraApp` の `ObjectTracker` と `CameraRepository` に合わせてある。
@@ -99,7 +153,7 @@ python scripts/recording_analysis/detect_objects.py recordings/2026-10-07/cam_13
 ## predict_landing.py
 
 ```bash
-python scripts/recording_analysis/predict_landing.py recordings/2026-10-07/predict_landing.json
+mise run //:recording-analysis scripts/recording_analysis/predict_landing.py recordings/2026-10-07/predict_landing.json
 ```
 
 `detect_objects.py` の検出結果を視線に直し、ball_tracker と同じ計算 (放物線を視線に当てはめて的の面まで
@@ -136,7 +190,7 @@ python scripts/recording_analysis/predict_landing.py recordings/2026-10-07/predi
 ## estimate_time_offset.py
 
 ```bash
-python scripts/recording_analysis/estimate_time_offset.py recordings/2026-10-10/predict_landing_time25.json
+mise run //:recording-analysis scripts/recording_analysis/estimate_time_offset.py recordings/2026-10-10/predict_landing_time25.json
 ```
 
 2 台の時刻が合っていれば、2 台の視線は 1 本の放物線に乗る。右のカメラ (設定した位置の y が大きいほう) の
@@ -186,7 +240,7 @@ python scripts/recording_analysis/estimate_time_offset.py recordings/2026-10-10/
 ## simulate_layouts.py
 
 ```bash
-python scripts/recording_analysis/simulate_layouts.py
+mise run //:recording-analysis scripts/recording_analysis/simulate_layouts.py
 ```
 
 投球をランダムに作り、カメラの画角・フレームレート・露光中のぶれ・時計のずれ・取り付けの誤差を入れて、
@@ -198,11 +252,11 @@ python scripts/recording_analysis/simulate_layouts.py
 ## replay_to_tracker.py
 
 ```bash
-./target/release/ball_tracker.exe --input network --output csv -c recordings/2026-10-10/collisions.csv -j
+./target/release-tracker/ball_tracker.exe --input network --output csv -c recordings/2026-10-10/collisions.csv -j
 ```
 
 ```bash
-python scripts/recording_analysis/replay_to_tracker.py recordings/2026-10-10/replay_all.json
+mise run //:recording-analysis scripts/recording_analysis/replay_to_tracker.py recordings/2026-10-10/replay_all.json
 ```
 
 先に ball_tracker を起動しておき、別のターミナルから実行する。カメラの登録 (6060 番) と検出結果の送信
@@ -241,7 +295,7 @@ ball_tracker の `--time-trim-ms` に 25 (行ごとの時刻差を入れると�
 ## calibrate_camera.py
 
 ```bash
-python scripts/recording_analysis/calibrate_camera.py pose recordings/calibration/<シリアル>/frame_XXXX.png --position 0.257 0.180 1.230 --rotation 140 -2 -31
+mise run //:recording-analysis scripts/recording_analysis/calibrate_camera.py pose recordings/calibration/<シリアル>/frame_XXXX.png --position 0.257 0.180 1.230 --rotation 140 -2 -31
 ```
 
 カメラを置くたびに、次の手順で位置と向きを求める。
@@ -263,7 +317,7 @@ python scripts/recording_analysis/calibrate_camera.py pose recordings/calibratio
 実物を測ったら書き換えること。
 
 ```bash
-python scripts/recording_analysis/calibrate_camera.py check --help
+mise run //:recording-analysis scripts/recording_analysis/calibrate_camera.py check --help
 ```
 
 `check` は、位置を測った印にボールを当てた状態の画像を 2 台ぶん渡すと、ボールの中心を三角測量して、測った位置との
@@ -272,7 +326,7 @@ python scripts/recording_analysis/calibrate_camera.py check --help
 ## calibrate_intrinsics.py
 
 ```bash
-python scripts/recording_analysis/calibrate_intrinsics.py recordings/calibration/<シリアル> --board 9x6 --out intrinsics.json
+mise run //:recording-analysis scripts/recording_analysis/calibrate_intrinsics.py recordings/calibration/<シリアル> --board 9x6 --out intrinsics.json
 ```
 
 チェッカーボード (印刷したものか PC の画面) を「Save frame」で 15 枚ほど、向きと位置を変えて撮り、焦点距離・

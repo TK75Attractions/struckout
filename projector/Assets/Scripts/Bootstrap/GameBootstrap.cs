@@ -3,7 +3,7 @@ using Struckout.Application;
 using System;
 using JetBrains.Annotations;
 using Struckout.Application.Interface;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 using UnityEngine;
 
 namespace Struckout.Bootstrap
@@ -56,6 +56,7 @@ namespace Struckout.Bootstrap
             _master.ScoreChanged += OnScoreChanged;
             _master.GameStarted += OnGameStarted;
             _master.GameFinished += OnGameFinished;
+            _master.ConnectionLost += OnConnectionLost;
         }
 
         private void OnGameStarted(Difficulty difficulty) =>
@@ -63,6 +64,13 @@ namespace Struckout.Bootstrap
 
         private void OnGameFinished() =>
             _dispatcher.Enqueue(_runtime.FinishGame);
+
+        private void OnConnectionLost() =>
+            _dispatcher.Enqueue(() =>
+            {
+                _runtime.FinishGame();
+                _service.SetRemainingTime(TimeSpan.Zero);
+            });
 
         private void OnRemainingTimeChanged(TimeSpan remaining) =>
             _dispatcher.Enqueue(() => _service.SetRemainingTime(remaining));
@@ -78,6 +86,7 @@ namespace Struckout.Bootstrap
             _runtime.ScoreAdded -= OnScoreAdded;
             _master.GameStarted -= OnGameStarted;
             _master.GameFinished -= OnGameFinished;
+            _master.ConnectionLost -= OnConnectionLost;
             _master.RemainingTimeChanged -= OnRemainingTimeChanged;
             _master.ScoreChanged -= OnScoreChanged;
             _context = null;

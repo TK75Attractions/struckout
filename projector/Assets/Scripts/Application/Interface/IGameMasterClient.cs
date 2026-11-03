@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Application.Interface
 {
@@ -21,7 +21,7 @@ namespace Struckout.Application.Interface
 
         /// <summary>
         /// 制限時間が尽きてゲームが終わった。これ以降 game_master は
-        /// この game_id を running_games から外すので、得点を送っても弾かれる。
+        /// この game_id の Session を終了するので、得点を送っても弾かれる。
         /// GameStarted と同じく受信スレッドから飛ぶ。
         /// </summary>
         event Action GameFinished;

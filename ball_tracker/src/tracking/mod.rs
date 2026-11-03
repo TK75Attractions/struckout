@@ -35,7 +35,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use struckout_proto::{CameraPose, Detection};
 use tokio::{sync::mpsc, time::MissedTickBehavior};
-use tracing::{trace, warn};
+use tracing::{info, warn};
 
 /// 予測した着弾時刻が来たか、古くなったトラックがないかを確かめる間隔。
 const COLLISION_POLL_INTERVAL: Duration = Duration::from_millis(5);
@@ -133,9 +133,9 @@ where
         loop {
             let (collisions, events) = tokio::select! {
                 frame = frame_rx.recv() => {
-                    let frame = frame
-                        .with_context(|| "frame channel has been unexpectedly closed")
-                        .unwrap();
+                    let Some(frame) = frame else {
+                        return Ok(());
+                    };
                     self.update_frame(frame, Utc::now())
                 }
                 _ = poll.tick() => self.poll_collisions(Utc::now()),
@@ -260,7 +260,7 @@ where
                 });
                 continue;
             }
-            trace!(?track_id, "detected collision");
+            info!(?track_id, "detected collision");
             self.last_report = Some(pending.time);
             reported.insert(track_id, pending.point);
             diagnostics.extend(throw_diagnostics(track_id, track.ball.rays()));

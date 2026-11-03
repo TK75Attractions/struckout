@@ -1,7 +1,13 @@
-# projector の未着手項目と実装方針
+# projector の旧課題メモ
 
-デバッグ環境を整える過程で分かった、projector 側に残っている課題と推奨する進め方。
-上から順に優先度が高い。
+> **2026-10-28 更新:** 以下は旧 API 実装前の検討記録で、現行の未着手リストではない。
+> Session API 移行に合わせ、A/B/F/H/I/N は実装済み。projector は開始前に Idle、終了時に Finished となり、
+> `GameStarted` / `GameFinished` を受け、切断後は再接続して稼働中状態を snapshot から復元する。
+> 現行の通信仕様は [`projector_debug.md`](projector_debug.md) と
+> [`api_session_migration_plan.md`](../api_session_migration_plan.md) を参照。
+> Unity EditMode テストは 119/121 成功し、座標変換 JSON の既存テスト 2 件は失敗が残る。
+
+この下の内容は当時の設計理由を保存する履歴。古い API 名や未実装の記述を現在の動作として使わないこと。
 
 ---
 

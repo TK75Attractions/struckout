@@ -14,7 +14,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.type_attribute(".tk75attractions.struckout.v1.DetectionsPacket", SERDE_ATTR);
     config.type_attribute(".tk75attractions.struckout.v1.Detection", SERDE_ATTR);
     config.type_attribute(".tk75attractions.struckout.v1.CameraPose", SERDE_ATTR);
-    config.type_attribute(".tk75attractions.struckout.game_master.v1.GameMode", "#[derive(::strum::EnumIs)]");
+    config.type_attribute(
+        ".tk75attractions.struckout.game_master.v1.GameMode",
+        "#[derive(::strum::EnumIs)]",
+    );
 
     tonic_prost_build::configure().compile_with_config(config, &proto_files, &[include])?;
     Ok(())

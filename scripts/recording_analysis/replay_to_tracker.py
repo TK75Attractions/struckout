@@ -24,6 +24,9 @@ from pathlib import Path
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from struckout_common import server_port
+
 # 端末センサー座標 (x: 右、y: 上、z: 画面の手前) からカメラ座標 (x: 画像の右、y: 画像の下、
 # z: 光軸) への回転。カメラアプリの defaultBackCameraRotation(90) と同じ。
 DEVICE_TO_CAMERA = np.array([[0.0, -1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
@@ -233,7 +236,7 @@ def main():
     # カメラの登録。ball_tracker は登録済みの台数を次の id にするので、1 台ずつ順に行う。
     control, data = [], []
     for index, camera in enumerate(cameras):
-        sock = socket.create_connection((host, 6060))
+        sock = socket.create_connection((host, server_port("ball-tracker", "camera-ctrl")))
         camera_id = receive_camera_id(sock)
         send_packet(sock, encode_camera_pose(camera_id, camera["position_m"], camera["rotation_deg"]))
         control.append(sock)
@@ -249,7 +252,7 @@ def main():
             threading.Thread(target=answer_time_sync, args=(sock, camera["clock"], info), daemon=True).start()
         time.sleep(0.3)
     for camera in cameras:
-        sock = socket.create_connection((host, 5050))
+        sock = socket.create_connection((host, server_port("ball-tracker", "camera-data")))
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         data.append(sock)
         camera["session"] = str(uuid.uuid4())

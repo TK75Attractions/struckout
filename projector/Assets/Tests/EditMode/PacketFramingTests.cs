@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using Google.Protobuf;
 using NUnit.Framework;
 using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -81,8 +82,20 @@ namespace Struckout.Tests.Tests.EditMode
             // game_master とは gRPC。メッセージとサービスのスタブが要る。
             Assert.That(new AddScoreRequest(), Is.Not.Null);
             Assert.That(new ListenEventsRequest(), Is.Not.Null);
-            Assert.That(new Tk75Attractions.Struckout.V1.Event(), Is.Not.Null);
-            Assert.That(typeof(GameMasterService.GameMasterServiceClient), Is.Not.Null);
+            Assert.That(new Tk75Attractions.Struckout.GameMaster.V1.Event(), Is.Not.Null);
+            Assert.That(typeof(GameMasterSessionService.GameMasterSessionServiceClient), Is.Not.Null);
+
+            var started = new Tk75Attractions.Struckout.GameMaster.V1.Event
+            {
+                GameStarted = new Tk75Attractions.Struckout.GameMaster.V1.Event.Types.GameStarted
+                {
+                    GameId = 42,
+                    Difficulty = Difficulty.Hard,
+                },
+            };
+            var roundTrip = Tk75Attractions.Struckout.GameMaster.V1.Event.Parser.ParseFrom(started.ToByteArray());
+            Assert.That(roundTrip.GameStarted.GameId, Is.EqualTo(42));
+            Assert.That(roundTrip.GameStarted.Difficulty, Is.EqualTo(Difficulty.Hard));
         }
     }
 }

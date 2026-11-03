@@ -106,8 +106,8 @@ class DataConnectionImpl : DataConnection {
         val REMOTE_ADDRESS: InetAddress = InetAddress.getByName("127.0.0.1")
 
         /**
-         * Send packet to port 5050
+         * Send detected objects to ball_tracker.
          */
-        const val REMOTE_PORT = 5050
+        const val REMOTE_PORT = ServerPorts.BALL_TRACKER_CAMERA_DATA
     }
 }

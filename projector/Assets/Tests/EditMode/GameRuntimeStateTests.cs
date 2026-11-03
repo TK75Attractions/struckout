@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Struckout.Application;
 using Struckout.Domain;
-using Tk75Attractions.Struckout.V1;
+using Tk75Attractions.Struckout.GameMaster.V1;
 
 namespace Struckout.Tests.Tests.EditMode
 {
@@ -24,6 +24,15 @@ namespace Struckout.Tests.Tests.EditMode
 
             Assert.That(state.Phase, Is.EqualTo(GamePhase.Playing));
             Assert.That(state.Difficulty, Is.EqualTo(Difficulty.Hard));
+
+            // A reconnect snapshot resumes the same board and score rather than resetting them.
+            state.AddScore(7);
+            state.FinishGame();
+            state.StartGame(Difficulty.Hard);
+            state.StartGame(Difficulty.Hard);
+
+            Assert.That(state.Phase, Is.EqualTo(GamePhase.Playing));
+            Assert.That(state.Score, Is.EqualTo(7));
         }
 
         // ---------------------------------------------------------------- score

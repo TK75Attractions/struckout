@@ -1,17 +1,21 @@
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc, time::Duration};
 
-use futures_util::Stream;
+use futures_util::{Stream, StreamExt};
 use parking_lot::{RwLock, RwLockReadGuard};
 use struckout_proto::{
-    AddPlayerRequest, AddPlayerResponse, Difficulty, GetGameResultRequest, GetGameResultResponse,
-    GetPlayerRequest, GetPlayerResponse, StartGameRequest, StartGameResponse,
-    ValidatePlayerNameRequest, ValidatePlayerNameResponse, event::EventData,
-    game_master_service_client::GameMasterServiceClient, types::GameId,
+    AddPlayerRequest, AddPlayerResponse, Difficulty, GameMode, GetGameResultRequest,
+    GetGameResultResponse, GetPlayerRequest, GetPlayerResponse, ListenEventsRequest,
+    ListenEventsResponse, SetGameModeRequest, SetGameModeResponse, SetSessionDifficultyRequest,
+    SetSessionDifficultyResponse, SetSessionReadyRequest, SetSessionReadyResponse,
+    StartSessionRequest, StartSessionResponse, ValidatePlayerNameRequest,
+    ValidatePlayerNameResponse, event::EventData,
+    game_master_player_service_client::GameMasterPlayerServiceClient,
+    game_master_session_service_client::GameMasterSessionServiceClient, types::GameId,
     validate_player_name_response::ValidatePlayerNameResp,
 };
 use thiserror::Error;
-use tokio::sync::{broadcast, watch};
-use tokio_stream::StreamExt;
+use tokio::sync::{broadcast, mpsc, watch};
+use tokio_util::sync::CancellationToken;
 use tonic::{Response, Status};
 use tracing::{instrument, trace};
 
@@ -23,7 +27,9 @@ mod private {
     pub trait Sealed {}
 }
 
-/// A trait for [`GameMasterServiceClient`].
+type EventStream = Pin<Box<dyn Stream<Item = Result<ListenEventsResponse, Status>> + Send>>;
+
+/// A narrow adapter for the two game-master services so the data flow can be driven by a fake.
 pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
     fn connect<D>(dst: D) -> impl Future<Output = Result<Self, tonic::transport::Error>>
     where
@@ -35,23 +41,6 @@ pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
         request: impl tonic::IntoRequest<AddPlayerRequest>,
     ) -> impl Future<Output = Result<Response<AddPlayerResponse>, Status>>;
 
-    fn start_game(
-        &mut self,
-        request: impl tonic::IntoRequest<StartGameRequest>,
-    ) -> impl Future<
-        Output = Result<
-            Response<
-                impl Stream<Item = Result<StartGameResponse, Status>> + Unpin + Send + Sync + 'static,
-            >,
-            Status,
-        >,
-    >;
-
-    fn get_game_result(
-        &mut self,
-        request: impl tonic::IntoRequest<GetGameResultRequest>,
-    ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>>;
-
     fn validate_player_name(
         &mut self,
         request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
@@ -61,6 +50,128 @@ pub trait InternalGrpcClient: Sized + Sync + Send + Clone + private::Sealed {
         &mut self,
         request: impl tonic::IntoRequest<GetPlayerRequest>,
     ) -> impl Future<Output = Result<Response<GetPlayerResponse>, Status>>;
+
+    fn start_session(
+        &mut self,
+        request: impl tonic::IntoRequest<StartSessionRequest>,
+    ) -> impl Future<Output = Result<Response<StartSessionResponse>, Status>>;
+
+    fn set_game_mode(
+        &mut self,
+        request: impl tonic::IntoRequest<SetGameModeRequest>,
+    ) -> impl Future<Output = Result<Response<SetGameModeResponse>, Status>>;
+
+    fn set_session_difficulty(
+        &mut self,
+        request: impl tonic::IntoRequest<SetSessionDifficultyRequest>,
+    ) -> impl Future<Output = Result<Response<SetSessionDifficultyResponse>, Status>>;
+
+    fn set_session_ready(
+        &mut self,
+        request: impl tonic::IntoRequest<SetSessionReadyRequest>,
+    ) -> impl Future<Output = Result<Response<SetSessionReadyResponse>, Status>>;
+
+    fn listen_events(
+        &mut self,
+        request: impl tonic::IntoRequest<ListenEventsRequest>,
+    ) -> impl Future<Output = Result<EventStream, Status>>;
+
+    fn get_game_result(
+        &mut self,
+        request: impl tonic::IntoRequest<GetGameResultRequest>,
+    ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>>;
+}
+
+#[derive(Clone)]
+pub struct GameMasterGrpcClient {
+    player: GameMasterPlayerServiceClient<tonic::transport::Channel>,
+    session: GameMasterSessionServiceClient<tonic::transport::Channel>,
+}
+
+impl std::fmt::Debug for GameMasterGrpcClient {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.debug_struct("GameMasterGrpcClient").finish()
+    }
+}
+
+impl private::Sealed for GameMasterGrpcClient {}
+
+impl InternalGrpcClient for GameMasterGrpcClient {
+    async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+    where
+        D: TryInto<tonic::transport::Endpoint>,
+        D::Error: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    {
+        let channel = tonic::transport::Endpoint::new(dst)?.connect().await?;
+        Ok(Self {
+            player: GameMasterPlayerServiceClient::new(channel.clone()),
+            session: GameMasterSessionServiceClient::new(channel),
+        })
+    }
+
+    async fn add_player(
+        &mut self,
+        request: impl tonic::IntoRequest<AddPlayerRequest>,
+    ) -> Result<Response<AddPlayerResponse>, Status> {
+        self.player.add_player(request).await
+    }
+
+    async fn validate_player_name(
+        &mut self,
+        request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
+    ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
+        self.player.validate_player_name(request).await
+    }
+
+    async fn get_player(
+        &mut self,
+        request: impl tonic::IntoRequest<GetPlayerRequest>,
+    ) -> Result<Response<GetPlayerResponse>, Status> {
+        self.player.get_player(request).await
+    }
+
+    async fn start_session(
+        &mut self,
+        request: impl tonic::IntoRequest<StartSessionRequest>,
+    ) -> Result<Response<StartSessionResponse>, Status> {
+        self.session.start_session(request).await
+    }
+
+    async fn set_game_mode(
+        &mut self,
+        request: impl tonic::IntoRequest<SetGameModeRequest>,
+    ) -> Result<Response<SetGameModeResponse>, Status> {
+        self.session.set_game_mode(request).await
+    }
+
+    async fn set_session_difficulty(
+        &mut self,
+        request: impl tonic::IntoRequest<SetSessionDifficultyRequest>,
+    ) -> Result<Response<SetSessionDifficultyResponse>, Status> {
+        self.session.set_session_difficulty(request).await
+    }
+
+    async fn set_session_ready(
+        &mut self,
+        request: impl tonic::IntoRequest<SetSessionReadyRequest>,
+    ) -> Result<Response<SetSessionReadyResponse>, Status> {
+        self.session.set_session_ready(request).await
+    }
+
+    async fn listen_events(
+        &mut self,
+        request: impl tonic::IntoRequest<ListenEventsRequest>,
+    ) -> Result<EventStream, Status> {
+        let stream = self.session.listen_events(request).await?.into_inner();
+        Ok(Box::pin(stream))
+    }
+
+    async fn get_game_result(
+        &mut self,
+        request: impl tonic::IntoRequest<GetGameResultRequest>,
+    ) -> Result<Response<GetGameResultResponse>, Status> {
+        self.session.get_game_result(request).await
+    }
 }
 
 #[derive(derive_more::Debug, Clone)]
@@ -82,8 +193,10 @@ pub enum ConnectError {
 pub enum RequestError {
     #[error(transparent)]
     Grpc(#[from] Status),
-    #[error("stream unexpectedly ended")]
+    #[error("event stream unexpectedly ended")]
     UnexpectedEndOfStream,
+    #[error("game did not start within the allowed time")]
+    StartTimedOut,
     #[error("field {field_name} of message {message_name} was invalid: {detail}")]
     InvalidPacket {
         message_name: String,
@@ -95,16 +208,14 @@ pub enum RequestError {
 }
 
 impl RequestError {
-    /// Utility method to construct [`RequestError::InvalidPacket`].
     fn missing_field(message_name: &str, field_name: &str) -> Self {
         Self::InvalidPacket {
             message_name: message_name.to_string(),
             field_name: field_name.to_string(),
-            detail: "field was missing despite it should include some data".to_string(),
+            detail: "field was missing".to_string(),
         }
     }
 
-    /// Utility method to construct [`RequestError::InvalidPacket`].
     fn invalid_packet(message_name: &str, field_name: &str, detail: &str) -> Self {
         Self::InvalidPacket {
             message_name: message_name.to_string(),
@@ -114,63 +225,8 @@ impl RequestError {
     }
 }
 
-impl private::Sealed for GameMasterServiceClient<tonic::transport::Channel> {}
-
-impl InternalGrpcClient for GameMasterServiceClient<tonic::transport::Channel> {
-    fn connect<D>(dst: D) -> impl Future<Output = Result<Self, tonic::transport::Error>>
-    where
-        D: TryInto<tonic::transport::Endpoint>,
-        D::Error: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
-    {
-        Self::connect(dst)
-    }
-
-    fn add_player(
-        &mut self,
-        request: impl tonic::IntoRequest<AddPlayerRequest>,
-    ) -> impl Future<Output = Result<Response<AddPlayerResponse>, Status>> {
-        self.add_player(request)
-    }
-
-    fn start_game(
-        &mut self,
-        request: impl tonic::IntoRequest<StartGameRequest>,
-    ) -> impl Future<
-        Output = Result<
-            Response<
-                impl Stream<Item = Result<StartGameResponse, Status>> + Unpin + Send + Sync + 'static,
-            >,
-            Status,
-        >,
-    > {
-        self.start_game(request)
-    }
-
-    fn get_game_result(
-        &mut self,
-        request: impl tonic::IntoRequest<GetGameResultRequest>,
-    ) -> impl Future<Output = Result<Response<GetGameResultResponse>, Status>> {
-        self.get_game_result(request)
-    }
-
-    fn validate_player_name(
-        &mut self,
-        request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
-    ) -> impl Future<Output = Result<Response<ValidatePlayerNameResponse>, Status>> {
-        self.validate_player_name(request)
-    }
-
-    fn get_player(
-        &mut self,
-        request: impl tonic::IntoRequest<GetPlayerRequest>,
-    ) -> impl Future<Output = Result<Response<GetPlayerResponse>, Status>> {
-        self.get_player(request)
-    }
-}
-
 impl<T: InternalGrpcClient> GameMasterClient<T> {
     pub async fn connect(server_addr: &str, machine_id: MachineId) -> Result<Self, ConnectError> {
-        // TODO: httpsも使えるようにする
         let endpoint = format!("http://{}:{}", server_addr, GAME_MASTER_GRPC_PORT);
         let client = T::connect(endpoint).await?;
         Ok(Self {
@@ -184,90 +240,143 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
         self.client
             .add_player(AddPlayerRequest { name: name.into() })
             .await
-            .map(|res| res.into_inner().player_id.into())
+            .map(|response| response.into_inner().player_id.into())
     }
 
-    /// Starts a new game.
-    ///
-    /// It returns when the first response from the server came.
-    /// Subsequent responses (e.g. ScoreChanged) are handled internally in another task.
+    /// Runs the single-game session protocol and waits for this Ready response's game ID.
     #[instrument(skip(self))]
     pub async fn start_game(
         &mut self,
         player_id: PlayerId,
         difficulty: Difficulty,
     ) -> Result<GameId, RequestError> {
-        let mut stream = self
+        let stream = self
             .client
-            .start_game(StartGameRequest {
+            .listen_events(ListenEventsRequest {
                 machine_id: self.machine_id.into_inner(),
-                difficulty: difficulty.into(),
-                player_id: player_id.into_inner(),
             })
-            .await?
-            .into_inner();
-        let resp = stream
-            .next()
-            .await
-            .ok_or(RequestError::UnexpectedEndOfStream)??;
-        let event = resp
-            .event
-            .ok_or(RequestError::missing_field("StartGameResponse", "event"))?;
-        let started = event
-            .event_data
-            .as_ref()
-            .ok_or(RequestError::missing_field("Event", "event_data"))?;
-        let EventData::GameStarted(started) = started else {
-            return Err(RequestError::UnexpectedEvent(event));
-        };
-        {
-            let difficulty: i32 = difficulty.into();
-            assert_eq!(
-                started.difficulty, difficulty,
-                "difficulty in request and in response should be same"
-            );
+            .await?;
+        let cancellation = CancellationToken::new();
+        let (event_tx, mut event_rx) = mpsc::channel(32);
+        tokio::spawn(forward_events(stream, event_tx, cancellation.child_token()));
+
+        let machine_id = self.machine_id.into_inner();
+        let setup = async {
+            self.client
+                .start_session(StartSessionRequest {
+                    machine_id,
+                    player_id: player_id.into_inner(),
+                })
+                .await?;
+            self.client
+                .set_game_mode(SetGameModeRequest {
+                    mode: GameMode::Single.into(),
+                    machine_id,
+                })
+                .await?;
+            self.client
+                .set_session_difficulty(SetSessionDifficultyRequest {
+                    difficulty: difficulty.into(),
+                    machine_id,
+                })
+                .await?;
+            self.client
+                .set_session_ready(SetSessionReadyRequest { machine_id })
+                .await
+                .map(|response| response.into_inner().game_id.into())
+                .map_err(RequestError::from)
         }
-        let game_id = event.game_id.into();
+        .await;
+
+        let game_id: GameId = match setup {
+            Ok(game_id) => game_id,
+            Err(error) => {
+                cancellation.cancel();
+                return Err(error);
+            }
+        };
+
+        let started = tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                let response = event_rx
+                    .recv()
+                    .await
+                    .ok_or(RequestError::UnexpectedEndOfStream)??;
+                let event = response
+                    .event
+                    .ok_or(RequestError::missing_field("ListenEventsResponse", "event"))?;
+                let event_data = event
+                    .event_data
+                    .ok_or_else(|| RequestError::missing_field("Event", "event_data"))?;
+                if let EventData::GameStarted(started) = event_data {
+                    if started.game_id == game_id.into_inner() {
+                        let actual_difficulty =
+                            Difficulty::try_from(started.difficulty).map_err(|_| {
+                                RequestError::invalid_packet(
+                                    "GameStarted",
+                                    "difficulty",
+                                    "unknown enum value",
+                                )
+                            })?;
+                        if actual_difficulty != difficulty {
+                            return Err(RequestError::invalid_packet(
+                                "GameStarted",
+                                "difficulty",
+                                "did not match the request",
+                            ));
+                        }
+                        break Ok(());
+                    }
+                }
+            }
+        })
+        .await;
+
+        let started = match started {
+            Ok(started) => started,
+            Err(_) => {
+                cancellation.cancel();
+                return Err(RequestError::StartTimedOut);
+            }
+        };
+
+        if let Err(error) = started {
+            cancellation.cancel();
+            return Err(error);
+        }
 
         let (rem_tx, rem_rx) = watch::channel(DisplayableRemainingTime::ZERO);
         let (score_tx, score_rx) = watch::channel(0);
         let (error_tx, error_rx) = watch::channel(None);
-        let (complete_tx, mut complete_rx) = broadcast::channel(1);
-        {
-            let mut guard = self.session.write();
-            *guard = Some(Session {
-                difficulty,
-                rem_tx: rem_tx.clone(),
-                score_tx: score_tx.clone(),
-                error_tx: error_tx.clone(),
-                complete_tx: complete_tx.clone(),
-            });
-        }
-
-        tokio::spawn(handle_subsequent_events(
-            stream,
-            error_tx,
+        let (complete_tx, _) = broadcast::channel(1);
+        let session = Session {
+            game_id,
+            difficulty,
             rem_tx,
             score_tx,
+            error_tx,
             complete_tx,
+            cancellation: cancellation.clone(),
+        };
+        *self.session.write() = Some(session.clone());
+
+        tokio::spawn(handle_subsequent_events(
+            event_rx,
+            game_id,
+            session,
+            Arc::clone(&self.session),
         ));
-        tokio::spawn(keep_rx_alive(rem_rx, score_rx, error_rx));
-        tokio::spawn({
-            let session = Arc::clone(&self.session);
-            async move {
-                complete_rx.recv().await.unwrap();
-                {
-                    let mut guard = session.write();
-                    *guard = None;
-                }
-                trace!("removed current session");
-            }
-        });
+        // Hold these receivers until the stream ends so the initial values are always retained.
+        tokio::spawn(keep_receivers_alive(
+            rem_rx,
+            score_rx,
+            error_rx,
+            cancellation,
+        ));
 
         Ok(game_id)
     }
 
-    /// Gets the result of a specified game.
     #[instrument(skip(self))]
     pub async fn get_game_result(&mut self, game_id: GameId) -> Result<u32, Status> {
         self.client
@@ -275,37 +384,26 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
                 game_id: game_id.into_inner(),
             })
             .await
-            .map(|resp| resp.into_inner().total_score)
+            .map(|response| response.into_inner().total_score)
     }
 
     pub async fn validate_player_name(
         &mut self,
         name: impl Into<String>,
     ) -> Result<ValidatePlayerNameResp, RequestError> {
-        let res = self
+        let response = self
             .client
             .validate_player_name(ValidatePlayerNameRequest {
                 player_name: name.into(),
             })
-            .await;
-        match res {
-            Ok(resp) => {
-                let resp = resp.into_inner();
-                resp.validate_player_name_resp.ok_or({
-                    RequestError::missing_field(
-                        "ValidatePlayerNameResponse",
-                        "validate_player_name_resp",
-                    )
-                })
-            }
-            Err(e) => Err(RequestError::Grpc(e)),
-        }
+            .await?
+            .into_inner();
+        response.validate_player_name_resp.ok_or_else(|| {
+            RequestError::missing_field("ValidatePlayerNameResponse", "validate_player_name_resp")
+        })
     }
 
-    /// Gets player info from game-master.
-    ///
-    /// Returns `Ok(Some(_))` when the player exists, `Ok(None)` when the player does not exist,
-    /// `Err(_)` when an unknown error occured.
+    /// Returns an existing player ID, `None` for an unknown name, and an error for other failures.
     pub async fn get_player(
         &mut self,
         name: impl Into<String>,
@@ -315,168 +413,197 @@ impl<T: InternalGrpcClient> GameMasterClient<T> {
             .get_player(GetPlayerRequest { name: name.into() })
             .await
         {
-            Ok(res) => {
-                let res = res.into_inner();
-                Ok(Some(res.player_id.into()))
-            }
-            Err(e) => match e.code() {
-                tonic::Code::NotFound => Ok(None),
-                _ => Err(RequestError::Grpc(e)),
-            },
+            Ok(response) => Ok(Some(response.into_inner().player_id.into())),
+            Err(error) if error.code() == tonic::Code::NotFound => Ok(None),
+            Err(error) => Err(RequestError::Grpc(error)),
         }
     }
 
-    /// Returns the current session state.
     pub fn session(&self) -> RwLockReadGuard<'_, Option<Session>> {
         self.session.read()
     }
 }
 
-/// Handles events from game-master's gRPC server after receiving `GameStarted` event.
-///
-/// The function returns when it received the `GameFinished` event.
-/// error_tx's newly-sent value is always `Some`.
-async fn handle_subsequent_events<S>(
+async fn forward_events<S>(
     mut stream: S,
-    error_tx: watch::Sender<Option<RequestError>>,
-    rem_tx: watch::Sender<DisplayableRemainingTime>,
-    score_tx: watch::Sender<u32>,
-    complete_tx: broadcast::Sender<()>,
+    tx: mpsc::Sender<Result<ListenEventsResponse, RequestError>>,
+    cancellation: CancellationToken,
 ) where
-    S: Stream<Item = Result<StartGameResponse, Status>> + Unpin,
+    S: Stream<Item = Result<ListenEventsResponse, Status>> + Send + Unpin,
 {
     loop {
-        let resp = match stream.next().await {
-            Some(Ok(v)) => v,
-            Some(Err(e)) => {
-                error_tx.send(Some(RequestError::Grpc(e))).unwrap();
-                continue;
+        let received = tokio::select! {
+            _ = cancellation.cancelled() => return,
+            received = stream.next() => received,
+        };
+        let message = match received {
+            Some(Ok(response)) => Ok(response),
+            Some(Err(error)) => Err(RequestError::Grpc(error)),
+            None => Err(RequestError::UnexpectedEndOfStream),
+        };
+        let finished = message.is_err();
+        if tx.send(message).await.is_err() || finished {
+            return;
+        }
+    }
+}
+
+async fn handle_subsequent_events(
+    mut events: mpsc::Receiver<Result<ListenEventsResponse, RequestError>>,
+    game_id: GameId,
+    session: Session,
+    current_session: Arc<RwLock<Option<Session>>>,
+) {
+    loop {
+        let response = match events.recv().await {
+            Some(Ok(response)) => response,
+            Some(Err(error)) => {
+                session.error_tx.send_replace(Some(error));
+                break;
             }
             None => {
-                error_tx
-                    .send(Some(RequestError::UnexpectedEndOfStream))
-                    .unwrap();
+                session
+                    .error_tx
+                    .send_replace(Some(RequestError::UnexpectedEndOfStream));
                 break;
             }
         };
-        trace!(resp = ?resp, "received event");
-        let Some(ev) = resp.event else {
-            error_tx
-                .send(Some(RequestError::missing_field(
-                    "StartGameResponse",
+        trace!(?response, "received event");
+        let Some(event) = response.event else {
+            session
+                .error_tx
+                .send_replace(Some(RequestError::missing_field(
+                    "ListenEventsResponse",
                     "event",
-                )))
-                .unwrap();
-            continue;
+                )));
+            break;
         };
-        let Some(ev_data) = ev.event_data else {
-            error_tx
-                .send(Some(RequestError::missing_field("EventData", "event_data")))
-                .unwrap();
-            continue;
+        let Some(event_data) = event.event_data else {
+            session
+                .error_tx
+                .send_replace(Some(RequestError::missing_field("Event", "event_data")));
+            break;
         };
-        match ev_data {
-            EventData::GameStarted(_) => {
-                error_tx
-                    .send(Some(RequestError::UnexpectedEvent(ev)))
-                    .unwrap();
-                continue;
-            }
-            EventData::GameTimeLimitNotify(v) => {
-                let Some(rem) = v.remaining else {
-                    error_tx
-                        .send(Some(RequestError::missing_field(
+        let event_game_id = match &event_data {
+            EventData::GameStarted(value) => value.game_id,
+            EventData::GameTimeLimitNotify(value) => value.game_id,
+            EventData::GameScoreChanged(value) => value.game_id,
+            EventData::GameFinished(value) => value.game_id,
+        };
+        if event_game_id != game_id.into_inner() {
+            continue;
+        }
+
+        match event_data {
+            EventData::GameStarted(_) => (),
+            EventData::GameTimeLimitNotify(value) => {
+                let Some(remaining) = value.remaining else {
+                    session
+                        .error_tx
+                        .send_replace(Some(RequestError::missing_field(
                             "GameTimeLimitNotify",
                             "remaining",
-                        )))
-                        .unwrap();
-                    continue;
+                        )));
+                    break;
                 };
-                let Ok(rem) = rem.try_into() else {
-                    error_tx
-                        .send(Some(RequestError::invalid_packet(
-                            "GameTimeLimitNotify",
-                            "remaining",
-                            "the value was negative",
-                        )))
-                        .unwrap();
-                    continue;
-                };
-                rem_tx.send(rem).unwrap();
+                match DisplayableRemainingTime::try_from(remaining) {
+                    Ok(remaining) => {
+                        session.rem_tx.send_replace(remaining);
+                    }
+                    Err(error) => {
+                        session
+                            .error_tx
+                            .send_replace(Some(RequestError::invalid_packet(
+                                "GameTimeLimitNotify",
+                                "remaining",
+                                &error.to_string(),
+                            )));
+                        break;
+                    }
+                }
             }
-            EventData::GameScoreChanged(v) => {
-                score_tx.send(v.total_score).unwrap();
+            EventData::GameScoreChanged(value) => {
+                session.score_tx.send_replace(value.total_score);
             }
             EventData::GameFinished(_) => {
-                complete_tx.send(()).unwrap();
+                let _ = session.complete_tx.send(());
+                session.cancellation.cancel();
+                clear_session(&current_session, game_id);
+                return;
             }
         }
     }
+    session.cancellation.cancel();
+    clear_session(&current_session, game_id);
 }
 
-/// Keep channel receivers alive in order to avoid error while sending.
-async fn keep_rx_alive(
+fn clear_session(current_session: &RwLock<Option<Session>>, game_id: GameId) {
+    let mut current = current_session.write();
+    if current
+        .as_ref()
+        .is_some_and(|session| session.game_id == game_id)
+    {
+        *current = None;
+        trace!(%game_id, "removed current session");
+    }
+}
+
+async fn keep_receivers_alive(
     mut rem_rx: watch::Receiver<DisplayableRemainingTime>,
     mut score_rx: watch::Receiver<u32>,
     mut error_rx: watch::Receiver<Option<RequestError>>,
+    cancellation: CancellationToken,
 ) {
     loop {
         tokio::select! {
-            _ = rem_rx.changed() => {
-                let val = rem_rx.borrow_and_update();
-                trace!(?val, "remaining_time changed");
-            }
-            _ = score_rx.changed() => {
-                let val = score_rx.borrow_and_update();
-                trace!(?val, "score_rx changed");
-            }
-            _ = error_rx.changed() => {
-                let val = error_rx.borrow_and_update();
-                trace!(?val, "error_rx changed");
-            }
+            _ = cancellation.cancelled() => return,
+            changed = rem_rx.changed() => if changed.is_err() { return; },
+            changed = score_rx.changed() => if changed.is_err() { return; },
+            changed = error_rx.changed() => if changed.is_err() { return; },
         }
     }
 }
 
-/// States of a game session.
-///
-/// The struct holds [`watch::Sender`]s, but they are used only for creating new [`watch::Receiver`]
-/// by calling [`Receiver::subscribe()`].
-///
-/// [Receiver::subscribe]: watch::Receiver::subscribe
+/// State and watch channels for one game. The game ID prevents old completion tasks clearing a later game.
 #[derive(Debug, Clone)]
 pub struct Session {
-    difficulty: struckout_proto::Difficulty,
+    game_id: GameId,
+    difficulty: Difficulty,
     score_tx: watch::Sender<u32>,
     rem_tx: watch::Sender<DisplayableRemainingTime>,
     error_tx: watch::Sender<Option<RequestError>>,
     complete_tx: broadcast::Sender<()>,
+    cancellation: CancellationToken,
 }
 
 impl Session {
+    /// Constructs a session state for presentation tests that exercise watch-channel behavior.
     pub fn new(
-        difficulty: struckout_proto::Difficulty,
+        difficulty: Difficulty,
         score_tx: watch::Sender<u32>,
         rem_tx: watch::Sender<DisplayableRemainingTime>,
         error_tx: watch::Sender<Option<RequestError>>,
         complete_tx: broadcast::Sender<()>,
     ) -> Self {
         Self {
+            game_id: GameId::new(1),
             difficulty,
             score_tx,
             rem_tx,
             error_tx,
             complete_tx,
+            cancellation: CancellationToken::new(),
         }
     }
 
-    /// Subscribes to [`watch::Sender`] and returns new [`Receiver`].
-    ///
-    /// Note that all [`Sender`] will be dropped after receiving `GameFinished` event, so calling [`Receiver::recv()`] can
-    /// fail.
-    ///
-    /// [`Sender`]: watch::Sender
-    /// [`Receiver`]: watch::Receiver
+    pub fn game_id(&self) -> GameId {
+        self.game_id
+    }
+
+    pub fn difficulty(&self) -> Difficulty {
+        self.difficulty
+    }
+
     pub fn score(&self) -> watch::Receiver<u32> {
         self.score_tx.subscribe()
     }
@@ -496,19 +623,15 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
-    use async_stream::stream;
-    use struckout_proto::{
-        event::{EventData, GameStarted, GameTimeLimitNotify},
-        types::GameId,
-    };
+    use super::*;
+    use futures_util::stream;
+    use struckout_proto::{Event, event::GameStarted, types::MachineId};
     use tokio::time::timeout;
 
-    use super::*;
-
     #[derive(Debug, Clone)]
-    struct FakeGrpcClient {}
+    struct FakeGrpcClient;
+
+    impl private::Sealed for FakeGrpcClient {}
 
     impl InternalGrpcClient for FakeGrpcClient {
         async fn connect<D>(_dst: D) -> Result<Self, tonic::transport::Error>
@@ -516,84 +639,104 @@ mod tests {
             D: TryInto<tonic::transport::Endpoint>,
             D::Error: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
         {
-            Ok(Self {})
+            Ok(Self)
         }
 
         async fn add_player(
             &mut self,
             _request: impl tonic::IntoRequest<AddPlayerRequest>,
         ) -> Result<Response<AddPlayerResponse>, Status> {
-            todo!()
-        }
-
-        async fn start_game(
-            &mut self,
-            _request: impl tonic::IntoRequest<StartGameRequest>,
-        ) -> Result<
-            Response<
-                impl Stream<Item = Result<StartGameResponse, Status>> + Unpin + Send + Sync + 'static,
-            >,
-            Status,
-        > {
-            let s = stream! {
-                yield EventData::GameStarted(GameStarted {
-                    difficulty: struckout_proto::Difficulty::Normal.into(),
-                });
-                tokio::time::sleep(Duration::from_secs(10)).await;
-                yield EventData::GameTimeLimitNotify(GameTimeLimitNotify {
-                    remaining: Some(prost_types::Duration {
-                        seconds: 100,
-                        nanos: 0,
-                    }),
-                });
-            };
-            let s = Box::pin(s);
-            let s = s.map(|ev| {
-                Ok(StartGameResponse {
-                    event: Some(struckout_proto::Event {
-                        machine_id: MachineId::new(1).into_inner(),
-                        game_id: GameId::new(5).into_inner(),
-                        event_data: Some(ev),
-                    }),
-                })
-            });
-            Ok(Response::new(s))
-        }
-
-        async fn get_game_result(
-            &mut self,
-            _request: impl tonic::IntoRequest<GetGameResultRequest>,
-        ) -> Result<Response<GetGameResultResponse>, Status> {
-            unimplemented!()
+            Ok(Response::new(AddPlayerResponse { player_id: 12 }))
         }
 
         async fn validate_player_name(
             &mut self,
             _request: impl tonic::IntoRequest<ValidatePlayerNameRequest>,
         ) -> Result<Response<ValidatePlayerNameResponse>, Status> {
-            unimplemented!()
+            Ok(Response::new(ValidatePlayerNameResponse {
+                validate_player_name_resp: Some(ValidatePlayerNameResp::Ok(
+                    struckout_proto::validate_player_name_response::Ok {},
+                )),
+            }))
         }
 
         async fn get_player(
             &mut self,
             _request: impl tonic::IntoRequest<GetPlayerRequest>,
         ) -> Result<Response<GetPlayerResponse>, Status> {
-            unimplemented!()
+            Ok(Response::new(GetPlayerResponse {
+                player_id: 12,
+                player_name: "test".into(),
+            }))
+        }
+
+        async fn start_session(
+            &mut self,
+            _request: impl tonic::IntoRequest<StartSessionRequest>,
+        ) -> Result<Response<StartSessionResponse>, Status> {
+            Ok(Response::new(StartSessionResponse {}))
+        }
+
+        async fn set_game_mode(
+            &mut self,
+            _request: impl tonic::IntoRequest<SetGameModeRequest>,
+        ) -> Result<Response<SetGameModeResponse>, Status> {
+            Ok(Response::new(SetGameModeResponse {}))
+        }
+
+        async fn set_session_difficulty(
+            &mut self,
+            _request: impl tonic::IntoRequest<SetSessionDifficultyRequest>,
+        ) -> Result<Response<SetSessionDifficultyResponse>, Status> {
+            Ok(Response::new(SetSessionDifficultyResponse {}))
+        }
+
+        async fn set_session_ready(
+            &mut self,
+            _request: impl tonic::IntoRequest<SetSessionReadyRequest>,
+        ) -> Result<Response<SetSessionReadyResponse>, Status> {
+            Ok(Response::new(SetSessionReadyResponse { game_id: 5 }))
+        }
+
+        async fn listen_events(
+            &mut self,
+            _request: impl tonic::IntoRequest<ListenEventsRequest>,
+        ) -> Result<EventStream, Status> {
+            let events = [4, 5].map(|game_id| {
+                Ok(ListenEventsResponse {
+                    event: Some(Event {
+                        event_data: Some(EventData::GameStarted(GameStarted {
+                            difficulty: Difficulty::Normal.into(),
+                            game_id,
+                        })),
+                    }),
+                })
+            });
+            Ok(Box::pin(stream::iter(events)))
+        }
+
+        async fn get_game_result(
+            &mut self,
+            _request: impl tonic::IntoRequest<GetGameResultRequest>,
+        ) -> Result<Response<GetGameResultResponse>, Status> {
+            Ok(Response::new(GetGameResultResponse { total_score: 0 }))
         }
     }
 
-    impl private::Sealed for FakeGrpcClient {}
-
     #[tokio::test]
-    async fn start_game_returns_immediately_after_first_reponse() {
-        let player_id = PlayerId::new(12);
-        let difficulty = struckout_proto::Difficulty::Normal;
-        let mut gm = GameMasterClient::<FakeGrpcClient>::connect("127.0.0.1", MachineId::new(1))
-            .await
-            .unwrap();
-
-        let res = timeout(Duration::from_secs(1), gm.start_game(player_id, difficulty)).await;
-        let res = res.expect("should not timeout");
-        assert!(res.is_ok());
+    async fn start_game_waits_for_the_ready_game_id_not_an_old_snapshot() {
+        let mut client =
+            GameMasterClient::<FakeGrpcClient>::connect("127.0.0.1", MachineId::new(1))
+                .await
+                .unwrap();
+        let game_id = timeout(
+            Duration::from_secs(1),
+            client.start_game(PlayerId::new(12), Difficulty::Normal),
+        )
+        .await
+        .expect("the matching start event should be available")
+        .unwrap();
+        assert_eq!(game_id, GameId::new(5));
+        assert_eq!(client.session().as_ref().unwrap().game_id(), game_id);
     }
 }

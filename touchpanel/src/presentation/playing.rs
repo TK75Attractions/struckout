@@ -73,7 +73,15 @@ where
         let (rem_rx, score_rx, mut error_rx, mut complete_rx) = {
             let cx = worker.context();
             let session_guard = cx.session();
-            let session = session_guard.as_ref().expect("session should exist");
+            let Some(session) = session_guard
+                .as_ref()
+                .filter(|session| session.game_id() == game_id)
+            else {
+                self.nav_controller.navigate(NavRoute::Fallback(
+                    "開始したゲームの状態を取得できませんでした".into(),
+                ));
+                return worker.spawn_local(async {});
+            };
 
             (
                 session.remaining_time(),
@@ -106,7 +114,7 @@ where
                     }
                     if let Some(err) = error_rx.borrow_and_update().as_ref() {
                         nc.navigate(NavRoute::Fallback(err.to_string()));
-                        // TODO: breakすべきか?
+                        break;
                     }
                 }
             }
@@ -116,11 +124,11 @@ where
         worker.spawn_local({
             let nc = self.nav_controller.clone();
             async move {
-                complete_rx.recv().await.unwrap();
-                rem_cancel.cancel();
-                score_cancel.cancel();
-
-                nc.navigate(NavRoute::Score { game_id });
+                if complete_rx.recv().await.is_ok() {
+                    rem_cancel.cancel();
+                    score_cancel.cancel();
+                    nc.navigate(NavRoute::Score { game_id });
+                }
             }
         })
     }

@@ -2,6 +2,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use serde::Serialize;
 use struckout_proto::{Detection, DetectionsPacket};
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 mod db;
 mod network;
@@ -16,6 +17,7 @@ pub trait DetectionInput {
     fn start(
         self,
         tx: mpsc::Sender<CameraFrame>,
+        shutdown: CancellationToken,
     ) -> impl std::future::Future<Output = std::io::Result<()>> + Send;
 }
 

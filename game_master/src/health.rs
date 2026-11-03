@@ -66,10 +66,10 @@ mod tests {
 
     use super::*;
 
-    /// The statuses of the whole server and of [`TestService`].
+    /// The statuses of the whole server and of the test service.
     async fn statuses(health: &HealthService) -> [Status; 2] {
         let mut statuses = [Status::Unknown; 2];
-        for (status, name) in statuses.iter_mut().zip(["", TestService::NAME]) {
+        for (status, name) in statuses.iter_mut().zip(["", "test.GameMasterService"]) {
             let response = health
                 .check(Request::new(HealthCheckRequest {
                     service: name.into(),
