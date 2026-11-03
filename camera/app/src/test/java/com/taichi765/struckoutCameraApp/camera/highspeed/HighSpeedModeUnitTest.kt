@@ -59,4 +59,39 @@ class HighSpeedModeUnitTest {
             selectHighSpeedMode(listOf(mode(640, 480, 30, 120)), HighSpeedStreamSize.VGA)
         }
     }
+
+    // CPH2639 の通常撮影。1280x720 などはどれも 30fps 固定が上限
+    private val cph2639 = listOf(
+        mode(4080, 3072, 30, 30), mode(1920, 1080, 30, 30), mode(1600, 1200, 30, 30),
+        mode(1280, 720, 30, 30), mode(640, 480, 30, 30), mode(640, 360, 30, 30),
+    )
+
+    @Test
+    fun `fps follows constrained high speed support`() {
+        assertEquals(120, captureFpsFor(true))
+        assertEquals(30, captureFpsFor(false))
+    }
+
+    @Test
+    fun `without high speed the default selects 640x360 at 30fps`() {
+        assertEquals(
+            mode(640, 360, 30, 30),
+            selectHighSpeedMode(cph2639, HighSpeedStreamSize.HD720, NORMAL_TARGET_FPS),
+        )
+    }
+
+    @Test
+    fun `without high speed VGA selects 640x480 at 30fps`() {
+        assertEquals(
+            mode(640, 480, 30, 30),
+            selectHighSpeedMode(cph2639, HighSpeedStreamSize.VGA, NORMAL_TARGET_FPS),
+        )
+    }
+
+    @Test
+    fun `a 30fps device is rejected when 120fps is required`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            selectHighSpeedMode(cph2639, HighSpeedStreamSize.HD720)
+        }
+    }
 }

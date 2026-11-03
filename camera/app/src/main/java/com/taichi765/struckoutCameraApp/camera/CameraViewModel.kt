@@ -54,7 +54,7 @@ class CameraViewModel @Inject constructor(
 
     init {
         clockInfo.update {
-            it.copy(appVariant = "highspeed", frameRate = HighSpeedCamera.TARGET_FPS.toDouble())
+            it.copy(appVariant = "highspeed", frameRate = cameraRepository.captureFps.toDouble())
         }
     }
 

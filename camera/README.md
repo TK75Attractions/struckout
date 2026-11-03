@@ -38,6 +38,22 @@
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## 端末ごとの fps
+
+撮る fps は、背面カメラが `CONSTRAINED_HIGH_SPEED_VIDEO` の能力を持つかで決まる (`captureFpsFor`)。
+
+| 端末 | 能力 | 撮影 |
+|---|---|---|
+| KYV45 | あり | 高速撮影のセッションで 120fps |
+| CPH2639 | なし (通常撮影は最大 30fps。`adb shell dumpsys media.camera` の 1280x720 / 640x480 の最小フレーム間隔は 33.33 ms) | 通常のセッションで 30fps 固定 (`CONTROL_AE_TARGET_FPS_RANGE` 30-30) |
+
+CPH2639 は高速撮影の設定 (1280x720 の 120fps) をメタデータに載せているが、能力を持たないので Camera2 の標準 API からは使えない。
+どちらの場合も、エンコーダー → デコーダー → 解析、PC への動画送信の流れは同じで、PC に送る `frameRate` も撮る fps になる。
+通常のセッションでは、自動選択は 16:9・幅 640 以上で最小の 640x360 を選ぶ。
+ball_tracker は、120fps と 30fps の端末を混ぜても、フレームの時刻で対応づけて三角測量する
+(`predicts_the_same_collision_from_a_120fps_camera_and_a_30fps_camera`)。30fps の端末は 1 コマの間隔が 33 ms と長いので、
+的に近い位置の精度は 120fps の端末より落ちる。
+
 ## 高速撮影の大きさ
 
 設定画面の「高速撮影の大きさ」で、従来の自動選択 (既定) と `640x480` を選べる。自動選択は固定 120fps の

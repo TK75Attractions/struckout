@@ -22,14 +22,6 @@ class CameraRepository @Inject constructor(
     private val clockInfo: CameraClockInfoHolder,
     private val configRepository: ConfigStoreRepository,
 ) {
-    // 「動かなくなった前景を背景とみなすまでの時間」を 30fps のときと同じ 0.5 秒に保つため、
-    // フレーム数は fps に比例させる (30fps で 15 フレーム)。
-    val tracker = ObjectTracker(
-        0.5, 15.0, 80.0,
-        foregroundPersistenceFrames = HighSpeedCamera.TARGET_FPS / 2,
-        minColorShift = MIN_BALL_COLOR_SHIFT
-    )
-
     /**
      * @param imageWidth,imageHeight [rect] を検出した解析画像 (回転前) の大きさ
      */
@@ -51,6 +43,19 @@ class CameraRepository @Inject constructor(
         backCameras.firstOrNull()
             ?: throw IllegalStateException("This device does not have a back camera.")
     }
+
+    /**
+     * この端末が撮る fps。高速撮影に対応していれば 120、していなければ 30 ([HighSpeedCamera] が同じ値で撮る)。
+     */
+    val captureFps: Int = HighSpeedCamera.captureFpsFor(characteristics)
+
+    // 「動かなくなった前景を背景とみなすまでの時間」を 30fps のときと同じ 0.5 秒に保つため、
+    // フレーム数は fps に比例させる (30fps で 15 フレーム)。
+    val tracker = ObjectTracker(
+        0.5, 15.0, 80.0,
+        foregroundPersistenceFrames = captureFps / 2,
+        minColorShift = MIN_BALL_COLOR_SHIFT
+    )
 
     /**
      * センサーの向き。解析画像は、この角度だけ時計回りに回すと端末を縦に持ったときの向きになる。

@@ -2,6 +2,7 @@ package com.taichi765.struckoutCameraApp.camera.highspeed
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession
@@ -41,6 +42,8 @@ import kotlin.math.roundToInt
  * 縮小したフレームを解析用に渡す。
  *
  * 通常のセッションでは 30fps が上限の端末でも、このセッションなら 120fps で撮れる。
+ * constrained high speed に対応していない端末 (CPH2639) では、通常のセッションで 30fps 固定で撮り、
+ * あとの流れ (エンコーダー、デコーダー、解析) は同じにする ([captureFpsFor])。
  * 出力先に YUV の ImageReader を使えないため、カメラ → [VideoRelay] (動画エンコーダーとデコーダー) →
  * [GlFrameReader] の順にフレームを渡す。プレビュー用の出力先 (SurfaceTexture) で直接受けると、
  * 30fps しか渡さない端末がある (KYV45)。
@@ -350,7 +353,6 @@ class HighSpeedCamera @Inject constructor(
                     }
                     session = configured
                     try {
-                        val highSpeed = configured as CameraConstrainedHighSpeedCaptureSession
                         val request = camera.createCaptureRequest(CameraDevice.TEMPLATE_RECORD).apply {
                             addTarget(surface)
                             set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, mode.fpsRange)
@@ -360,23 +362,29 @@ class HighSpeedCamera @Inject constructor(
                                 CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF
                             )
                         }.build()
-                        highSpeed.setRepeatingBurst(
-                            highSpeed.createHighSpeedRequestList(request),
-                            // 行ごとの露光の時刻差と露光時間は、撮影結果からしか分からない。
-                            object : CameraCaptureSession.CaptureCallback() {
-                                override fun onCaptureCompleted(
-                                    session: CameraCaptureSession,
-                                    request: CaptureRequest,
-                                    result: TotalCaptureResult
-                                ) {
-                                    clockInfo.onCaptureResult(result)
-                                    result.get(CaptureResult.SENSOR_TIMESTAMP)?.let { recordCapture(it) }
-                                }
-                            },
-                            cameraHandler
-                        )
+                        // 行ごとの露光の時刻差と露光時間は、撮影結果からしか分からない。
+                        val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+                            override fun onCaptureCompleted(
+                                session: CameraCaptureSession,
+                                request: CaptureRequest,
+                                result: TotalCaptureResult
+                            ) {
+                                clockInfo.onCaptureResult(result)
+                                result.get(CaptureResult.SENSOR_TIMESTAMP)?.let { recordCapture(it) }
+                            }
+                        }
+                        if (mode.highSpeed) {
+                            val highSpeed = configured as CameraConstrainedHighSpeedCaptureSession
+                            highSpeed.setRepeatingBurst(
+                                highSpeed.createHighSpeedRequestList(request),
+                                captureCallback,
+                                cameraHandler
+                            )
+                        } else {
+                            configured.setRepeatingRequest(request, captureCallback, cameraHandler)
+                        }
                         Timber.tag(TAG)
-                            .i("high speed session started: stream=${mode.size} fps=${mode.fpsRange} analysis=$analysisSize")
+                            .i("${if (mode.highSpeed) "high speed" else "normal"} session started: stream=${mode.size} fps=${mode.fpsRange} analysis=$analysisSize")
                         _state.value =
                             State.Running(mode.size, analysisSize, mode.fpsRange.upper)
                     } catch (e: Exception) {
@@ -385,20 +393,21 @@ class HighSpeedCamera @Inject constructor(
                 }
 
                 override fun onConfigureFailed(failed: CameraCaptureSession) {
-                    fail("failed to configure the high speed session (stream=${mode.size})", null)
+                    fail("failed to configure the capture session (stream=${mode.size})", null)
                 }
             }
             try {
                 camera.createCaptureSession(
                     SessionConfiguration(
-                        SessionConfiguration.SESSION_HIGH_SPEED,
+                        if (mode.highSpeed) SessionConfiguration.SESSION_HIGH_SPEED
+                        else SessionConfiguration.SESSION_REGULAR,
                         listOf(OutputConfiguration(surface)),
                         executor,
                         callback
                     )
                 )
             } catch (e: Exception) {
-                fail("failed to create the high speed session", e)
+                fail("failed to create the capture session", e)
             }
         }
 
@@ -513,10 +522,17 @@ class HighSpeedCamera @Inject constructor(
         }
     }
 
-    private data class Mode(val cameraId: String, val size: Size, val fpsRange: Range<Int>)
+    private data class Mode(
+        val cameraId: String,
+        val size: Size,
+        val fpsRange: Range<Int>,
+        /** constrained high speed のセッションで撮るか。false なら通常のセッションの 30fps 固定 */
+        val highSpeed: Boolean,
+    )
 
     /**
-     * 背面カメラの高速撮影の設定から、[TARGET_FPS] 固定で撮れるものを選ぶ。
+     * 背面カメラの設定から、[captureFpsFor] の fps 固定で撮れるものを選ぶ。
+     * 高速撮影に対応していれば高速撮影の設定から、していなければ通常の出力の大きさから選ぶ。
      */
     private fun selectMode(manager: CameraManager, streamSize: HighSpeedStreamSize): Mode {
         // CameraRepository と同じく、最初の背面カメラを使う。
@@ -526,32 +542,52 @@ class HighSpeedCamera @Inject constructor(
         } ?: throw IllegalStateException("This device does not have a back camera.")
 
         val characteristics = manager.getCameraCharacteristics(cameraId)
-        val capabilities =
-            characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
-        check(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO in capabilities) {
-            "This device does not support constrained high speed video."
-        }
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             ?: throw IllegalStateException("This device does not report stream configurations.")
+        val highSpeed = supportsConstrainedHighSpeed(characteristics)
+        val fps = captureFpsFor(highSpeed)
 
-        val candidates = map.highSpeedVideoSizes.flatMap { size ->
-            val ranges = map.getHighSpeedVideoFpsRangesFor(size)
-            Timber.tag(TAG).i("high speed config: $size ${ranges.joinToString()}")
-            // 下限と上限が同じ範囲を選ぶ。下限が 30 の範囲だと、プレビュー用の出力は 30fps になる。
-            ranges.map { HighSpeedMode(size.width, size.height, it.lower, it.upper) }
+        val candidates = if (highSpeed) {
+            map.highSpeedVideoSizes.flatMap { size ->
+                val ranges = map.getHighSpeedVideoFpsRangesFor(size)
+                Timber.tag(TAG).i("high speed config: $size ${ranges.joinToString()}")
+                // 下限と上限が同じ範囲を選ぶ。下限が 30 の範囲だと、プレビュー用の出力は 30fps になる。
+                ranges.map { HighSpeedMode(size.width, size.height, it.lower, it.upper) }
+            }
+        } else {
+            val fixedRange = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                ?.any { it.lower == fps && it.upper == fps } == true
+            check(fixedRange) { "This device does not support fixed ${fps}fps capture." }
+            // 出力先はエンコーダーの入力 (Surface)。SurfaceTexture に出せる大きさから選ぶ。
+            map.getOutputSizes(SurfaceTexture::class.java).map { HighSpeedMode(it.width, it.height, fps, fps) }
         }
-        val selected = selectHighSpeedMode(candidates, streamSize)
+        val selected = selectHighSpeedMode(candidates, streamSize, fps)
         if (streamSize == HighSpeedStreamSize.VGA && (selected.width != 640 || selected.height != 480)) {
-            Timber.tag(TAG).w("640x480 at ${TARGET_FPS}fps is unavailable; falling back to ${selected.width}x${selected.height}")
+            Timber.tag(TAG).w("640x480 at ${fps}fps is unavailable; falling back to ${selected.width}x${selected.height}")
         }
         // VGA は 4:3 センサー全体を横いっぱいに使い、16:9 と横の画角が同じという前提。
         // Save frame で実機の画角を確認するまでは既定にしない (焦点距離/解析画像幅の比の前提)。
-        return Mode(cameraId, Size(selected.width, selected.height), Range(selected.minFps, selected.maxFps))
+        return Mode(
+            cameraId,
+            Size(selected.width, selected.height),
+            Range(selected.minFps, selected.maxFps),
+            highSpeed,
+        )
     }
 
     companion object {
         const val TAG = "HighSpeedCamera"
-        const val TARGET_FPS = HIGH_SPEED_TARGET_FPS
+
+        private fun supportsConstrainedHighSpeed(characteristics: CameraCharacteristics): Boolean =
+            CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO in
+                (characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf())
+
+        /**
+         * [characteristics] のカメラが撮る fps。高速撮影に対応していれば 120、していなければ 30。
+         * CPH2639 は高速撮影の設定を載せているが、constrained high speed の能力を持たないので 30fps になる。
+         */
+        fun captureFpsFor(characteristics: CameraCharacteristics): Int =
+            captureFpsFor(supportsConstrainedHighSpeed(characteristics))
 
         /** 解析に渡す画像の幅。高さはカメラの出力の縦横比から決まる。 */
         const val ANALYSIS_WIDTH = HIGH_SPEED_ANALYSIS_WIDTH

@@ -91,7 +91,7 @@ private fun cameraStateText(state: HighSpeedCamera.State): String = when (state)
     is HighSpeedCamera.State.Running ->
         "${state.fps}fps  撮影 ${state.streamSize}  解析 ${state.analysisSize}"
 
-    is HighSpeedCamera.State.Failed -> "高速撮影を開始できません: ${state.message}"
+    is HighSpeedCamera.State.Failed -> "撮影を開始できません: ${state.message}"
 }
 
 private fun cameraStatsText(stats: HighSpeedCamera.Stats): String =

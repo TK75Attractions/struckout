@@ -646,6 +646,29 @@ mod tests {
     }
 
     #[test]
+    fn predicts_the_same_collision_from_a_120fps_camera_and_a_30fps_camera() {
+        let locations = side_camera_locations();
+        let mut runner = TrackRunner::new(locations.clone(), NullEventLogger);
+
+        // カメラ 0 は 120fps (KYV45)、カメラ 1 は 30fps (CPH2639)。届く順は撮った順に並べる。
+        let mut frames: Vec<(u32, i64)> = (0..14)
+            .map(|index| (0, 20 + index * 1000 / 120))
+            .chain((0..4).map(|index| (1, 33 + index * 1000 / 30)))
+            .collect();
+        frames.sort_by_key(|&(_, millis)| millis);
+        for (camera_id, millis) in frames {
+            let frame = thrown_ball_frame(&locations, camera_id, millis, true);
+            assert!(runner.update_frame(frame, time(millis)).0.is_empty());
+        }
+
+        let expected = expected_collision();
+        assert_eq!(runner.tracks.len(), 1);
+        let predicted = runner.tracks[0].pending.unwrap();
+        assert_relative_eq!(predicted.point.y, expected.y, epsilon = 1e-3);
+        assert_relative_eq!(predicted.point.z, expected.z, epsilon = 1e-3);
+    }
+
+    #[test]
     fn predicts_a_collision_from_two_frames_per_camera() {
         let locations = side_camera_locations();
         let mut runner = TrackRunner::new(locations.clone(), NullEventLogger);

@@ -1,7 +1,39 @@
 import com.google.protobuf.gradle.proto
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
+abstract class GenerateServerPortsTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val generatorScript: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val serverSpec: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val process = ProcessBuilder(
+            "python",
+            generatorScript.get().asFile.absolutePath,
+            "--camera-output",
+            outputDirectory.get().asFile.absolutePath,
+        ).inheritIO().start()
+        check(process.waitFor() == 0) { "Failed to generate camera server port constants." }
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -19,6 +51,13 @@ val releaseCommitShortHash = providers.environmentVariable("ST_COMMIT_SHORT_HASH
 // can update the app on the phones: Android refuses an update signed with another key.
 // Without the variables, the release build is unsigned as before.
 val releaseKeystore = providers.environmentVariable("CAMERA_KEYSTORE_FILE")
+val serverPortsOutput = layout.buildDirectory.dir("generated/source/serverPorts/main")
+val generateServerPorts = tasks.register<GenerateServerPortsTask>("generateServerPorts") {
+    val repositoryRoot = rootProject.projectDir.parentFile
+    generatorScript.set(repositoryRoot.resolve("scripts/generate_server_ports.py"))
+    serverSpec.set(repositoryRoot.resolve("api/spec/servers.yaml"))
+    outputDirectory.set(serverPortsOutput)
+}
 
 // The release (.github/workflows/release.yaml) gives the version like the other modules, e.g.
 // '2026-10-20.3' (see ReleaseTag in xtask/src/release.rs). The launcher updates the app with
@@ -106,6 +145,15 @@ android {
             }
         }
     }
+}
+
+androidComponents.onVariants { variant ->
+    val kotlinSources = variant.sources.kotlin
+        ?: error("Kotlin source directory is unavailable for ${variant.name}.")
+    kotlinSources.addGeneratedSourceDirectory(
+        generateServerPorts,
+        GenerateServerPortsTask::outputDirectory,
+    )
 }
 
 dependencies {
