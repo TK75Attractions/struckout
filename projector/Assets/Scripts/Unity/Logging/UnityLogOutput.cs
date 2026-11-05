@@ -10,9 +10,10 @@ namespace Struckout.Unity.Logging
     /// </summary>
     internal static class UnityLogOutput
     {
-        public static void Write(LogLevel level, string category, string message, Exception exception)
+        public static void Write(LogLevel level, string category, string message, Exception exception, uint? machineId = null)
         {
-            var output = $"[{category}] {message}";
+            var identity = machineId.HasValue ? $"[machine_id={machineId.Value}] " : "";
+            var output = $"[{category}] {identity}{message}";
             if (exception != null) output += $"\n{exception}";
             switch (level)
             {

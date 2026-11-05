@@ -31,6 +31,7 @@ mod health;
 use crate::config::{Config, ConfigLocation};
 
 mod config;
+mod logging;
 
 #[cfg(feature = "sentry")]
 const SENTRY_DSN: &str = "https://2b9af00fb25f2faa692253f8ed95c43e@o4512229597315072.ingest.us.sentry.io/4512229769871360";
@@ -44,6 +45,9 @@ struct Cli {
     /// キーは長いオプション名と同じ (README を参照)
     #[arg(long = "config")]
     config: Option<PathBuf>,
+    /// ログと Sentry に付ける筐体番号 [既定: 1]
+    #[arg(long = "machine-id")]
+    machine_id: Option<u32>,
     /// detectionをどこから受け取るか。コマンドラインか設定ファイルのどちらかで必ず指定する
     #[arg(value_enum, long = "input")]
     detection_input: Option<DetectionInputKind>,
@@ -267,6 +271,7 @@ fn json_log_output_dir() -> PathBuf {
 }
 
 fn main() {
+    let config = load_config();
     #[cfg(feature = "sentry")]
     let _guard = sentry::init(
         sentry::ClientOptions::new()
@@ -274,6 +279,9 @@ fn main() {
             .maybe_release(version_option())
             .traces_sample_rate(1.0),
     );
+
+    #[cfg(feature = "sentry")]
+    sentry::configure_scope(|scope| scope.set_tag("machine_id", config.machine_id.to_string()));
 
     // ランチャーは 1 秒ごとにヘルスを問い合わせる。そのたびに HTTP/2 の TRACE のログが大量に出ないよう、通信の層は INFO までにする
     let transport_logs = Targets::new()
@@ -284,8 +292,11 @@ fn main() {
             ("tower", LevelFilter::INFO),
             ("tonic", LevelFilter::INFO),
         ]);
-    let reg = tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_filter(transport_logs));
+    let reg = tracing_subscriber::registry().with(
+        tracing_subscriber::fmt::layer()
+            .event_format(logging::MachineEventFormat(config.machine_id))
+            .with_filter(transport_logs),
+    );
     #[cfg(feature = "sentry")]
     let reg = reg
         .with(sentry::integrations::tracing::SpanLayer::new().with_filter(LevelFilter::TRACE))
@@ -316,7 +327,7 @@ fn main() {
                     .await
                     .expect("Ctrl-C handler should be installed");
             };
-            let fut = run_main(shutdown_signal);
+            let fut = run_main(config, shutdown_signal);
             #[cfg(feature = "sentry")]
             let fut = {
                 use sentry::SentryFutureExt;
@@ -326,9 +337,8 @@ fn main() {
         });
 }
 
-async fn run_main(shutdown_signal: impl std::future::Future<Output = ()> + Send) {
+async fn run_main(config: Config, shutdown_signal: impl std::future::Future<Output = ()> + Send) {
     let shutdown = tokio_util::sync::CancellationToken::new();
-    let config = load_config();
 
     let camera_locs = Arc::new(CameraLocationStore::new());
     let cameras = config.cameras.as_ref().map(|path| {

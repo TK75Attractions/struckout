@@ -75,6 +75,9 @@ namespace Struckout.Unity
                 .As(typeof(ILogger<>));
             var resolver = new NetworkSettingsResolver(new ProjectorLogger<NetworkSettingsResolver>(hub, scopes));
             var networkSettings = resolver.Resolve(this.networkSettings);
+            _logger = new ProjectorLogger<GameLifetimeScope>(hub, scopes, networkSettings);
+            hub.ConfigureScope(scope => scope.SetTag("machine_id",
+                networkSettings.machineId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             builder.RegisterInstance(networkSettings);
 
             // 物理座標 -> 描画座標 の係数。SensorProvider が使う。

@@ -22,10 +22,15 @@ input: network
 output: network
 report-delay-ms: -30
 json: true
+machine-id: 1
 ```
 
 設定ファイルとコマンドラインの両方に同じ引数がある場合は、コマンドラインの値が優先されます。
 ただし、設定ファイルで `true` にしたフラグを、コマンドラインから無効にすることはできません。
+
+筐体番号は `--machine-id` または設定の `machine-id` で指定する (既定は 1)。
+すべての通常ログに `machine_id=<番号>` を付け、Sentry にも同名のタグを付ける。
+別スレッドから出るログにも適用する。解析用のイベント・フレーム JSON の形式は変えない。
 
 ## ヘルスチェック
 ランチャーが状態を確かめられるように、5080 番 (`api/spec/servers.yaml` の `ball-tracker.health`) で gRPC の health checking protocol に答える。

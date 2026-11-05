@@ -7,6 +7,7 @@ use std::{
 
 use ball_tracker::video::analysis::{DetectionCenter, EdgeDetections};
 use serde::Deserialize;
+use struckout_proto::types::MachineId;
 use thiserror::Error;
 
 use crate::{Cli, CollisionOutputKind, DetectionInputKind};
@@ -48,6 +49,8 @@ impl ConfigLocation {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Config {
+    #[serde(deserialize_with = "deserialize_machine_id")]
+    pub machine_id: MachineId,
     /// [`Config::apply_cli`] の後は必ず `Some`
     #[serde(rename = "input")]
     pub detection_input: Option<DetectionInputKind>,
@@ -75,6 +78,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            machine_id: MachineId::new(1),
             detection_input: None,
             collision_output: None,
             output_to_json: false,
@@ -153,6 +157,10 @@ impl Config {
     /// コマンドラインから無効にすることはできない
     pub fn apply_cli(self, cli: Cli) -> Result<Self, ApplyCliError> {
         let config = Self {
+            machine_id: cli
+                .machine_id
+                .map(MachineId::new)
+                .unwrap_or(self.machine_id),
             detection_input: cli.detection_input.or(self.detection_input),
             collision_output: cli.collision_output.or(self.collision_output),
             output_to_json: cli.output_to_json || self.output_to_json,
@@ -178,6 +186,12 @@ impl Config {
         }
         Ok(config)
     }
+}
+
+fn deserialize_machine_id<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<MachineId, D::Error> {
+    u32::deserialize(deserializer).map(MachineId::new)
 }
 
 #[cfg(test)]
@@ -217,6 +231,18 @@ mod tests {
             Config::from_file(&location),
             Err(LoadConfigError::Parse { .. })
         ));
+    }
+
+    #[test]
+    fn machine_id_uses_config_and_cli_precedence() {
+        let (_dir, location) = write_config("input: network\noutput: csv\nmachine-id: 2\n");
+        let config = Config::from_file(&location).unwrap();
+        assert_eq!(config.machine_id, MachineId::new(2));
+        let cli = Cli::try_parse_from(["ball_tracker", "--machine-id", "3"]).unwrap();
+        assert_eq!(config.apply_cli(cli).unwrap().machine_id, MachineId::new(3));
+        assert!(Cli::try_parse_from(["ball_tracker", "--machine-id", "-1"]).is_err());
+        let (_dir, location) = write_config("machine-id: -1\n");
+        assert!(Config::from_file(&location).is_err());
     }
 
     #[test]

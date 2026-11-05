@@ -129,7 +129,7 @@ def phone_state(remote: CameraRemote, camera) -> PhoneState:
 
 def short(line: str) -> str:
     """ログの行から、時刻、レベル、モジュール名を除く。"""
-    return re.sub(r"^\S+\s+\w+\s+ball_tracker::", "", line)
+    return re.sub(r"^(?:machine_id=\d+\s+)?\S+\s+\w+\s+ball_tracker::", "", line)
 
 
 class TrackerLog:
