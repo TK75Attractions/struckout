@@ -50,8 +50,10 @@ public sealed class Supervisor : IDisposable
     // Starting, stopping and checking run one at a time.
     private readonly SemaphoreSlim gate = new(1, 1);
 
+    /// <param name="cameraAlarm">Sounds while a camera's video stops, if camera is a module of this PC.</param>
     public Supervisor(
-        LauncherConfig config, InstallState state, AppPaths paths, HostPlatform platform, ServerPorts ports, ICommandRunner runner)
+        LauncherConfig config, InstallState state, AppPaths paths, HostPlatform platform, ServerPorts ports, ICommandRunner runner,
+        CameraVideoAlarm? cameraAlarm = null)
     {
         this.config = config;
         installState = state;
@@ -65,7 +67,7 @@ public sealed class Supervisor : IDisposable
             var logFile = Path.Combine(logs, $"{id.Slug()}_{time}.log");
             try
             {
-                runners[id] = CreateRunner(id, state, paths, platform, locator, runner, logFile);
+                runners[id] = CreateRunner(id, state, paths, platform, locator, runner, logFile, cameraAlarm);
                 statuses[id] = new ModuleStatus(id, ModuleState.Stopped, "止まっています");
             }
             catch (LauncherException e)
@@ -387,7 +389,8 @@ public sealed class Supervisor : IDisposable
         HostPlatform platform,
         ToolLocator locator,
         ICommandRunner runner,
-        string logFile)
+        string logFile,
+        CameraVideoAlarm? cameraAlarm)
     {
         if (!state.Modules.TryGetValue(id, out var installation))
         {
@@ -456,7 +459,7 @@ public sealed class Supervisor : IDisposable
                         // guaranteed by the game-master case
                         ?? throw new InvalidOperationException("game-master should have a health endpoint"));
             case (ModuleId.Camera, ApkInstallation):
-                return new CameraRunner(new Adb(Tool(PrerequisiteId.Adb), runner), paths.CamerasFile, ports);
+                return new CameraRunner(new Adb(Tool(PrerequisiteId.Adb), runner), paths.CamerasFile, ports, cameraAlarm);
             default:
                 throw new LauncherException($"インストールの記録 ({installation.GetType().Name}) が壊れています");
         }

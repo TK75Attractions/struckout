@@ -31,6 +31,9 @@ public sealed record AppPaths(string ConfigDirectory, string DataDirectory)
 
     public string LogsDirectory => Path.Combine(DataDirectory, "logs");
 
+    /// <summary>The warning sound of <see cref="AlarmSound"/>, written by the launcher itself.</summary>
+    public string AlarmSoundFile => Path.Combine(DataDirectory, "camera-alarm.wav");
+
     public string ModuleDirectory(string slug) => Path.Combine(ModulesDirectory, slug);
 
     public static AppPaths ForCurrentUser(HostPlatform platform)

@@ -69,6 +69,11 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
     private Supervisor? supervisor;
     private bool checking;
 
+    /// <summary>Fed by the camera module while it runs, and reset when it stops.</summary>
+    private readonly CameraVideoAlarm cameraAlarm;
+
+    private IAlarmSound? alarmSound;
+
     public LaunchViewModel(HostPlatform platform, AppPaths paths, ServerPorts ports, ICommandRunner runner)
     {
         this.platform = platform;
@@ -77,6 +82,7 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
         this.runner = runner;
         timer = new DispatcherTimer { Interval = CheckInterval };
         timer.Tick += async (_, _) => await CheckAsync();
+        cameraAlarm = new CameraVideoAlarm(CreateAlarmSound, Log.CreateProgress());
     }
 
     public ObservableCollection<ModuleStatusViewModel> Modules { get; } = [];
@@ -86,6 +92,17 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
     public LogViewModel Log { get; } = new();
 
     public string ConfigPath => paths.LauncherConfigFile;
+
+    /// <summary>Why the cameras' video stopped, one camera per line, or empty while it arrives.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCameraAlarm))]
+    public partial string CameraAlarm { get; private set; } = "";
+
+    public bool HasCameraAlarm => CameraAlarm.Length > 0;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MuteCameraAlarmCommand))]
+    public partial bool IsCameraAlarmSounding { get; private set; }
 
     [ObservableProperty]
     public partial string ConfigError { get; private set; } = "";
@@ -115,7 +132,7 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
         {
             var config = LauncherConfig.Load(paths.LauncherConfigFile);
             var state = InstallState.Load(paths.InstallStateFile);
-            supervisor = new Supervisor(config, state, paths, platform, ports, runner);
+            supervisor = new Supervisor(config, state, paths, platform, ports, runner, cameraAlarm);
             supervisor.StatusChanged += OnStatusChanged;
             foreach (var status in supervisor.Statuses)
             {
@@ -156,6 +173,7 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
         finally
         {
             IsBusy = false;
+            ShowCameraAlarm();
         }
     }
 
@@ -182,7 +200,15 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
         finally
         {
             IsBusy = false;
+            ShowCameraAlarm();
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCameraAlarmSounding))]
+    private void MuteCameraAlarm()
+    {
+        cameraAlarm.Mute();
+        ShowCameraAlarm();
     }
 
     [RelayCommand]
@@ -198,7 +224,21 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         timer.Stop();
+        cameraAlarm.Reset();
+        alarmSound?.Dispose();
         supervisor?.Dispose();
+    }
+
+    private IAlarmSound? CreateAlarmSound()
+    {
+        alarmSound = AlarmSound.Create(platform, paths.AlarmSoundFile, runner, Log.CreateProgress());
+        return alarmSound;
+    }
+
+    private void ShowCameraAlarm()
+    {
+        CameraAlarm = string.Join(Environment.NewLine, cameraAlarm.Losses.Select(loss => loss.Message));
+        IsCameraAlarmSounding = cameraAlarm is { Losses.Count: > 0, IsMuted: false };
     }
 
     private void Open(string path)
@@ -225,6 +265,7 @@ public sealed partial class LaunchViewModel : ObservableObject, IDisposable
         try
         {
             await supervisor.CheckAllAsync(CancellationToken.None);
+            ShowCameraAlarm();
             var remotes = await supervisor.CheckRemotesAsync(CancellationToken.None);
             Remotes.Clear();
             foreach (var remote in remotes)
