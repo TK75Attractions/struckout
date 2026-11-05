@@ -32,6 +32,10 @@ namespace Struckout.Unity
     {
         private ILogger<UIService> _logger;
         private ILogger<CompassTargetUI> _targetLogger;
+        [Header("Sound Effects")]
+        [SerializeField] private GameSoundSettings soundEffects = new();
+        private GameSoundPlayer _sounds;
+        private uint? _countdownSeconds;
 
         private const int BackgroundSortingOrder = -100;
         private const int OverlaySortingOrder = 100;
@@ -139,6 +143,7 @@ namespace Struckout.Unity
                 pocketWatchDiameter * PocketWatchLayout.CanvasToDialRatio > Math.Min(world.Field.width, world.Field.height))
                 throw new InvalidOperationException("[UI] 懐中時計の直径は盤面に収まる正の値を設定してください。");
             _targetToTransform = new();
+            _sounds = new GameSoundPlayer(transform, soundEffects);
 
             CreateFieldSprite("ArenaBackground", backgroundSprite, BackgroundSortingOrder);
             _idleRenderer = CreateFieldSprite("IdleScreen", idleSprite, OverlaySortingOrder);
@@ -230,6 +235,8 @@ namespace Struckout.Unity
         public void ShowCountdown(uint seconds)
         {
             if (_screen != ProjectorScreen.Playing) SetScreen(ProjectorScreen.Playing);
+            if (_countdownSeconds != seconds) _sounds?.Play(GameSound.Countdown);
+            _countdownSeconds = seconds;
             _countdownText.text = seconds.ToString(CultureInfo.InvariantCulture);
             _countdown.SetActive(true);
         }
@@ -285,6 +292,8 @@ namespace Struckout.Unity
 
         public void StartGameClock(TimeSpan duration)
         {
+            _countdownSeconds = null;
+            _sounds?.Play(GameSound.Start);
             _gameClock.Start(duration, Time.realtimeSinceStartupAsDouble);
             _timeBonusText = null;
             SetRemainingTime(duration);
@@ -294,6 +303,7 @@ namespace Struckout.Unity
         {
             var added = _gameClock.ChangeTotalDuration(duration, Time.realtimeSinceStartupAsDouble);
             if (added <= TimeSpan.Zero || _screen != ProjectorScreen.Playing) return;
+            _sounds?.Play(GameSound.TimeExtension);
             _timeBonusText = "+" + added.TotalSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s";
             _timeBonusUntil = Time.realtimeSinceStartupAsDouble + 1;
             UpdateRemainingTimeLabel();
@@ -332,6 +342,8 @@ namespace Struckout.Unity
         public void ShowScoreChange(ScoreChange change)
         {
             if (_screen != ProjectorScreen.Playing || change.Difference <= 0 || _hud == null) return;
+            if (change.Reason == ScoreReason.TargetHit) _sounds?.Play(GameSound.Hit);
+            else if (change.Reason == ScoreReason.Combo) _sounds?.Play(GameSound.Combo);
             var root = (RectTransform)_hud.transform;
             Vector2 position;
             switch (change.Reason)
@@ -418,6 +430,8 @@ namespace Struckout.Unity
 
         public void SetScreen(ProjectorScreen screen)
         {
+            _sounds?.StopAll();
+            _countdownSeconds = null;
             _screen = screen;
             if (_countdown != null) _countdown.SetActive(false);
             _results?.SetScreen(screen);
@@ -449,8 +463,16 @@ namespace Struckout.Unity
             }
         }
 
-        public UniTask ShowGameResultAsync(uint score, CancellationToken token)
-            => _results?.ShowScoreAsync(score, token) ?? UniTask.CompletedTask;
+        public async UniTask ShowGameResultAsync(uint score, CancellationToken token)
+        {
+            if (_results == null || token.IsCancellationRequested) return;
+            _sounds?.Play(GameSound.Score);
+            try { await _results.ShowScoreAsync(score, token); }
+            finally { _sounds?.Stop(GameSound.Score); }
+        }
+
+        private void OnDisable() => _sounds?.StopAll();
+        private void OnDestroy() => _sounds?.Dispose();
         public void ShowResultContext(Tk75Attractions.Struckout.GameMaster.V1.GameMode mode,
             Tk75Attractions.Struckout.GameMaster.V1.Difficulty difficulty, uint? rank = null)
             => _results?.ShowContext(mode, difficulty, rank);
