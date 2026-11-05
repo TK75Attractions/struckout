@@ -1,35 +1,22 @@
 flowchart TD
-    classDef studio_class stroke-dasharray:5
     subgraph machine1
-        subgraph pc1_1
-            ball_tracker1("Ball Tracker")
-            android_studio1("fab:fa-android Android Studio")
-            class android_studio1 studio_class
-        end
-
-        subgraph pc1_2
-            projector1("fab:fa-unity Projector")
-            touchpanel1("Touchpanel")
-        end
-
+        ball_tracker1("Ball Tracker")
+        projector1("fab:fa-unity Projector")
+        touchpanel1("Touchpanel")
         camera1_1("fa:fa-camera Camera")
         camera1_2("fa:fa-camera Camera")
+        game_master1("Game Master")
+        database1("fa:fa-database MySQL")
     end
 
     subgraph machine2
-        subgraph pc2_1
-            ball_tracker2("Ball Tracker")
-            android_studio2("fab:fa-android Android Studio")
-            class android_studio2 studio_class
-        end
-
-        subgraph pc2_2
-            projector2("fab:fa-unity Projector")
-            touchpanel2("Touchpanel")
-        end
-
+        ball_tracker2("Ball Tracker")
+        projector2("fab:fa-unity Projector")
+        touchpanel2("Touchpanel")
         camera2_1("fa:fa-camera Camera")
         camera2_2("fa:fa-camera Camera")
+        game_master2("Game Master")
+        database2("fa:fa-database MySQL")
     end
 
     %%subgraph dashboard_暇だったら作る
@@ -37,19 +24,17 @@ flowchart TD
     %%    do("fab:fa-cloudflare Durable Objects")
     %%end
 
-    database("fa:fa-database MySQL")
-
-    game_master("Game Master")
-
     camera1_1 & camera1_2 --USB--> ball_tracker1
-    camera2_1 & camera2_2 --USB--> ball_tracker2 
+    camera2_1 & camera2_2 --USB--> ball_tracker2
 
-    projector1 --Ethernet--> ball_tracker1
-    projector2 --Ethernet--> ball_tracker2
+    ball_tracker1 --> projector1
+    ball_tracker2 --> projector2
 
-    touchpanel1 & touchpanel2 --> game_master <--> database
+    touchpanel1 --> game_master1 <--SQL--> database1
+    touchpanel2 --> game_master2 <--SQL--> database2
 
-    projector1 & projector2 --> game_master
+    projector1 <--gRPC--> game_master1
+    projector2 <--gRPC--> game_master2
 
-    ball_tracker1 ~~~ projector1 ~~~ game_master
-    ball_tracker2 ~~~ projector2 ~~~ game_master
+    ball_tracker1 ~~~ projector1 ~~~ game_master1
+    ball_tracker2 ~~~ projector2 ~~~ game_master2
