@@ -26,8 +26,10 @@ global Adopter {
 
 export component DifficulitySelectScreen inherits Rectangle {
     private property <length> comp_button_font_size: 24px;
-    private property <length> comp_margin_lr: 40px;
-    private property <length> comp_margin_tb: 10px;
+    private property <length> comp_difficulty_font_size: 2rem;
+    private property <length> comp_buttons_padding: 48px;
+    private property <length> comp_buttons_spacing: 48px;
+    private property <percent> comp_buttons_height_ratio: 60%;
 
     pure function difficulty-text(difficulty: Difficulity) -> string {
         if difficulty == Difficulity.Normal {
@@ -44,55 +46,57 @@ export component DifficulitySelectScreen inherits Rectangle {
         alignment: LayoutAlignment.space-between;
         padding-top: 16px;
 
-        VerticalLayout {
-            alignment: LayoutAlignment.stretch;
-            // spacing: 12px;
+        // Side by side, the buttons can share the screen's width instead of each getting a third of its height.
+        // The buttons ignore their text's width so that they get the same width.
+        HorizontalLayout {
             height: 75%;
-            cont1 := Rectangle {
-                TwoColorOutlinedButton {
-                    font-family: Fonts.oxanium;
-                    font-size: root.comp_button_font_size;
-                    layout-lr: root.comp_margin_lr;
-                    layout-tb: root.comp_margin_tb;
-                    enabled: !Adopter.busy && !Adopter.ready;
-                    text: "NORMAL";
-                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
-                    emphasize: Adopter.selected-difficulity == Difficulity.Normal;
-                    clicked => {
-                        Adopter.select-difficulity(Difficulity.Normal);
-                    }
+            cross-axis-alignment: CrossAxisAlignment.center;
+            padding-left: root.comp_buttons_padding;
+            padding-right: root.comp_buttons_padding;
+            spacing: root.comp_buttons_spacing;
+
+            TwoColorOutlinedButton {
+                min-width: 0px;
+                preferred-width: 0px;
+                height: root.comp_buttons_height_ratio;
+                horizontal-stretch: 1;
+                font-family: Fonts.oxanium;
+                font-size: root.comp_difficulty_font_size;
+                enabled: !Adopter.busy && !Adopter.ready;
+                text: "NORMAL";
+                emphasize: Adopter.selected-difficulity == Difficulity.Normal;
+                clicked => {
+                    Adopter.select-difficulity(Difficulity.Normal);
                 }
             }
 
-            cont2 := Rectangle {
-                TwoColorOutlinedButton {
-                    font-family: Fonts.oxanium;
-                    font-size: root.comp_button_font_size;
-                    layout-lr: root.comp_margin_lr;
-                    layout-tb: root.comp_margin_tb;
-                    enabled: !Adopter.busy && !Adopter.ready;
-                    text: "HARD";
-                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
-                    emphasize: Adopter.selected-difficulity == Difficulity.Hard;
-                    clicked => {
-                        Adopter.select-difficulity(Difficulity.Hard);
-                    }
+            TwoColorOutlinedButton {
+                min-width: 0px;
+                preferred-width: 0px;
+                height: root.comp_buttons_height_ratio;
+                horizontal-stretch: 1;
+                font-family: Fonts.oxanium;
+                font-size: root.comp_difficulty_font_size;
+                enabled: !Adopter.busy && !Adopter.ready;
+                text: "HARD";
+                emphasize: Adopter.selected-difficulity == Difficulity.Hard;
+                clicked => {
+                    Adopter.select-difficulity(Difficulity.Hard);
                 }
             }
 
-            cont3 := Rectangle {
-                TwoColorOutlinedButton {
-                    font-family: Fonts.oxanium;
-                    font-size: root.comp_button_font_size;
-                    layout-lr: root.comp_margin_lr;
-                    layout-tb: root.comp_margin_tb;
-                    enabled: !Adopter.busy && !Adopter.ready;
-                    text: "VERY HARD";
-                    width: max(cont1.preferred-width, cont2.preferred-width, cont3.preferred-width);
-                    emphasize: Adopter.selected-difficulity == Difficulity.VeryHard;
-                    clicked => {
-                        Adopter.select-difficulity(Difficulity.VeryHard);
-                    }
+            TwoColorOutlinedButton {
+                min-width: 0px;
+                preferred-width: 0px;
+                height: root.comp_buttons_height_ratio;
+                horizontal-stretch: 1;
+                font-family: Fonts.oxanium;
+                font-size: root.comp_difficulty_font_size;
+                enabled: !Adopter.busy && !Adopter.ready;
+                text: "VERY HARD";
+                emphasize: Adopter.selected-difficulity == Difficulity.VeryHard;
+                clicked => {
+                    Adopter.select-difficulity(Difficulity.VeryHard);
                 }
             }
         }
