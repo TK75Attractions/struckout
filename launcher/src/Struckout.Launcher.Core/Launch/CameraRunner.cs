@@ -28,6 +28,7 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
 
     /// <summary>
     /// Forwards ball_tracker's ports to each phone, sends its settings, records the ID it reports and opens the app.
+    /// A replaced phone takes the place of the missing one first (<see cref="CameraSerials"/>).
     /// </summary>
     public async Task StartAsync(IProgress<string> log, CancellationToken cancellationToken)
     {
@@ -37,6 +38,7 @@ internal sealed partial class CameraRunner(Adb adb, string camerasFile, ServerPo
         launchLog = log;
         lastOpenedAt = null;
         var connected = await adb.DevicesAsync(cancellationToken);
+        CameraSerials.AssignAutomatically(file, connected, log);
         foreach (var camera in file.Cameras.Where(c => !connected.Contains(c.Serial)))
         {
             log.Report($"camera: {camera.Name} ({camera.Serial}) がつながっていません");
